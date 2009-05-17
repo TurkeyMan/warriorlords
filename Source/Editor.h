@@ -20,12 +20,20 @@ public:
 
 	static void BrushSelect(int button, void *pUserData, int buttonID);
 	static void ChooseBrush(int button, void *pUserData, int buttonID);
+	static void FlipPage(int button, void *pUserData, int buttonID);
+	static void ShowMiniMap(int button, void *pUserData, int buttonID);
 
 protected:
 	Map *pMap;
 
+	MFMaterial *pIcons;
+
+	Button *pMiniMap;
+
 	Button *pBrushButton[2];
-	Button *pTerrainButtons[15];
+	Button *pFlipButton;
+	Button *pChooserButtons[14];
+
 	float terrainSelectWindowWidth;
 	float terrainSelectWindowHeight;
 
@@ -33,7 +41,8 @@ protected:
 	int brush;
 
 	bool bIsPainting;
-	bool bShowTerrainChooser;
+
+	int tileChooser;
 };
 
 #endif

@@ -91,10 +91,13 @@ public:
 	inline MFMaterial *GetMaterial() { return pTileMap; }
 	void GetTileUVs(int tile, MFRect *pUVs);
 
+	const MFVector &GetTerrainColour(int terrain) { return pTerrainTypes[terrain].mapColour; }
+
 protected:
 	struct TerrainType
 	{
 		char name[32];
+		MFVector mapColour;
 	};
 
 	struct SpecialType

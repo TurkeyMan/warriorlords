@@ -8,6 +8,7 @@
 #include "MFInput.h"
 #include "MFSystem.h"
 #include "MFFont.h"
+#include "MFTexture.h"
 
 Map *Map::Create(const char *pMapFilename)
 {
@@ -86,6 +87,9 @@ Map *Map::Create(const char *pMapFilename)
 		pMap->numChanges = 0;
 	}
 
+	pMap->pRenderTarget = NULL;
+	pMap->pMinimap = NULL;
+
 	return pMap;
 }
 
@@ -113,7 +117,18 @@ Map *Map::CreateNew(const char *pTileset)
 	}
 
 	pNew->zoom = 1.f;
+/*
+	int width, height;
+	pNew->pTiles->GetTileSize(&width, &height);
 
+	int screenWidth = gDefaults.display.displayWidth + width + (width-1);
+	int screenHeight = gDefaults.display.displayHeight + height + (height-1);
+	screenWidth -= screenWidth % width;
+	screenHeight -= screenHeight % height;
+
+	pNew->pRenderTarget = MFTexture_CreateRenderTarget("Map", screenWidth, screenHeight);
+	pNew->pMinimap = MFTexture_CreateDynamic("Minimap", pNew->mapWidth * 2, pNew->mapHeight * 2, TexFmt_A8R8G8B8);
+*/
 	// editor stuff
 	pNew->pTouched = (uint8*)MFHeap_AllocAndZero(pNew->mapWidth * pNew->mapHeight * sizeof(*pNew->pTouched));
 	pNew->pChangeList = (MapCoord*)MFHeap_Alloc(sizeof(MapCoord)*1024);
@@ -315,7 +330,7 @@ void Map::SetZoom(float _zoom, float pointX, float pointY)
 	if(pointY < 0.f)
 		pointY = gDefaults.display.displayHeight / tileHeight * 0.5f;
 
-	float newZoom = MFClamp(0.5f, _zoom, 2.f);
+	float newZoom = MFClamp(0.25f, _zoom, 2.f);
 	float zoomDiff = zoom / newZoom;
 	zoom = newZoom;
 

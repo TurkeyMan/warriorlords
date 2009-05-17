@@ -4,6 +4,8 @@
 #include "Tileset.h"
 #include "InputHandler.h"
 
+struct MFTexture;
+
 class Map : public InputHandler
 {
 public:
@@ -49,6 +51,9 @@ protected:
 	float zoom;
 
 	bool bIsDragging;
+
+	MFTexture *pRenderTarget;
+	MFTexture *pMinimap;
 
 	// editor stuff
 	struct MapCoord

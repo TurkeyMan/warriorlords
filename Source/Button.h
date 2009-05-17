@@ -17,8 +17,8 @@ public:
 	virtual int UpdateInput();
 	void Draw();
 
+	void SetImage(MFMaterial *pImage, MFRect *pUVs);
 	void SetPos(MFRect *pPos);
-	void SetUVs(MFRect *pUVs);
 
 	void SetOutline(bool bEnable, const MFVector &colour);
 

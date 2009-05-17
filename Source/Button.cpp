@@ -93,8 +93,9 @@ void Button::SetPos(MFRect *pPos)
 	pos = *pPos;
 }
 
-void Button::SetUVs(MFRect *pUVs)
+void Button::SetImage(MFMaterial *pImage, MFRect *pUVs)
 {
+	pMaterial = pImage;
 	uvs = *pUVs;
 }
 

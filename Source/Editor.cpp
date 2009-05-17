@@ -5,6 +5,7 @@
 #include "MFSystem.h"
 #include "MFPrimitive.h"
 #include "MFFont.h"
+#include "MFMaterial.h"
 
 Editor::Editor(const char *pFilename)
 {
@@ -20,16 +21,27 @@ Editor::Editor(const char *pFilename)
 	brush = 1;
 
 	bIsPainting = false;
-	bShowTerrainChooser = false;
 
-	// brush buttons
-	Tileset *pTiles = pMap->GetTileset();
-	MFMaterial *pTileMat = pTiles->GetMaterial();
+	tileChooser = 0;
 
+	pIcons = MFMaterial_Create("Icons");
+
+	// buttons
 	int tileWidth, tileHeight;
+	Tileset *pTiles = pMap->GetTileset();
 	pTiles->GetTileSize(&tileWidth, &tileHeight);
 
 	MFRect uvs, pos = { 0, 0, (float)tileWidth, (float)tileHeight };
+
+	pos.x = (float)(gDefaults.display.displayWidth - (16 + tileWidth));
+	pos.y = 16.f;
+	uvs.x = 0.75f; uvs.y = 0.f;
+	uvs.width = 0.25f; uvs.height = 0.25f;
+	pMiniMap = Button::Create(pIcons, &pos, &uvs, ShowMiniMap, this, 0, true);
+
+	// brush buttons
+	MFMaterial *pTileMat = pTiles->GetMaterial();
+
 
 	for(int a=0; a<2; ++a)
 	{
@@ -63,13 +75,20 @@ Editor::Editor(const char *pFilename)
 		int tile = 0;
 		pTiles->FindBestTiles(&tile, EncodeTile(a, a, a, a), 0xFFFFFFFF, 1);
 		pTiles->GetTileUVs(tile, &uvs);
-		
+
 		pos.x = left + (a % columns)*(tileWidth+16);
 		pos.y = top + (a / columns)*(tileHeight+16);
 
-		pTerrainButtons[a] = Button::Create(pTileMat, &pos, &uvs, ChooseBrush, this, a, true);
-		pTerrainButtons[a]->SetOutline(true, MFVector::black);
+		pChooserButtons[a] = Button::Create(pTileMat, &pos, &uvs, ChooseBrush, this, a, true);
+		pChooserButtons[a]->SetOutline(true, MFVector::black);
 	}
+
+	// page flip button
+	pos.x = left + (11 % columns)*(tileWidth+16);
+	pos.y = top + (11 / columns)*(tileHeight+16);
+	uvs.x = 0.0f; uvs.y = 0.0f;
+	uvs.width = 0.25f; uvs.height = 0.25f;
+	pFlipButton = Button::Create(pIcons, &pos, &uvs, FlipPage, this, 0, true);
 
 	terrainSelectWindowWidth = width + 32.f;
 	terrainSelectWindowHeight = height + 32.f;
@@ -87,13 +106,15 @@ void Editor::Select()
 
 int Editor::UpdateInput()
 {
-	if(bShowTerrainChooser)
+	if(tileChooser)
 	{
 		Tileset *pTiles = pMap->GetTileset();
 		int terrainCount = pTiles->GetNumTerrainTypes();
 
 		for(int a=0; a<terrainCount; ++a)
-			pTerrainButtons[a]->UpdateInput();
+			pChooserButtons[a]->UpdateInput();
+
+		pFlipButton->UpdateInput();
 	}
 	else
 	{
@@ -105,6 +126,8 @@ int Editor::UpdateInput()
 		// update zoom
 
 		// update minimap
+		if(pMiniMap->UpdateInput())
+			return 1;
 
 		// update map
 		pMap->UpdateInput();
@@ -147,10 +170,12 @@ void Editor::Draw()
 	if(bDrawDebug)
 		pMap->DrawDebug();
 
+	pMiniMap->Draw();
+
 	pBrushButton[0]->Draw();
 	pBrushButton[1]->Draw();
 
-	if(bShowTerrainChooser)
+	if(tileChooser)
 	{
 		// render background
 		float x = gDefaults.display.displayWidth*0.5f - terrainSelectWindowWidth*0.5f;
@@ -165,7 +190,9 @@ void Editor::Draw()
 		int terrainCount = pTiles->GetNumTerrainTypes();
 
 		for(int a=0; a<terrainCount; ++a)
-			pTerrainButtons[a]->Draw();
+			pChooserButtons[a]->Draw();
+
+		pFlipButton->Draw();
 	}
 }
 
@@ -181,7 +208,7 @@ void Editor::BrushSelect(int button, void *pUserData, int buttonID)
 	if(pThis->brush == buttonID)
 	{
 		// show brush selector window...
-		pThis->bShowTerrainChooser = true;
+		pThis->tileChooser = 1;
 	}
 	else
 	{
@@ -203,7 +230,17 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 
 	MFRect rect;
 	pTiles->GetTileUVs(tile, &rect);
-	pThis->pBrushButton[pThis->brush]->SetUVs(&rect);
+	pThis->pBrushButton[pThis->brush]->SetImage(pTiles->GetMaterial(), &rect);
 
-	pThis->bShowTerrainChooser = false;
+	pThis->tileChooser = 0;
+}
+
+void Editor::FlipPage(int button, void *pUserData, int buttonID)
+{
+
+}
+
+void Editor::ShowMiniMap(int button, void *pUserData, int buttonID)
+{
+
 }
