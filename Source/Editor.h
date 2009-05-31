@@ -31,8 +31,11 @@ protected:
 	Button *pMiniMap;
 
 	Button *pBrushButton[2];
+	Button *pChooserButtons[3][11];
 	Button *pFlipButton;
-	Button *pChooserButtons[14];
+
+	int pageButtonCount[3];
+	int numPages;
 
 	float terrainSelectWindowWidth;
 	float terrainSelectWindowHeight;

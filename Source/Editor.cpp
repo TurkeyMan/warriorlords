@@ -14,7 +14,7 @@ Editor::Editor(const char *pFilename)
 	if(pFilename)
 		pMap = Map::Create(pFilename);
 	if(!pMap)
-		pMap = Map::CreateNew("TileSet");
+		pMap = Map::CreateNew("TileSet", "Castles");
 
 	brushType[0] = 0;
 	brushType[1] = 1;
@@ -23,26 +23,28 @@ Editor::Editor(const char *pFilename)
 	bIsPainting = false;
 
 	tileChooser = 0;
+	numPages = 0;
 
 	pIcons = MFMaterial_Create("Icons");
 
 	// buttons
 	int tileWidth, tileHeight;
 	Tileset *pTiles = pMap->GetTileset();
+	MFMaterial *pTileMat = pTiles->GetMaterial();
 	pTiles->GetTileSize(&tileWidth, &tileHeight);
+
+	CastleSet *pCastles = pMap->GetCastleSet();
+	MFMaterial *pCastleMat = pCastles->GetCastleMaterial();
 
 	MFRect uvs, pos = { 0, 0, (float)tileWidth, (float)tileHeight };
 
 	pos.x = (float)(gDefaults.display.displayWidth - (16 + tileWidth));
 	pos.y = 16.f;
-	uvs.x = 0.75f; uvs.y = 0.f;
+	uvs.x = 0.75f + (1.f/256.f); uvs.y = 0.f + (1.f/256.f);
 	uvs.width = 0.25f; uvs.height = 0.25f;
 	pMiniMap = Button::Create(pIcons, &pos, &uvs, ShowMiniMap, this, 0, true);
 
 	// brush buttons
-	MFMaterial *pTileMat = pTiles->GetMaterial();
-
-
 	for(int a=0; a<2; ++a)
 	{
 		int tile = 0;
@@ -57,18 +59,21 @@ Editor::Editor(const char *pFilename)
 	}
 
 	// terrain selector
-	static const int numRows[16]    = { 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
-	static const int numColumns[16] = { 0, 1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 5, 5, 5 };
+	const int numRows[16]    = { 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
+	const int numColumns[16] = { 0, 1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 5, 5, 5 };
+	const int numButtons = 12; // only have 12 buttons for now
 
-	int terrainCount = pTiles->GetNumTerrainTypes();
-
-	int rows = numRows[terrainCount];
-	int columns = numColumns[terrainCount];
+	int rows = numRows[numButtons];
+	int columns = numColumns[numButtons];
 
 	float width = (float)(tileWidth*columns + 16*(columns-1));
 	float height = (float)(tileHeight*rows + 16*(rows-1));
 	float left = gDefaults.display.displayWidth*0.5f - width*0.5f;
 	float top = gDefaults.display.displayHeight*0.5f - height*0.5f;
+
+	// terrain page
+	int terrainCount = pTiles->GetNumTerrainTypes();
+	pageButtonCount[0] = terrainCount;
 
 	for(int a=0; a<terrainCount; ++a)
 	{
@@ -79,14 +84,67 @@ Editor::Editor(const char *pFilename)
 		pos.x = left + (a % columns)*(tileWidth+16);
 		pos.y = top + (a / columns)*(tileHeight+16);
 
-		pChooserButtons[a] = Button::Create(pTileMat, &pos, &uvs, ChooseBrush, this, a, true);
-		pChooserButtons[a]->SetOutline(true, MFVector::black);
+		pChooserButtons[numPages][a] = Button::Create(pTileMat, &pos, &uvs, ChooseBrush, this, (OT_Terrain << 16) | a, true);
+		pChooserButtons[numPages][a]->SetOutline(true, MFVector::black);
+	}
+
+	++numPages;
+
+	// castle buttons
+	int raceCount = pCastles->GetNumRaces();
+	pageButtonCount[1] = raceCount + 2;
+
+	for(int a=0; a<raceCount; ++a)
+	{
+		pCastles->GetCastleUVs(a, &uvs);
+
+		pos.x = left + (a % columns)*(tileWidth+16);
+		pos.y = top + (a / columns)*(tileHeight+16);
+
+		pChooserButtons[numPages][a] = Button::Create(pCastleMat, &pos, &uvs, ChooseBrush, this, (OT_Castle << 16) | a, true);
+		pChooserButtons[numPages][a]->SetOutline(true, MFVector::black);
+	}
+
+	// add the merc flag
+	pCastles->GetFlagUVs(0, &uvs);
+
+	pos.x = left + (raceCount % columns)*(tileWidth+16);
+	pos.y = top + (raceCount / columns)*(tileHeight+16);
+
+	pChooserButtons[numPages][raceCount] = Button::Create(pCastleMat, &pos, &uvs, ChooseBrush, this, (OT_Flag << 16) | 0, true);
+	pChooserButtons[numPages][raceCount]->SetOutline(true, MFVector::black);
+
+	// add the road
+	//...
+
+	++numPages;
+
+	// special buttons
+	int specialCount = pCastles->GetNumSpecials();
+	int specialIndex = 0;
+	while(specialIndex < specialCount)
+	{
+		pageButtonCount[1] = MFMin(specialCount - specialIndex, 11);
+
+		for(int a=specialIndex; a<specialIndex + pageButtonCount[1]; ++a)
+		{
+			pCastles->GetSpecialUVs(a, &uvs);
+
+			pos.x = left + (a % columns)*(tileWidth+16);
+			pos.y = top + (a / columns)*(tileHeight+16);
+
+			pChooserButtons[numPages][a] = Button::Create(pCastleMat, &pos, &uvs, ChooseBrush, this, (OT_Special << 16) | a, true);
+			pChooserButtons[numPages][a]->SetOutline(true, MFVector::black);
+		}
+
+		specialIndex += pageButtonCount[1];
+		++numPages;
 	}
 
 	// page flip button
 	pos.x = left + (11 % columns)*(tileWidth+16);
 	pos.y = top + (11 / columns)*(tileHeight+16);
-	uvs.x = 0.0f; uvs.y = 0.0f;
+	uvs.x = 0.0f + (1.f/256.f); uvs.y = 0.0f + (1.f/256.f);
 	uvs.width = 0.25f; uvs.height = 0.25f;
 	pFlipButton = Button::Create(pIcons, &pos, &uvs, FlipPage, this, 0, true);
 
@@ -109,10 +167,11 @@ int Editor::UpdateInput()
 	if(tileChooser)
 	{
 		Tileset *pTiles = pMap->GetTileset();
-		int terrainCount = pTiles->GetNumTerrainTypes();
+		CastleSet *pCastles = pMap->GetCastleSet();
+		int chooserPage = tileChooser - 1;
 
-		for(int a=0; a<terrainCount; ++a)
-			pChooserButtons[a]->UpdateInput();
+		for(int a=0; a<pageButtonCount[chooserPage]; ++a)
+			pChooserButtons[chooserPage][a]->UpdateInput();
 
 		pFlipButton->UpdateInput();
 	}
@@ -187,10 +246,11 @@ void Editor::Draw()
 
 		// render the buttons
 		Tileset *pTiles = pMap->GetTileset();
-		int terrainCount = pTiles->GetNumTerrainTypes();
+		CastleSet *pCastles = pMap->GetCastleSet();
+		int chooserPage = tileChooser - 1;
 
-		for(int a=0; a<terrainCount; ++a)
-			pChooserButtons[a]->Draw();
+		for(int a=0; a<pageButtonCount[chooserPage]; ++a)
+			pChooserButtons[chooserPage][a]->Draw();
 
 		pFlipButton->Draw();
 	}
@@ -222,6 +282,9 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 {
 	Editor *pThis = (Editor*)pUserData;
 
+	ObjectType type = (ObjectType)(buttonID >> 16);
+	buttonID &= 0xFFFF;
+
 	pThis->brushType[pThis->brush] = buttonID;
 
 	int tile = 0;
@@ -237,7 +300,9 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 
 void Editor::FlipPage(int button, void *pUserData, int buttonID)
 {
+	Editor *pThis = (Editor*)pUserData;
 
+	pThis->tileChooser = (pThis->tileChooser % pThis->numPages) + 1;
 }
 
 void Editor::ShowMiniMap(int button, void *pUserData, int buttonID)

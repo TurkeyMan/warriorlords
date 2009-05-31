@@ -33,8 +33,8 @@ Tileset *Tileset::Create(const char *pFilename)
 				else if(pTilemap->IsString(0, "tilemap"))
 				{
 					pNew->pTileMap = MFMaterial_Create(MFStr_TruncateExtension(pTilemap->GetString(1)));
-//					pNew->imageWidth = ;
-//					pNew->imageHeight = ;
+					pNew->imageWidth = 1024;
+					pNew->imageHeight = 1024;
 				}
 				else if(pTilemap->IsString(0, "tile_width"))
 				{
@@ -83,41 +83,13 @@ Tileset *Tileset::Create(const char *pFilename)
 
 							while(pColours)
 							{
-								uint32 colour = (uint32)pColours->GetInt(1);
-								pNew->pTerrainTypes[pColours->GetInt(0)].mapColour.Set((float)((colour >> 16) & 0xFF) * (1.f/255.f), (float)((colour >> 8) & 0xFF) * (1.f/255.f), (float)(colour & 0xFF) * (1.f/255.f));
+								uint32 colour = MFString_AsciiToInteger(pColours->GetString(1), true) | 0xFF000000;
+								pNew->pTerrainTypes[pColours->GetInt(0)].mapColour.Set(((colour >> 16) & 0xFF) * (1.f/255.f), ((colour >> 8) & 0xFF) * (1.f/255.f), (colour & 0xFF) * (1.f/255.f));
 								pColours = pColours->Next();
 							}
 						}
 
 						pTerrain = pTerrain->Next();
-					}
-				}
-				else if(pTilemap->IsSection("Special"))
-				{
-					pNew->specialCount = 0;
-
-					MFIniLine *pSpecial = pTilemap->Sub();
-					while(pSpecial)
-					{
-						pNew->specialCount = MFMax(pNew->specialCount, pSpecial->GetInt(0) + 1);
-						pSpecial = pSpecial->Next();
-					}
-
-					pNew->pSpecialTiles = (SpecialType*)MFHeap_AllocAndZero(sizeof(SpecialType) * pNew->specialCount);
-
-					pSpecial = pTilemap->Sub();
-					while(pSpecial)
-					{
-						int s = pSpecial->GetInt(0);
-						MFString_Copy(pNew->pSpecialTiles[s].name, pSpecial->GetString(1));
-
-						for(int a=2; a<pSpecial->GetStringCount(); ++a)
-						{
-							if(pSpecial->IsString(a, "searchable"))
-								pNew->pSpecialTiles[s].canSearch = 1;
-						}
-
-						pSpecial = pSpecial->Next();
 					}
 				}
 				else if(pTilemap->IsSection("Tiles"))
@@ -170,7 +142,6 @@ void Tileset::Destroy()
 {
 	MFMaterial_Destroy(pTileMap);
 	MFHeap_Free(pTerrainTypes);
-	MFHeap_Free(pSpecialTiles);
 	MFHeap_Free(this);
 }
 
@@ -248,10 +219,12 @@ int Tileset::FindBestTiles(int *pTiles, uint32 tile, uint32 mask, int maxMatches
 
 void Tileset::GetTileUVs(int tile, MFRect *pUVs)
 {
-	float xScale = (1.f / 1024.f) * tileWidth;
-	float yScale = (1.f / 1024.f) * tileHeight;
-	float halfX = 0.5f / 1024.f;
-	float halfY = 0.5f / 1024.f;
+	float fWidth = (float)imageWidth;
+	float fHeight = (float)imageHeight;
+	float xScale = (1.f / fWidth) * tileWidth;
+	float yScale = (1.f / fHeight) * tileHeight;
+	float halfX = 0.5f / fWidth;
+	float halfY = 0.5f / fHeight;
 
 	Tile &t = tiles[tile];
 	pUVs->x = t.x*xScale + halfX;

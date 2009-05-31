@@ -68,7 +68,7 @@ int GameMain(MFInitParams *pInitParams)
 {
 	MFRand_Seed((uint32)MFSystem_ReadRTC());
 
-#if 1
+#if 0
 	gDefaults.display.displayWidth = 480;
 	gDefaults.display.displayHeight = 320;
 #else

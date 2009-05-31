@@ -49,7 +49,8 @@ Map *Map::Create(const char *pMapFilename)
 				{
 					MFDebug_Assert(pMap->mapWidth && pMap->mapHeight, "Invalid map dimensions");
 
-					pMap->pMap = (uint8*)MFHeap_Alloc(pMap->mapWidth * pMap->mapHeight * sizeof(*pMap->pMap));
+					pMap->pTerrain = (uint8*)MFHeap_Alloc(pMap->mapWidth * pMap->mapHeight * sizeof(*pMap->pTerrain));
+					pMap->pDetails = (uint8*)MFHeap_Alloc(pMap->mapWidth * pMap->mapHeight * sizeof(*pMap->pDetails));
 
 					int i = 0;
 
@@ -59,7 +60,7 @@ Map *Map::Create(const char *pMapFilename)
 						MFDebug_Assert(pTiles->GetStringCount() == pMap->mapWidth, "Not enough tiles in row.");
 
 						for(int a=0; a<pMap->mapWidth; ++a)
-							pMap->pMap[i++] = pTiles->GetInt(a);
+							pMap->pTerrain[i++] = pTiles->GetInt(a);
 
 						pTiles = pTiles->Next();
 					}
@@ -93,7 +94,7 @@ Map *Map::Create(const char *pMapFilename)
 	return pMap;
 }
 
-Map *Map::CreateNew(const char *pTileset)
+Map *Map::CreateNew(const char *pTileset, const char *pCastles)
 {
 	Map *pNew = (Map*)MFHeap_AllocAndZero(sizeof(Map));
 	pNew = new(pNew) Map;
@@ -102,8 +103,10 @@ Map *Map::CreateNew(const char *pTileset)
 	pNew->mapWidth = 128;
 	pNew->mapHeight = 128;
 
-	pNew->pMap = (uint8*)MFHeap_Alloc(pNew->mapWidth * pNew->mapHeight * sizeof(*pNew->pMap));
+	pNew->pTerrain = (uint8*)MFHeap_Alloc(pNew->mapWidth * pNew->mapHeight * sizeof(*pNew->pTerrain));
+	pNew->pDetails = (uint8*)MFHeap_Alloc(pNew->mapWidth * pNew->mapHeight * sizeof(*pNew->pDetails));
 	pNew->pTiles = Tileset::Create(pTileset);
+	pNew->pCastles = CastleSet::Create(pCastles);
 
 	// get default tiles
 	int tiles[8];
@@ -111,7 +114,7 @@ Map *Map::CreateNew(const char *pTileset)
 
 	for(int y=0; y<pNew->mapHeight; ++y)
 	{
-		uint8 *pRow = pNew->pMap + y*pNew->mapWidth;
+		uint8 *pRow = pNew->pTerrain + y*pNew->mapWidth;
 		for(int x=0; x<pNew->mapWidth; ++x)
 			pRow[x] = tiles[MFRand()%numVariants];
 	}
@@ -140,7 +143,9 @@ Map *Map::CreateNew(const char *pTileset)
 void Map::Destroy()
 {
 	pTiles->Destroy();
-	MFHeap_Free(pMap);
+	pCastles->Destroy();
+	MFHeap_Free(pTerrain);
+	MFHeap_Free(pDetails);
 	MFHeap_Free(this);
 }
 
@@ -211,7 +216,7 @@ void Map::Draw()
 	int xTiles, yTiles;
 	SetMapOrtho(&xTiles, &yTiles);
 
-	uint8 *pStart = pMap + (int)yOffset*mapWidth + (int)xOffset;
+	uint8 *pStart = pTerrain + (int)yOffset*mapWidth + (int)xOffset;
 
 	// blit map portion to a render target
 	pTiles->DrawMap(xTiles, yTiles, pStart, mapWidth);
@@ -361,7 +366,7 @@ bool Map::SetTile(int x, int y, uint32 tile, uint32 mask)
 
 	// TODO: use some logic to refine the selection based on quickest/valid route to target
 	int t = tiles[MFRand()%matches];
-	pMap[y*mapWidth + x] = t;
+	pTerrain[y*mapWidth + x] = t;
 
 	// mark the tile touched
 	pTouched[y*mapWidth + x] = 1;

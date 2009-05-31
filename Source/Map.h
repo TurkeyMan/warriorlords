@@ -2,15 +2,27 @@
 #define _MAP_H
 
 #include "Tileset.h"
+#include "Castle.h"
 #include "InputHandler.h"
 
 struct MFTexture;
+
+enum ObjectType
+{
+	OT_Terrain,
+	OT_Castle,
+	OT_Flag,
+	OT_Special,
+	OT_Road,
+
+	OT_Max
+};
 
 class Map : public InputHandler
 {
 public:
 	static Map *Create(const char *pMapFilename);
-	static Map *CreateNew(const char *pTileset);
+	static Map *CreateNew(const char *pTileset, const char *pCastles);
 	void Destroy();
 
 	virtual int UpdateInput();
@@ -29,24 +41,28 @@ public:
 
 	void SetMapOrtho(int *pXTiles = NULL, int *pYTiles = NULL);
 
-	inline Tile *GetTile(int x, int y) { return pTiles->GetTile(pMap[y*mapWidth + x]); }
-	inline uint32 GetTerrain(int x, int y) { return pTiles->GetTile(pMap[y*mapWidth + x])->terrain; }
+	inline Tile *GetTile(int x, int y) { return pTiles->GetTile(pTerrain[y*mapWidth + x]); }
+	inline uint32 GetTerrain(int x, int y) { return pTiles->GetTile(pTerrain[y*mapWidth + x])->terrain; }
 	bool SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask = 0xFFFFFFFF);
 
 	Tileset *GetTileset() { return pTiles; }
+	CastleSet *GetCastleSet() { return pCastles; }
 
 	int Map::UpdateChange(int a);
 
 protected:
 	char name[32];
 
+	Tileset *pTiles;
+	CastleSet *pCastles;
+
 	int mapWidth;
 	int mapHeight;
 
-	uint8 *pMap;
+	uint8 *pTerrain;	// terrain layer
+	uint8 *pDetails;	// detail layer (TTIIIIII - T = Type, I = Index
 
-	Tileset *pTiles;
-
+	// runtime data
 	float xOffset, yOffset;
 	float zoom;
 

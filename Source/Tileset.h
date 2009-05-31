@@ -3,55 +3,6 @@
 
 struct MFMaterial;
 
-union TerrainType
-{
-	uint32 e;
-	struct { uint8 tl, tr, bl, br; };
-};
-
-inline uint32 EncodeTile(int tl, int tr, int bl, int br)
-{
-	TerrainType t;
-	t.tl = tl;
-	t.tr = tr;
-	t.bl = bl;
-	t.br = br;
-	return t.e;
-}
-
-inline void DecodeTile(uint32 tile, int *tl, int *tr, int *bl, int *br)
-{
-	TerrainType t = { tile };
-	*tl = t.tl;
-	*tr = t.tr;
-	*bl = t.bl;
-	*br = t.br;
-}
-
-inline int DecodeTL(uint32 tile)
-{
-	TerrainType t = { tile };
-	return t.tl;
-}
-
-inline int DecodeTR(uint32 tile)
-{
-	TerrainType t = { tile };
-	return t.tr;
-}
-
-inline int DecodeBL(uint32 tile)
-{
-	TerrainType t = { tile };
-	return t.bl;
-}
-
-inline int DecodeBR(uint32 tile)
-{
-	TerrainType t = { tile };
-	return t.br;
-}
-
 struct Tile
 {
 	enum Type
@@ -85,9 +36,6 @@ public:
 	inline int GetNumTerrainTypes() { return terrainCount; }
 	inline const char *GetTerrainName(int type) { return pTerrainTypes[type].name; }
 
-	inline int GetNumSpecialTypes() { return specialCount; }
-	inline const char *GetSpecialName(int type) { return pSpecialTiles[type].name; }
-
 	inline MFMaterial *GetMaterial() { return pTileMap; }
 	void GetTileUVs(int tile, MFRect *pUVs);
 
@@ -100,14 +48,6 @@ protected:
 		MFVector mapColour;
 	};
 
-	struct SpecialType
-	{
-		char name[32];
-
-		uint32 canSearch : 1;
-		uint32 flags : 31;
-	};
-
 	char name[64];
 
 	int tileWidth, tileHeight;
@@ -117,8 +57,6 @@ protected:
 
 	TerrainType *pTerrainTypes;
 	int terrainCount;
-	SpecialType *pSpecialTiles;
-	int specialCount;
 
 	Tile tiles[256];
 
@@ -136,5 +74,55 @@ protected:
 		return error;
 	}
 };
+
+// helpers for encoding and decoding terrain
+union EncodedTerrain
+{
+	uint32 e;
+	struct { uint8 tl, tr, bl, br; };
+};
+
+inline uint32 EncodeTile(int tl, int tr, int bl, int br)
+{
+	EncodedTerrain t;
+	t.tl = tl;
+	t.tr = tr;
+	t.bl = bl;
+	t.br = br;
+	return t.e;
+}
+
+inline void DecodeTile(uint32 tile, int *tl, int *tr, int *bl, int *br)
+{
+	EncodedTerrain t = { tile };
+	*tl = t.tl;
+	*tr = t.tr;
+	*bl = t.bl;
+	*br = t.br;
+}
+
+inline int DecodeTL(uint32 tile)
+{
+	EncodedTerrain t = { tile };
+	return t.tl;
+}
+
+inline int DecodeTR(uint32 tile)
+{
+	EncodedTerrain t = { tile };
+	return t.tr;
+}
+
+inline int DecodeBL(uint32 tile)
+{
+	EncodedTerrain t = { tile };
+	return t.bl;
+}
+
+inline int DecodeBR(uint32 tile)
+{
+	EncodedTerrain t = { tile };
+	return t.br;
+}
 
 #endif
