@@ -109,17 +109,13 @@ Tileset *Tileset::Create(const char *pFilename)
 						t.y = y;
 						t.terrain = EncodeTile(pTile->GetInt(3), pTile->GetInt(4), pTile->GetInt(5), pTile->GetInt(6));
 
-						if(pTile->IsString(7, "tile"))
+						int numStrings = pTile->GetStringCount();
+						for(int f = 7; f < numStrings; ++f)
 						{
-							t.type = Tile::Regular;
-						}
-						else if(pTile->IsString(7, "road"))
-						{
-							t.type = Tile::Road;
-						}
-						else if(pTile->IsString(7, "special"))
-						{
-							t.type = Tile::Special;
+							if(pTile->IsString(f, "walk"))
+								t.canWalk = 1;
+							else if(pTile->IsString(f, "build"))
+								t.canBuild = 1;
 						}
 
 						pTile = pTile->Next();

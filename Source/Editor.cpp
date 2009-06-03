@@ -16,8 +16,10 @@ Editor::Editor(const char *pFilename)
 	if(!pMap)
 		pMap = Map::CreateNew("TileSet", "Castles");
 
-	brushType[0] = 0;
-	brushType[1] = 1;
+	brushType[0] = OT_Terrain;
+	brushType[1] = OT_Terrain;
+	brushIndex[0] = 0;
+	brushIndex[1] = 1;
 	brush = 1;
 
 	bIsPainting = false;
@@ -35,6 +37,7 @@ Editor::Editor(const char *pFilename)
 
 	CastleSet *pCastles = pMap->GetCastleSet();
 	MFMaterial *pCastleMat = pCastles->GetCastleMaterial();
+	MFMaterial *pRoadMat = pCastles->GetRoadMaterial();
 
 	MFRect uvs, pos = { 0, 0, (float)tileWidth, (float)tileHeight };
 
@@ -48,7 +51,7 @@ Editor::Editor(const char *pFilename)
 	for(int a=0; a<2; ++a)
 	{
 		int tile = 0;
-		pTiles->FindBestTiles(&tile, EncodeTile(brushType[a], brushType[a], brushType[a], brushType[a]), 0xFFFFFFFF, 1);
+		pTiles->FindBestTiles(&tile, EncodeTile(brushIndex[a], brushIndex[a], brushIndex[a], brushIndex[a]), 0xFFFFFFFF, 1);
 		pTiles->GetTileUVs(tile, &uvs);
 
 		pos.x = (float)(gDefaults.display.displayWidth - (16 + tileWidth));
@@ -73,7 +76,7 @@ Editor::Editor(const char *pFilename)
 
 	// terrain page
 	int terrainCount = pTiles->GetNumTerrainTypes();
-	pageButtonCount[0] = terrainCount;
+	pageButtonCount[numPages] = terrainCount;
 
 	for(int a=0; a<terrainCount; ++a)
 	{
@@ -92,7 +95,7 @@ Editor::Editor(const char *pFilename)
 
 	// castle buttons
 	int raceCount = pCastles->GetNumRaces();
-	pageButtonCount[1] = raceCount + 2;
+	pageButtonCount[numPages] = raceCount + 2;
 
 	for(int a=0; a<raceCount; ++a)
 	{
@@ -115,7 +118,14 @@ Editor::Editor(const char *pFilename)
 	pChooserButtons[numPages][raceCount]->SetOutline(true, MFVector::black);
 
 	// add the road
-	//...
+	pCastles->GetRoadUVs(0, &uvs);
+	++raceCount;
+
+	pos.x = left + (raceCount % columns)*(tileWidth+16);
+	pos.y = top + (raceCount / columns)*(tileHeight+16);
+
+	pChooserButtons[numPages][raceCount] = Button::Create(pRoadMat, &pos, &uvs, ChooseBrush, this, (OT_Road << 16) | 0, true);
+	pChooserButtons[numPages][raceCount]->SetOutline(true, MFVector::black);
 
 	++numPages;
 
@@ -124,9 +134,9 @@ Editor::Editor(const char *pFilename)
 	int specialIndex = 0;
 	while(specialIndex < specialCount)
 	{
-		pageButtonCount[1] = MFMin(specialCount - specialIndex, 11);
+		pageButtonCount[numPages] = MFMin(specialCount - specialIndex, 11);
 
-		for(int a=specialIndex; a<specialIndex + pageButtonCount[1]; ++a)
+		for(int a=specialIndex; a<specialIndex + pageButtonCount[numPages]; ++a)
 		{
 			pCastles->GetSpecialUVs(a, &uvs);
 
@@ -137,7 +147,7 @@ Editor::Editor(const char *pFilename)
 			pChooserButtons[numPages][a]->SetOutline(true, MFVector::black);
 		}
 
-		specialIndex += pageButtonCount[1];
+		specialIndex += pageButtonCount[numPages];
 		++numPages;
 	}
 
@@ -198,9 +208,33 @@ int Editor::UpdateInput()
 		static int change = 0;
 		if(MFInput_Read(Mouse_LeftButton, IDD_Mouse))
 		{
-			int type = brushType[brush];
-			pMap->SetTerrain(cursorX, cursorY, type, type, type, type);
-			change = 0;
+			switch(brushType[brush])
+			{
+				case OT_Terrain:
+				{
+					int terrain = brushIndex[brush];
+					pMap->SetTerrain(cursorX, cursorY, terrain, terrain, terrain, terrain);
+					change = 0;
+				}
+				case OT_Castle:
+				{
+					// place a castle
+					break;
+				}
+				case OT_Flag:
+				{
+					break;
+				}
+				case OT_Special:
+				{
+					break;
+				}
+				case OT_Road:
+				{
+					// place a road, and connect neighbouring roads to it...
+					break;
+				}
+			}
 		}
 
 		if(MFInput_WasPressed(Key_Space, IDD_Keyboard))
@@ -283,17 +317,59 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 	Editor *pThis = (Editor*)pUserData;
 
 	ObjectType type = (ObjectType)(buttonID >> 16);
-	buttonID &= 0xFFFF;
+	int index = buttonID & 0xFFFF;
 
-	pThis->brushType[pThis->brush] = buttonID;
+	pThis->brushType[pThis->brush] = type;
+	pThis->brushIndex[pThis->brush] = index;
 
-	int tile = 0;
-	Tileset *pTiles = pThis->pMap->GetTileset();
-	pTiles->FindBestTiles(&tile, EncodeTile(buttonID, buttonID, buttonID, buttonID), 0xFFFFFFFF, 1);
+	MFMaterial *pMat = NULL;
+	MFRect rect = { 0, 0, 1, 1 };
 
-	MFRect rect;
-	pTiles->GetTileUVs(tile, &rect);
-	pThis->pBrushButton[pThis->brush]->SetImage(pTiles->GetMaterial(), &rect);
+	switch(type)
+	{
+		case OT_Terrain:
+		{
+			Tileset *pTiles = pThis->pMap->GetTileset();
+
+			int tile = 0;
+			pTiles->FindBestTiles(&tile, EncodeTile(buttonID, buttonID, buttonID, buttonID), 0xFFFFFFFF, 1);
+
+			pTiles->GetTileUVs(tile, &rect);
+			pMat = pTiles->GetMaterial();
+			break;
+		}
+		case OT_Castle:
+		{
+			CastleSet *pCastles = pThis->pMap->GetCastleSet();
+			pCastles->GetCastleUVs(index, &rect);
+			pMat = pCastles->GetCastleMaterial();
+			break;
+		}
+		case OT_Flag:
+		{
+			CastleSet *pCastles = pThis->pMap->GetCastleSet();
+			pCastles->GetFlagUVs(index, &rect);
+			pMat = pCastles->GetCastleMaterial();
+			break;
+		}
+		case OT_Special:
+		{
+			CastleSet *pCastles = pThis->pMap->GetCastleSet();
+			pCastles->GetSpecialUVs(index, &rect);
+			pMat = pCastles->GetCastleMaterial();
+			break;
+		}
+		case OT_Road:
+		{
+			CastleSet *pCastles = pThis->pMap->GetCastleSet();
+			pCastles->GetRoadUVs(index, &rect);
+			pMat = pCastles->GetRoadMaterial();
+			break;
+		}
+	}
+
+	// update the brush image
+	pThis->pBrushButton[pThis->brush]->SetImage(pMat, &rect);
 
 	pThis->tileChooser = 0;
 }

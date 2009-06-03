@@ -12,12 +12,12 @@ struct Tile
 		Special = 2,
 	};
 
-	uint8 type        : 2;
-	uint8 isOversized : 1;
-	uint8 subType     : 5;
-	uint8 speed;
-	uint8 x, y;
 	uint32 terrain;
+	uint8 x, y;
+	uint8 speed;
+	uint8 canBuild : 1;
+	uint8 canWalk  : 1;
+	uint8 flags    : 6;
 };
 
 class Tileset

@@ -1,5 +1,6 @@
 #include "Warlords.h"
 #include "Castle.h"
+#include "Tileset.h"
 
 #include "MFIni.h"
 #include "MFMaterial.h"
@@ -34,6 +35,10 @@ CastleSet *CastleSet::Create(const char *pFilename)
 					pNew->pImage = MFMaterial_Create(MFStr_TruncateExtension(pCastleSet->GetString(1)));
 					pNew->imageWidth = 512;
 					pNew->imageHeight = 512;
+				}
+				else if(pCastleSet->IsString(0, "roads"))
+				{
+					pNew->pRoadMap = MFMaterial_Create(MFStr_TruncateExtension(pCastleSet->GetString(1)));
 				}
 				else if(pCastleSet->IsString(0, "tile_width"))
 				{
@@ -97,6 +102,37 @@ CastleSet *CastleSet::Create(const char *pFilename)
 						}
 
 						pSpecial = pSpecial->Next();
+					}
+				}
+				else if(pCastleSet->IsSection("Road"))
+				{
+					pNew->roadCount = 0;
+					int r = 0;
+
+					MFIniLine *pRoad = pCastleSet->Sub();
+					while(pRoad)
+					{
+						++pNew->roadCount;
+						pRoad = pRoad->Next();
+					}
+
+					pNew->pRoads = (Road*)MFHeap_AllocAndZero(sizeof(Road) * pNew->roadCount);
+
+					pRoad = pCastleSet->Sub();
+					while(pRoad)
+					{
+						int x = pRoad->GetInt(0);
+						int y = pRoad->GetInt(1);
+						MFDebug_Assert(x < 16 && y < 16, "Tile sheets may have a maximum of 16x16 tiles.");
+						MFDebug_Assert(pRoad->IsString(2, "="), "Expected '='.");
+
+						Road &road = pNew->pRoads[r++];
+						road.x = x;
+						road.y = y;
+						road.directions = (pRoad->GetInt(3) << 3) | (pRoad->GetInt(4) << 2) | (pRoad->GetInt(5) << 1) | pRoad->GetInt(6);
+						road.terrain = EncodeTile(pRoad->GetInt(7), pRoad->GetInt(8), pRoad->GetInt(9), pRoad->GetInt(10));
+
+						pRoad = pRoad->Next();
 					}
 				}
 
@@ -179,6 +215,22 @@ void CastleSet::GetSpecialUVs(int index, MFRect *pUVs)
 	Special &s = pSpecials[index];
 	pUVs->x = s.x*xScale + halfX;
 	pUVs->y = s.y*yScale + halfY;
+	pUVs->width = xScale;
+	pUVs->height = yScale;
+}
+
+void CastleSet::GetRoadUVs(int index, MFRect *pUVs)
+{
+	float fWidth = (float)imageWidth;
+	float fHeight = (float)imageHeight;
+	float xScale = (1.f / fWidth) * tileWidth;
+	float yScale = (1.f / fHeight) * tileHeight;
+	float halfX = 0.5f / fWidth;
+	float halfY = 0.5f / fHeight;
+
+	Road &r = pRoads[index];
+	pUVs->x = r.x*xScale + halfX;
+	pUVs->y = r.y*yScale + halfY;
 	pUVs->width = xScale;
 	pUVs->height = yScale;
 }

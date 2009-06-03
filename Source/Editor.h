@@ -40,7 +40,8 @@ protected:
 	float terrainSelectWindowWidth;
 	float terrainSelectWindowHeight;
 
-	int brushType[2];
+	ObjectType brushType[2];
+	int brushIndex[2];
 	int brush;
 
 	bool bIsPainting;

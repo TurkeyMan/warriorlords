@@ -20,12 +20,12 @@ public:
 	inline const char *GetSpecialName(int type) { return pSpecials[type].name; }
 
 	inline MFMaterial *GetCastleMaterial() { return pImage; }
-//	inline MFMaterial *GetRoadMaterial() { return pRoadMap; }
+	inline MFMaterial *GetRoadMaterial() { return pRoadMap; }
 
 	void GetCastleUVs(int race, MFRect *pUVs);
 	void GetFlagUVs(int race, MFRect *pUVs);
 	void GetSpecialUVs(int index, MFRect *pUVs);
-//	void GetRoadUVs(int tile, MFRect *pUVs);
+	void GetRoadUVs(int index, MFRect *pUVs);
 
 	MFVector GetRaceColour(int race);
 
@@ -46,18 +46,30 @@ protected:
 		uint16 flags : 15;
 	};
 
+	struct Road
+	{
+		uint8 x, y;
+		uint8 directions;
+		uint8 reserved;
+		uint32 terrain;
+	};
+
 	char name[64];
 
 	int tileWidth, tileHeight;
 	int imageWidth, imageHeight;
 
 	MFMaterial *pImage;
+	MFMaterial *pRoadMap;
 
 	Race *pRaces;
 	int raceCount;
 
 	Special *pSpecials;
 	int specialCount;
+
+	Road *pRoads;
+	int roadCount;
 };
 
 #endif
