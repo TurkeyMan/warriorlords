@@ -26,7 +26,7 @@ public:
 	static Tileset *Create(const char *pFilename);
 	void Destroy();
 
-	void DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride);
+	void DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride);
 
 	int FindBestTiles(int *pTiles, uint32 tile, uint32 mask = 0xFFFFFFFF, int maxMatches = 8);
 

@@ -240,3 +240,14 @@ MFVector CastleSet::GetRaceColour(int race)
 	uint32 c = pRaces[race].colour;
 	return MakeVector(((c >> 16) & 0xFF) * (1.f/255.f), ((c >> 8) & 0xFF) * (1.f/255.f), (c & 0xFF) * (1.f/255.f));
 }
+
+int CastleSet::FindRoad(uint32 directions, uint32 terrain)
+{
+	for(int a=0; a<roadCount; ++a)
+	{
+		if(pRoads[a].terrain == terrain && pRoads[a].directions == directions)
+			return a;
+	}
+
+	return -1;
+}

@@ -20,7 +20,7 @@ Tileset *Tileset::Create(const char *pFilename)
 		if(pLine->IsSection("Tilemap"))
 		{
 			pNew = (Tileset*)MFHeap_AllocAndZero(sizeof(Tileset));
-			MFMemSet(pNew->tiles, 0xFF, sizeof(pNew->tiles));
+			MFZeroMemory(pNew->tiles, sizeof(pNew->tiles));
 
 			MFIniLine *pTilemap = pLine->Sub();
 
@@ -141,7 +141,7 @@ void Tileset::Destroy()
 	MFHeap_Free(this);
 }
 
-void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride)
+void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride)
 {
 	// we should set the ortho rect to map tiles to the render target texture...
 //	MFView_Push();
@@ -163,7 +163,7 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride)
 	{
 		for(int x=0; x<xTiles; ++x)
 		{
-			Tile &t = tiles[pTileData[x]];
+			Tile &t = tiles[pTileData[x*stride]];
 
 			MFSetTexCoord1(t.x*xScale + halfX, t.y*yScale + halfY);
 			MFSetPosition((float)x, (float)y, 0);
@@ -180,7 +180,7 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride)
 			MFSetPosition((float)x, (float)(y+1), 0);
 		}
 
-		pTileData += stride;
+		pTileData += lineStride*stride;
 	}
 
 	MFEnd();

@@ -49,8 +49,7 @@ Map *Map::Create(const char *pMapFilename)
 				{
 					MFDebug_Assert(pMap->mapWidth && pMap->mapHeight, "Invalid map dimensions");
 
-					pMap->pTerrain = (uint8*)MFHeap_Alloc(pMap->mapWidth * pMap->mapHeight * sizeof(*pMap->pTerrain));
-					pMap->pDetails = (uint8*)MFHeap_Alloc(pMap->mapWidth * pMap->mapHeight * sizeof(*pMap->pDetails));
+					pMap->pMap = (MapTile*)MFHeap_AllocAndZero(pMap->mapWidth * pMap->mapHeight * sizeof(MapTile));
 
 					int i = 0;
 
@@ -60,7 +59,7 @@ Map *Map::Create(const char *pMapFilename)
 						MFDebug_Assert(pTiles->GetStringCount() == pMap->mapWidth, "Not enough tiles in row.");
 
 						for(int a=0; a<pMap->mapWidth; ++a)
-							pMap->pTerrain[i++] = pTiles->GetInt(a);
+							pMap->pMap[i++].terrain = pTiles->GetInt(a);
 
 						pTiles = pTiles->Next();
 					}
@@ -100,11 +99,11 @@ Map *Map::CreateNew(const char *pTileset, const char *pCastles)
 	pNew = new(pNew) Map;
 
 	MFString_Copy(pNew->name, "Untitled");
+
 	pNew->mapWidth = 128;
 	pNew->mapHeight = 128;
+	pNew->pMap = (MapTile*)MFHeap_AllocAndZero(pNew->mapWidth * pNew->mapHeight * sizeof(MapTile));
 
-	pNew->pTerrain = (uint8*)MFHeap_Alloc(pNew->mapWidth * pNew->mapHeight * sizeof(*pNew->pTerrain));
-	pNew->pDetails = (uint8*)MFHeap_Alloc(pNew->mapWidth * pNew->mapHeight * sizeof(*pNew->pDetails));
 	pNew->pTiles = Tileset::Create(pTileset);
 	pNew->pCastles = CastleSet::Create(pCastles);
 
@@ -114,9 +113,9 @@ Map *Map::CreateNew(const char *pTileset, const char *pCastles)
 
 	for(int y=0; y<pNew->mapHeight; ++y)
 	{
-		uint8 *pRow = pNew->pTerrain + y*pNew->mapWidth;
+		MapTile *pRow = pNew->pMap + y*pNew->mapWidth;
 		for(int x=0; x<pNew->mapWidth; ++x)
-			pRow[x] = tiles[MFRand()%numVariants];
+			pRow[x].terrain = tiles[MFRand()%numVariants];
 	}
 
 	pNew->zoom = 1.f;
@@ -144,8 +143,7 @@ void Map::Destroy()
 {
 	pTiles->Destroy();
 	pCastles->Destroy();
-	MFHeap_Free(pTerrain);
-	MFHeap_Free(pDetails);
+	MFHeap_Free(pMap);
 	MFHeap_Free(this);
 }
 
@@ -213,13 +211,67 @@ void Map::Draw()
 {
 	MFView_Push();
 
+	int xStart = (int)xOffset;
+	int yStart = (int)yOffset;
+
 	int xTiles, yTiles;
 	SetMapOrtho(&xTiles, &yTiles);
 
-	uint8 *pStart = pTerrain + (int)yOffset*mapWidth + (int)xOffset;
+	MapTile *pStart = &pMap[yStart*mapWidth + xStart];
 
 	// blit map portion to a render target
-	pTiles->DrawMap(xTiles, yTiles, pStart, mapWidth);
+	pTiles->DrawMap(xTiles, yTiles, &pStart->terrain, sizeof(MapTile), mapWidth);
+
+	// now we should, like, render all the extra stuff, except the roads
+	for(int y=0; y<yTiles; ++y)
+	{
+		for(int x=0; x<xTiles; ++x)
+		{
+			MapTile *pTile = pStart + x;
+
+			if(pTile->type == OT_None)
+				continue;
+
+			float tileWidth = 1.f;
+			MFMaterial *pMat;
+			MFRect uvs;
+
+			if(pTile->type == OT_Road)
+			{
+				pMat = pCastles->GetRoadMaterial();
+
+				int r = pCastles->FindRoad(pTile->index, GetTerrain(xStart+x, yStart+y));
+				MFDebug_Assert(r >= 0, "Invalid road!");
+
+				pCastles->GetRoadUVs(r, &uvs);
+			}
+			else
+			{
+				pMat = pCastles->GetCastleMaterial();
+
+				switch(pTile->type)
+				{
+					case OT_Castle:
+						pCastles->GetCastleUVs(pTile->index, &uvs);
+						tileWidth = 2.f;
+						break;
+					case OT_Flag:
+						pCastles->GetFlagUVs(pTile->index, &uvs);
+						break;
+					case OT_Special:
+						pCastles->GetSpecialUVs(pTile->index, &uvs);
+						break;
+				}
+			}
+
+			MFMaterial_SetMaterial(pMat);
+			MFPrimitive_DrawQuad((float)x, (float)y, tileWidth, tileWidth, MFVector::one, uvs.x, uvs.y, uvs.x + uvs.width, uvs.y + uvs.height);
+		}
+
+		pStart += mapWidth;
+	}
+
+	// and now the units
 
 	// the tilemap should render to an image and we render it to the screen here...
 	//...
@@ -364,9 +416,12 @@ bool Map::SetTile(int x, int y, uint32 tile, uint32 mask)
 	if(!matches)
 		return false;
 
+	// clear any existing stuff on the tile
+	ClearDetail(x, y);
+
 	// TODO: use some logic to refine the selection based on quickest/valid route to target
 	int t = tiles[MFRand()%matches];
-	pTerrain[y*mapWidth + x] = t;
+	pMap[y*mapWidth + x].terrain = t;
 
 	// mark the tile touched
 	pTouched[y*mapWidth + x] = 1;
@@ -510,4 +565,174 @@ int Map::UpdateChange(int a)
 	SetTile(x, y, EncodeTile(tl, tr, bl, br), EncodeTile(tlm, trm, blm, brm));
 
 	return ++a;
+}
+
+bool Map::PlaceCastle(int x, int y, int race)
+{
+	// check we have room on the map
+	if(x >= mapWidth - 1 || y >= mapHeight - 1)
+		return false;
+
+	// get the terrain tiles
+	Tile *pT0 = GetTile(x, y);
+	Tile *pT1 = GetTile(x+1, y);
+	Tile *pT2 = GetTile(x, y+1);
+	Tile *pT3 = GetTile(x+1, y+1);
+
+	// test we can build here...
+	if(!pT0->canBuild)
+		return false;
+
+	// test we have 4 clear tiles
+	if(pT0->terrain != pT1->terrain || pT2->terrain != pT3->terrain || pT0->terrain != pT2->terrain)
+		return false;
+
+	// cool, we can place a castle here!
+	// clear the space for the castle...
+	ClearDetail(x, y);
+	ClearDetail(x+1, y);
+	ClearDetail(x, y+1);
+	ClearDetail(x+1, y+1);
+
+	// place castle
+	pMap[y*mapWidth + x].type = OT_Castle;
+	pMap[y*mapWidth + x].index = race;
+
+	return true;
+}
+
+bool Map::PlaceFlag(int x, int y, int race)
+{
+	// check for compatible terrain
+	Tile *pT = GetTile(x, y);
+
+	// check if we can build on this terrain type
+	if(!pT->canBuild)
+		return false;
+
+	// clear the tile
+	ClearDetail(x, y);
+
+	// terrain is compatible, place flag
+	pMap[y*mapWidth + x].type = OT_Flag;
+	pMap[y*mapWidth + x].index = race;
+
+	return true;
+}
+
+bool Map::PlaceSpecial(int x, int y, int index)
+{
+	// check for compatible terrain
+	Tile *pT = GetTile(x, y);
+
+	// check if the terrain type matches the special target.
+	// TODO: for now, place on flat land...
+	if(!pT->canBuild)
+		return false;
+
+	ClearDetail(x, y);
+
+	// terrain is compatible, place special
+	pMap[y*mapWidth + x].type = OT_Special;
+	pMap[y*mapWidth + x].index = index;
+
+	return true;
+}
+
+bool Map::PlaceRoad(int x, int y)
+{
+	if(pMap[y*mapWidth + x].type == OT_Road)
+		return true;
+
+	// check for compatible terrain
+	Tile *pT = GetTile(x, y);
+
+	// HACK: just assume grass for now
+	if(pT->terrain != 0)
+		return false;
+
+	// terrain is compatible, place road
+	ClearDetail(x, y);
+	pMap[y*mapWidth + x].type = OT_Road;
+	pMap[y*mapWidth + x].index = 0;
+
+	// connect surrounding roads
+	if(x > 0 && pMap[y*mapWidth + x-1].type == OT_Road)
+	{
+		// TODO: we need to find if the required intersections exists, and if so, connect them
+		pMap[y*mapWidth + x].index |= 2;
+		pMap[y*mapWidth + x-1].index |= 1;
+	}
+	if(x < mapWidth-1 && pMap[y*mapWidth + x+1].type == OT_Road)
+	{
+		// TODO: we need to find if the required intersections exists, and if so, connect them
+		pMap[y*mapWidth + x].index |= 1;
+		pMap[y*mapWidth + x+1].index |= 2;
+	}
+	if(y > 0 && pMap[(y-1)*mapWidth + x].type == OT_Road)
+	{
+		// TODO: we need to find if the required intersections exists, and if so, connect them
+		pMap[y*mapWidth + x].index |= 8;
+		pMap[(y-1)*mapWidth + x].index |= 4;
+	}
+	if(y < mapWidth-1 && pMap[(y+1)*mapWidth + x].type == OT_Road)
+	{
+		// TODO: we need to find if the required intersections exists, and if so, connect them
+		pMap[y*mapWidth + x].index |= 4;
+		pMap[(y+1)*mapWidth + x].index |= 8;
+	}
+
+	return true;
+}
+
+void Map::ClearDetail(int x, int y)
+{
+	uint8 oldType = pMap[y*mapWidth + x].type;
+
+	// remove the item from the map
+	pMap[y*mapWidth + x].type = OT_None;
+	pMap[y*mapWidth + x].index = 0;
+
+	// remove the item from this tile
+	if(oldType == OT_Road)
+	{
+		// update surrounding roads to remove connection
+		if(x > 0 && pMap[y*mapWidth + x-1].type == OT_Road)
+		{
+			// TODO: we need to find if the new piece exists, and if not, remove the road altogether
+			pMap[y*mapWidth + x-1].index &= 0xE;
+		}
+		if(x < mapWidth-1 && pMap[y*mapWidth + x+1].type == OT_Road)
+		{
+			// TODO: we need to find if the new piece exists, and if not, remove the road altogether
+			pMap[y*mapWidth + x+1].index &= 0xD;
+		}
+		if(y > 0 && pMap[(y-1)*mapWidth + x].type == OT_Road)
+		{
+			// TODO: we need to find if the new piece exists, and if not, remove the road altogether
+			pMap[(y-1)*mapWidth + x].index &= 0xB;
+		}
+		if(y < mapWidth-1 && pMap[(y+1)*mapWidth + x].type == OT_Road)
+		{
+			// TODO: we need to find if the new piece exists, and if not, remove the road altogether
+			pMap[(y+1)*mapWidth + x].index &= 0x7;
+		}
+	}
+
+	// check if we are in the space of an oversize castle
+	if(x > 0 && pMap[y*mapWidth + x-1].type == OT_Castle)
+	{
+		pMap[y*mapWidth + x-1].type = OT_None;
+		pMap[y*mapWidth + x-1].index = 0;
+	}
+	else if(y > 0 && pMap[(y-1)*mapWidth + x].type == OT_Castle)
+	{
+		pMap[(y-1)*mapWidth + x].type = OT_None;
+		pMap[(y-1)*mapWidth + x].index = 0;
+	}
+	else if(x > 0 && y > 0 && pMap[(y-1)*mapWidth + x-1].type == OT_Castle)
+	{
+		pMap[(y-1)*mapWidth + x-1].type = OT_None;
+		pMap[(y-1)*mapWidth + x-1].index = 0;
+	}
 }

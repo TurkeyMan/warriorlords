@@ -9,6 +9,8 @@ struct MFTexture;
 
 enum ObjectType
 {
+	OT_None = 0,
+
 	OT_Terrain,
 	OT_Castle,
 	OT_Flag,
@@ -41,16 +43,31 @@ public:
 
 	void SetMapOrtho(int *pXTiles = NULL, int *pYTiles = NULL);
 
-	inline Tile *GetTile(int x, int y) { return pTiles->GetTile(pTerrain[y*mapWidth + x]); }
-	inline uint32 GetTerrain(int x, int y) { return pTiles->GetTile(pTerrain[y*mapWidth + x])->terrain; }
+	inline Tile *GetTile(int x, int y) { return pTiles->GetTile(pMap[y*mapWidth + x].terrain); }
+	inline uint32 GetTerrain(int x, int y) { return pTiles->GetTile(pMap[y*mapWidth + x].terrain)->terrain; }
+
 	bool SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask = 0xFFFFFFFF);
+
+	bool PlaceCastle(int x, int y, int race);
+	bool PlaceFlag(int x, int y, int race = 0);
+	bool PlaceSpecial(int x, int y, int index);
+	bool PlaceRoad(int x, int y);
+
+	void ClearDetail(int x, int y);
 
 	Tileset *GetTileset() { return pTiles; }
 	CastleSet *GetCastleSet() { return pCastles; }
 
-	int Map::UpdateChange(int a);
+	int UpdateChange(int a);
 
 protected:
+	struct MapTile
+	{
+		uint8 terrain;
+		uint8 type  : 3;
+		uint8 index : 5;
+	};
+
 	char name[32];
 
 	Tileset *pTiles;
@@ -59,8 +76,7 @@ protected:
 	int mapWidth;
 	int mapHeight;
 
-	uint8 *pTerrain;	// terrain layer
-	uint8 *pDetails;	// detail layer (TTIIIIII - T = Type, I = Index
+	MapTile *pMap;
 
 	// runtime data
 	float xOffset, yOffset;
@@ -81,7 +97,7 @@ protected:
 	MapCoord *pChangeList;
 	int numChanges;
 
-	bool Map::SetTile(int x, int y, uint32 tile, uint32 mask);
+	bool SetTile(int x, int y, uint32 tile, uint32 mask);
 };
 
 #endif

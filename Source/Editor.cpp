@@ -210,35 +210,39 @@ int Editor::UpdateInput()
 		{
 			switch(brushType[brush])
 			{
+				case OT_None:
+				{
+					pMap->ClearDetail(cursorX, cursorY);
+					break;
+				}
 				case OT_Terrain:
 				{
 					int terrain = brushIndex[brush];
 					pMap->SetTerrain(cursorX, cursorY, terrain, terrain, terrain, terrain);
-					change = 0;
+					break;
 				}
 				case OT_Castle:
 				{
-					// place a castle
+					pMap->PlaceCastle(cursorX, cursorY, brushIndex[brush]);
 					break;
 				}
 				case OT_Flag:
 				{
+					pMap->PlaceFlag(cursorX, cursorY, brushIndex[brush]);
 					break;
 				}
 				case OT_Special:
 				{
+					pMap->PlaceSpecial(cursorX, cursorY, brushIndex[brush]);
 					break;
 				}
 				case OT_Road:
 				{
-					// place a road, and connect neighbouring roads to it...
+					pMap->PlaceRoad(cursorX, cursorY);
 					break;
 				}
 			}
 		}
-
-		if(MFInput_WasPressed(Key_Space, IDD_Keyboard))
-			change = pMap->UpdateChange(change);
 	}
 
 	return 0;

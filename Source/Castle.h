@@ -29,6 +29,8 @@ public:
 
 	MFVector GetRaceColour(int race);
 
+	int FindRoad(uint32 directions, uint32 terrain);
+
 protected:
 	struct Race
 	{
