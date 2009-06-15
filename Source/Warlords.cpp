@@ -27,7 +27,10 @@ void Game_Init()
 	mountData.pPath = MFFile_SystemPath("Data/");
 	MFFileSystem_Mount(hNative, &mountData);
 
-	pEditor = new Editor();//"DefaultMap");
+	if(MFFileSystem_Exists("Map.ini"))
+		pEditor = new Editor("Map");
+	else
+		pEditor = new Editor();
 
 	Screen::SetNext(pEditor);
 }

@@ -5,9 +5,7 @@ class Unit
 {
 public:
 	char name[32];
-
 	int race;
-	int 
 };
 
 #endif

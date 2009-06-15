@@ -7,6 +7,8 @@
 #include "MFFont.h"
 #include "MFMaterial.h"
 
+#include "Path.h"
+
 Editor::Editor(const char *pFilename)
 {
 	pMap = NULL;
@@ -23,6 +25,8 @@ Editor::Editor(const char *pFilename)
 	brush = 1;
 
 	bIsPainting = false;
+	bPaintMode = true;
+	pMap->SetMoveKey(bPaintMode);
 
 	tileChooser = 0;
 	numPages = 0;
@@ -46,6 +50,11 @@ Editor::Editor(const char *pFilename)
 	uvs.x = 0.75f + (1.f/256.f); uvs.y = 0.f + (1.f/256.f);
 	uvs.width = 0.25f; uvs.height = 0.25f;
 	pMiniMap = Button::Create(pIcons, &pos, &uvs, ShowMiniMap, this, 0, true);
+
+	pos.x = 16.f;
+	pos.y = 16.f;
+	uvs.x = 0.75f + (1.f/256.f); uvs.y = 0.25f + (1.f/256.f);
+	pModeButton = Button::Create(pIcons, &pos, &uvs, ChangeMode, this, 0, true);
 
 	// brush buttons
 	for(int a=0; a<2; ++a)
@@ -197,49 +206,99 @@ int Editor::UpdateInput()
 		// update minimap
 		if(pMiniMap->UpdateInput())
 			return 1;
+		if(pModeButton->UpdateInput())
+			return 1;
 
 		// update map
 		pMap->UpdateInput();
 
-		// handle tile placement
-		int cursorX, cursorY;
-		pMap->GetCursor(&cursorX, &cursorY);
+		if(MFInput_WasPressed(Key_S, IDD_Keyboard))
+			pMap->Save("Map.ini");
 
-		static int change = 0;
-		if(MFInput_Read(Mouse_LeftButton, IDD_Mouse))
+		if(MFInput_WasPressed(Key_Space, IDD_Keyboard))
 		{
-			switch(brushType[brush])
+			Step *pPath = pMap->path.FindPath(0, 0, 10, 10);
+			for(Step *pS = pPath; pS; pS = pS->pNext)
+				MFDebug_Log(1, MFStr("%d, %d", pS->x, pS->y));
+			pMap->path.Destroy(pPath);
+		}
+
+		// handle tile placement
+		if(bPaintMode)
+		{
+			int cursorX, cursorY;
+			pMap->GetCursor(&cursorX, &cursorY);
+
+			bool bWasPressed = MFInput_WasPressed(Mouse_LeftButton, IDD_Mouse);
+			ObjectType detail = pMap->GetDetailType(cursorX, cursorY);
+
+			if(bWasPressed)
 			{
-				case OT_None:
+				if(brushType[brush] == OT_Road)
+					bRemoveRoad = (detail == OT_Road);
+
+				switch(brushType[brush])
 				{
-					pMap->ClearDetail(cursorX, cursorY);
-					break;
+					case OT_Castle:
+					{
+						if(detail == OT_Castle)
+						{
+							//if(castle selected)
+							//  castle properties
+							//else
+							//	select castle
+						}
+						else
+							pMap->PlaceCastle(cursorX, cursorY, brushIndex[brush]);
+						break;
+					}
+					case OT_Flag:
+					{
+						if(detail == OT_Flag)
+							pMap->ClearDetail(cursorX, cursorY);
+						else
+							pMap->PlaceFlag(cursorX, cursorY, brushIndex[brush]);
+						break;
+					}
+					case OT_Special:
+					{
+						if(detail == OT_Special)
+							pMap->ClearDetail(cursorX, cursorY);
+						else
+							pMap->PlaceSpecial(cursorX, cursorY, brushIndex[brush]);
+						break;
+					}
 				}
-				case OT_Terrain:
+			}
+
+			if(MFInput_Read(Mouse_LeftButton, IDD_Mouse))
+			{
+				switch(brushType[brush])
 				{
-					int terrain = brushIndex[brush];
-					pMap->SetTerrain(cursorX, cursorY, terrain, terrain, terrain, terrain);
-					break;
-				}
-				case OT_Castle:
-				{
-					pMap->PlaceCastle(cursorX, cursorY, brushIndex[brush]);
-					break;
-				}
-				case OT_Flag:
-				{
-					pMap->PlaceFlag(cursorX, cursorY, brushIndex[brush]);
-					break;
-				}
-				case OT_Special:
-				{
-					pMap->PlaceSpecial(cursorX, cursorY, brushIndex[brush]);
-					break;
-				}
-				case OT_Road:
-				{
-					pMap->PlaceRoad(cursorX, cursorY);
-					break;
+					case OT_None:
+					{
+						pMap->ClearDetail(cursorX, cursorY);
+						break;
+					}
+					case OT_Terrain:
+					{
+						int terrain = brushIndex[brush];
+						pMap->SetTerrain(cursorX, cursorY, terrain, terrain, terrain, terrain);
+						break;
+					}
+					case OT_Road:
+					{
+						if(bRemoveRoad)
+						{
+							if(pMap->GetDetailType(cursorX, cursorY) == OT_Road)
+								pMap->ClearDetail(cursorX, cursorY);
+						}
+						else
+						{
+							pMap->PlaceRoad(cursorX, cursorY);
+						}
+						break;
+					}
 				}
 			}
 		}
@@ -268,6 +327,7 @@ void Editor::Draw()
 		pMap->DrawDebug();
 
 	pMiniMap->Draw();
+	pModeButton->Draw();
 
 	pBrushButton[0]->Draw();
 	pBrushButton[1]->Draw();
@@ -388,4 +448,17 @@ void Editor::FlipPage(int button, void *pUserData, int buttonID)
 void Editor::ShowMiniMap(int button, void *pUserData, int buttonID)
 {
 
+}
+
+void Editor::ChangeMode(int button, void *pUserData, int buttonID)
+{
+	Editor *pThis = (Editor*)pUserData;
+
+	pThis->bPaintMode = !pThis->bPaintMode;
+	pThis->pMap->SetMoveKey(pThis->bPaintMode);
+
+	MFRect uvs;
+	uvs.x = (pThis->bPaintMode ? 0.75f : 0.5f) + (1.f/256.f); uvs.y = 0.25f + (1.f/256.f);
+	uvs.width = 0.25f; uvs.height = 0.25f;
+	pThis->pModeButton->SetImage(pThis->pIcons, &uvs);
 }

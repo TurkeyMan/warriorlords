@@ -32,6 +32,7 @@ public:
 
 	inline void GetTileSize(int *pWidth, int *pHeight) { *pWidth = tileWidth; *pHeight = tileHeight; }
 	inline Tile *GetTile(int tile) { return &tiles[tile]; }
+	int GetTileSpeed(uint32 terrain);
 
 	inline int GetNumTerrainTypes() { return terrainCount; }
 	inline const char *GetTerrainName(int type) { return pTerrainTypes[type].name; }
@@ -44,7 +45,8 @@ public:
 protected:
 	struct TerrainType
 	{
-		char name[32];
+		char name[28];
+		int speed;
 		MFVector mapColour;
 	};
 

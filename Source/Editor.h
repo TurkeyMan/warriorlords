@@ -22,6 +22,7 @@ public:
 	static void ChooseBrush(int button, void *pUserData, int buttonID);
 	static void FlipPage(int button, void *pUserData, int buttonID);
 	static void ShowMiniMap(int button, void *pUserData, int buttonID);
+	static void ChangeMode(int button, void *pUserData, int buttonID);
 
 protected:
 	Map *pMap;
@@ -29,6 +30,7 @@ protected:
 	MFMaterial *pIcons;
 
 	Button *pMiniMap;
+	Button *pModeButton;
 
 	Button *pBrushButton[2];
 	Button *pChooserButtons[3][11];
@@ -44,7 +46,9 @@ protected:
 	int brushIndex[2];
 	int brush;
 
+	bool bPaintMode;
 	bool bIsPainting;
+	bool bRemoveRoad;
 
 	int tileChooser;
 };

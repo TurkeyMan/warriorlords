@@ -20,7 +20,7 @@ Tileset *Tileset::Create(const char *pFilename)
 		if(pLine->IsSection("Tilemap"))
 		{
 			pNew = (Tileset*)MFHeap_AllocAndZero(sizeof(Tileset));
-			MFZeroMemory(pNew->tiles, sizeof(pNew->tiles));
+			MFMemSet(pNew->tiles, 0xFF, sizeof(pNew->tiles));
 
 			MFIniLine *pTilemap = pLine->Sub();
 
@@ -88,6 +88,17 @@ Tileset *Tileset::Create(const char *pFilename)
 								pColours = pColours->Next();
 							}
 						}
+						else if(pTerrain->IsSection("Speed"))
+						{
+							MFIniLine *pSpeeds = pTerrain->Sub();
+
+							while(pSpeeds)
+							{
+								uint32 speed = MFString_AsciiToInteger(pSpeeds->GetString(1));
+								pNew->pTerrainTypes[pSpeeds->GetInt(0)].speed = speed;
+								pSpeeds = pSpeeds->Next();
+							}
+						}
 
 						pTerrain = pTerrain->Next();
 					}
@@ -102,12 +113,13 @@ Tileset *Tileset::Create(const char *pFilename)
 						MFDebug_Assert(x < 16 && y < 16, "Tile sheets may have a maximum of 16x16 tiles.");
 						MFDebug_Assert(pTile->IsString(2, "="), "Expected '='.");
 
-						uint8 i = (x & 0xF) | ((y << 4) & 0xF0);
+						int i = (x & 0xF) | ((y & 0xF) << 4);
 						Tile &t = pNew->tiles[i];
 
 						t.x = x;
 						t.y = y;
 						t.terrain = EncodeTile(pTile->GetInt(3), pTile->GetInt(4), pTile->GetInt(5), pTile->GetInt(6));
+						t.speed = pNew->GetTileSpeed(t.terrain);
 
 						int numStrings = pTile->GetStringCount();
 						for(int f = 7; f < numStrings; ++f)
@@ -186,6 +198,15 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 	MFEnd();
 
 //	MFView_Pop();
+}
+
+int Tileset::GetTileSpeed(uint32 terrain)
+{
+	uint32 t0 = terrain & 0xFF;
+	uint32 t1 = (terrain >> 8) & 0xFF;
+	uint32 t2 = (terrain >> 16) & 0xFF;
+	uint32 t3 = (terrain >> 24) & 0xFF;
+	return MFMax(MFMax(pTerrainTypes[t0].speed, pTerrainTypes[t1].speed), MFMax(pTerrainTypes[t0].speed, pTerrainTypes[t1].speed));
 }
 
 int Tileset::FindBestTiles(int *pTiles, uint32 tile, uint32 mask, int maxMatches)

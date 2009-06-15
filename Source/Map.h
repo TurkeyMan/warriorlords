@@ -3,7 +3,9 @@
 
 #include "Tileset.h"
 #include "Castle.h"
+#include "Unit.h"
 #include "InputHandler.h"
+#include "Path.h"
 
 struct MFTexture;
 
@@ -27,6 +29,8 @@ public:
 	static Map *CreateNew(const char *pTileset, const char *pCastles);
 	void Destroy();
 
+	void Save(const char *pFilename);
+
 	virtual int UpdateInput();
 
 	void Update();
@@ -34,6 +38,7 @@ public:
 
 	void DrawDebug();
 
+	void GetMapSize(int *pWidth, int *pHeight) { *pWidth = mapWidth; *pHeight = mapHeight; }
 	void GetCursor(int *pX, int *pY);
 	void GetVisibleTileSize(float *pWidth, float *pHeight);
 
@@ -45,6 +50,9 @@ public:
 
 	inline Tile *GetTile(int x, int y) { return pTiles->GetTile(pMap[y*mapWidth + x].terrain); }
 	inline uint32 GetTerrain(int x, int y) { return pTiles->GetTile(pMap[y*mapWidth + x].terrain)->terrain; }
+
+	ObjectType GetDetailType(int x, int y);
+	int GetDetail(int x, int y);
 
 	bool SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask = 0xFFFFFFFF);
 
@@ -58,17 +66,26 @@ public:
 	Tileset *GetTileset() { return pTiles; }
 	CastleSet *GetCastleSet() { return pCastles; }
 
+	void SetMoveKey(bool bAlternate) { bRightMove = bAlternate; }
+
 	int UpdateChange(int a);
+
+	// TODO: MOVE ME!!!
+	Path path;
 
 protected:
 	struct MapTile
 	{
+		Unit *pUnits;
 		uint8 terrain;
-		uint8 type  : 3;
-		uint8 index : 5;
+		uint8 type;
+		uint8 index;
+		uint8 reserved;
 	};
 
 	char name[32];
+	char tileset[32];
+	char castleset[32];
 
 	Tileset *pTiles;
 	CastleSet *pCastles;
@@ -96,6 +113,8 @@ protected:
 	uint8 *pTouched;
 	MapCoord *pChangeList;
 	int numChanges;
+
+	bool bRightMove;
 
 	bool SetTile(int x, int y, uint32 tile, uint32 mask);
 };

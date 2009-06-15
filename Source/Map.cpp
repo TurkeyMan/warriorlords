@@ -9,6 +9,19 @@
 #include "MFSystem.h"
 #include "MFFont.h"
 #include "MFTexture.h"
+#include "MFFileSystem.h"
+
+#include "stdio.h"
+
+static const char * const pObjectTypes[] =
+{
+	"none",
+	"terrain",
+	"castle",
+	"flag",
+	"special",
+	"road"
+};
 
 Map *Map::Create(const char *pMapFilename)
 {
@@ -24,6 +37,7 @@ Map *Map::Create(const char *pMapFilename)
 		if(pLine->IsSection("Map"))
 		{
 			pMap = (Map*)MFHeap_AllocAndZero(sizeof(Map));
+			pMap = new(pMap) Map;
 
 			MFIniLine *pMapLine = pLine->Sub();
 
@@ -35,7 +49,13 @@ Map *Map::Create(const char *pMapFilename)
 				}
 				else if(pMapLine->IsString(0, "tileset"))
 				{
+					MFString_Copy(pMap->tileset, pMapLine->GetString(1));
 					pMap->pTiles = Tileset::Create(pMapLine->GetString(1));
+				}
+				else if(pMapLine->IsString(0, "castleset"))
+				{
+					MFString_Copy(pMap->castleset, pMapLine->GetString(1));
+					pMap->pCastles = CastleSet::Create(pMapLine->GetString(1));
 				}
 				else if(pMapLine->IsString(0, "map_width"))
 				{
@@ -59,15 +79,80 @@ Map *Map::Create(const char *pMapFilename)
 						MFDebug_Assert(pTiles->GetStringCount() == pMap->mapWidth, "Not enough tiles in row.");
 
 						for(int a=0; a<pMap->mapWidth; ++a)
-							pMap->pMap[i++].terrain = pTiles->GetInt(a);
+							pMap->pMap[i++].terrain = MFString_AsciiToInteger(pTiles->GetString(a), false, 16);
 
 						pTiles = pTiles->Next();
 					}
 
 					MFDebug_Assert(i == pMap->mapWidth * pMap->mapHeight, "Not enough rows.");
 				}
-				else if(pMapLine->IsSection("Objects"))
+				else if(pMapLine->IsSection("Details"))
 				{
+					MFIniLine *pDetails = pMapLine->Sub();
+					while(pDetails)
+					{
+						int x = pDetails->GetInt(0);
+						int y = pDetails->GetInt(1);
+						MFDebug_Assert(!MFString_Compare(pDetails->GetString(2), "="), "Expected: '='");
+
+						MapTile &tile = pMap->pMap[y*pMap->mapWidth + x];
+
+						for(int a=0; a<OT_Max; ++a)
+						{
+							if(!MFString_CaseCmp(pDetails->GetString(3), pObjectTypes[a]))
+							{
+								tile.type = a;
+								break;
+							}
+						}
+						tile.index = pDetails->GetInt(4);
+
+						pDetails = pDetails->Next();
+					}
+				}
+				else if(pMapLine->IsSection("Castles"))
+				{
+					MFIniLine *pCastles = pMapLine->Sub();
+
+					while(pCastles)
+					{
+						if(pCastles->IsSection("Castle"))
+						{
+							MFIniLine *pCastle = pCastles->Sub();
+
+							char name[32];
+							int x = 0;
+							int y = 0;
+							int race;
+
+							while(pCastle)
+							{
+								if(!MFString_CaseCmp(pCastle->GetString(0), "name"))
+								{
+									MFString_Copy(name, pCastle->GetString(1));
+								}
+								else if(!MFString_CaseCmp(pCastle->GetString(0), "position"))
+								{
+									x = pCastle->GetInt(1);
+									y = pCastle->GetInt(2);
+								}
+								else if(!MFString_CaseCmp(pCastle->GetString(0), "race"))
+								{
+									race = pCastle->GetInt(1);
+								}
+
+								pCastle = pCastle->Next();
+							}
+
+							MapTile &tile = pMap->pMap[y*pMap->mapWidth + x];
+							tile.type = OT_Castle;
+							tile.index = race;
+
+							// insert additional map data...
+						}
+
+						pCastles = pCastles->Next();
+					}
 				}
 
 				pMapLine = pMapLine->Next();
@@ -76,6 +161,11 @@ Map *Map::Create(const char *pMapFilename)
 
 		pLine = pLine->Next();
 	}
+
+	if(!pMap)
+		return NULL;
+
+	pMap->path.Init(pMap);
 
 	pMap->zoom = 1.0f;
 
@@ -90,6 +180,8 @@ Map *Map::Create(const char *pMapFilename)
 	pMap->pRenderTarget = NULL;
 	pMap->pMinimap = NULL;
 
+	pMap->bRightMove = false;
+
 	return pMap;
 }
 
@@ -99,6 +191,8 @@ Map *Map::CreateNew(const char *pTileset, const char *pCastles)
 	pNew = new(pNew) Map;
 
 	MFString_Copy(pNew->name, "Untitled");
+	MFString_Copy(pNew->tileset, pTileset);
+	MFString_Copy(pNew->castleset, pCastles);
 
 	pNew->mapWidth = 128;
 	pNew->mapHeight = 128;
@@ -106,6 +200,8 @@ Map *Map::CreateNew(const char *pTileset, const char *pCastles)
 
 	pNew->pTiles = Tileset::Create(pTileset);
 	pNew->pCastles = CastleSet::Create(pCastles);
+
+	pNew->path.Init(pNew);
 
 	// get default tiles
 	int tiles[8];
@@ -136,15 +232,104 @@ Map *Map::CreateNew(const char *pTileset, const char *pCastles)
 	pNew->pChangeList = (MapCoord*)MFHeap_Alloc(sizeof(MapCoord)*1024);
 	pNew->numChanges = 0;
 
+	pNew->bRightMove = false;
+
 	return pNew;
 }
 
 void Map::Destroy()
 {
+	path.Deinit();
+
 	pTiles->Destroy();
 	pCastles->Destroy();
 	MFHeap_Free(pMap);
 	MFHeap_Free(this);
+}
+
+void Map::Save(const char *pFilename)
+{
+	MFFile *pFile = MFFileSystem_Open(MFStr("game:%s", pFilename), MFOF_Write|MFOF_Binary);
+	if(!pFile)
+		return;
+
+	// write the map to disk...
+	const char *pMapData = MFStr(
+		"[Map]\n"
+		"{\n"
+		"\tname = %s\n\n"
+		"\ttileset = %s\n"
+		"\tcastleset = %s\n\n"
+		"\tmap_width = %d\n"
+		"\tmap_Height = %d\n"
+		"\n"
+		"\t[Tiles]\n"
+		"\t{\n",
+		name, tileset, castleset, mapWidth, mapHeight);
+	int len = MFString_Length(pMapData);
+	MFFile_Write(pFile, pMapData, len);
+
+	char buffer[2048];
+	for(int a=0; a<mapHeight; ++a)
+	{
+		MFString_Copy(buffer, "\t\t");
+		int offset = MFString_Length(buffer);
+
+		for(int b=0; b<mapWidth; ++b)
+		{
+			offset += sprintf(&buffer[offset], "%02x", pMap[a*mapWidth + b].terrain);
+			buffer[offset++] = b < mapWidth-1 ? ',' : '\n';
+		}
+
+		MFFile_Write(pFile, buffer, offset);
+	}
+
+	const char *pMapData2 =
+		"\t}\n"
+		"\n"
+		"\t[Details]\n"
+		"\t{\n";
+	MFFile_Write(pFile, pMapData2, MFString_Length(pMapData2));
+
+	for(int a=0; a<mapHeight; ++a)
+	{
+		for(int b=0; b<mapWidth; ++b)
+		{
+			int type = pMap[a*mapWidth + b].type;
+			if(type && type != OT_Castle)
+			{
+				int len = sprintf(buffer, "\t\t%d, %d = %s %d\n", b, a, pObjectTypes[type], pMap[a*mapWidth + b].index);
+				MFFile_Write(pFile, buffer, len);
+			}
+		}
+	}
+
+	const char *pMapData3 =
+		"\t}\n"
+		"\n"
+		"\t[Castles]\n"
+		"\t{\n";
+	MFFile_Write(pFile, pMapData3, MFString_Length(pMapData3));
+
+	for(int a=0; a<mapHeight; ++a)
+	{
+		for(int b=0; b<mapWidth; ++b)
+		{
+			if(pMap[a*mapWidth + b].type == OT_Castle)
+			{
+				int race = pMap[a*mapWidth + b].index;
+				int len = sprintf(buffer, "\t\t[Castle]\n\t\t{\n\t\t\tname = \"%s\"\n\t\t\tposition = %d, %d\n\t\t\trace = %d\n\t\t}\n", "unnamed", b, a, race);
+				MFFile_Write(pFile, buffer, len);
+			}
+		}
+	}
+
+	const char *pMapData4 =
+		"\t}\n"
+		"}\n";
+	MFFile_Write(pFile, pMapData4, MFString_Length(pMapData4));
+
+	MFFile_Close(pFile);
 }
 
 void Map::GetVisibleTileSize(float *pWidth, float *pHeight)
@@ -180,7 +365,7 @@ int Map::UpdateInput()
 		SetZoom(zoom + 0.25f*mouseZoom, mouseX/tileWidth, mouseY/tileHeight);
 	}
 
-	if(MFInput_WasReleased(Mouse_RightButton, IDD_Mouse))
+	if(MFInput_WasReleased(bRightMove ? Mouse_RightButton : Mouse_LeftButton, IDD_Mouse))
 	{
 		bIsDragging = false;
 		ReleaseExclusive();
@@ -194,7 +379,7 @@ int Map::UpdateInput()
 		SetOffset(xOffset + xDelta/tileWidth, yOffset + yDelta/tileHeight);
 	}
 
-	if(MFInput_WasPressed(Mouse_RightButton, IDD_Mouse))
+	if(MFInput_WasPressed(bRightMove ? Mouse_RightButton : Mouse_LeftButton, IDD_Mouse))
 	{
 		bIsDragging = true;
 		SetExclusive();
@@ -463,8 +648,6 @@ bool Map::SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask)
 	if(!SetTile(x, y, EncodeTile(tl, tr, bl, br), mask))
 		return false;
 
-//	MFDebug_Assert(numChanges, "!");
-
 	for(int a=0; a<numChanges; ++a)
 	{
 		x = pChangeList[a].x;
@@ -683,6 +866,38 @@ bool Map::PlaceRoad(int x, int y)
 	}
 
 	return true;
+}
+
+ObjectType Map::GetDetailType(int x, int y)
+{
+	if(pMap[y*mapWidth + x].type)
+		return (ObjectType)pMap[y*mapWidth + x].type;
+
+	// check if we are in the space of an oversize castle
+	if((x > 0 && pMap[y*mapWidth + x-1].type == OT_Castle) ||
+		(y > 0 && pMap[(y-1)*mapWidth + x].type == OT_Castle) ||
+		(x > 0 && y > 0 && pMap[(y-1)*mapWidth + x-1].type == OT_Castle))
+		return OT_Castle;
+
+	// nothing there
+	return OT_None;
+}
+
+int Map::GetDetail(int x, int y)
+{
+	if(pMap[y*mapWidth + x].type)
+		return pMap[y*mapWidth + x].index;
+
+	// check if we are in the space of an oversize castle
+	if(x > 0 && pMap[y*mapWidth + x-1].type == OT_Castle)
+		return pMap[y*mapWidth + x-1].index;
+	if(y > 0 && pMap[(y-1)*mapWidth + x].type == OT_Castle)
+		return pMap[(y-1)*mapWidth + x].index;
+	if(x > 0 && y > 0 && pMap[(y-1)*mapWidth + x-1].type == OT_Castle)
+		return pMap[(y-1)*mapWidth + x-1].index;
+
+	// nothing there
+	return 0;
 }
 
 void Map::ClearDetail(int x, int y)
