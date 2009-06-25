@@ -102,7 +102,9 @@ protected:
 	bool bIsDragging;
 
 	MFTexture *pRenderTarget;
+	MFMaterial *pRenderTargetMaterial;
 	MFTexture *pMinimap;
+	MFMaterial *pMinimapMaterial;
 
 	// editor stuff
 	struct MapCoord

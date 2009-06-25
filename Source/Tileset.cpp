@@ -3,6 +3,7 @@
 
 #include "MFIni.h"
 #include "MFMaterial.h"
+#include "MFTexture.h"
 #include "MFPrimitive.h"
 
 Tileset *Tileset::Create(const char *pFilename)
@@ -155,17 +156,19 @@ void Tileset::Destroy()
 
 void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride)
 {
-	// we should set the ortho rect to map tiles to the render target texture...
-//	MFView_Push();
-//	MFRect rect = { 0, 0, textureWidth / tileWidth, textureHeight / tileHeight };
-//	MFView_SetOrtho(&rect);
+	MFTexture *pTex;
+	int diffuse = MFMaterial_GetParameterIndexFromName(pTileMap, "diffuseMap");
+	MFMaterial_GetParameter(pTileMap, diffuse, 0, &pTex);
+
+	int textureWidth, textureHeight;
+	MFTexture_GetTextureDimensions(pTex, &textureWidth, &textureHeight);
+
+	float xScale = (1.f / textureWidth) * tileWidth;
+	float yScale = (1.f / textureHeight) * tileHeight;
+	float halfX = 0.5f / textureWidth;
+	float halfY = 0.5f / textureHeight;
 
 	MFMaterial_SetMaterial(pTileMap);
-
-	float xScale = (1.f / 1024.f) * tileWidth;
-	float yScale = (1.f / 1024.f) * tileHeight;
-	float halfX = 0.5f / 1024.f;
-	float halfY = 0.5f / 1024.f;
 
 	MFPrimitive(PT_TriList);
 	MFBegin(6*xTiles*yTiles);
@@ -196,8 +199,6 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 	}
 
 	MFEnd();
-
-//	MFView_Pop();
 }
 
 int Tileset::GetTileSpeed(uint32 terrain)

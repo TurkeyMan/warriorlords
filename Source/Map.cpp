@@ -1,6 +1,8 @@
 #include "Warlords.h"
 #include "Map.h"
 
+#include "Display.h"
+#include "MFRenderer.h"
 #include "MFIni.h"
 #include "MFView.h"
 #include "MFMaterial.h"
@@ -177,8 +179,25 @@ Map *Map::Create(const char *pMapFilename)
 		pMap->numChanges = 0;
 	}
 
-	pMap->pRenderTarget = NULL;
+	int tileWidth, tileHeight;
+	MFRect screen;
+	pMap->pTiles->GetTileSize(&tileWidth, &tileHeight);
+	MFDisplay_GetDisplayRect(&screen);
+
+	const int maxZoom = 2;
+	int rtWidth = (int)screen.width*maxZoom+tileWidth*2-1;
+	int rtHeight = (int)screen.height*maxZoom+tileHeight*2-1;
+	rtWidth -= rtWidth%tileWidth;
+	rtHeight -= rtHeight%tileHeight;
+	rtWidth = MFUtil_NextPowerOf2(rtWidth);
+	rtHeight = MFUtil_NextPowerOf2(rtHeight);
+	pMap->pRenderTarget = MFTexture_CreateRenderTarget("MapSurface", rtWidth, rtHeight);
+	pMap->pRenderTargetMaterial = MFMaterial_Create("MapSurface");
+
+//	pMap->pMinimap = MFTexture_CreateRenderTarget("MiniMap", MFUtil_NextPowerOf2(pMap->mapWidth), MFUtil_NextPowerOf2(pMap->mapHeight));
+//	pMap->pMinimapMaterial = MFMaterial_Create("MiniMap");
 	pMap->pMinimap = NULL;
+	pMap->pMinimapMaterial = NULL;
 
 	pMap->bRightMove = false;
 
@@ -211,22 +230,27 @@ Map *Map::CreateNew(const char *pTileset, const char *pCastles)
 	{
 		MapTile *pRow = pNew->pMap + y*pNew->mapWidth;
 		for(int x=0; x<pNew->mapWidth; ++x)
+
 			pRow[x].terrain = tiles[MFRand()%numVariants];
 	}
 
 	pNew->zoom = 1.f;
-/*
-	int width, height;
-	pNew->pTiles->GetTileSize(&width, &height);
 
-	int screenWidth = gDefaults.display.displayWidth + width + (width-1);
-	int screenHeight = gDefaults.display.displayHeight + height + (height-1);
-	screenWidth -= screenWidth % width;
-	screenHeight -= screenHeight % height;
+	int tileWidth, tileHeight;
+	MFRect screen;
+	pNew->pTiles->GetTileSize(&tileWidth, &tileHeight);
+	MFDisplay_GetDisplayRect(&screen);
+	int rtWidth = (int)screen.width*4+tileWidth*2-1;
+	int rtHeight = (int)screen.height*4+tileHeight*2-1;
+	rtWidth -= rtWidth%tileWidth;
+	rtHeight -= rtHeight%tileHeight;
+	rtWidth = MFUtil_NextPowerOf2(rtWidth);
+	rtHeight = MFUtil_NextPowerOf2(rtHeight);
+	pNew->pRenderTarget = MFTexture_CreateRenderTarget("MapSurface", rtWidth, rtHeight);
 
-	pNew->pRenderTarget = MFTexture_CreateRenderTarget("Map", screenWidth, screenHeight);
-	pNew->pMinimap = MFTexture_CreateDynamic("Minimap", pNew->mapWidth * 2, pNew->mapHeight * 2, TexFmt_A8R8G8B8);
-*/
+//	pNew->pMinimap = MFTexture_CreateRenderTarget("MiniMap", MFUtil_NextPowerOf2(pMap->mapWidth), MFUtil_NextPowerOf2(pMap->mapHeight));
+	pNew->pMinimap = NULL;
+
 	// editor stuff
 	pNew->pTouched = (uint8*)MFHeap_AllocAndZero(pNew->mapWidth * pNew->mapHeight * sizeof(*pNew->pTouched));
 	pNew->pChangeList = (MapCoord*)MFHeap_Alloc(sizeof(MapCoord)*1024);
@@ -396,6 +420,8 @@ void Map::Draw()
 {
 	MFView_Push();
 
+	MFRenderer_SetRenderTarget(pRenderTarget, NULL);
+
 	int xStart = (int)xOffset;
 	int yStart = (int)yOffset;
 
@@ -458,8 +484,28 @@ void Map::Draw()
 
 	// and now the units
 
-	// the tilemap should render to an image and we render it to the screen here...
-	//...
+	MFRenderer_SetDeviceRenderTarget();
+
+	MFRect orthoRect;
+	orthoRect.x = orthoRect.y = 0;
+	orthoRect.width = orthoRect.height = 1;
+	MFView_SetOrtho(&orthoRect);
+
+	MFRect uvs;
+	int targetWidth, targetHeight;
+	int tileWidth, tileHeight;
+
+	MFDisplay_GetDisplayRect(&uvs);
+	MFTexture_GetTextureDimensions(pRenderTarget, &targetWidth, &targetHeight);
+	pTiles->GetTileSize(&tileWidth, &tileHeight);
+
+	uvs.x = (xOffset - (float)(int)xOffset) * (tileWidth / targetWidth) + (0.5f/targetWidth);
+	uvs.y = (yOffset - (float)(int)yOffset) * (tileHeight / targetHeight) + (0.5f/targetHeight);
+	uvs.width = uvs.width / targetWidth / zoom;
+	uvs.height = uvs.height / targetHeight / zoom;
+
+	MFMaterial_SetMaterial(pRenderTargetMaterial);
+	MFPrimitive_DrawQuad(0, 0, 1, 1, MFVector::one, uvs.x, uvs.y, uvs.x + uvs.width, uvs.y + uvs.height);
 
 	MFView_Pop();
 }
@@ -513,14 +559,16 @@ void Map::DrawDebug()
 
 void Map::SetMapOrtho(int *pXTiles, int *pYTiles)
 {
-	MFRect screenRect;
-	MFView_GetOrthoRect(&screenRect);
+	int targetWidth, targetHeight;
+	int tileWidth, tileHeight;
+	MFTexture_GetTextureDimensions(pRenderTarget, &targetWidth, &targetHeight);
+	pTiles->GetTileSize(&tileWidth, &tileHeight);
 
-	float tileWidth, tileHeight;
-	GetVisibleTileSize(&tileWidth, &tileHeight);
+	float screenWidth = (float)targetWidth / (float)tileWidth;
+	float screenHeight = (float)targetHeight / (float)tileHeight;
 
-	float screenWidth = screenRect.width / tileWidth;
-	float screenHeight = screenRect.height / tileHeight;
+	xOffset = (int)(xOffset*tileWidth) / (float)tileWidth;
+	yOffset = (int)(yOffset*tileWidth) / (float)tileWidth;
 
 	MFRect rect;
 	rect.x = xOffset - (float)(int)xOffset;
@@ -529,10 +577,13 @@ void Map::SetMapOrtho(int *pXTiles, int *pYTiles)
 	rect.height = screenHeight;
 	MFView_SetOrtho(&rect);
 
+	MFRect screenRect;
+	MFDisplay_GetDisplayRect(&screenRect);
+
 	if(pXTiles)
-		*pXTiles = (int)MFCeil(screenWidth + 1.f);
+		*pXTiles = (int)MFCeil((screenRect.width / tileWidth) / zoom + 1.f);
 	if(pYTiles)
-		*pYTiles = (int)MFCeil(screenHeight + 1.f);
+		*pYTiles = (int)MFCeil((screenRect.height / tileHeight) / zoom + 1.f);
 }
 
 void Map::SetOffset(float x, float y)
@@ -572,7 +623,7 @@ void Map::SetZoom(float _zoom, float pointX, float pointY)
 	if(pointY < 0.f)
 		pointY = gDefaults.display.displayHeight / tileHeight * 0.5f;
 
-	float newZoom = MFClamp(0.25f, _zoom, 2.f);
+	float newZoom = MFClamp(0.5f, _zoom, 2.f);
 	float zoomDiff = zoom / newZoom;
 	zoom = newZoom;
 
