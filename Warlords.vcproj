@@ -282,6 +282,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Source\Game.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\Game.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Source\InputHandler.cpp"
 				>
 			</File>

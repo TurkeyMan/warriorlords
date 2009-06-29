@@ -215,14 +215,6 @@ int Editor::UpdateInput()
 		if(MFInput_WasPressed(Key_S, IDD_Keyboard))
 			pMap->Save("Map.ini");
 
-		if(MFInput_WasPressed(Key_Space, IDD_Keyboard))
-		{
-			Step *pPath = pMap->path.FindPath(0, 0, 10, 10);
-			for(Step *pS = pPath; pS; pS = pS->pNext)
-				MFDebug_Log(1, MFStr("%d, %d", pS->x, pS->y));
-			pMap->path.Destroy(pPath);
-		}
-
 		// handle tile placement
 		if(bPaintMode)
 		{

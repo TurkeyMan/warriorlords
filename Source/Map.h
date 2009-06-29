@@ -119,6 +119,7 @@ protected:
 	bool bRightMove;
 
 	bool SetTile(int x, int y, uint32 tile, uint32 mask);
+	int ChooseTile(int *pSelectedTiles, int numVariants);
 };
 
 #endif

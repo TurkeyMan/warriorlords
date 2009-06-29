@@ -204,6 +204,28 @@ Map *Map::Create(const char *pMapFilename)
 	return pMap;
 }
 
+int Map::ChooseTile(int *pSelectedTiles, int numVariants)
+{
+	if(numVariants == 1)
+		return pSelectedTiles[0];
+
+	int t, total = 0;
+	for(t=0; t<numVariants; ++t)
+		total += pTiles->GetTile(pSelectedTiles[t])->bias;
+
+	int selection = (int)(MFRand() % total);
+	for(t=0; t<numVariants; ++t)
+	{
+		int tile = pSelectedTiles[t];
+		selection -= pTiles->GetTile(tile)->bias;
+
+		if(selection < 0)
+			return tile;
+	}
+
+	return 0;
+}
+
 Map *Map::CreateNew(const char *pTileset, const char *pCastles)
 {
 	Map *pNew = (Map*)MFHeap_AllocAndZero(sizeof(Map));
@@ -230,8 +252,7 @@ Map *Map::CreateNew(const char *pTileset, const char *pCastles)
 	{
 		MapTile *pRow = pNew->pMap + y*pNew->mapWidth;
 		for(int x=0; x<pNew->mapWidth; ++x)
-
-			pRow[x].terrain = tiles[MFRand()%numVariants];
+			pRow[x].terrain = pNew->ChooseTile(tiles, numVariants);
 	}
 
 	pNew->zoom = 1.f;
@@ -499,8 +520,9 @@ void Map::Draw()
 	MFTexture_GetTextureDimensions(pRenderTarget, &targetWidth, &targetHeight);
 	pTiles->GetTileSize(&tileWidth, &tileHeight);
 
-	uvs.x = (xOffset - (float)(int)xOffset) * (tileWidth / targetWidth) + (0.5f/targetWidth);
-	uvs.y = (yOffset - (float)(int)yOffset) * (tileHeight / targetHeight) + (0.5f/targetHeight);
+	float texelOffset = zoom <= 0.5f ? 1.f : 0.5f;
+	uvs.x = (xOffset - (float)(int)xOffset) * (tileWidth / targetWidth) + (texelOffset/targetWidth);
+	uvs.y = (yOffset - (float)(int)yOffset) * (tileHeight / targetHeight) + (texelOffset/targetHeight);
 	uvs.width = uvs.width / targetWidth / zoom;
 	uvs.height = uvs.height / targetHeight / zoom;
 
@@ -656,7 +678,7 @@ bool Map::SetTile(int x, int y, uint32 tile, uint32 mask)
 	ClearDetail(x, y);
 
 	// TODO: use some logic to refine the selection based on quickest/valid route to target
-	int t = tiles[MFRand()%matches];
+	int t = ChooseTile(tiles, matches);
 	pMap[y*mapWidth + x].terrain = t;
 
 	// mark the tile touched

@@ -17,7 +17,7 @@ struct Tile
 	uint8 speed;
 	uint8 canBuild : 1;
 	uint8 canWalk  : 1;
-	uint8 flags    : 6;
+	uint8 bias     : 6;
 };
 
 class Tileset
@@ -26,7 +26,7 @@ public:
 	static Tileset *Create(const char *pFilename);
 	void Destroy();
 
-	void DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride);
+	void DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride, float texelOffset = 0.5f);
 
 	int FindBestTiles(int *pTiles, uint32 tile, uint32 mask = 0xFFFFFFFF, int maxMatches = 8);
 

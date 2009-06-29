@@ -121,14 +121,21 @@ Tileset *Tileset::Create(const char *pFilename)
 						t.y = y;
 						t.terrain = EncodeTile(pTile->GetInt(3), pTile->GetInt(4), pTile->GetInt(5), pTile->GetInt(6));
 						t.speed = pNew->GetTileSpeed(t.terrain);
+						t.bias = 63;
 
 						int numStrings = pTile->GetStringCount();
 						for(int f = 7; f < numStrings; ++f)
 						{
-							if(pTile->IsString(f, "walk"))
+							const char *pDetail = pTile->GetString(f);
+							if(!MFString_CaseCmp(pDetail, "walk"))
 								t.canWalk = 1;
-							else if(pTile->IsString(f, "build"))
+							else if(!MFString_CaseCmp(pDetail, "build"))
 								t.canBuild = 1;
+							else if(pDetail[MFString_Length(pDetail)-1] == '%')
+							{
+								int percent = MFString_AsciiToInteger(pDetail);
+								t.bias = (percent * 63) / 100;
+							}
 						}
 
 						pTile = pTile->Next();
@@ -154,7 +161,7 @@ void Tileset::Destroy()
 	MFHeap_Free(this);
 }
 
-void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride)
+void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride, float texelOffset)
 {
 	MFTexture *pTex;
 	int diffuse = MFMaterial_GetParameterIndexFromName(pTileMap, "diffuseMap");
@@ -165,8 +172,8 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 
 	float xScale = (1.f / textureWidth) * tileWidth;
 	float yScale = (1.f / textureHeight) * tileHeight;
-	float halfX = 0.5f / textureWidth;
-	float halfY = 0.5f / textureHeight;
+	float halfX = texelOffset / textureWidth;
+	float halfY = texelOffset / textureHeight;
 
 	MFMaterial_SetMaterial(pTileMap);
 

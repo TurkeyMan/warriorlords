@@ -22,10 +22,10 @@ public:
 	inline MFMaterial *GetCastleMaterial() { return pImage; }
 	inline MFMaterial *GetRoadMaterial() { return pRoadMap; }
 
-	void GetCastleUVs(int race, MFRect *pUVs);
-	void GetFlagUVs(int race, MFRect *pUVs);
-	void GetSpecialUVs(int index, MFRect *pUVs);
-	void GetRoadUVs(int index, MFRect *pUVs);
+	void GetCastleUVs(int race, MFRect *pUVs, float texelOffset = 0.5f);
+	void GetFlagUVs(int race, MFRect *pUVs, float texelOffset = 0.5f);
+	void GetSpecialUVs(int index, MFRect *pUVs, float texelOffset = 0.5f);
+	void GetRoadUVs(int index, MFRect *pUVs, float texelOffset = 0.5f);
 
 	MFVector GetRaceColour(int race);
 

@@ -171,14 +171,14 @@ int CastleSet::DrawSpecial(int index)
 	return 0;
 }
 
-void CastleSet::GetCastleUVs(int race, MFRect *pUVs)
+void CastleSet::GetCastleUVs(int race, MFRect *pUVs, float texelOffset)
 {
 	float fWidth = (float)imageWidth;
 	float fHeight = (float)imageHeight;
 	float xScale = (1.f / fWidth) * tileWidth;
 	float yScale = (1.f / fHeight) * tileHeight;
-	float halfX = 0.5f / fWidth;
-	float halfY = 0.5f / fHeight;
+	float halfX = texelOffset / fWidth;
+	float halfY = texelOffset / fHeight;
 
 	Race &r = pRaces[race];
 	pUVs->x = r.castlex*xScale + halfX;
@@ -187,14 +187,14 @@ void CastleSet::GetCastleUVs(int race, MFRect *pUVs)
 	pUVs->height = yScale*2;
 }
 
-void CastleSet::GetFlagUVs(int race, MFRect *pUVs)
+void CastleSet::GetFlagUVs(int race, MFRect *pUVs, float texelOffset)
 {
 	float fWidth = (float)imageWidth;
 	float fHeight = (float)imageHeight;
 	float xScale = (1.f / fWidth) * tileWidth;
 	float yScale = (1.f / fHeight) * tileHeight;
-	float halfX = 0.5f / fWidth;
-	float halfY = 0.5f / fHeight;
+	float halfX = texelOffset / fWidth;
+	float halfY = texelOffset / fHeight;
 
 	Race &r = pRaces[race];
 	pUVs->x = r.flagx*xScale + halfX;
@@ -203,14 +203,14 @@ void CastleSet::GetFlagUVs(int race, MFRect *pUVs)
 	pUVs->height = yScale;
 }
 
-void CastleSet::GetSpecialUVs(int index, MFRect *pUVs)
+void CastleSet::GetSpecialUVs(int index, MFRect *pUVs, float texelOffset)
 {
 	float fWidth = (float)imageWidth;
 	float fHeight = (float)imageHeight;
 	float xScale = (1.f / fWidth) * tileWidth;
 	float yScale = (1.f / fHeight) * tileHeight;
-	float halfX = 0.5f / fWidth;
-	float halfY = 0.5f / fHeight;
+	float halfX = texelOffset / fWidth;
+	float halfY = texelOffset / fHeight;
 
 	Special &s = pSpecials[index];
 	pUVs->x = s.x*xScale + halfX;
@@ -219,14 +219,14 @@ void CastleSet::GetSpecialUVs(int index, MFRect *pUVs)
 	pUVs->height = yScale;
 }
 
-void CastleSet::GetRoadUVs(int index, MFRect *pUVs)
+void CastleSet::GetRoadUVs(int index, MFRect *pUVs, float texelOffset)
 {
 	float fWidth = (float)imageWidth;
 	float fHeight = (float)imageHeight;
 	float xScale = (1.f / fWidth) * tileWidth;
 	float yScale = (1.f / fHeight) * tileHeight;
-	float halfX = 0.5f / fWidth;
-	float halfY = 0.5f / fHeight;
+	float halfX = texelOffset / fWidth;
+	float halfY = texelOffset / fHeight;
 
 	Road &r = pRoads[index];
 	pUVs->x = r.x*xScale + halfX;
