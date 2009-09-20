@@ -341,6 +341,18 @@
 				RelativePath=".\Source\Warlords.h"
 				>
 			</File>
+			<Filter
+				Name="Screens"
+				>
+				<File
+					RelativePath=".\Source\Screens\Battle.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\Battle.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<File
 			RelativePath=".\Makefile"

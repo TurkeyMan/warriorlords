@@ -1,6 +1,7 @@
 #include "Warlords.h"
 #include "Game.h"
 #include "Editor.h"
+#include "Screens/Battle.h"
 
 #include "MFFileSystem.h"
 #include "FileSystem/MFFileSystemNative.h"
@@ -12,6 +13,7 @@
 /*** Global Stuff ***/
 Editor *pEditor;
 Game *pGame;
+Battle *pBattle;
 
 /*** Game Functions ***/
 
@@ -29,7 +31,7 @@ void Game_Init()
 	mountData.pPath = MFFile_SystemPath("Data/");
 	MFFileSystem_Mount(hNative, &mountData);
 
-#if 1
+#if 0
 	if(MFFileSystem_Exists("Map.ini"))
 		pEditor = new Editor("Map");
 	else
@@ -37,9 +39,10 @@ void Game_Init()
 
 	Screen::SetNext(pEditor);
 #else
-	pGame = new Game("Map");
-
-	Screen::SetNext(pGame);
+//	pGame = new Game("Map");
+//	Screen::SetNext(pGame);
+  pBattle = new Battle(NULL, NULL, "field", "forest", NULL);
+	Screen::SetNext(pBattle);
 #endif
 
 }
