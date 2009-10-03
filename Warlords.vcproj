@@ -330,6 +330,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Source\Unit.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Source\Unit.h"
 				>
 			</File>

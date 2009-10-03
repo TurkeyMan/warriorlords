@@ -56,6 +56,7 @@ protected:
 	int imageWidth, imageHeight;
 
 	MFMaterial *pTileMap;
+	MFMaterial *pWater;
 
 	TerrainType *pTerrainTypes;
 	int terrainCount;

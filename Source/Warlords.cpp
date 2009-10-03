@@ -17,6 +17,7 @@ Battle *pBattle;
 
 /*** Game Functions ***/
 
+
 void Game_Init()
 {
 	MFCALLSTACK;
@@ -31,7 +32,7 @@ void Game_Init()
 	mountData.pPath = MFFile_SystemPath("Data/");
 	MFFileSystem_Mount(hNative, &mountData);
 
-#if 0
+#if 1
 	if(MFFileSystem_Exists("Map.ini"))
 		pEditor = new Editor("Map");
 	else
@@ -44,7 +45,6 @@ void Game_Init()
   pBattle = new Battle(NULL, NULL, "field", "forest", NULL);
 	Screen::SetNext(pBattle);
 #endif
-
 }
 
 void Game_Update()

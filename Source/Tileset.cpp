@@ -34,8 +34,18 @@ Tileset *Tileset::Create(const char *pFilename)
 				else if(pTilemap->IsString(0, "tilemap"))
 				{
 					pNew->pTileMap = MFMaterial_Create(MFStr_TruncateExtension(pTilemap->GetString(1)));
-					pNew->imageWidth = 1024;
-					pNew->imageHeight = 1024;
+
+          if(pNew->pTileMap)
+          {
+	          MFTexture *pTex;
+	          int diffuse = MFMaterial_GetParameterIndexFromName(pNew->pTileMap, "diffuseMap");
+	          MFMaterial_GetParameter(pNew->pTileMap, diffuse, 0, &pTex);
+	          MFTexture_GetTextureDimensions(pTex, &pNew->imageWidth, &pNew->imageHeight);
+          }
+				}
+				else if(pTilemap->IsString(0, "water"))
+				{
+					pNew->pWater = MFMaterial_Create(MFStr_TruncateExtension(pTilemap->GetString(1)));
 				}
 				else if(pTilemap->IsString(0, "tile_width"))
 				{
@@ -175,10 +185,38 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 	float halfX = texelOffset / textureWidth;
 	float halfY = texelOffset / textureHeight;
 
-	MFMaterial_SetMaterial(pTileMap);
+	MFMaterial_SetMaterial(pWater);
 
 	MFPrimitive(PT_TriList);
 	MFBegin(6*xTiles*yTiles);
+	MFSetColour(MFVector::white);
+
+	for(int y=0; y<yTiles; ++y)
+	{
+		for(int x=0; x<xTiles; ++x)
+		{
+			MFSetTexCoord1(0 + (0.5f/64.f), 0 + (0.5f/64.f));
+			MFSetPosition((float)x, (float)y, 0);
+			MFSetTexCoord1(1 + (0.5f/64.f), 0 + (0.5f/64.f));
+			MFSetPosition((float)(x+1), (float)y, 0);
+			MFSetTexCoord1(0 + (0.5f/64.f), 1 + (0.5f/64.f));
+			MFSetPosition((float)x, (float)(y+1), 0);
+
+			MFSetTexCoord1(1 + (0.5f/64.f), 0 + (0.5f/64.f));
+			MFSetPosition((float)(x+1), (float)y, 0);
+			MFSetTexCoord1(1 + (0.5f/64.f), 1 + (0.5f/64.f));
+			MFSetPosition((float)(x+1), (float)(y+1), 0);
+			MFSetTexCoord1(0 + (0.5f/64.f), 1 + (0.5f/64.f));
+			MFSetPosition((float)x, (float)(y+1), 0);
+		}
+	}
+
+	MFEnd();
+
+	MFMaterial_SetMaterial(pTileMap);
+
+  MFPrimitive(PT_TriList);
+  MFBegin(6*xTiles*yTiles);
 	MFSetColour(MFVector::white);
 
 	for(int y=0; y<yTiles; ++y)

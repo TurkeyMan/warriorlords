@@ -70,7 +70,7 @@ CastleSet *CastleSet::Create(const char *pFilename)
 						pNew->pRaces[r].castlex = pRace->GetInt(2);
 						pNew->pRaces[r].castley = pRace->GetInt(3);
 						pNew->pRaces[r].flagx = pRace->GetInt(4);
-						pNew->pRaces[r].flagx = pRace->GetInt(5);
+						pNew->pRaces[r].flagy = pRace->GetInt(5);
 						pNew->pRaces[r].colour = MFString_AsciiToInteger(pRace->GetString(6), true) | 0xFF000000;
 
 						pRace = pRace->Next();
