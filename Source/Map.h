@@ -89,6 +89,7 @@ protected:
 
 	Tileset *pTiles;
 	CastleSet *pCastles;
+  UnitDefinitions *pUnits;
 
 	int mapWidth;
 	int mapHeight;

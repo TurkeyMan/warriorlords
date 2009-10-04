@@ -235,13 +235,13 @@ void CastleSet::GetRoadUVs(int index, MFRect *pUVs, float texelOffset)
 	pUVs->height = yScale;
 }
 
-MFVector CastleSet::GetRaceColour(int race)
+MFVector CastleSet::GetRaceColour(int race) const
 {
 	uint32 c = pRaces[race].colour;
 	return MakeVector(((c >> 16) & 0xFF) * (1.f/255.f), ((c >> 8) & 0xFF) * (1.f/255.f), (c & 0xFF) * (1.f/255.f));
 }
 
-int CastleSet::FindRoad(uint32 directions, uint32 terrain)
+int CastleSet::FindRoad(uint32 directions, uint32 terrain) const
 {
 	for(int a=0; a<roadCount; ++a)
 	{

@@ -19,17 +19,17 @@ public:
 	inline int GetNumSpecials() { return specialCount; }
 	inline const char *GetSpecialName(int type) { return pSpecials[type].name; }
 
-	inline MFMaterial *GetCastleMaterial() { return pImage; }
-	inline MFMaterial *GetRoadMaterial() { return pRoadMap; }
+	inline MFMaterial *GetCastleMaterial() const { return pImage; }
+	inline MFMaterial *GetRoadMaterial() const { return pRoadMap; }
 
 	void GetCastleUVs(int race, MFRect *pUVs, float texelOffset = 0.5f);
 	void GetFlagUVs(int race, MFRect *pUVs, float texelOffset = 0.5f);
 	void GetSpecialUVs(int index, MFRect *pUVs, float texelOffset = 0.5f);
 	void GetRoadUVs(int index, MFRect *pUVs, float texelOffset = 0.5f);
 
-	MFVector GetRaceColour(int race);
+	MFVector GetRaceColour(int race) const;
 
-	int FindRoad(uint32 directions, uint32 terrain);
+	int FindRoad(uint32 directions, uint32 terrain) const;
 
 protected:
 	struct Race

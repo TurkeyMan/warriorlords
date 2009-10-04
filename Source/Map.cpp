@@ -1,5 +1,6 @@
 #include "Warlords.h"
 #include "Map.h"
+#include "Castle.h"
 
 #include "Display.h"
 #include "MFRenderer.h"
@@ -166,6 +167,8 @@ Map *Map::Create(const char *pMapFilename)
 
 	if(!pMap)
 		return NULL;
+
+  pMap->pUnits = UnitDefinitions::Load("Units", pMap->pCastles);
 
 	pMap->path.Init(pMap);
 

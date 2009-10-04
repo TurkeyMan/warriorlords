@@ -4,6 +4,8 @@
 class MFIni;
 struct MFMaterial;
 
+class CastleSet;
+
 enum UnitType
 {
   UT_Unknown = -1,
@@ -22,9 +24,8 @@ struct UnitDetails
   int race;
 
   // stats
-  int movement;
-  int attackClass, defenceClass;
-  int strength, defence;
+  int attack, defence, movement;
+  int attackClass, defenceClass, movementClass;
   int attackSpeed;
   int life;
 
@@ -36,20 +37,23 @@ struct UnitDetails
 class UnitDefinitions
 {
 public:
-  UnitDefinitions *Load(const char *pUnits);
+  static UnitDefinitions *Load(const char *pUnits, const CastleSet *pCastleSet);
   void Free();
 
   class Unit *CreateUnit(int unit, int race);
 
-  void AddRenderUnit(int unit, float x, float y);
+  void AddRenderUnit(int unit, float x, float y, int race = -1, bool bFlip = false);
   void DrawUnits(float texelOffset = 0.5f);
 
 protected:
+  const char *pName;
+
   MFMaterial *pColourLayer;
   MFMaterial *pDetailLayer;
   int tileWidth, tileHeight;
 
   MFIni *pUnitDefs;
+  const CastleSet *pCastles; // DELETE ME!!
 
   UnitDetails *pUnits;
   int numUnits;
@@ -58,6 +62,8 @@ protected:
   {
     int unit;
     float x, y;
+    int race;
+    bool bFlip;
   };
 
   UnitRender renderUnits[256];
@@ -70,7 +76,7 @@ class Unit
 public:
   void Destroy();
 
-  void Draw(float x, float y);
+  void Draw(float x, float y, bool bFlip = false);
 
   const char *GetName() { return pName; }
   bool IsHero() { return details.type == UT_Hero; }

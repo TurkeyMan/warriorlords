@@ -32,7 +32,7 @@ void Game_Init()
 	mountData.pPath = MFFile_SystemPath("Data/");
 	MFFileSystem_Mount(hNative, &mountData);
 
-#if 1
+#if 0
 	if(MFFileSystem_Exists("Map.ini"))
 		pEditor = new Editor("Map");
 	else
