@@ -266,14 +266,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\Source\Castle.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\Source\Castle.h"
-				>
-			</File>
-			<File
 				RelativePath=".\Source\Editor.cpp"
 				>
 			</File>

@@ -55,10 +55,10 @@ Map *Map::Create(const char *pMapFilename)
 					MFString_Copy(pMap->tileset, pMapLine->GetString(1));
 					pMap->pTiles = Tileset::Create(pMapLine->GetString(1));
 				}
-				else if(pMapLine->IsString(0, "castleset"))
+				else if(pMapLine->IsString(0, "units"))
 				{
-					MFString_Copy(pMap->castleset, pMapLine->GetString(1));
-					pMap->pCastles = CastleSet::Create(pMapLine->GetString(1));
+					MFString_Copy(pMap->units, pMapLine->GetString(1));
+          pMap->pUnits = UnitDefinitions::Load(pMapLine->GetString(1));
 				}
 				else if(pMapLine->IsString(0, "map_width"))
 				{
@@ -168,8 +168,6 @@ Map *Map::Create(const char *pMapFilename)
 	if(!pMap)
 		return NULL;
 
-  pMap->pUnits = UnitDefinitions::Load("Units", pMap->pCastles);
-
 	pMap->path.Init(pMap);
 
 	pMap->zoom = 1.0f;
@@ -229,21 +227,21 @@ int Map::ChooseTile(int *pSelectedTiles, int numVariants)
 	return 0;
 }
 
-Map *Map::CreateNew(const char *pTileset, const char *pCastles)
+Map *Map::CreateNew(const char *pTileset, const char *pUnits)
 {
 	Map *pNew = (Map*)MFHeap_AllocAndZero(sizeof(Map));
 	pNew = new(pNew) Map;
 
 	MFString_Copy(pNew->name, "Untitled");
 	MFString_Copy(pNew->tileset, pTileset);
-	MFString_Copy(pNew->castleset, pCastles);
+	MFString_Copy(pNew->units, pUnits);
 
 	pNew->mapWidth = 128;
 	pNew->mapHeight = 128;
 	pNew->pMap = (MapTile*)MFHeap_AllocAndZero(pNew->mapWidth * pNew->mapHeight * sizeof(MapTile));
 
 	pNew->pTiles = Tileset::Create(pTileset);
-	pNew->pCastles = CastleSet::Create(pCastles);
+	pNew->pUnits = UnitDefinitions::Load(pUnits);
 
 	pNew->path.Init(pNew);
 
@@ -290,7 +288,7 @@ void Map::Destroy()
 	path.Deinit();
 
 	pTiles->Destroy();
-	pCastles->Destroy();
+	pUnits->Free();
 	MFHeap_Free(pMap);
 	MFHeap_Free(this);
 }
@@ -313,7 +311,7 @@ void Map::Save(const char *pFilename)
 		"\n"
 		"\t[Tiles]\n"
 		"\t{\n",
-		name, tileset, castleset, mapWidth, mapHeight);
+		name, tileset, units, mapWidth, mapHeight);
 	int len = MFString_Length(pMapData);
 	MFFile_Write(pFile, pMapData, len);
 
@@ -473,28 +471,28 @@ void Map::Draw()
 
 			if(pTile->type == OT_Road)
 			{
-				pMat = pCastles->GetRoadMaterial();
+				pMat = pTiles->GetRoadMaterial();
 
-				int r = pCastles->FindRoad(pTile->index, GetTerrain(xStart+x, yStart+y));
+				int r = pTiles->FindRoad(pTile->index, GetTerrain(xStart+x, yStart+y));
 				MFDebug_Assert(r >= 0, "Invalid road!");
 
-				pCastles->GetRoadUVs(r, &uvs);
+				pTiles->GetRoadUVs(r, &uvs);
 			}
 			else
 			{
-				pMat = pCastles->GetCastleMaterial();
+				pMat = pUnits->GetCastleMaterial();
 
 				switch(pTile->type)
 				{
 					case OT_Castle:
-						pCastles->GetCastleUVs(pTile->index, &uvs);
+						pUnits->GetCastleUVs(pTile->index, &uvs);
 						tileWidth = 2.f;
 						break;
 					case OT_Flag:
-						pCastles->GetFlagUVs(pTile->index, &uvs);
+						pUnits->GetFlagUVs(pTile->index, &uvs);
 						break;
 					case OT_Special:
-						pCastles->GetSpecialUVs(pTile->index, &uvs);
+						pUnits->GetSpecialUVs(pTile->index, &uvs);
 						break;
 				}
 			}

@@ -16,7 +16,6 @@
 #include "MFInput.h"
 #include "Display.h"
 
-CastleSet *pCastles;
 UnitDefinitions *pDefs;
 
 struct Group
@@ -37,8 +36,7 @@ Battle::Battle(Group *pGroup1, Group *pGroup2, const char *_pForeground, const c
   pBackground = MFMaterial_Create(MFStr("Battle/bg-%s", _pBackground));
   pCastle = _pCastle ? MFMaterial_Create(MFStr("Battle/castle-%s", _pCastle)) : NULL;
 
-  pCastles = CastleSet::Create("Castles");
-  pDefs = UnitDefinitions::Load("Units", pCastles);
+  pDefs = UnitDefinitions::Load("Units");
 
   // humans
   groups[0].pForwardUnits[groups[0].numForwardUnits++] = pDefs->CreateUnit(0, 1);

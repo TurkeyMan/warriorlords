@@ -26,7 +26,7 @@ class Map : public InputHandler
 {
 public:
 	static Map *Create(const char *pMapFilename);
-	static Map *CreateNew(const char *pTileset, const char *pCastles);
+	static Map *CreateNew(const char *pTileset, const char *pUnits);
 	void Destroy();
 
 	void Save(const char *pFilename);
@@ -64,7 +64,7 @@ public:
 	void ClearDetail(int x, int y);
 
 	Tileset *GetTileset() { return pTiles; }
-	CastleSet *GetCastleSet() { return pCastles; }
+  UnitDefinitions *GetUnitDefinitions() { return pUnits; }
 
 	void SetMoveKey(bool bAlternate) { bRightMove = bAlternate; }
 
@@ -85,10 +85,9 @@ protected:
 
 	char name[32];
 	char tileset[32];
-	char castleset[32];
+	char units[32];
 
 	Tileset *pTiles;
-	CastleSet *pCastles;
   UnitDefinitions *pUnits;
 
 	int mapWidth;

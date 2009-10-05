@@ -16,14 +16,15 @@ Game::Game(const char *pFilename)
 	pIcons = MFMaterial_Create("Icons");
 
 	// buttons
-	int tileWidth, tileHeight;
 	Tileset *pTiles = pMap->GetTileset();
-	MFMaterial *pTileMat = pTiles->GetMaterial();
-	pTiles->GetTileSize(&tileWidth, &tileHeight);
+  UnitDefinitions *pUnits = pMap->GetUnitDefinitions();
 
-	CastleSet *pCastles = pMap->GetCastleSet();
-	MFMaterial *pCastleMat = pCastles->GetCastleMaterial();
-	MFMaterial *pRoadMat = pCastles->GetRoadMaterial();
+  MFMaterial *pTileMat = pTiles->GetTileMaterial();
+	MFMaterial *pCastleMat = pUnits->GetCastleMaterial();
+	MFMaterial *pRoadMat = pTiles->GetRoadMaterial();
+
+	int tileWidth, tileHeight;
+	pTiles->GetTileSize(&tileWidth, &tileHeight);
 
 	MFRect uvs, pos = { 0, 0, (float)tileWidth, (float)tileHeight };
 

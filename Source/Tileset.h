@@ -26,21 +26,24 @@ public:
 	static Tileset *Create(const char *pFilename);
 	void Destroy();
 
-	void DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride, float texelOffset = 0.5f);
+	inline int GetNumTerrainTypes() { return terrainCount; }
+	inline const char *GetTerrainName(int type) { return pTerrainTypes[type].name; }
+	const MFVector &GetTerrainColour(int terrain) { return pTerrainTypes[terrain].mapColour; }
 
 	int FindBestTiles(int *pTiles, uint32 tile, uint32 mask = 0xFFFFFFFF, int maxMatches = 8);
+	int FindRoad(uint32 directions, uint32 terrain) const;
 
 	inline void GetTileSize(int *pWidth, int *pHeight) { *pWidth = tileWidth; *pHeight = tileHeight; }
 	inline Tile *GetTile(int tile) { return &tiles[tile]; }
 	int GetTileSpeed(uint32 terrain);
 
-	inline int GetNumTerrainTypes() { return terrainCount; }
-	inline const char *GetTerrainName(int type) { return pTerrainTypes[type].name; }
+  void DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride, float texelOffset = 0.5f);
 
-	inline MFMaterial *GetMaterial() { return pTileMap; }
-	void GetTileUVs(int tile, MFRect *pUVs);
+  void GetTileUVs(int tile, MFRect *pUVs);
+	void GetRoadUVs(int index, MFRect *pUVs, float texelOffset = 0.5f);
 
-	const MFVector &GetTerrainColour(int terrain) { return pTerrainTypes[terrain].mapColour; }
+  inline MFMaterial *GetTileMaterial() { return pTileMap; }
+	inline MFMaterial *GetRoadMaterial() const { return pRoadMap; }
 
 protected:
 	struct TerrainType
@@ -50,16 +53,29 @@ protected:
 		MFVector mapColour;
 	};
 
+	struct Road
+	{
+		uint8 x, y;
+		uint8 directions;
+		uint8 reserved;
+		uint32 terrain;
+	};
+
 	char name[64];
 
 	int tileWidth, tileHeight;
 	int imageWidth, imageHeight;
+	int roadWidth, roadHeight;
 
 	MFMaterial *pTileMap;
 	MFMaterial *pWater;
+	MFMaterial *pRoadMap;
 
 	TerrainType *pTerrainTypes;
 	int terrainCount;
+
+	Road *pRoads;
+	int roadCount;
 
 	Tile tiles[256];
 

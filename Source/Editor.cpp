@@ -34,14 +34,15 @@ Editor::Editor(const char *pFilename)
 	pIcons = MFMaterial_Create("Icons");
 
 	// buttons
-	int tileWidth, tileHeight;
 	Tileset *pTiles = pMap->GetTileset();
-	MFMaterial *pTileMat = pTiles->GetMaterial();
-	pTiles->GetTileSize(&tileWidth, &tileHeight);
+	UnitDefinitions *pUnits = pMap->GetUnitDefinitions();
 
-	CastleSet *pCastles = pMap->GetCastleSet();
-	MFMaterial *pCastleMat = pCastles->GetCastleMaterial();
-	MFMaterial *pRoadMat = pCastles->GetRoadMaterial();
+	MFMaterial *pTileMat = pTiles->GetTileMaterial();
+	MFMaterial *pRoadMat = pTiles->GetRoadMaterial();
+	MFMaterial *pCastleMat = pUnits->GetCastleMaterial();
+
+	int tileWidth, tileHeight;
+  pTiles->GetTileSize(&tileWidth, &tileHeight);
 
 	MFRect uvs, pos = { 0, 0, (float)tileWidth, (float)tileHeight };
 
@@ -103,12 +104,12 @@ Editor::Editor(const char *pFilename)
 	++numPages;
 
 	// castle buttons
-	int raceCount = pCastles->GetNumRaces();
+	int raceCount = pUnits->GetNumRaces();
 	pageButtonCount[numPages] = raceCount + 2;
 
 	for(int a=0; a<raceCount; ++a)
 	{
-		pCastles->GetCastleUVs(a, &uvs);
+		pUnits->GetCastleUVs(a, &uvs);
 
 		pos.x = left + (a % columns)*(tileWidth+16);
 		pos.y = top + (a / columns)*(tileHeight+16);
@@ -118,7 +119,7 @@ Editor::Editor(const char *pFilename)
 	}
 
 	// add the merc flag
-	pCastles->GetFlagUVs(0, &uvs);
+	pUnits->GetFlagUVs(0, &uvs);
 
 	pos.x = left + (raceCount % columns)*(tileWidth+16);
 	pos.y = top + (raceCount / columns)*(tileHeight+16);
@@ -127,7 +128,7 @@ Editor::Editor(const char *pFilename)
 	pChooserButtons[numPages][raceCount]->SetOutline(true, MFVector::black);
 
 	// add the road
-	pCastles->GetRoadUVs(0, &uvs);
+	pTiles->GetRoadUVs(0, &uvs);
 	++raceCount;
 
 	pos.x = left + (raceCount % columns)*(tileWidth+16);
@@ -139,7 +140,7 @@ Editor::Editor(const char *pFilename)
 	++numPages;
 
 	// special buttons
-	int specialCount = pCastles->GetNumSpecials();
+	int specialCount = pUnits->GetNumSpecials();
 	int specialIndex = 0;
 	while(specialIndex < specialCount)
 	{
@@ -147,7 +148,7 @@ Editor::Editor(const char *pFilename)
 
 		for(int a=specialIndex; a<specialIndex + pageButtonCount[numPages]; ++a)
 		{
-			pCastles->GetSpecialUVs(a, &uvs);
+			pUnits->GetSpecialUVs(a, &uvs);
 
 			pos.x = left + (a % columns)*(tileWidth+16);
 			pos.y = top + (a / columns)*(tileHeight+16);
@@ -186,7 +187,6 @@ int Editor::UpdateInput()
 	if(tileChooser)
 	{
 		Tileset *pTiles = pMap->GetTileset();
-		CastleSet *pCastles = pMap->GetCastleSet();
 		int chooserPage = tileChooser - 1;
 
 		for(int a=0; a<pageButtonCount[chooserPage]; ++a)
@@ -336,7 +336,6 @@ void Editor::Draw()
 
 		// render the buttons
 		Tileset *pTiles = pMap->GetTileset();
-		CastleSet *pCastles = pMap->GetCastleSet();
 		int chooserPage = tileChooser - 1;
 
 		for(int a=0; a<pageButtonCount[chooserPage]; ++a)
@@ -391,35 +390,35 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 			pTiles->FindBestTiles(&tile, EncodeTile(buttonID, buttonID, buttonID, buttonID), 0xFFFFFFFF, 1);
 
 			pTiles->GetTileUVs(tile, &rect);
-			pMat = pTiles->GetMaterial();
+			pMat = pTiles->GetTileMaterial();
 			break;
 		}
 		case OT_Castle:
 		{
-			CastleSet *pCastles = pThis->pMap->GetCastleSet();
-			pCastles->GetCastleUVs(index, &rect);
-			pMat = pCastles->GetCastleMaterial();
+    	UnitDefinitions *pUnits = pThis->pMap->GetUnitDefinitions();
+			pUnits->GetCastleUVs(index, &rect);
+			pMat = pUnits->GetCastleMaterial();
 			break;
 		}
 		case OT_Flag:
 		{
-			CastleSet *pCastles = pThis->pMap->GetCastleSet();
-			pCastles->GetFlagUVs(index, &rect);
-			pMat = pCastles->GetCastleMaterial();
+    	UnitDefinitions *pUnits = pThis->pMap->GetUnitDefinitions();
+			pUnits->GetFlagUVs(index, &rect);
+			pMat = pUnits->GetCastleMaterial();
 			break;
 		}
 		case OT_Special:
 		{
-			CastleSet *pCastles = pThis->pMap->GetCastleSet();
-			pCastles->GetSpecialUVs(index, &rect);
-			pMat = pCastles->GetCastleMaterial();
+    	UnitDefinitions *pUnits = pThis->pMap->GetUnitDefinitions();
+			pUnits->GetSpecialUVs(index, &rect);
+			pMat = pUnits->GetCastleMaterial();
 			break;
 		}
 		case OT_Road:
 		{
-			CastleSet *pCastles = pThis->pMap->GetCastleSet();
-			pCastles->GetRoadUVs(index, &rect);
-			pMat = pCastles->GetRoadMaterial();
+			Tileset *pTiles = pThis->pMap->GetTileset();
+			pTiles->GetRoadUVs(index, &rect);
+			pMat = pTiles->GetRoadMaterial();
 			break;
 		}
 	}

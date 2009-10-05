@@ -40,9 +40,23 @@ Tileset *Tileset::Create(const char *pFilename)
 	          MFTexture *pTex;
 	          int diffuse = MFMaterial_GetParameterIndexFromName(pNew->pTileMap, "diffuseMap");
 	          MFMaterial_GetParameter(pNew->pTileMap, diffuse, 0, &pTex);
-	          MFTexture_GetTextureDimensions(pTex, &pNew->imageWidth, &pNew->imageHeight);
+            if(pTex)
+  	          MFTexture_GetTextureDimensions(pTex, &pNew->imageWidth, &pNew->imageHeight);
           }
 				}
+				else if(pTilemap->IsString(0, "road"))
+				{
+					pNew->pRoadMap = MFMaterial_Create(MFStr_TruncateExtension(pTilemap->GetString(1)));
+
+          if(pNew->pRoadMap)
+          {
+	          MFTexture *pTex;
+	          int diffuse = MFMaterial_GetParameterIndexFromName(pNew->pRoadMap, "diffuseMap");
+	          MFMaterial_GetParameter(pNew->pRoadMap, diffuse, 0, &pTex);
+            if(pTex)
+  	          MFTexture_GetTextureDimensions(pTex, &pNew->roadWidth, &pNew->roadHeight);
+          }
+        }
 				else if(pTilemap->IsString(0, "water"))
 				{
 					pNew->pWater = MFMaterial_Create(MFStr_TruncateExtension(pTilemap->GetString(1)));
@@ -151,6 +165,37 @@ Tileset *Tileset::Create(const char *pFilename)
 						pTile = pTile->Next();
 					}
 				}
+				else if(pTilemap->IsSection("Road"))
+				{
+					pNew->roadCount = 0;
+					int r = 0;
+
+					MFIniLine *pRoad = pTilemap->Sub();
+					while(pRoad)
+					{
+						++pNew->roadCount;
+						pRoad = pRoad->Next();
+					}
+
+					pNew->pRoads = (Road*)MFHeap_AllocAndZero(sizeof(Road) * pNew->roadCount);
+
+					pRoad = pTilemap->Sub();
+					while(pRoad)
+					{
+						int x = pRoad->GetInt(0);
+						int y = pRoad->GetInt(1);
+						MFDebug_Assert(x < 16 && y < 16, "Tile sheets may have a maximum of 16x16 tiles.");
+						MFDebug_Assert(pRoad->IsString(2, "="), "Expected '='.");
+
+						Road &road = pNew->pRoads[r++];
+						road.x = x;
+						road.y = y;
+						road.directions = (pRoad->GetInt(3) << 3) | (pRoad->GetInt(4) << 2) | (pRoad->GetInt(5) << 1) | pRoad->GetInt(6);
+						road.terrain = EncodeTile(pRoad->GetInt(7), pRoad->GetInt(8), pRoad->GetInt(9), pRoad->GetInt(10));
+
+						pRoad = pRoad->Next();
+					}
+				}
 
 				pTilemap = pTilemap->Next();
 			}
@@ -167,23 +212,19 @@ Tileset *Tileset::Create(const char *pFilename)
 void Tileset::Destroy()
 {
 	MFMaterial_Destroy(pTileMap);
+  MFMaterial_Destroy(pWater);
+  MFMaterial_Destroy(pRoadMap);
 	MFHeap_Free(pTerrainTypes);
+	MFHeap_Free(pRoads);
 	MFHeap_Free(this);
 }
 
 void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride, float texelOffset)
 {
-	MFTexture *pTex;
-	int diffuse = MFMaterial_GetParameterIndexFromName(pTileMap, "diffuseMap");
-	MFMaterial_GetParameter(pTileMap, diffuse, 0, &pTex);
-
-	int textureWidth, textureHeight;
-	MFTexture_GetTextureDimensions(pTex, &textureWidth, &textureHeight);
-
-	float xScale = (1.f / textureWidth) * tileWidth;
-	float yScale = (1.f / textureHeight) * tileHeight;
-	float halfX = texelOffset / textureWidth;
-	float halfY = texelOffset / textureHeight;
+	float xScale = (1.f / imageWidth) * tileWidth;
+	float yScale = (1.f / imageHeight) * tileHeight;
+	float halfX = texelOffset / imageWidth;
+	float halfY = texelOffset / imageHeight;
 
 	MFMaterial_SetMaterial(pWater);
 
@@ -294,4 +335,31 @@ void Tileset::GetTileUVs(int tile, MFRect *pUVs)
 	pUVs->y = t.y*yScale + halfY;
 	pUVs->width = xScale;
 	pUVs->height = yScale;
+}
+
+void Tileset::GetRoadUVs(int index, MFRect *pUVs, float texelOffset)
+{
+	float fWidth = (float)roadWidth;
+	float fHeight = (float)roadHeight;
+	float xScale = (1.f / fWidth) * tileWidth;
+	float yScale = (1.f / fHeight) * tileHeight;
+	float halfX = texelOffset / fWidth;
+	float halfY = texelOffset / fHeight;
+
+	Road &r = pRoads[index];
+	pUVs->x = r.x*xScale + halfX;
+	pUVs->y = r.y*yScale + halfY;
+	pUVs->width = xScale;
+	pUVs->height = yScale;
+}
+
+int Tileset::FindRoad(uint32 directions, uint32 terrain) const
+{
+	for(int a=0; a<roadCount; ++a)
+	{
+		if(pRoads[a].terrain == terrain && pRoads[a].directions == directions)
+			return a;
+	}
+
+	return -1;
 }
