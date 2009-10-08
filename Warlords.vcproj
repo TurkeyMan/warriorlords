@@ -348,6 +348,14 @@
 					RelativePath=".\Source\Screens\Battle.h"
 					>
 				</File>
+				<File
+					RelativePath=".\Source\Screens\MapScreen.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\MapScreen.h"
+					>
+				</File>
 			</Filter>
 		</Filter>
 		<File

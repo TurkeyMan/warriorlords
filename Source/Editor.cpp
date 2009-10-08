@@ -9,12 +9,10 @@
 
 #include "Path.h"
 
-Editor::Editor(const char *pFilename)
+Editor::Editor(GameData *pGameData)
 {
-	pMap = NULL;
+	pMap = pGameData->GetMap();
 
-	if(pFilename)
-		pMap = Map::Create(pFilename);
 	if(!pMap)
 		pMap = Map::CreateNew("TileSet", "Castles");
 

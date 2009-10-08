@@ -1,31 +1,22 @@
 #if !defined(_GAME_H)
 #define _GAME_H
 
-#include "Screen.h"
 #include "Map.h"
-#include "Button.h"
+#include "Unit.h"
 
-class Game : public Screen
+class GameData
 {
 public:
-	Game(const char *pMap);
-	virtual ~Game();
+  GameData(const char *pMap);
+  ~GameData();
 
-	virtual void Select();
-	virtual int Update();
-	virtual void Draw();
-	virtual void Deselect();
-
-	virtual int UpdateInput();
-
-	static void ShowMiniMap(int button, void *pUserData, int buttonID);
+  Map *GetMap() { return pMap; }
+  UnitDefinitions *GetUnitDefs() { return pUnitDefs; }
 
 protected:
-	Map *pMap;
+  Map *pMap;
+  UnitDefinitions *pUnitDefs;
 
-	MFMaterial *pIcons;
-
-	Button *pMiniMap;
 };
 
 #endif

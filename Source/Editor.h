@@ -2,13 +2,14 @@
 #define _EDITOR_H
 
 #include "Screen.h"
+#include "Game.h"
 #include "Map.h"
 #include "Button.h"
 
 class Editor : public Screen
 {
 public:
-	Editor(const char *pMap = NULL);
+	Editor(GameData *pGameData);
 	virtual ~Editor();
 
 	virtual void Select();
@@ -25,6 +26,7 @@ public:
 	static void ChangeMode(int button, void *pUserData, int buttonID);
 
 protected:
+  GameData *pGameData;
 	Map *pMap;
 
 	MFMaterial *pIcons;

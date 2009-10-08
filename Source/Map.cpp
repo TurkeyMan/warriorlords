@@ -305,7 +305,7 @@ void Map::Save(const char *pFilename)
 		"{\n"
 		"\tname = %s\n\n"
 		"\ttileset = %s\n"
-		"\tcastleset = %s\n\n"
+		"\tunits = %s\n\n"
 		"\tmap_width = %d\n"
 		"\tmap_Height = %d\n"
 		"\n"
