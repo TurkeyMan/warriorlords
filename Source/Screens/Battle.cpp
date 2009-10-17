@@ -81,7 +81,7 @@ public:
   AttackPlan rearPlan;
 };
 
-static Group groups[2];
+static Group groups[8];
 static int races[2] = { 0, 1 };
 
 Battle::Battle(GameData *pGameData)
@@ -113,6 +113,12 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, const char *_pForeground, con
   int numUnits = pUnitDefs->GetNumUnits();
   groups[0].race = 1;
   groups[1].race = 2;
+  groups[2].race = 3;
+  groups[3].race = 4;
+  groups[4].race = 5;
+  groups[5].race = 6;
+  groups[6].race = 7;
+  groups[7].race = 8;
 
   MFIniLine *pLine = pIni->GetFirstLine();
 
@@ -136,50 +142,39 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, const char *_pForeground, con
         {
 //          pCastle = MFMaterial_Create(MFStr("Battle/castle-%s", pBattle->GetString(1)));
         }
-        else if(pBattle->IsSection("Group1"))
+        else if(pBattle->IsString(0, "army1"))
         {
-          MFIniLine *pUnits = pBattle->Sub();
-          while(pUnits)
-          {
-            const char *pName = pUnits->GetString(0);
-
-            for(int a=0; a<numUnits; ++a)
-            {
-              if(!MFString_CaseCmp(pUnitDefs->GetUnitName(a), pName))
-              {
-                Unit *pU = pUnitDefs->CreateUnit(a, 1);
-                if(!pU->IsHero() && pU->IsRanged() && groups[0].numRearUnits < 5)
-                  groups[0].pRearUnits[groups[0].numRearUnits++] = pU;
-                else if(groups[0].numForwardUnits < 5)
-                  groups[0].pForwardUnits[groups[0].numForwardUnits++] = pU;
-                break;
-              }
-            }
-
-            pUnits = pUnits->Next();
-          }
+          races[0] = pBattle->GetInt(1) - 1;
         }
-        else if(pBattle->IsSection("Group2"))
+        else if(pBattle->IsString(0, "army2"))
         {
-          MFIniLine *pUnits = pBattle->Sub();
-          while(pUnits)
+          races[1] = pBattle->GetInt(1) - 1;
+        }
+
+        for(int g=0; g<8; ++g)
+        {
+          if(pBattle->IsSection(MFStr("Group%d", g+1)))
           {
-            const char *pName = pUnits->GetString(0);
-
-            for(int a=0; a<numUnits; ++a)
+            MFIniLine *pUnits = pBattle->Sub();
+            while(pUnits)
             {
-              if(!MFString_CaseCmp(pUnitDefs->GetUnitName(a), pName))
-              {
-                Unit *pU = pUnitDefs->CreateUnit(a, 2);
-                if(!pU->IsHero() && pU->IsRanged() && groups[1].numRearUnits < 5)
-                  groups[1].pRearUnits[groups[1].numRearUnits++] = pU;
-                else if(groups[1].numForwardUnits < 5)
-                  groups[1].pForwardUnits[groups[1].numForwardUnits++] = pU;
-                break;
-              }
-            }
+              const char *pName = pUnits->GetString(0);
 
-            pUnits = pUnits->Next();
+              for(int a=0; a<numUnits; ++a)
+              {
+                if(!MFString_CaseCmp(pUnitDefs->GetUnitName(a), pName))
+                {
+                  Unit *pU = pUnitDefs->CreateUnit(a, g+1);
+                  if(!pU->IsHero() && pU->IsRanged() && groups[g].numRearUnits < 5)
+                    groups[g].pRearUnits[groups[g].numRearUnits++] = pU;
+                  else if(groups[g].numForwardUnits < 5)
+                    groups[g].pForwardUnits[groups[g].numForwardUnits++] = pU;
+                  break;
+                }
+              }
+
+              pUnits = pUnits->Next();
+            }
           }
         }
 
@@ -188,72 +183,6 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, const char *_pForeground, con
     }
     pLine = pLine->Next();
   }
-
-/*
-  // humans
-  groups[0].race = 1;
-  groups[0].pForwardUnits[groups[0].numForwardUnits++] = pUnitDefs->CreateUnit(0, 1);
-  groups[0].pForwardUnits[groups[0].numForwardUnits++] = pUnitDefs->CreateUnit(8, 1);
-  groups[0].pForwardUnits[groups[0].numForwardUnits++] = pUnitDefs->CreateUnit(9, 1);
-  groups[0].pForwardUnits[groups[0].numForwardUnits++] = pUnitDefs->CreateUnit(12, 1);
-
-  groups[0].pRearUnits[groups[0].numRearUnits++] = pUnitDefs->CreateUnit(24, 1);
-  groups[0].pRearUnits[groups[0].numRearUnits++] = pUnitDefs->CreateUnit(24, 1);
-  groups[0].pRearUnits[groups[0].numRearUnits++] = pUnitDefs->CreateUnit(24, 1);
-
-  // elves
-  groups[1].race = 2;
-  groups[1].pForwardUnits[groups[1].numForwardUnits++] = pUnitDefs->CreateUnit(1, 2);
-  groups[1].pForwardUnits[groups[1].numForwardUnits++] = pUnitDefs->CreateUnit(11, 2);
-
-  groups[1].pRearUnits[groups[1].numRearUnits++] = pUnitDefs->CreateUnit(10, 2);
-  groups[1].pRearUnits[groups[1].numRearUnits++] = pUnitDefs->CreateUnit(10, 2);
-  groups[1].pRearUnits[groups[1].numRearUnits++] = pUnitDefs->CreateUnit(10, 2);
-  groups[1].pRearUnits[groups[1].numRearUnits++] = pUnitDefs->CreateUnit(10, 2);
-  groups[1].pRearUnits[groups[1].numRearUnits++] = pUnitDefs->CreateUnit(10, 2);
-
-  // pirates
-  groups[2].race = 3;
-  groups[2].pForwardUnits[groups[2].numForwardUnits++] = pUnitDefs->CreateUnit(2, 3);
-  groups[2].pForwardUnits[groups[2].numForwardUnits++] = pUnitDefs->CreateUnit(12, 3);
-  groups[2].pForwardUnits[groups[2].numForwardUnits++] = pUnitDefs->CreateUnit(12, 3);
-  groups[2].pForwardUnits[groups[2].numForwardUnits++] = pUnitDefs->CreateUnit(12, 3);
-
-  groups[2].pRearUnits[groups[2].numRearUnits++] = pUnitDefs->CreateUnit(13, 3);
-  groups[2].pRearUnits[groups[2].numRearUnits++] = pUnitDefs->CreateUnit(13, 3);
-  groups[2].pRearUnits[groups[2].numRearUnits++] = pUnitDefs->CreateUnit(13, 3);
-
-  // pharos
-  groups[3].race = 4;
-  groups[3].pForwardUnits[groups[3].numForwardUnits++] = pUnitDefs->CreateUnit(3, 4);
-  groups[3].pForwardUnits[groups[3].numForwardUnits++] = pUnitDefs->CreateUnit(14, 4);
-  groups[3].pForwardUnits[groups[3].numForwardUnits++] = pUnitDefs->CreateUnit(14, 4);
-
-  groups[3].pRearUnits[groups[3].numRearUnits++] = pUnitDefs->CreateUnit(15, 4);
-  groups[3].pRearUnits[groups[3].numRearUnits++] = pUnitDefs->CreateUnit(15, 4);
-
-  // vikings
-  groups[4].race = 5;
-  groups[4].pForwardUnits[groups[4].numForwardUnits++] = pUnitDefs->CreateUnit(4, 5);
-  groups[4].pForwardUnits[groups[4].numForwardUnits++] = pUnitDefs->CreateUnit(16, 5);
-  groups[4].pForwardUnits[groups[4].numForwardUnits++] = pUnitDefs->CreateUnit(16, 5);
-
-  groups[4].pRearUnits[groups[4].numRearUnits++] = pUnitDefs->CreateUnit(17, 5);
-  groups[4].pRearUnits[groups[4].numRearUnits++] = pUnitDefs->CreateUnit(17, 5);
-  groups[4].pRearUnits[groups[4].numRearUnits++] = pUnitDefs->CreateUnit(17, 5);
-
-  // undead
-  groups[5].race = 6;
-  groups[5].pForwardUnits[groups[5].numForwardUnits++] = pUnitDefs->CreateUnit(5, 6);
-  groups[5].pForwardUnits[groups[5].numForwardUnits++] = pUnitDefs->CreateUnit(18, 6);
-  groups[5].pForwardUnits[groups[5].numForwardUnits++] = pUnitDefs->CreateUnit(18, 6);
-  groups[5].pForwardUnits[groups[5].numForwardUnits++] = pUnitDefs->CreateUnit(18, 6);
-  groups[5].pForwardUnits[groups[5].numForwardUnits++] = pUnitDefs->CreateUnit(18, 6);
-
-  groups[5].pRearUnits[groups[5].numRearUnits++] = pUnitDefs->CreateUnit(19, 6);
-  groups[5].pRearUnits[groups[5].numRearUnits++] = pUnitDefs->CreateUnit(19, 6);
-  groups[5].pRearUnits[groups[5].numRearUnits++] = pUnitDefs->CreateUnit(19, 6);
-*/
 
   // initialise the battle units
   armies[0].pGroup = &groups[races[0]];
