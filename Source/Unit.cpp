@@ -7,7 +7,7 @@
 #include "MFPrimitive.h"
 #include "MFIni.h"
 
-UnitDefinitions *UnitDefinitions::Load(const char *pUnits)
+UnitDefinitions *UnitDefinitions::Load(const char *pUnits, int numTerrainTypes)
 {
   MFIni *pIni = MFIni::Create("Units");
   if(!pIni)
@@ -26,6 +26,15 @@ UnitDefinitions *UnitDefinitions::Load(const char *pUnits)
 
   pUnitDefs->unitMapWidth = pUnitDefs->unitMapHeight = 0;
   pUnitDefs->castleMapWidth = pUnitDefs->castleMapHeight = 0;
+
+  pUnitDefs->numArmourClasses = pUnitDefs->numWeaponClasses = pUnitDefs->numMovementClasses = 0;
+  pUnitDefs->ppArmourClasses = pUnitDefs->ppWeaponClasses = pUnitDefs->ppMovementClasses = NULL;
+  pUnitDefs->pAttackModifiers = NULL;
+  pUnitDefs->pMovementPenalty = NULL;
+
+  pUnitDefs->numTerrainTypes = numTerrainTypes;
+
+  pUnitDefs->numRenderUnits = 0;
 
   MFIniLine *pLine = pIni->GetFirstLine();
   while(pLine)
@@ -60,6 +69,10 @@ UnitDefinitions *UnitDefinitions::Load(const char *pUnits)
     else if(pLine->IsString(0, "colour_map"))
     {
       pUnitDefs->pColourLayer = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
+    }
+    else if(pLine->IsString(0, "heads_map"))
+    {
+      pUnitDefs->pUnitHeads = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
     }
     else if(pLine->IsString(0, "castle_map"))
     {
@@ -180,16 +193,17 @@ UnitDefinitions *UnitDefinitions::Load(const char *pUnits)
 
         pUnit->race = pUnits->GetInt(7);
 
-        pUnit->attack = pUnits->GetInt(8);
-        pUnit->defence = pUnits->GetInt(9);
+        pUnit->attackMin = pUnits->GetInt(8);
+        pUnit->attackMax = pUnits->GetInt(9);
         pUnit->movement = pUnits->GetInt(10);
 
         pUnit->attackClass = pUnits->GetInt(11);
         pUnit->defenceClass = pUnits->GetInt(12);
         pUnit->movementClass = pUnits->GetInt(13);
 
-        pUnit->attackSpeed = pUnits->GetInt(14);
-        pUnit->life = pUnits->GetInt(15);
+        pUnit->cooldown = pUnits->GetFloat(14);
+        pUnit->attackSpeed = pUnits->GetFloat(15);
+        pUnit->life = pUnits->GetInt(16);
 
         ++pUnit;
         pUnits = pUnits->Next();
@@ -197,13 +211,87 @@ UnitDefinitions *UnitDefinitions::Load(const char *pUnits)
     }
     else if(pLine->IsSection("Classes"))
     {
+      MFIniLine *pClasses = pLine->Sub();
+      MFIniLine *pWeaponClasses = NULL;
+      while(pClasses)
+      {
+        if(pClasses->IsSection("Armour"))
+        {
+          MFIniLine *pArmour = pClasses->Sub();
+          pUnitDefs->numArmourClasses = 0;
+          while(pArmour)
+          {
+            ++pUnitDefs->numArmourClasses;
+            pArmour = pArmour->Next();
+          }
 
+          pUnitDefs->ppArmourClasses = (const char **)MFHeap_Alloc(sizeof(const char **)*pUnitDefs->numArmourClasses);
+
+          pArmour = pClasses->Sub();
+          while(pArmour)
+          {
+            pUnitDefs->ppArmourClasses[pArmour->GetInt(0)] = pArmour->GetString(1);
+            pArmour = pArmour->Next();
+          }
+        }
+        else if(pClasses->IsSection("Weapon"))
+        {
+          pWeaponClasses = pClasses->Sub();
+        }
+        else if(pClasses->IsSection("Movement"))
+        {
+          MFIniLine *pMovement = pClasses->Sub();
+          pUnitDefs->numWeaponClasses = 0;
+          while(pMovement)
+          {
+            ++pUnitDefs->numMovementClasses;
+            pMovement = pMovement->Next();
+          }
+
+          pUnitDefs->ppMovementClasses = (const char **)MFHeap_Alloc(sizeof(const char *)*pUnitDefs->numMovementClasses);
+          pUnitDefs->pMovementPenalty = (int*)MFHeap_Alloc(sizeof(int)*pUnitDefs->numMovementClasses*numTerrainTypes);
+
+          pMovement = pClasses->Sub();
+          while(pMovement)
+          {
+            int movClass = pMovement->GetInt(0);
+            pUnitDefs->ppMovementClasses[movClass] = pMovement->GetString(1);
+            for(int a=0; a<numTerrainTypes; ++a)
+              pUnitDefs->pMovementPenalty[movClass*numTerrainTypes + a] = pMovement->GetInt(2 + a);
+            pMovement = pMovement->Next();
+          }
+        }
+
+        pClasses = pClasses->Next();
+      }
+
+      if(pWeaponClasses)
+      {
+        MFIniLine *pWeapon = pWeaponClasses;
+        pUnitDefs->numWeaponClasses = 0;
+        while(pWeapon)
+        {
+          ++pUnitDefs->numWeaponClasses;
+          pWeapon = pWeapon->Next();
+        }
+
+        pUnitDefs->ppWeaponClasses = (const char **)MFHeap_Alloc(sizeof(const char *)*pUnitDefs->numWeaponClasses);
+        pUnitDefs->pAttackModifiers = (float*)MFHeap_Alloc(sizeof(float)*pUnitDefs->numWeaponClasses*pUnitDefs->numArmourClasses);
+
+        pWeapon = pWeaponClasses;
+        while(pWeapon)
+        {
+          int weaponClass = pWeapon->GetInt(0);
+          pUnitDefs->ppWeaponClasses[weaponClass] = pWeapon->GetString(1);
+          for(int a=0; a<pUnitDefs->numArmourClasses; ++a)
+            pUnitDefs->pAttackModifiers[weaponClass*pUnitDefs->numArmourClasses + a] = pWeapon->GetFloat(2 + a);
+          pWeapon = pWeapon->Next();
+        }
+      }
     }
 
     pLine = pLine->Next();
   }
-
-  pUnitDefs->numRenderUnits = 0;
 
   return pUnitDefs;
 }
@@ -265,21 +353,23 @@ void UnitDefinitions::AddRenderUnit(int unit, float x, float y, int race, bool b
   ++numRenderUnits;
 }
 
-void UnitDefinitions::DrawUnits(float texelOffset)
+void UnitDefinitions::DrawUnits(float texelOffset, bool bHead)
 {
   if(!numRenderUnits)
     return;
-
-	float xScale = (1.f / unitMapWidth) * tileWidth;
-	float yScale = (1.f / unitMapHeight) * tileHeight;
-	float halfX = texelOffset / unitMapWidth;
-	float halfY = texelOffset / unitMapHeight;
 
   float scale = 64.f;
 
   for(int a=0; a<2; ++a)
   {
-    MFMaterial_SetMaterial(a == 0 ? pDetailLayer : pColourLayer);
+    if(bHead)
+    {
+      MFMaterial_SetMaterial(a == 0 ? pUnitHeads : NULL);
+      if(a != 0)
+        break; // we don't have the head colour sheet yet.
+    }
+    else
+      MFMaterial_SetMaterial(a == 0 ? pDetailLayer : pColourLayer);
 
 	  MFPrimitive(PT_TriList);
 	  MFBegin(6*numRenderUnits);
@@ -295,23 +385,23 @@ void UnitDefinitions::DrawUnits(float texelOffset)
       if(a == 1)
         MFSetColour(GetRaceColour(unit.race));
 
-      float depth = (1000.f - unit.y) / 1000.f;
+      MFRect uvs;
+      GetUnitUVs(unit.unit, unit.bFlip, &uvs, texelOffset);
 
-      float x0 = unit.x + (unit.bFlip ? (def.x+def.width)*xScale - halfX : def.x*xScale + halfX);
-      float x1 = unit.x + (unit.bFlip ? def.x*xScale - halfX : (def.x+def.width)*xScale + halfX);
+      float depth = bHead ? 0.f : (1000.f - unit.y) / 1000.f;
 
-      MFSetTexCoord1(x0, def.y*yScale + halfY);
+      MFSetTexCoord1(uvs.x, uvs.y);
 			MFSetPosition(unit.x, unit.y, depth);
-			MFSetTexCoord1(x1, def.y*yScale + halfY);
+      MFSetTexCoord1(uvs.x+uvs.width, uvs.y);
       MFSetPosition(unit.x+def.width*scale, unit.y, depth);
-			MFSetTexCoord1(x0, (def.y+def.height)*yScale + halfY);
+      MFSetTexCoord1(uvs.x, uvs.y+uvs.height);
 			MFSetPosition(unit.x, unit.y+def.height*scale, depth);
 
-			MFSetTexCoord1(x1, def.y*yScale + halfY);
+			MFSetTexCoord1(uvs.x+uvs.width, uvs.y);
 			MFSetPosition(unit.x+def.width*scale, unit.y, depth);
-			MFSetTexCoord1(x1, (def.y+def.height)*yScale + halfY);
+			MFSetTexCoord1(uvs.x+uvs.width, uvs.y+uvs.height);
 			MFSetPosition(unit.x+def.width*scale, unit.y+def.height*scale, depth);
-			MFSetTexCoord1(x0, (def.y+def.height)*yScale + halfY);
+			MFSetTexCoord1(uvs.x, uvs.y+uvs.height);
 			MFSetPosition(unit.x, unit.y+def.height*scale, depth);
 	  }
 
@@ -366,6 +456,22 @@ void UnitDefinitions::GetFlagUVs(int race, MFRect *pUVs, float texelOffset)
 	pUVs->y = r.flagy*yScale + halfY;
 	pUVs->width = xScale;
 	pUVs->height = yScale;
+}
+
+void UnitDefinitions::GetUnitUVs(int unit, bool bFlip, MFRect *pUVs, float texelOffset)
+{
+	float fWidth = (float)unitMapWidth;
+	float fHeight = (float)unitMapHeight;
+	float xScale = (1.f / fWidth) * tileWidth;
+	float yScale = (1.f / fHeight) * tileHeight;
+	float halfX = texelOffset / fWidth;
+	float halfY = texelOffset / fHeight;
+
+  UnitDetails &def = pUnits[unit];
+  pUVs->x = bFlip ? (def.x+def.width)*xScale - halfX : def.x*xScale + halfX;
+  pUVs->y = def.y*yScale + halfY;
+  pUVs->width = (bFlip ? -def.width : def.width)*yScale;
+  pUVs->height = def.height*yScale;
 }
 
 void UnitDefinitions::GetSpecialUVs(int index, MFRect *pUVs, float texelOffset)

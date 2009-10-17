@@ -32,9 +32,9 @@ struct UnitDetails
   int race;
 
   // stats
-  int attack, defence, movement;
+  int attackMin, attackMax, movement;
   int attackClass, defenceClass, movementClass;
-  int attackSpeed;
+  float cooldown, attackSpeed;
   int life;
 
   // visible info
@@ -53,7 +53,7 @@ struct Special
 class UnitDefinitions
 {
 public:
-  static UnitDefinitions *Load(const char *pUnits);
+  static UnitDefinitions *Load(const char *pUnits, int numTerrainTypes);
   void Free();
 
 	inline int GetNumRaces() { return raceCount; }
@@ -68,9 +68,19 @@ public:
   inline int GetNumSpecials() { return specialCount; }
 	inline const char *GetSpecialName(int type) { return pSpecials[type].pName; }
 
+  int GetNumArmourClasses() { return numArmourClasses; }
+  const char *GetArmourClassName(int armourClass) { return ppArmourClasses[armourClass]; }
+  int GetNumWeaponClasses() { return numWeaponClasses; }
+  const char *GetWeaponClassName(int weaponClass) { return ppWeaponClasses[weaponClass]; }
+  int GetNumMovementClasses() { return numMovementClasses; }
+  const char *GetMovementClassName(int movementClass) { return ppMovementClasses[movementClass]; }
+
+  float GetDamageModifier(int weaponClass, int armourClass) { return pAttackModifiers[weaponClass*numArmourClasses + armourClass]; }
+  int GetMovementPenalty(int movementClass, int terrainType) { return pMovementPenalty[movementClass*numTerrainTypes + terrainType]; }
+
   // rendering
   void AddRenderUnit(int unit, float x, float y, int race = -1, bool bFlip = false);
-  void DrawUnits(float texelOffset = 0.5f);
+  void DrawUnits(float texelOffset = 0.5f, bool bHead = false);
 
 	int DrawCastle(int race);
 	int DrawFlag(int race);
@@ -90,6 +100,7 @@ protected:
 
   MFMaterial *pColourLayer;
   MFMaterial *pDetailLayer;
+  MFMaterial *pUnitHeads;
   MFMaterial *pCastleMap;
 
   int tileWidth, tileHeight;
@@ -104,6 +115,18 @@ protected:
 
 	Special *pSpecials;
 	int specialCount;
+
+  const char **ppArmourClasses;
+  int numArmourClasses;
+
+  const char **ppWeaponClasses;
+  float *pAttackModifiers;
+  int numWeaponClasses;
+
+  const char **ppMovementClasses;
+  int *pMovementPenalty;
+  int numMovementClasses;
+  int numTerrainTypes;
 
   // render list
   struct UnitRender
@@ -129,6 +152,13 @@ public:
   const char *GetName() { return pName; }
   bool IsHero() { return details.type == UT_Hero; }
   bool IsVehicle() { return details.type == UT_Vehicle; }
+
+  UnitDetails *GetDetails() { return &details; }
+  int GetRace() { return race; }
+  MFVector GetColour() { return pUnitDefs->GetRaceColour(race); }
+
+  float GetHealth() { return (float)life / (float)details.life; }
+  int Damage(int damage) { life -= MFMin(life, damage); return life; }
 
 protected:
   UnitDefinitions *pUnitDefs;

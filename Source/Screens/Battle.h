@@ -24,32 +24,37 @@ public:
 	virtual int UpdateInput();
 
 protected:
-	virtual void Select();
-
   enum UnitState
   {
     US_Cooldown,        // unit is waiting for cooldown to expire
-    US_Engaged,         // unit is being engaged
-    US_WaitingToEngage, // unit is waiting for target to be available
+    US_Waiting,         // unit is waiting for target to be available
     US_Engaging,        // unit is engaging a unit
+    US_Dying,           // unit is dying
   };
 
   struct BattleUnit
   {
-    Unit *pUnit;
-    float cooldown;
+    void Init(Unit *pUnit);
+    void SetPos(int x, int y);
 
-    int UnitState;
+    Unit *pUnit;
+    int army, row;
+
+    int state;
     float stateTime;
 
     // engaging state
     BattleUnit *pTarget;
+    bool bEngaged;
+    float damageIndicatorTime; // timeout for showing the damage indicator
 
-    float posX, posY;
-    float curX, curY;
-    float cooldownPos;
+    int posX, posY;
+    int curX, curY;
+    int cooldownOffset;
 
-    BattleUnit *pCooldownNext;
+    MFVector colour;
+
+    BattleUnit *pPrev, *pNext;
   };
 
   struct Army
@@ -59,10 +64,26 @@ protected:
     int numUnits;
   };
 
+  // member functions
+	virtual void Select();
+
+  void StartCooldown(BattleUnit *pUnit);
+  void StopCooldown(BattleUnit *pUnit);
+  BattleUnit *CheckCooldown();
+
+  void AddWaiting(BattleUnit *pUnit);
+  void EndWaiting(BattleUnit *pUnit);
+
+  // members
   UnitDefinitions *pUnitDefs;
 
   Army armies[2];
-  BattleUnit *pCooldownList;
+
+  BattleUnit *pCooldownHead, *pCooldownTail;
+  BattleUnit *pActionHead, *pActionTail;
+  int cooldownCount;
+
+  MFMaterial *pIcons;
 
   MFMaterial *pForeground;
   MFMaterial *pBackground;
