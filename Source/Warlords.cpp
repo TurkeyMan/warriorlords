@@ -37,12 +37,14 @@ void Game_Init()
 
   pGameData = new GameData("Map");
 
-#if 1
+#if 0
   pEditor = new Editor(pGameData);
 	Screen::SetNext(pEditor);
 #else
-//	pMapScreen = new MapScreen("Map");
+//	pMapScreen = new MapScreen(pGameData);
 //	Screen::SetNext(pMapScreen);
+  pEditor = new Editor(pGameData);
+	Screen::SetNext(pEditor);
   pBattle = new Battle(pGameData);
   pBattle->Begin(NULL, NULL, "field", "forest", NULL);
 #endif

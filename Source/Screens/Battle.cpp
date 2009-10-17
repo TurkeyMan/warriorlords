@@ -16,6 +16,9 @@
 #include "MFInput.h"
 #include "Display.h"
 
+// remove me!
+#include "MFIni.h"
+
 enum AttackPlan
 {
   AP_AttackStrongest,
@@ -78,8 +81,8 @@ public:
   AttackPlan rearPlan;
 };
 
-static Group groups[8];
-static int races[2] = { 5, 4 };
+static Group groups[2];
+static int races[2] = { 0, 1 };
 
 Battle::Battle(GameData *pGameData)
 {
@@ -97,12 +100,96 @@ Battle::~Battle()
 
 void Battle::Begin(Group *pGroup1, Group *pGroup2, const char *_pForeground, const char *_pBackground, const char *_pCastle)
 {
+  MFIni *pIni = MFIni::Create("TestBattle");
+  if(!pIni)
+    return;
+
   pIcons = MFMaterial_Create("BattleIcons");
 
-  pForeground = MFMaterial_Create(MFStr("Battle/fg-%s", _pForeground));
-  pBackground = MFMaterial_Create(MFStr("Battle/bg-%s", _pBackground));
-  pCastle = _pCastle ? MFMaterial_Create(MFStr("Battle/castle-%s", _pCastle)) : NULL;
+  pForeground = NULL; //MFMaterial_Create(MFStr("Battle/fg-%s", _pForeground));
+  pBackground = NULL; //MFMaterial_Create(MFStr("Battle/bg-%s", _pBackground));
+  pCastle = NULL; //_pCastle ? MFMaterial_Create(MFStr("Battle/castle-%s", _pCastle)) : NULL;
 
+  int numUnits = pUnitDefs->GetNumUnits();
+  groups[0].race = 1;
+  groups[1].race = 2;
+
+  MFIniLine *pLine = pIni->GetFirstLine();
+
+  while(pLine)
+  {
+    if(pLine->IsSection("Battle"))
+    {
+      MFIniLine *pBattle = pLine->Sub();
+
+      while(pBattle)
+      {
+        if(pBattle->IsString(0, "background"))
+        {
+          pBackground = MFMaterial_Create(MFStr("Battle/bg-%s", pBattle->GetString(1)));
+        }
+        else if(pBattle->IsString(0, "foreground"))
+        {
+          pForeground = MFMaterial_Create(MFStr("Battle/fg-%s", pBattle->GetString(1)));
+        }
+        else if(pBattle->IsString(0, "castle"))
+        {
+//          pCastle = MFMaterial_Create(MFStr("Battle/castle-%s", pBattle->GetString(1)));
+        }
+        else if(pBattle->IsSection("Group1"))
+        {
+          MFIniLine *pUnits = pBattle->Sub();
+          while(pUnits)
+          {
+            const char *pName = pUnits->GetString(0);
+
+            for(int a=0; a<numUnits; ++a)
+            {
+              if(!MFString_CaseCmp(pUnitDefs->GetUnitName(a), pName))
+              {
+                Unit *pU = pUnitDefs->CreateUnit(a, 1);
+                if(!pU->IsHero() && pU->IsRanged() && groups[0].numRearUnits < 5)
+                  groups[0].pRearUnits[groups[0].numRearUnits++] = pU;
+                else if(groups[0].numForwardUnits < 5)
+                  groups[0].pForwardUnits[groups[0].numForwardUnits++] = pU;
+                break;
+              }
+            }
+
+            pUnits = pUnits->Next();
+          }
+        }
+        else if(pBattle->IsSection("Group2"))
+        {
+          MFIniLine *pUnits = pBattle->Sub();
+          while(pUnits)
+          {
+            const char *pName = pUnits->GetString(0);
+
+            for(int a=0; a<numUnits; ++a)
+            {
+              if(!MFString_CaseCmp(pUnitDefs->GetUnitName(a), pName))
+              {
+                Unit *pU = pUnitDefs->CreateUnit(a, 2);
+                if(!pU->IsHero() && pU->IsRanged() && groups[1].numRearUnits < 5)
+                  groups[1].pRearUnits[groups[1].numRearUnits++] = pU;
+                else if(groups[1].numForwardUnits < 5)
+                  groups[1].pForwardUnits[groups[1].numForwardUnits++] = pU;
+                break;
+              }
+            }
+
+            pUnits = pUnits->Next();
+          }
+        }
+
+        pBattle = pBattle->Next();
+      }
+    }
+    pLine = pLine->Next();
+  }
+
+/*
   // humans
   groups[0].race = 1;
   groups[0].pForwardUnits[groups[0].numForwardUnits++] = pUnitDefs->CreateUnit(0, 1);
@@ -166,7 +253,7 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, const char *_pForeground, con
   groups[5].pRearUnits[groups[5].numRearUnits++] = pUnitDefs->CreateUnit(19, 6);
   groups[5].pRearUnits[groups[5].numRearUnits++] = pUnitDefs->CreateUnit(19, 6);
   groups[5].pRearUnits[groups[5].numRearUnits++] = pUnitDefs->CreateUnit(19, 6);
-
+*/
 
   // initialise the battle units
   armies[0].pGroup = &groups[races[0]];
