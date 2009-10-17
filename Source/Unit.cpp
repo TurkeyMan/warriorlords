@@ -28,8 +28,8 @@ UnitDefinitions *UnitDefinitions::Load(const char *pUnits, int numTerrainTypes)
   pUnitDefs->castleMapWidth = pUnitDefs->castleMapHeight = 0;
 
   pUnitDefs->numArmourClasses = pUnitDefs->numWeaponClasses = pUnitDefs->numMovementClasses = 0;
-  pUnitDefs->ppArmourClasses = pUnitDefs->ppWeaponClasses = pUnitDefs->ppMovementClasses = NULL;
-  pUnitDefs->pAttackModifiers = NULL;
+  pUnitDefs->ppArmourClasses = pUnitDefs->ppMovementClasses = NULL;
+  pUnitDefs->pWeaponClasses = NULL;
   pUnitDefs->pMovementPenalty = NULL;
 
   pUnitDefs->numTerrainTypes = numTerrainTypes;
@@ -275,16 +275,21 @@ UnitDefinitions *UnitDefinitions::Load(const char *pUnits, int numTerrainTypes)
           pWeapon = pWeapon->Next();
         }
 
-        pUnitDefs->ppWeaponClasses = (const char **)MFHeap_Alloc(sizeof(const char *)*pUnitDefs->numWeaponClasses);
-        pUnitDefs->pAttackModifiers = (float*)MFHeap_Alloc(sizeof(float)*pUnitDefs->numWeaponClasses*pUnitDefs->numArmourClasses);
+        pUnitDefs->pWeaponClasses = (WeaponClass*)MFHeap_Alloc(sizeof(const char *)*pUnitDefs->numWeaponClasses);
 
         pWeapon = pWeaponClasses;
         while(pWeapon)
         {
           int weaponClass = pWeapon->GetInt(0);
-          pUnitDefs->ppWeaponClasses[weaponClass] = pWeapon->GetString(1);
+          WeaponClass &wpnClass = pUnitDefs->pWeaponClasses[weaponClass];
+          wpnClass.pAttackModifiers = (float*)MFHeap_Alloc(sizeof(float)*pUnitDefs->numArmourClasses);
+
+          wpnClass.pName = pWeapon->GetString(1);
+          wpnClass.ranged = pWeapon->GetInt(pUnitDefs->numArmourClasses + 2);
+
           for(int a=0; a<pUnitDefs->numArmourClasses; ++a)
-            pUnitDefs->pAttackModifiers[weaponClass*pUnitDefs->numArmourClasses + a] = pWeapon->GetFloat(2 + a);
+            wpnClass.pAttackModifiers[a] = pWeapon->GetFloat(2 + a);
+
           pWeapon = pWeapon->Next();
         }
       }

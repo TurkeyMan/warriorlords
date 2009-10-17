@@ -16,8 +16,56 @@
 #include "MFInput.h"
 #include "Display.h"
 
-struct Group
+enum AttackPlan
 {
+  AP_AttackStrongest,
+  AP_AttackWeakest,
+  AP_AttackStrongestAvailable,
+  AP_AttackWeakestAvailable,
+  AP_AttackFront,
+  AP_AttackRear,
+
+  AP_Max
+};
+
+class Group
+{
+public:
+  int GetNumUnits() const { return numForwardUnits + numRearUnits; }
+  int GetNumForwardUnits() const { return numForwardUnits; }
+  int GetNumRearUnits() const { return numRearUnits; }
+
+  void AddUnit(Unit *pUnit)
+  {
+  }
+
+  void RemoveUnit(Unit *pUnit)
+  {
+    for(int a=0; a<numForwardUnits; ++a)
+    {
+      if(pUnit == pForwardUnits[a])
+      {
+        --numForwardUnits;
+        for(int b=a; b<numForwardUnits; ++b)
+          pForwardUnits[b] = pForwardUnits[b+1];
+        pForwardUnits[numForwardUnits] = NULL;
+        break;
+      }
+    }
+    for(int a=0; a<numRearUnits; ++a)
+    {
+      if(pUnit == pRearUnits[a])
+      {
+        --numRearUnits;
+        for(int b=a; b<numRearUnits; ++b)
+          pRearUnits[b] = pRearUnits[b+1];
+        pRearUnits[numRearUnits] = NULL;
+        break;
+      }
+    }
+  }
+
+//protected:
   int race;
 
   Unit *pForwardUnits[5];
@@ -25,10 +73,13 @@ struct Group
 
   int numForwardUnits;
   int numRearUnits;
+
+  AttackPlan forwardPlan;
+  AttackPlan rearPlan;
 };
 
 static Group groups[8];
-static int races[2] = { 0, 1 };
+static int races[2] = { 5, 4 };
 
 Battle::Battle(GameData *pGameData)
 {
@@ -79,7 +130,9 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, const char *_pForeground, con
   groups[2].pForwardUnits[groups[2].numForwardUnits++] = pUnitDefs->CreateUnit(2, 3);
   groups[2].pForwardUnits[groups[2].numForwardUnits++] = pUnitDefs->CreateUnit(12, 3);
   groups[2].pForwardUnits[groups[2].numForwardUnits++] = pUnitDefs->CreateUnit(12, 3);
+  groups[2].pForwardUnits[groups[2].numForwardUnits++] = pUnitDefs->CreateUnit(12, 3);
 
+  groups[2].pRearUnits[groups[2].numRearUnits++] = pUnitDefs->CreateUnit(13, 3);
   groups[2].pRearUnits[groups[2].numRearUnits++] = pUnitDefs->CreateUnit(13, 3);
   groups[2].pRearUnits[groups[2].numRearUnits++] = pUnitDefs->CreateUnit(13, 3);
 
@@ -96,12 +149,13 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, const char *_pForeground, con
   groups[4].race = 5;
   groups[4].pForwardUnits[groups[4].numForwardUnits++] = pUnitDefs->CreateUnit(4, 5);
   groups[4].pForwardUnits[groups[4].numForwardUnits++] = pUnitDefs->CreateUnit(16, 5);
+  groups[4].pForwardUnits[groups[4].numForwardUnits++] = pUnitDefs->CreateUnit(16, 5);
 
   groups[4].pRearUnits[groups[4].numRearUnits++] = pUnitDefs->CreateUnit(17, 5);
   groups[4].pRearUnits[groups[4].numRearUnits++] = pUnitDefs->CreateUnit(17, 5);
   groups[4].pRearUnits[groups[4].numRearUnits++] = pUnitDefs->CreateUnit(17, 5);
 
-  // vikings
+  // undead
   groups[5].race = 6;
   groups[5].pForwardUnits[groups[5].numForwardUnits++] = pUnitDefs->CreateUnit(5, 6);
   groups[5].pForwardUnits[groups[5].numForwardUnits++] = pUnitDefs->CreateUnit(18, 6);
@@ -174,34 +228,19 @@ void Battle::Select()
 
 }
 
+int Battle::CalculateDamage(BattleUnit *pUnit, BattleUnit *pTarget)
+{
+  UnitDetails *pDetails = pUnit->pUnit->GetDetails();
+  UnitDetails *pTargetDetails = pTarget->pUnit->GetDetails();
+  float damageMod = pUnitDefs->GetDamageModifier(pDetails->attackClass, pTargetDetails->defenceClass);
+
+  int damage = (MFRand() % (pDetails->attackMax - pDetails->attackMin + 1)) + pDetails->attackMin;
+
+  return (int)(damage * damageMod);
+}
+
 int Battle::Update()
 {
-  if(MFInput_WasPressed(Key_1, IDD_Keyboard))
-    races[0] = 0;
-  if(MFInput_WasPressed(Key_2, IDD_Keyboard))
-    races[0] = 1;
-  if(MFInput_WasPressed(Key_3, IDD_Keyboard))
-    races[0] = 2;
-  if(MFInput_WasPressed(Key_4, IDD_Keyboard))
-    races[0] = 3;
-  if(MFInput_WasPressed(Key_5, IDD_Keyboard))
-    races[0] = 4;
-  if(MFInput_WasPressed(Key_6, IDD_Keyboard))
-    races[0] = 5;
-
-  if(MFInput_WasPressed(Key_Q, IDD_Keyboard))
-    races[1] = 0;
-  if(MFInput_WasPressed(Key_W, IDD_Keyboard))
-    races[1] = 1;
-  if(MFInput_WasPressed(Key_E, IDD_Keyboard))
-    races[1] = 2;
-  if(MFInput_WasPressed(Key_R, IDD_Keyboard))
-    races[1] = 3;
-  if(MFInput_WasPressed(Key_T, IDD_Keyboard))
-    races[1] = 4;
-  if(MFInput_WasPressed(Key_Y, IDD_Keyboard))
-    races[1] = 5;
-
   for(int a=0; a<2; ++a)
   {
     for(int b=0; b<armies[a].numUnits; ++b)
@@ -218,8 +257,9 @@ int Battle::Update()
             unit.curX = unit.posX;
             unit.curY = unit.posY;
 
-            UnitDetails *pDetails = unit.pUnit->GetDetails();
-            if(unit.pTarget->pUnit->Damage((MFRand() % (pDetails->attackMax - pDetails->attackMin + 1)) + pDetails->attackMin) == 0)
+            int damage = CalculateDamage(&unit, unit.pTarget);
+
+            if(unit.pTarget->pUnit->Damage(damage) == 0)
             {
               if(unit.pTarget->state == US_Waiting)
                 EndWaiting(unit.pTarget);
@@ -227,6 +267,9 @@ int Battle::Update()
                 StopCooldown(unit.pTarget);
 
               unit.pTarget->state = US_Dying;
+              unit.pTarget->stateTime = 1.f;
+
+              armies[unit.pTarget->army].pGroup->RemoveUnit(unit.pTarget->pUnit);
             }
 
             unit.pTarget->bEngaged = false;
@@ -282,13 +325,15 @@ int Battle::Update()
   {
     if(!pUnit->bEngaged && pUnit->damageIndicatorTime == 0.f)
     {
+      bool bCanAttackBackRow = pUnit->pUnit->IsRanged() || armies[1 - pUnit->army].pGroup->GetNumForwardUnits() == 0;
+
       // pick target...
       BattleUnit *pTarget = NULL;
       Army &army = armies[1-pUnit->army];
       for(int a=0; a<army.numUnits; ++a)
       {
         BattleUnit *pT = &army.units[a];
-        if(!pT->bEngaged && !pT->damageIndicatorTime && pT->pUnit->GetHealth() && (pT->state == US_Cooldown || pT->state == US_Waiting))
+        if(!pT->bEngaged && !pT->damageIndicatorTime && pT->pUnit->GetHealth() && (pT->state == US_Cooldown || pT->state == US_Waiting) && (bCanAttackBackRow || pT->row == 0))
         {
           pTarget = pT;
           break;

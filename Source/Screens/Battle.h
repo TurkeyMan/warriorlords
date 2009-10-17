@@ -7,7 +7,7 @@
 #include "Game.h"
 #include "Unit.h"
 
-struct Group;
+class Group;
 
 class Battle : public Screen
 {
@@ -73,6 +73,8 @@ protected:
 
   void AddWaiting(BattleUnit *pUnit);
   void EndWaiting(BattleUnit *pUnit);
+
+  int CalculateDamage(BattleUnit *pUnit, BattleUnit *pTarget);
 
   // members
   UnitDefinitions *pUnitDefs;

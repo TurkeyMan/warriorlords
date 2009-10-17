@@ -70,12 +70,14 @@ public:
 
   int GetNumArmourClasses() { return numArmourClasses; }
   const char *GetArmourClassName(int armourClass) { return ppArmourClasses[armourClass]; }
+
   int GetNumWeaponClasses() { return numWeaponClasses; }
-  const char *GetWeaponClassName(int weaponClass) { return ppWeaponClasses[weaponClass]; }
+  const char *GetWeaponClassName(int weaponClass) { return pWeaponClasses[weaponClass].pName; }
+  float GetDamageModifier(int weaponClass, int armourClass) { return pWeaponClasses[weaponClass].pAttackModifiers[armourClass]; }
+  bool IsRanged(int weaponClass) { return pWeaponClasses[weaponClass].ranged != 0; }
+
   int GetNumMovementClasses() { return numMovementClasses; }
   const char *GetMovementClassName(int movementClass) { return ppMovementClasses[movementClass]; }
-
-  float GetDamageModifier(int weaponClass, int armourClass) { return pAttackModifiers[weaponClass*numArmourClasses + armourClass]; }
   int GetMovementPenalty(int movementClass, int terrainType) { return pMovementPenalty[movementClass*numTerrainTypes + terrainType]; }
 
   // rendering
@@ -94,6 +96,13 @@ public:
 	inline MFMaterial *GetCastleMaterial() const { return pCastleMap; }
 
 protected:
+  struct WeaponClass
+  {
+    const char *pName;
+    int ranged;
+    float *pAttackModifiers;
+  };
+
   MFIni *pUnitDefs;
 
   const char *pName;
@@ -119,8 +128,7 @@ protected:
   const char **ppArmourClasses;
   int numArmourClasses;
 
-  const char **ppWeaponClasses;
-  float *pAttackModifiers;
+  WeaponClass *pWeaponClasses;
   int numWeaponClasses;
 
   const char **ppMovementClasses;
@@ -159,6 +167,8 @@ public:
 
   float GetHealth() { return (float)life / (float)details.life; }
   int Damage(int damage) { life -= MFMin(life, damage); return life; }
+
+  bool IsRanged() { return pUnitDefs->IsRanged(details.attackClass); }
 
 protected:
   UnitDefinitions *pUnitDefs;
