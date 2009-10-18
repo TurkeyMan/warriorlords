@@ -537,8 +537,27 @@ void Map::DrawDebug()
 {
 	MFView_Push();
 
-	int xTiles, yTiles;
-	SetMapOrtho(&xTiles, &yTiles);
+	MFRect screenRect;
+	MFDisplay_GetDisplayRect(&screenRect);
+
+	int tileW, tileH;
+	pTiles->GetTileSize(&tileW, &tileH);
+
+	float screenWidth = (float)screenRect.width / (float)tileW;
+	float screenHeight = (float)screenRect.height / (float)tileH;
+
+	xOffset = (int)(xOffset*tileW) / (float)tileW;
+	yOffset = (int)(yOffset*tileH) / (float)tileH;
+
+	MFRect rect;
+	rect.x = xOffset - (float)(int)xOffset;
+	rect.y = yOffset - (float)(int)yOffset;
+	rect.width = screenWidth;
+	rect.height = screenHeight;
+	MFView_SetOrtho(&rect);
+
+	int xTiles = (int)MFCeil((screenRect.width / tileW) / zoom + 1.f);
+	int yTiles = (int)MFCeil((screenRect.height / tileH) / zoom + 1.f);
 
 	float tileWidth, tileHeight;
 	GetVisibleTileSize(&tileWidth, &tileHeight);
@@ -591,7 +610,7 @@ void Map::SetMapOrtho(int *pXTiles, int *pYTiles)
 	float screenHeight = (float)targetHeight / (float)tileHeight;
 
 	xOffset = (int)(xOffset*tileWidth) / (float)tileWidth;
-	yOffset = (int)(yOffset*tileWidth) / (float)tileWidth;
+	yOffset = (int)(yOffset*tileHeight) / (float)tileHeight;
 
 	MFRect rect;
 	rect.x = xOffset - (float)(int)xOffset;
@@ -831,10 +850,10 @@ bool Map::PlaceCastle(int x, int y, int race)
 		return false;
 
 	// get the terrain tiles
-	Tile *pT0 = GetTile(x, y);
-	Tile *pT1 = GetTile(x+1, y);
-	Tile *pT2 = GetTile(x, y+1);
-	Tile *pT3 = GetTile(x+1, y+1);
+	const Tile *pT0 = GetTile(x, y);
+	const Tile *pT1 = GetTile(x+1, y);
+	const Tile *pT2 = GetTile(x, y+1);
+	const Tile *pT3 = GetTile(x+1, y+1);
 
 	// test we can build here...
 	if(!pT0->canBuild)
@@ -861,7 +880,7 @@ bool Map::PlaceCastle(int x, int y, int race)
 bool Map::PlaceFlag(int x, int y, int race)
 {
 	// check for compatible terrain
-	Tile *pT = GetTile(x, y);
+	const Tile *pT = GetTile(x, y);
 
 	// check if we can build on this terrain type
 	if(!pT->canBuild)
@@ -880,7 +899,7 @@ bool Map::PlaceFlag(int x, int y, int race)
 bool Map::PlaceSpecial(int x, int y, int index)
 {
 	// check for compatible terrain
-	Tile *pT = GetTile(x, y);
+	const Tile *pT = GetTile(x, y);
 
 	// check if the terrain type matches the special target.
 	// TODO: for now, place on flat land...
@@ -902,7 +921,7 @@ bool Map::PlaceRoad(int x, int y)
 		return true;
 
 	// check for compatible terrain
-	Tile *pT = GetTile(x, y);
+	const Tile *pT = GetTile(x, y);
 
 	// HACK: just assume grass for now
 	if(pT->terrain != 0)

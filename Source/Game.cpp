@@ -17,5 +17,6 @@ GameData::GameData(const char *_pMap)
 
 GameData::~GameData()
 {
-
+	if(pMap)
+		pMap->Destroy();
 }

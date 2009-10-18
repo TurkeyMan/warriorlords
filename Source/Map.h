@@ -48,7 +48,7 @@ public:
 
 	void SetMapOrtho(int *pXTiles = NULL, int *pYTiles = NULL);
 
-	inline Tile *GetTile(int x, int y) { return pTiles->GetTile(pMap[y*mapWidth + x].terrain); }
+	inline const Tile *GetTile(int x, int y) { return pTiles->GetTile(pMap[y*mapWidth + x].terrain); }
 	inline uint32 GetTerrain(int x, int y) { return pTiles->GetTile(pMap[y*mapWidth + x].terrain)->terrain; }
 
 	ObjectType GetDetailType(int x, int y);
@@ -77,6 +77,8 @@ protected:
 	struct MapTile
 	{
 		Unit *pUnits;
+		void *pObject;
+
 		uint8 terrain;
 		uint8 type;
 		uint8 index;

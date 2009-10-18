@@ -80,3 +80,8 @@ void MapScreen::ShowMiniMap(int button, void *pUserData, int buttonID)
 	MapScreen *pThis = (MapScreen*)pUserData;
 
 }
+
+void MapScreen::Selection::DrawSelection()
+{
+
+}

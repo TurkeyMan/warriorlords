@@ -6,6 +6,22 @@ struct MFMaterial;
 
 class CastleSet;
 
+struct Race
+{
+	const char *pName;
+	uint8 castlex, castley;
+	uint8 flagx, flagy;
+	uint32 colour;
+};
+
+struct Special
+{
+	const char *pName;
+	uint8 x, y;
+	uint16 canSearch : 1;
+	uint16 flags : 15;
+};
+
 enum UnitType
 {
   UT_Unknown = -1,
@@ -15,14 +31,6 @@ enum UnitType
   UT_Vehicle,
 
   UT_Max
-};
-
-struct Race
-{
-	const char *pName;
-	uint8 castlex, castley;
-	uint8 flagx, flagy;
-	uint32 colour;
 };
 
 struct UnitDetails
@@ -40,14 +48,6 @@ struct UnitDetails
   // visible info
   int x, y;
   int width, height;
-};
-
-struct Special
-{
-	const char *pName;
-	uint8 x, y;
-	uint16 canSearch : 1;
-	uint16 flags : 15;
 };
 
 class UnitDefinitions
@@ -183,6 +183,31 @@ protected:
 
   // unit stats
   int kills, victories;
+};
+
+struct CastleDetails
+{
+  char *pName;
+
+  int buildUnits[4];
+  int buildTime;
+  int numBuildUnits;
+
+  int income;
+};
+
+class Castle
+{
+public:
+
+protected:
+  UnitDefinitions *pUnitDefs;
+
+  CastleDetails details;
+  int race;
+
+  int building;   // the current unit being built
+  int buildTime;  // how many turns this unit has been in production
 };
 
 #endif

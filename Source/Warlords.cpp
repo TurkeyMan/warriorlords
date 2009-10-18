@@ -14,9 +14,10 @@
 /*** Global Stuff ***/
 GameData *pGameData;
 
-Editor *pEditor;
-MapScreen *pMapScreen;
-Battle *pBattle;
+Editor *pEditor = NULL;
+Battle *pBattle = NULL;
+
+MapScreen *pMapScreen = NULL;
 
 /*** Game Functions ***/
 
@@ -38,15 +39,13 @@ void Game_Init()
   pGameData = new GameData("Map");
 
 #if 0
-  pEditor = new Editor(pGameData);
-	Screen::SetNext(pEditor);
+	pMapScreen = new MapScreen(pGameData);
+	Screen::SetNext(pMapScreen);
 #else
-//	pMapScreen = new MapScreen(pGameData);
-//	Screen::SetNext(pMapScreen);
   pEditor = new Editor(pGameData);
 	Screen::SetNext(pEditor);
   pBattle = new Battle(pGameData);
-  pBattle->Begin(NULL, NULL, "field", "forest", NULL);
+  pBattle->Begin(NULL, NULL, 0, 3, -1);
 #endif
 }
 
@@ -79,7 +78,15 @@ void Game_Deinit()
 {
 	MFCALLSTACK;
 
-	delete pEditor;
+  if(pBattle)
+    delete pBattle;
+  if(pEditor)
+	  delete pEditor;
+  if(pMapScreen)
+	  delete pMapScreen;
+
+  if(pGameData)
+    delete pGameData;
 }
 
 int GameMain(MFInitParams *pInitParams)
@@ -108,6 +115,7 @@ int GameMain(MFInitParams *pInitParams)
 }
 
 #if defined(MF_WINDOWS) || defined(_WINDOWS)
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrev, LPSTR lpCmdLine, int nCmdShow)

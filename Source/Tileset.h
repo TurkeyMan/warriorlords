@@ -26,15 +26,15 @@ public:
 	static Tileset *Create(const char *pFilename);
 	void Destroy();
 
-	inline int GetNumTerrainTypes() { return terrainCount; }
-	inline const char *GetTerrainName(int type) { return pTerrainTypes[type].name; }
-	const MFVector &GetTerrainColour(int terrain) { return pTerrainTypes[terrain].mapColour; }
+	inline int GetNumTerrainTypes() const { return terrainCount; }
+	inline const char *GetTerrainName(int type) const { return pTerrainTypes[type].name; }
+	const MFVector &GetTerrainColour(int terrain) const { return pTerrainTypes[terrain].mapColour; }
 
 	int FindBestTiles(int *pTiles, uint32 tile, uint32 mask = 0xFFFFFFFF, int maxMatches = 8);
 	int FindRoad(uint32 directions, uint32 terrain) const;
 
-	inline void GetTileSize(int *pWidth, int *pHeight) { *pWidth = tileWidth; *pHeight = tileHeight; }
-	inline Tile *GetTile(int tile) { return &tiles[tile]; }
+	inline void GetTileSize(int *pWidth, int *pHeight) const { *pWidth = tileWidth; *pHeight = tileHeight; }
+	inline const Tile *GetTile(int tile) const { return &tiles[tile]; }
 	int GetTileSpeed(uint32 terrain);
 
   void DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride, float texelOffset = 0.5f);
@@ -42,7 +42,7 @@ public:
   void GetTileUVs(int tile, MFRect *pUVs);
 	void GetRoadUVs(int index, MFRect *pUVs, float texelOffset = 0.5f);
 
-  inline MFMaterial *GetTileMaterial() { return pTileMap; }
+  inline MFMaterial *GetTileMaterial() const { return pTileMap; }
 	inline MFMaterial *GetRoadMaterial() const { return pRoadMap; }
 
 protected:

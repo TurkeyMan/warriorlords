@@ -86,29 +86,62 @@ static int races[2] = { 0, 1 };
 
 Battle::Battle(GameData *pGameData)
 {
-  pUnitDefs = pGameData->GetUnitDefs();
-
   // load lots of battle related stuff
   pCooldownHead = pCooldownTail = NULL;
   pActionHead = pActionTail = NULL;
   cooldownCount = 0;
+
+  pIcons = MFMaterial_Create("BattleIcons");
+
+  pTileSet = pGameData->GetMap()->GetTileset();
+  int numTerrains = pTileSet->GetNumTerrainTypes();
+  ppForegrounds = (MFMaterial**)MFHeap_AllocAndZero(sizeof(MFMaterial*)*numTerrains);
+  ppBackgrounds = (MFMaterial**)MFHeap_AllocAndZero(sizeof(MFMaterial*)*numTerrains);
+  for(int a=0; a<numTerrains; ++a)
+  {
+    ppForegrounds[a] = MFMaterial_Create(MFStr("Battle/fg-%s", pTileSet->GetTerrainName(a)));
+    ppBackgrounds[a] = MFMaterial_Create(MFStr("Battle/bg-%s", pTileSet->GetTerrainName(a)));
+  }
+
+  pUnitDefs = pGameData->GetUnitDefs();
+  int numRaces = pUnitDefs->GetNumRaces();
+  ppCastles = (MFMaterial**)MFHeap_AllocAndZero(sizeof(MFMaterial*)*numRaces);
+  for(int a=0; a<numRaces; ++a)
+  {
+    ppCastles[a] = MFMaterial_Create(MFStr("Battle/castle-%s", pUnitDefs->GetRaceName(a)));
+  }
 }
 
 Battle::~Battle()
 {
+  MFMaterial_Destroy(pIcons);
+
+  int numTerrains = pTileSet->GetNumTerrainTypes();
+  for(int a=0; a<numTerrains; ++a)
+  {
+    MFMaterial_Destroy(ppForegrounds[a]);
+    MFMaterial_Destroy(ppBackgrounds[a]);
+  }
+  MFHeap_Free(ppForegrounds);
+  MFHeap_Free(ppBackgrounds);
+
+  int numRaces = pUnitDefs->GetNumRaces();
+  for(int a=0; a<numRaces; ++a)
+  {
+    MFMaterial_Destroy(ppCastles[a]);
+  }
+  MFHeap_Free(ppCastles);
 }
 
-void Battle::Begin(Group *pGroup1, Group *pGroup2, const char *_pForeground, const char *_pBackground, const char *_pCastle)
+void Battle::Begin(Group *pGroup1, Group *pGroup2, int foreground, int background, int castle)
 {
   MFIni *pIni = MFIni::Create("TestBattle");
   if(!pIni)
     return;
 
-  pIcons = MFMaterial_Create("BattleIcons");
-
-  pForeground = NULL; //MFMaterial_Create(MFStr("Battle/fg-%s", _pForeground));
-  pBackground = NULL; //MFMaterial_Create(MFStr("Battle/bg-%s", _pBackground));
-  pCastle = NULL; //_pCastle ? MFMaterial_Create(MFStr("Battle/castle-%s", _pCastle)) : NULL;
+  pForeground = ppForegrounds[foreground];
+  pBackground = ppBackgrounds[background];
+  pCastle = castle != -1 ? ppCastles[castle] : NULL;
 
   int numUnits = pUnitDefs->GetNumUnits();
   groups[0].race = 1;
@@ -132,11 +165,25 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, const char *_pForeground, con
       {
         if(pBattle->IsString(0, "background"))
         {
-          pBackground = MFMaterial_Create(MFStr("Battle/bg-%s", pBattle->GetString(1)));
+          for(int a=0; a<pTileSet->GetNumTerrainTypes(); ++a)
+          {
+            if(!MFString_CaseCmp(pBattle->GetString(1), pTileSet->GetTerrainName(a)))
+            {
+              pBackground = ppBackgrounds[a];
+              break;
+            }
+          }
         }
         else if(pBattle->IsString(0, "foreground"))
         {
-          pForeground = MFMaterial_Create(MFStr("Battle/fg-%s", pBattle->GetString(1)));
+          for(int a=0; a<pTileSet->GetNumTerrainTypes(); ++a)
+          {
+            if(!MFString_CaseCmp(pBattle->GetString(1), pTileSet->GetTerrainName(a)))
+            {
+              pForeground = ppForegrounds[a];
+              break;
+            }
+          }
         }
         else if(pBattle->IsString(0, "castle"))
         {
@@ -183,6 +230,8 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, const char *_pForeground, con
     }
     pLine = pLine->Next();
   }
+
+  MFIni::Destroy(pIni);
 
   // initialise the battle units
   armies[0].pGroup = &groups[races[0]];
@@ -473,10 +522,7 @@ void Battle::Draw()
 
 void Battle::Deselect()
 {
-  MFMaterial_Destroy(pForeground);
-  MFMaterial_Destroy(pBackground);
-  if(pCastle)
-    MFMaterial_Destroy(pCastle);
+  // clean up the battle units?
 }
 
 int Battle::UpdateInput()

@@ -15,7 +15,7 @@ public:
 	Battle(GameData *pGameData);
 	virtual ~Battle();
 
-  void Begin(Group *pGroup1, Group *pGroup2, const char *pForeground, const char *pBackground, const char *pCastle);
+  void Begin(Group *pGroup1, Group *pGroup2, int foreground, int background, int castle = -1);
 
 	virtual int Update();
 	virtual void Draw();
@@ -78,6 +78,7 @@ protected:
 
   // members
   UnitDefinitions *pUnitDefs;
+  Tileset *pTileSet;
 
   Army armies[2];
 
