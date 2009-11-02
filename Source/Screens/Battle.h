@@ -4,18 +4,19 @@
 #include "MFMaterial.h"
 
 #include "Screen.h"
-#include "Game.h"
 #include "Unit.h"
 
+class Game;
 class Group;
+class Tileset;
 
 class Battle : public Screen
 {
 public:
-	Battle(GameData *pGameData);
+	Battle(Game *pGame);
 	virtual ~Battle();
 
-  void Begin(Group *pGroup1, Group *pGroup2, int foreground, int background, int castle = -1);
+	void Begin(Group *pGroup1, Group *pGroup2, int foreground, int background, int castle = -1);
 
 	virtual int Update();
 	virtual void Draw();
@@ -24,78 +25,80 @@ public:
 	virtual int UpdateInput();
 
 protected:
-  enum UnitState
-  {
-    US_Cooldown,        // unit is waiting for cooldown to expire
-    US_Waiting,         // unit is waiting for target to be available
-    US_Engaging,        // unit is engaging a unit
-    US_Dying,           // unit is dying
-  };
+	enum UnitState
+	{
+		US_Cooldown,        // unit is waiting for cooldown to expire
+		US_Waiting,         // unit is waiting for target to be available
+		US_Engaging,        // unit is engaging a unit
+		US_Dying,           // unit is dying
+	};
 
-  struct BattleUnit
-  {
-    void Init(Unit *pUnit);
-    void SetPos(int x, int y);
+	struct BattleUnit
+	{
+		void Init(Unit *pUnit);
+		void SetPos(int x, int y);
 
-    Unit *pUnit;
-    int army, row;
+		Unit *pUnit;
+		int army, row;
 
-    int state;
-    float stateTime;
+		int state;
+		float stateTime;
 
-    // engaging state
-    BattleUnit *pTarget;
-    bool bEngaged;
-    float damageIndicatorTime; // timeout for showing the damage indicator
+		// engaging state
+		BattleUnit *pTarget;
+		bool bEngaged;
+		float damageIndicatorTime; // timeout for showing the damage indicator
 
-    int posX, posY;
-    int curX, curY;
-    int cooldownOffset;
+		int posX, posY;
+		int curX, curY;
+		int cooldownOffset;
 
-    MFVector colour;
+		MFVector colour;
 
-    BattleUnit *pPrev, *pNext;
-  };
+		BattleUnit *pPrev, *pNext;
+	};
 
-  struct Army
-  {
-    Group *pGroup;
-    BattleUnit units[10];
-    int numUnits;
-  };
+	struct Army
+	{
+		Group *pGroup;
+		BattleUnit units[10];
+		int numUnits;
+	};
 
-  // member functions
+	// member functions
 	virtual void Select();
 
-  void StartCooldown(BattleUnit *pUnit);
-  void StopCooldown(BattleUnit *pUnit);
-  BattleUnit *CheckCooldown();
+	void StartCooldown(BattleUnit *pUnit);
+	void StopCooldown(BattleUnit *pUnit);
+	BattleUnit *CheckCooldown();
 
-  void AddWaiting(BattleUnit *pUnit);
-  void EndWaiting(BattleUnit *pUnit);
+	void AddWaiting(BattleUnit *pUnit);
+	void EndWaiting(BattleUnit *pUnit);
 
-  int CalculateDamage(BattleUnit *pUnit, BattleUnit *pTarget);
+	int CalculateDamage(BattleUnit *pUnit, BattleUnit *pTarget);
 
-  // members
-  UnitDefinitions *pUnitDefs;
-  Tileset *pTileSet;
+	// members
+	Game *pGame;
 
-  Army armies[2];
+	UnitDefinitions *pUnitDefs;
+	Tileset *pTileSet;
 
-  BattleUnit *pCooldownHead, *pCooldownTail;
-  BattleUnit *pActionHead, *pActionTail;
-  int cooldownCount;
+	Army armies[2];
 
-  MFMaterial *pIcons;
+	BattleUnit *pCooldownHead, *pCooldownTail;
+	BattleUnit *pActionHead, *pActionTail;
+	int cooldownCount;
 
-  MFMaterial *pForeground;
-  MFMaterial *pBackground;
-  MFMaterial *pCastle;
+	MFMaterial *pIcons;
 
-  // library
-  MFMaterial **ppForegrounds;
-  MFMaterial **ppBackgrounds;
-  MFMaterial **ppCastles;
+	MFMaterial *pForeground;
+	MFMaterial *pBackground;
+	MFMaterial *pCastle;
+
+	// library
+	MFMaterial **ppForegrounds;
+	MFMaterial **ppBackgrounds;
+	MFMaterial **ppCastles;
 };
 
 #endif

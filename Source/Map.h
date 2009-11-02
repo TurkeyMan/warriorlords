@@ -64,14 +64,11 @@ public:
 	void ClearDetail(int x, int y);
 
 	Tileset *GetTileset() { return pTiles; }
-  UnitDefinitions *GetUnitDefinitions() { return pUnits; }
+	UnitDefinitions *GetUnitDefinitions() { return pUnits; }
 
 	void SetMoveKey(bool bAlternate) { bRightMove = bAlternate; }
 
 	int UpdateChange(int a);
-
-	// TODO: MOVE ME!!!
-	Path path;
 
 protected:
 	struct MapTile
@@ -90,12 +87,14 @@ protected:
 	char units[32];
 
 	Tileset *pTiles;
-  UnitDefinitions *pUnits;
+	UnitDefinitions *pUnits;
 
 	int mapWidth;
 	int mapHeight;
 
 	MapTile *pMap;
+
+	Path path;
 
 	// runtime data
 	float xOffset, yOffset;

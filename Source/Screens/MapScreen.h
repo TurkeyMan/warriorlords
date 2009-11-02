@@ -10,7 +10,7 @@
 class MapScreen : public Screen
 {
 public:
-	MapScreen(GameData *pGameData);
+	MapScreen(Game *pGame);
 	virtual ~MapScreen();
 
 	virtual void Select();
@@ -23,30 +23,27 @@ public:
 	static void ShowMiniMap(int button, void *pUserData, int buttonID);
 
 protected:
-  class Selection
-  {
-  public:
-    void DrawSelection();
+	class Selection
+	{
+	public:
+		void DrawSelection();
 
-    void SelectUnit(Unit *_pUnit) { pUnit = _pUnit; pCastle = NULL; }
-    void SelectCastle(Castle *_pCastle) { pCastle = _pCastle; pUnit = NULL; }
-    void Deselect() { pUnit = NULL; pCastle = NULL; }
+		void SelectUnit(Unit *_pUnit) { pUnit = _pUnit; pCastle = NULL; }
+		void SelectCastle(Castle *_pCastle) { pCastle = _pCastle; pUnit = NULL; }
+		void Deselect() { pUnit = NULL; pCastle = NULL; }
 
-  protected:
-    Unit *pUnit;
-    Castle *pCastle;
-  };
+	protected:
+		Unit *pUnit;
+		Castle *pCastle;
+	};
 
-  GameData *pGameData;
+	Game *pGame;
 
 	MFMaterial *pIcons;
 
 	Button *pMiniMap;
 
-  // game related variables
-  int currenPlayer;
-
-  Selection selection;
+	Selection selection;
 };
 
 #endif

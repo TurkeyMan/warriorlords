@@ -10,17 +10,17 @@
 
 #include "Path.h"
 
-MapScreen::MapScreen(GameData *_pGameData)
+MapScreen::MapScreen(Game *_pGame)
 {
-  pGameData = _pGameData;
+	pGame = _pGame;
 
 	pIcons = MFMaterial_Create("Icons");
 
 	// buttons
-	Tileset *pTiles = pGameData->GetMap()->GetTileset();
-  UnitDefinitions *pUnits = pGameData->GetUnitDefs();
+	Tileset *pTiles = pGame->GetMap()->GetTileset();
+	UnitDefinitions *pUnits = pGame->GetUnitDefs();
 
-  MFMaterial *pTileMat = pTiles->GetTileMaterial();
+	MFMaterial *pTileMat = pTiles->GetTileMaterial();
 	MFMaterial *pCastleMat = pUnits->GetCastleMaterial();
 	MFMaterial *pRoadMat = pTiles->GetRoadMaterial();
 
@@ -53,20 +53,20 @@ int MapScreen::UpdateInput()
 		return 1;
 
 	// update map
-	pGameData->GetMap()->UpdateInput();
+	pGame->GetMap()->UpdateInput();
 
 	return 0;
 }
 
 int MapScreen::Update()
 {
-	pGameData->GetMap()->Update();
+	pGame->GetMap()->Update();
 	return 0;
 }
 
 void MapScreen::Draw()
 {
-	pGameData->GetMap()->Draw();
+	pGame->GetMap()->Draw();
 	pMiniMap->Draw();
 }
 

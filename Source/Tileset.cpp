@@ -35,28 +35,28 @@ Tileset *Tileset::Create(const char *pFilename)
 				{
 					pNew->pTileMap = MFMaterial_Create(MFStr_TruncateExtension(pTilemap->GetString(1)));
 
-          if(pNew->pTileMap)
-          {
-	          MFTexture *pTex;
-	          int diffuse = MFMaterial_GetParameterIndexFromName(pNew->pTileMap, "diffuseMap");
-	          MFMaterial_GetParameter(pNew->pTileMap, diffuse, 0, &pTex);
-            if(pTex)
-  	          MFTexture_GetTextureDimensions(pTex, &pNew->imageWidth, &pNew->imageHeight);
-          }
+					if(pNew->pTileMap)
+					{
+						MFTexture *pTex;
+						int diffuse = MFMaterial_GetParameterIndexFromName(pNew->pTileMap, "diffuseMap");
+						MFMaterial_GetParameter(pNew->pTileMap, diffuse, 0, &pTex);
+						if(pTex)
+							MFTexture_GetTextureDimensions(pTex, &pNew->imageWidth, &pNew->imageHeight);
+					}
 				}
 				else if(pTilemap->IsString(0, "road"))
 				{
 					pNew->pRoadMap = MFMaterial_Create(MFStr_TruncateExtension(pTilemap->GetString(1)));
 
-          if(pNew->pRoadMap)
-          {
-	          MFTexture *pTex;
-	          int diffuse = MFMaterial_GetParameterIndexFromName(pNew->pRoadMap, "diffuseMap");
-	          MFMaterial_GetParameter(pNew->pRoadMap, diffuse, 0, &pTex);
-            if(pTex)
-  	          MFTexture_GetTextureDimensions(pTex, &pNew->roadWidth, &pNew->roadHeight);
-          }
-        }
+					if(pNew->pRoadMap)
+					{
+						MFTexture *pTex;
+						int diffuse = MFMaterial_GetParameterIndexFromName(pNew->pRoadMap, "diffuseMap");
+						MFMaterial_GetParameter(pNew->pRoadMap, diffuse, 0, &pTex);
+						if(pTex)
+							MFTexture_GetTextureDimensions(pTex, &pNew->roadWidth, &pNew->roadHeight);
+					}
+				}
 				else if(pTilemap->IsString(0, "water"))
 				{
 					pNew->pWater = MFMaterial_Create(MFStr_TruncateExtension(pTilemap->GetString(1)));
@@ -212,8 +212,8 @@ Tileset *Tileset::Create(const char *pFilename)
 void Tileset::Destroy()
 {
 	MFMaterial_Destroy(pTileMap);
-  MFMaterial_Destroy(pWater);
-  MFMaterial_Destroy(pRoadMap);
+	MFMaterial_Destroy(pWater);
+	MFMaterial_Destroy(pRoadMap);
 	MFHeap_Free(pTerrainTypes);
 	MFHeap_Free(pRoads);
 	MFHeap_Free(this);
@@ -256,8 +256,8 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 
 	MFMaterial_SetMaterial(pTileMap);
 
-  MFPrimitive(PT_TriList);
-  MFBegin(6*xTiles*yTiles);
+	MFPrimitive(PT_TriList);
+	MFBegin(6*xTiles*yTiles);
 	MFSetColour(MFVector::white);
 
 	for(int y=0; y<yTiles; ++y)

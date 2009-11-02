@@ -12,7 +12,7 @@
 #include "MFSystem.h"
 
 /*** Global Stuff ***/
-GameData *pGameData;
+Game *pGame;
 
 Editor *pEditor = NULL;
 Battle *pBattle = NULL;
@@ -36,16 +36,13 @@ void Game_Init()
 	mountData.pPath = MFFile_SystemPath("Data/");
 	MFFileSystem_Mount(hNative, &mountData);
 
-  pGameData = new GameData("Map");
+	pGame = new Game("Map");
 
-#if 0
-	pMapScreen = new MapScreen(pGameData);
-	Screen::SetNext(pMapScreen);
+#if 1
+	pGame->BeginGame();
 #else
-  pEditor = new Editor(pGameData);
+	pEditor = new Editor(pGame);
 	Screen::SetNext(pEditor);
-  pBattle = new Battle(pGameData);
-  pBattle->Begin(NULL, NULL, 0, 3, -1);
 #endif
 }
 
@@ -78,15 +75,11 @@ void Game_Deinit()
 {
 	MFCALLSTACK;
 
-  if(pBattle)
-    delete pBattle;
-  if(pEditor)
-	  delete pEditor;
-  if(pMapScreen)
-	  delete pMapScreen;
+	if(pEditor)
+		delete pEditor;
 
-  if(pGameData)
-    delete pGameData;
+	if(pGame)
+		delete pGame;
 }
 
 int GameMain(MFInitParams *pInitParams)

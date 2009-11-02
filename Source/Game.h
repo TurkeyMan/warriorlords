@@ -4,19 +4,50 @@
 #include "Map.h"
 #include "Unit.h"
 
-class GameData
+class MapScreen;
+class Battle;
+
+struct Player
+{
+	MFVector colour;
+	int race;
+	int gold;
+};
+
+class Game
 {
 public:
-  GameData(const char *pMap);
-  ~GameData();
+	Game(const char *pMap);
+	~Game();
 
-  Map *GetMap() { return pMap; }
-  UnitDefinitions *GetUnitDefs() { return pUnitDefs; }
+	void BeginGame();
+	void BeginTurn(int player);
+
+	Map *GetMap() { return pMap; }
+	UnitDefinitions *GetUnitDefs() { return pUnitDefs; }
+
+	int CurrentPlayer() { return currentPlayer; }
+	int GetPlayerRace(int player) { return players[player].race; }
+	MFVector GetPlayerColour(int player) { return players[player].colour; }
 
 protected:
-  Map *pMap;
-  UnitDefinitions *pUnitDefs;
+	// game data
+	Map *pMap;
+	UnitDefinitions *pUnitDefs;
 
+	Player players[8];
+	int numPlayers;
+
+	// screens
+	MapScreen *pMapScreen;
+	Battle *pBattle;
+
+	// game state data
+	int currentPlayer;
+
+	// castles
+
+	// units
 };
 
 #endif

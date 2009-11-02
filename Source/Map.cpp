@@ -58,7 +58,7 @@ Map *Map::Create(const char *pMapFilename)
 				else if(pMapLine->IsString(0, "units"))
 				{
 					MFString_Copy(pMap->units, pMapLine->GetString(1));
-          pMap->pUnits = UnitDefinitions::Load(pMapLine->GetString(1), pMap->pTiles->GetNumTerrainTypes());
+					pMap->pUnits = UnitDefinitions::Load(pMapLine->GetString(1), pMap->pTiles->GetNumTerrainTypes());
 				}
 				else if(pMapLine->IsString(0, "map_width"))
 				{
@@ -241,7 +241,7 @@ Map *Map::CreateNew(const char *pTileset, const char *pUnits)
 	pNew->pMap = (MapTile*)MFHeap_AllocAndZero(pNew->mapWidth * pNew->mapHeight * sizeof(MapTile));
 
 	pNew->pTiles = Tileset::Create(pTileset);
-  pNew->pUnits = UnitDefinitions::Load(pUnits, pNew->pTiles->GetNumTerrainTypes());
+	pNew->pUnits = UnitDefinitions::Load(pUnits, pNew->pTiles->GetNumTerrainTypes());
 
 	pNew->path.Init(pNew);
 

@@ -9,9 +9,9 @@
 
 #include "Path.h"
 
-Editor::Editor(GameData *pGameData)
+Editor::Editor(Game *pGame)
 {
-	pMap = pGameData->GetMap();
+	pMap = pGame->GetMap();
 
 	if(!pMap)
 		pMap = Map::CreateNew("TileSet", "Castles");
@@ -40,7 +40,7 @@ Editor::Editor(GameData *pGameData)
 	MFMaterial *pCastleMat = pUnits->GetCastleMaterial();
 
 	int tileWidth, tileHeight;
-  pTiles->GetTileSize(&tileWidth, &tileHeight);
+	pTiles->GetTileSize(&tileWidth, &tileHeight);
 
 	MFRect uvs, pos = { 0, 0, (float)tileWidth, (float)tileHeight };
 

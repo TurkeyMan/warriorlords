@@ -4,5 +4,6 @@
 #include "Fuji.h"
 #include "MFHeap.h"
 
+#include "Game.h"
 
 #endif

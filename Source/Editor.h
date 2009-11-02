@@ -9,7 +9,7 @@
 class Editor : public Screen
 {
 public:
-	Editor(GameData *pGameData);
+	Editor(Game *pGame);
 	virtual ~Editor();
 
 	virtual void Select();
@@ -26,7 +26,7 @@ public:
 	static void ChangeMode(int button, void *pUserData, int buttonID);
 
 protected:
-  GameData *pGameData;
+	Game *pGame;
 	Map *pMap;
 
 	MFMaterial *pIcons;
