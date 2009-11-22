@@ -12,6 +12,8 @@ struct Player
 	MFVector colour;
 	int race;
 	int gold;
+
+	int cursorX, cursorY;
 };
 
 class Game
@@ -22,12 +24,14 @@ public:
 
 	void BeginGame();
 	void BeginTurn(int player);
+	void BeginBattle(Group *pGroup1, Group *pGroup2);
+	void EndBattle(Group *pGroup1, Group *pGroup2);
 
 	Map *GetMap() { return pMap; }
 	UnitDefinitions *GetUnitDefs() { return pUnitDefs; }
 
 	int CurrentPlayer() { return currentPlayer; }
-	int GetPlayerRace(int player) { return players[player].race; }
+	int GetPlayerRace(int player) { return player == -1 ? 0 : players[player].race; }
 	MFVector GetPlayerColour(int player) { return players[player].colour; }
 
 protected:

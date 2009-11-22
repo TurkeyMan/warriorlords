@@ -19,68 +19,6 @@
 // remove me!
 #include "MFIni.h"
 
-enum AttackPlan
-{
-	AP_AttackStrongest,
-	AP_AttackWeakest,
-	AP_AttackStrongestAvailable,
-	AP_AttackWeakestAvailable,
-	AP_AttackFront,
-	AP_AttackRear,
-
-	AP_Max
-};
-
-class Group
-{
-public:
-	int GetNumUnits() const { return numForwardUnits + numRearUnits; }
-	int GetNumForwardUnits() const { return numForwardUnits; }
-	int GetNumRearUnits() const { return numRearUnits; }
-
-	void AddUnit(Unit *pUnit)
-	{
-	}
-
-	void RemoveUnit(Unit *pUnit)
-	{
-		for(int a=0; a<numForwardUnits; ++a)
-		{
-			if(pUnit == pForwardUnits[a])
-			{
-				--numForwardUnits;
-				for(int b=a; b<numForwardUnits; ++b)
-					pForwardUnits[b] = pForwardUnits[b+1];
-				pForwardUnits[numForwardUnits] = NULL;
-				break;
-			}
-		}
-		for(int a=0; a<numRearUnits; ++a)
-		{
-			if(pUnit == pRearUnits[a])
-			{
-				--numRearUnits;
-				for(int b=a; b<numRearUnits; ++b)
-					pRearUnits[b] = pRearUnits[b+1];
-				pRearUnits[numRearUnits] = NULL;
-				break;
-			}
-		}
-	}
-
-	//protected:
-	int race;
-
-	Unit *pForwardUnits[5];
-	Unit *pRearUnits[5];
-
-	int numForwardUnits;
-	int numRearUnits;
-
-	AttackPlan forwardPlan;
-	AttackPlan rearPlan;
-};
-
 static Group groups[8];
 static int races[2] = { 0, 1 };
 
@@ -137,23 +75,24 @@ Battle::~Battle()
 
 void Battle::Begin(Group *pGroup1, Group *pGroup2, int foreground, int background, int castle)
 {
-	MFIni *pIni = MFIni::Create("TestBattle");
-	if(!pIni)
-		return;
-
 	pForeground = ppForegrounds[foreground];
 	pBackground = ppBackgrounds[background];
 	pCastle = castle != -1 ? ppCastles[castle] : NULL;
 
-	int numUnits = pUnitDefs->GetNumUnits();
-	groups[0].race = 1;
-	groups[1].race = 2;
-	groups[2].race = 3;
-	groups[3].race = 4;
-	groups[4].race = 5;
-	groups[5].race = 6;
-	groups[6].race = 7;
-	groups[7].race = 8;
+#if 0
+	MFIni *pIni = MFIni::Create("TestBattle");
+	if(!pIni)
+		return;
+
+	int numUnits = pUnitDefs->GetNumUnitTypes();
+	groups[0].player = 0;
+	groups[1].player = 1;
+	groups[2].player = 2;
+	groups[3].player = 3;
+	groups[4].player = 4;
+	groups[5].player = 5;
+	groups[6].player = 6;
+	groups[7].player = 7;
 
 	MFIniLine *pLine = pIni->GetFirstLine();
 
@@ -211,7 +150,7 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, int foreground, int backgroun
 
 							for(int a=0; a<numUnits; ++a)
 							{
-								if(!MFString_CaseCmp(pUnitDefs->GetUnitName(a), pName))
+								if(!MFString_CaseCmp(pUnitDefs->GetUnitTypeName(a), pName))
 								{
 									Unit *pU = pUnitDefs->CreateUnit(a, g+1);
 									if(!pU->IsHero() && pU->IsRanged() && groups[g].numRearUnits < 5)
@@ -237,8 +176,13 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, int foreground, int backgroun
 
 	// initialise the battle units
 	armies[0].pGroup = &groups[races[0]];
-	armies[0].numUnits = 0;
 	armies[1].pGroup = &groups[races[1]];
+#else
+	// initialise the battle units
+	armies[0].pGroup = pGroup1;
+	armies[1].pGroup = pGroup2;
+#endif
+	armies[0].numUnits = 0;
 	armies[1].numUnits = 0;
 
 	MFRect rect;
@@ -258,10 +202,10 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, int foreground, int backgroun
 	{
 		for(int b=0; b<5; ++b)
 		{
-			if(b < groups[races[a]].numForwardUnits)
+			if(b < armies[a].pGroup->numForwardUnits)
 			{
 				BattleUnit *pUnit = &armies[a].units[armies[a].numUnits++];
-				pUnit->Init(groups[races[a]].pForwardUnits[b]);
+				pUnit->Init(armies[a].pGroup->pForwardUnits[b]);
 				pUnit->army = a;
 				pUnit->row = 0;
 
@@ -271,10 +215,10 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, int foreground, int backgroun
 
 				StartCooldown(pUnit);
 			}
-			if(b < groups[races[a]].numRearUnits)
+			if(b < armies[a].pGroup->numRearUnits)
 			{
 				BattleUnit *pUnit = &armies[a].units[armies[a].numUnits++];
-				pUnit->Init(groups[races[a]].pRearUnits[b]);
+				pUnit->Init(armies[a].pGroup->pRearUnits[b]);
 				pUnit->army = a;
 				pUnit->row = 1;
 
@@ -285,6 +229,8 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, int foreground, int backgroun
 				StartCooldown(pUnit);
 			}
 		}
+
+		armies[a].numUnitsAlive = armies[a].numUnits;
 	}
 
 	SetNext(this);
@@ -292,7 +238,8 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, int foreground, int backgroun
 
 void Battle::Select()
 {
-
+	pInputManager->ClearReceivers();
+	pInputManager->PushReceiver(this);
 }
 
 int Battle::CalculateDamage(BattleUnit *pUnit, BattleUnit *pTarget)
@@ -335,8 +282,6 @@ int Battle::Update()
 
 							unit.pTarget->state = US_Dying;
 							unit.pTarget->stateTime = 1.f;
-
-							armies[unit.pTarget->army].pGroup->RemoveUnit(unit.pTarget->pUnit);
 						}
 
 						unit.pTarget->bEngaged = false;
@@ -377,6 +322,14 @@ int Battle::Update()
 						{
 							// shoot a projectile
 						}
+					}
+				}
+				else if(unit.state == US_Dying)
+				{
+					if(unit.stateTime <= 0.f)
+					{
+						unit.state = US_Dead;
+						--armies[a].numUnitsAlive;
 					}
 				}
 			}
@@ -455,11 +408,13 @@ void Battle::Draw()
 		for(int b=0; b<armies[a].numUnits; ++b)
 		{
 			BattleUnit &unit = armies[a].units[b];
-			unit.pUnit->Draw((float)unit.curX, (float)unit.curY, a == 1);
+
+			if(unit.state != US_Dead)
+				unit.pUnit->Draw((float)unit.curX, (float)unit.curY, a == 1, unit.state == US_Dying ? unit.stateTime : 1.f);
 		}
 	}
 
-	pUnitDefs->DrawUnits();
+	pUnitDefs->DrawUnits(64.f);
 
 	// health bars + damage indicators
 	for(int a=0; a<2; ++a)
@@ -467,10 +422,14 @@ void Battle::Draw()
 		for(int b=0; b<armies[a].numUnits; ++b)
 		{
 			BattleUnit &unit = armies[a].units[b];
-			float healthSize = MFClamp(12, unit.pUnit->GetDetails()->life, 32) * 2.f;
-			float health = unit.pUnit->GetHealth() * healthSize;
-			MFPrimitive_DrawUntexturedQuad(float(unit.curX + 31 - healthSize*0.5f), float(unit.curY - 8), healthSize + 2.f, 4.f, MFVector::black);
-			MFPrimitive_DrawUntexturedQuad(float(unit.curX + 32 - healthSize*0.5f), float(unit.curY - 7), health, 2.f, MFVector::red);
+
+			if(unit.state != US_Dying && unit.state != US_Dead)
+			{
+				float healthSize = MFClamp(12, unit.pUnit->GetDetails()->life, 32) * 2.f;
+				float health = unit.pUnit->GetHealth() * healthSize;
+				MFPrimitive_DrawUntexturedQuad(float(unit.curX + 31 - healthSize*0.5f), float(unit.curY - 8), healthSize + 2.f, 4.f, MFVector::black);
+				MFPrimitive_DrawUntexturedQuad(float(unit.curX + 32 - healthSize*0.5f), float(unit.curY - 7), health, 2.f, MFVector::red);
+			}
 
 			if(unit.damageIndicatorTime)
 			{
@@ -500,7 +459,7 @@ void Battle::Draw()
 	BattleUnit *pUnit = pCooldownTail;
 	while(pUnit)
 	{
-		int offset = pUnit->pUnit->GetRace() == armies[0].pGroup->race ? -1 : 1;
+		int offset = pUnit->pUnit->GetPlayer() == armies[0].pGroup->player ? -1 : 1;
 		int x = left + (int)(width*(pUnit->stateTime/7.0f));
 		int y = timelineY + pUnit->cooldownOffset + offset*20;
 
@@ -509,7 +468,7 @@ void Battle::Draw()
 		pUnit->pUnit->Draw(x-16.f, y-16.f);
 
 		// draw the unit head here for correct overlap behaviour
-//		pUnitDefs->DrawUnits(0.5f, true);
+//		pUnitDefs->DrawUnits(64.f 0.5f, true);
 
 		pUnit = pUnit->pPrev;
 	}
@@ -517,7 +476,7 @@ void Battle::Draw()
 	MFPrimitive_EndBlitter();
 
 	// draw deferred unit heads
-	pUnitDefs->DrawUnits(0.5f, true);
+	pUnitDefs->DrawUnits(64.f, 0.5f, true);
 
 	MFView_Pop();
 }
@@ -525,6 +484,23 @@ void Battle::Draw()
 void Battle::Deselect()
 {
 	// clean up the battle units?
+}
+
+bool Battle::HandleInputEvent(InputEvent ev, InputInfo &info)
+{
+	if(info.device == IDD_Mouse && info.deviceID != 0)
+		return false;
+
+	if(ev == IE_Tap)
+	{
+		if(armies[0].numUnitsAlive == 0 || armies[1].numUnitsAlive == 0)
+		{
+			// battle is finished
+			pGame->EndBattle(armies[0].pGroup, armies[1].pGroup);
+		}
+	}
+
+	return false;
 }
 
 int Battle::UpdateInput()

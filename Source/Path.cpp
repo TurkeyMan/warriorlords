@@ -9,7 +9,7 @@ void Path::Init(Map *_pMap)
 	int width, height;
 	pMap->GetMapSize(&width, &height);
 
-	stepPool.Init("Step pool", 1024);
+	stepPool.Init("Step pool", 8*1024);
 }
 
 void Path::Deinit()
@@ -17,7 +17,7 @@ void Path::Deinit()
 	stepPool.Deinit();
 }
 
-Step *Path::FindPath(int startX, int startY, int destX, int destY)
+Step *Path::FindPath(int player, int startX, int startY, int destX, int destY)
 {
 	// check target is not the source
 	if(startX == destX && startY == destY)
@@ -45,7 +45,7 @@ Step *Path::FindPath(int startX, int startY, int destX, int destY)
 		}
 	};
 
-	Cell searchList[1*1024];
+	Cell searchList[8*1024];
 	int dist = MFMax(MFAbs(destX - startX), MFAbs(destY - startY));
 	searchList[0].Set(startX, startY, 0, dist, dist);
 	int item = 0;
@@ -97,7 +97,7 @@ Step *Path::FindPath(int startX, int startY, int destX, int destY)
 		{
 			for(int tx = MFMax(item.x-1, 0); tx < MFMin(item.x+2, width); ++tx)
 			{
-				if(tx == x && ty == ty)
+				if(tx == item.x && ty == item.y)
 					continue;
 
 				if(1)// if not flying...
@@ -140,7 +140,15 @@ Step *Path::FindPath(int startX, int startY, int destX, int destY)
 
 				if(y == -1 || searchList[y].open != 2)
 				{
-					int tg = item.gScore + (pMap->GetDetailType(tx, ty) == OT_Road ? 1 : pMap->GetTile(tx, ty)->speed * 2);
+					// calculate the path score
+					MapTile *pTile = pMap->GetTile(tx, ty);
+
+					ObjectType type = pTile->GetType();
+					int terrain = pTile->GetTerrain();
+					int terrainSpeed = pMap->GetTerrainTile(terrain)->speed;
+					int cornerPenalty = (tx != item.x) && (ty != item.y) ? 1 : 0;
+
+					int tg = item.gScore + ((type == OT_Road || type == OT_Castle) ? 2 : terrainSpeed * 4) + cornerPenalty + (pTile->IsEnemyTile(player) ? 100 : 0);
 					bool isBetter = false;
 
 					if(y == -1)
@@ -165,6 +173,13 @@ Step *Path::FindPath(int startX, int startY, int destX, int destY)
 
 	// there is no path!
 	return NULL;
+}
+
+Step *Path::StripStep(Step *pPath)
+{
+	Step *pNext = pPath->pNext;
+	stepPool.Destroy(pPath);
+	return pNext;
 }
 
 void Path::Destroy(Step *pPath)

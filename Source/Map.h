@@ -8,6 +8,7 @@
 #include "Path.h"
 
 struct MFTexture;
+class Game;
 
 enum ObjectType
 {
@@ -22,16 +23,56 @@ enum ObjectType
 	OT_Max
 };
 
-class Map : public InputHandler
+class MapTile
+{
+	friend class Map;
+public:
+	int GetX() { return x; }
+	int GetY() { return y; }
+
+	int GetTerrain() { return terrain; }
+	ObjectType GetType() { return (ObjectType)type; }
+
+	void AddGroup(Group *pGroup);
+	void RemoveGroup(Group *pGroup);
+
+	int GetNumGroups();
+	Group *GetGroup(int group);
+	Unit *FindVehicle();
+
+	void BringGroupToFront(Group *pGroup);
+
+	int GetNumUnits();
+	int GetAvailableUnitSpace() { return 10 - GetNumUnits(); }
+
+	Castle *GetCastle() { if(type == OT_Castle) return (Castle*)pObject; return NULL; }
+
+	bool IsFriendlyTile(int player);
+	bool IsEnemyTile(int player);
+	bool CanMove(Group *pGroup);
+
+protected:
+	Group *pGroup;
+	void *pObject;
+
+	uint16 x, y;
+
+	uint8 terrain;		// terrain type
+	uint8 type;			// type of detail on tile
+	uint8 index;		// index of item on tile
+	uint8 castleTile;	// castle square: 0 = top left, 1 = top right, 2 = bottom left, 3 = bottom right
+};
+
+class Map : public InputReceiver
 {
 public:
-	static Map *Create(const char *pMapFilename);
-	static Map *CreateNew(const char *pTileset, const char *pUnits);
+	static Map *Create(Game *pGame, const char *pMapFilename);
+	static Map *CreateNew(Game *pGame, const char *pTileset, const char *pUnits);
 	void Destroy();
 
 	void Save(const char *pFilename);
 
-	virtual int UpdateInput();
+	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 
 	void Update();
 	void Draw();
@@ -39,20 +80,29 @@ public:
 	void DrawDebug();
 
 	void GetMapSize(int *pWidth, int *pHeight) { *pWidth = mapWidth; *pHeight = mapHeight; }
-	void GetCursor(int *pX, int *pY);
+	void GetCursor(float x, float y, int *pX, int *pY);
 	void GetVisibleTileSize(float *pWidth, float *pHeight);
 
 	void SetOffset(float x, float y);
-	void CenterView(int x, int y);
+	void GetOffset(float *pX, float *pY);
 	void SetZoom(float zoom, float centerX = -1.f, float centerY = -1.f);
+	void CenterView(int x, int y);
 
 	void SetMapOrtho(int *pXTiles = NULL, int *pYTiles = NULL);
 
-	inline const Tile *GetTile(int x, int y) { return pTiles->GetTile(pMap[y*mapWidth + x].terrain); }
-	inline uint32 GetTerrain(int x, int y) { return pTiles->GetTile(pMap[y*mapWidth + x].terrain)->terrain; }
+	MapTile *GetTile(int x, int y) const { return pMap + y*mapWidth + x; }
+	const Tile *GetTerrainTile(int terrain) const { return pTiles->GetTile(terrain); }
+	const Tile *GetTerrainTileAt(int x, int y) const { return pTiles->GetTile(pMap[y*mapWidth + x].terrain); }
+	uint32 GetTerrain(int x, int y) const { return pTiles->GetTile(pMap[y*mapWidth + x].terrain)->terrain; }
 
-	ObjectType GetDetailType(int x, int y);
-	int GetDetail(int x, int y);
+	int GetNumCastles() const { return numCastles; }
+	Castle *GetCastle(int id) const { return &pCastles[id]; }
+
+	ObjectType GetDetailType(int x, int y) const;
+	int GetDetail(int x, int y) const;
+
+	Tileset *GetTileset() { return pTiles; }
+	UnitDefinitions *GetUnitDefinitions() { return pUnits; }
 
 	bool SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask = 0xFFFFFFFF);
 
@@ -63,28 +113,20 @@ public:
 
 	void ClearDetail(int x, int y);
 
-	Tileset *GetTileset() { return pTiles; }
-	UnitDefinitions *GetUnitDefinitions() { return pUnits; }
-
-	void SetMoveKey(bool bAlternate) { bRightMove = bAlternate; }
+	void SetMoveKey(bool bAlternate) { moveButton = bAlternate ? 1 : 0; }
 
 	int UpdateChange(int a);
 
+	Step *FindPath(int player, int startX, int startY, int destX, int destY);
+	Step *StripStep(Step *pPath);
+	void DestroyPath(Step *pPath);
+
 protected:
-	struct MapTile
-	{
-		Unit *pUnits;
-		void *pObject;
-
-		uint8 terrain;
-		uint8 type;
-		uint8 index;
-		uint8 reserved;
-	};
-
 	char name[32];
 	char tileset[32];
-	char units[32];
+	char unitset[32];
+
+	Game *pGame;
 
 	Tileset *pTiles;
 	UnitDefinitions *pUnits;
@@ -100,12 +142,13 @@ protected:
 	float xOffset, yOffset;
 	float zoom;
 
-	bool bIsDragging;
-
 	MFTexture *pRenderTarget;
 	MFMaterial *pRenderTargetMaterial;
 	MFTexture *pMinimap;
 	MFMaterial *pMinimapMaterial;
+
+	Castle *pCastles;
+	int numCastles;
 
 	// editor stuff
 	struct MapCoord
@@ -117,10 +160,11 @@ protected:
 	MapCoord *pChangeList;
 	int numChanges;
 
-	bool bRightMove;
+	int moveButton;
 
 	bool SetTile(int x, int y, uint32 tile, uint32 mask);
 	int ChooseTile(int *pSelectedTiles, int numVariants);
+	void SetRTOrtho(int *pXTiles = NULL, int *pYTiles = NULL);
 };
 
 #endif

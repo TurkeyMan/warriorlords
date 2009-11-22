@@ -287,7 +287,7 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 	MFEnd();
 }
 
-int Tileset::GetTileSpeed(uint32 terrain)
+int Tileset::GetTileSpeed(uint32 terrain) const
 {
 	uint32 t0 = terrain & 0xFF;
 	uint32 t1 = (terrain >> 8) & 0xFF;

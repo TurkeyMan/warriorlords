@@ -14,7 +14,7 @@ Editor::Editor(Game *pGame)
 	pMap = pGame->GetMap();
 
 	if(!pMap)
-		pMap = Map::CreateNew("TileSet", "Castles");
+		pMap = Map::CreateNew(pGame, "TileSet", "Castles");
 
 	brushType[0] = OT_Terrain;
 	brushType[1] = OT_Terrain;
@@ -177,39 +177,26 @@ Editor::~Editor()
 
 void Editor::Select()
 {
+	pInputManager->ClearReceivers();
+	pInputManager->PushReceiver(this);
+	pInputManager->PushReceiver(pMap);
 
+	pInputManager->PushReceiver(pBrushButton[0]);
+	pInputManager->PushReceiver(pBrushButton[1]);
+
+	pInputManager->PushReceiver(pMiniMap);
+	pInputManager->PushReceiver(pModeButton);
+}
+
+bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
+{
+	return false;
 }
 
 int Editor::UpdateInput()
 {
-	if(tileChooser)
+	if(!tileChooser)
 	{
-		Tileset *pTiles = pMap->GetTileset();
-		int chooserPage = tileChooser - 1;
-
-		for(int a=0; a<pageButtonCount[chooserPage]; ++a)
-			pChooserButtons[chooserPage][a]->UpdateInput();
-
-		pFlipButton->UpdateInput();
-	}
-	else
-	{
-		// update buttons
-		if(pBrushButton[0]->UpdateInput() ||
-			pBrushButton[1]->UpdateInput())
-			return 1;
-
-		// update zoom
-
-		// update minimap
-		if(pMiniMap->UpdateInput())
-			return 1;
-		if(pModeButton->UpdateInput())
-			return 1;
-
-		// update map
-		pMap->UpdateInput();
-
 		if(MFInput_WasPressed(Key_S, IDD_Keyboard))
 			pMap->Save("Map.ini");
 
@@ -217,7 +204,7 @@ int Editor::UpdateInput()
 		if(bPaintMode)
 		{
 			int cursorX, cursorY;
-			pMap->GetCursor(&cursorX, &cursorY);
+			pMap->GetCursor(MFInput_Read(Mouse_XPos, IDD_Mouse), MFInput_Read(Mouse_YPos, IDD_Mouse), &cursorX, &cursorY);
 
 			bool bWasPressed = MFInput_WasPressed(Mouse_LeftButton, IDD_Mouse);
 			ObjectType detail = pMap->GetDetailType(cursorX, cursorY);
@@ -354,8 +341,17 @@ void Editor::BrushSelect(int button, void *pUserData, int buttonID)
 
 	if(pThis->brush == buttonID)
 	{
-		// show brush selector window...
-		pThis->tileChooser = 1;
+		if(pThis->tileChooser == 0)
+		{
+			// show brush selector window...
+			pThis->tileChooser = 1;
+
+			pInputManager->PushReceiver(pThis->pFlipButton);
+
+			int chooserPage = pThis->tileChooser - 1;
+			for(int a=0; a<pThis->pageButtonCount[chooserPage]; ++a)
+				pInputManager->PushReceiver(pThis->pChooserButtons[chooserPage][a]);
+		}
 	}
 	else
 	{
@@ -393,21 +389,23 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 		}
 		case OT_Castle:
 		{
-    	UnitDefinitions *pUnits = pThis->pMap->GetUnitDefinitions();
-			pUnits->GetCastleUVs(index, &rect);
+			UnitDefinitions *pUnits = pThis->pMap->GetUnitDefinitions();
+			pUnits->GetCastleUVs(index - 1, &rect);
 			pMat = pUnits->GetCastleMaterial();
+			--pThis->brushIndex[pThis->brush];
 			break;
 		}
 		case OT_Flag:
 		{
-    	UnitDefinitions *pUnits = pThis->pMap->GetUnitDefinitions();
-			pUnits->GetFlagUVs(index, &rect);
+			UnitDefinitions *pUnits = pThis->pMap->GetUnitDefinitions();
+			pUnits->GetFlagUVs(index - 1, &rect);
 			pMat = pUnits->GetCastleMaterial();
+			--pThis->brushIndex[pThis->brush];
 			break;
 		}
 		case OT_Special:
 		{
-    	UnitDefinitions *pUnits = pThis->pMap->GetUnitDefinitions();
+			UnitDefinitions *pUnits = pThis->pMap->GetUnitDefinitions();
 			pUnits->GetSpecialUVs(index, &rect);
 			pMat = pUnits->GetCastleMaterial();
 			break;
@@ -424,6 +422,9 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 	// update the brush image
 	pThis->pBrushButton[pThis->brush]->SetImage(pMat, &rect);
 
+	// pop everything above the flip button
+	pInputManager->PopReceiver(pThis->pFlipButton);
+
 	pThis->tileChooser = 0;
 }
 
@@ -431,7 +432,16 @@ void Editor::FlipPage(int button, void *pUserData, int buttonID)
 {
 	Editor *pThis = (Editor*)pUserData;
 
+	// pop the last page buttons
+	pInputManager->PopReceiver(pThis->pChooserButtons[pThis->tileChooser - 1][0]);
+
+	// update the page
 	pThis->tileChooser = (pThis->tileChooser % pThis->numPages) + 1;
+
+	// push the new page buttons
+	int chooserPage = pThis->tileChooser - 1;
+	for(int a=0; a<pThis->pageButtonCount[chooserPage]; ++a)
+		pInputManager->PushReceiver(pThis->pChooserButtons[chooserPage][a]);
 }
 
 void Editor::ShowMiniMap(int button, void *pUserData, int buttonID)

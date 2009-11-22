@@ -6,15 +6,17 @@
 
 struct MFMaterial;
 
-class Button : public InputHandler
+class Button : public InputReceiver
 {
 public:
 	typedef void (TriggerCallback)(int button, void *pUserData, int buttonID); 
 
+	Button(MFRect &rect) : InputReceiver(rect) { }
+
 	static Button *Create(MFMaterial *pImage, MFRect *pPosition, MFRect *pUVs, TriggerCallback *pCallback, void *pUserData, int ButtonID = 0, bool bTriggerOnDown = false);
 	void Destroy();
 
-	virtual int UpdateInput();
+	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 	void Draw();
 
 	void SetImage(MFMaterial *pImage, MFRect *pUVs);
@@ -36,6 +38,7 @@ protected:
 	TriggerCallback *pCallback;
 	void *pUserData;
 
+	int button;
 	int buttonID;
 };
 

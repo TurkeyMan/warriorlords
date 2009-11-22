@@ -8,7 +8,7 @@
 Button *Button::Create(MFMaterial *pImage, MFRect *pPosition, MFRect *pUVs, TriggerCallback *pCallback, void *pUserData, int buttonID, bool bTriggerOnDown)
 {
 	Button *pNew = (Button*)MFHeap_Alloc(sizeof(Button));
-	pNew = new(pNew) Button;
+	pNew = new(pNew) Button(*pPosition);
 
 	pNew->pMaterial = pImage;
 	pNew->pos = *pPosition;
@@ -19,6 +19,7 @@ Button *Button::Create(MFMaterial *pImage, MFRect *pPosition, MFRect *pUVs, Trig
 	pNew->bTriggerOnDown = bTriggerOnDown;
 	pNew->bOutline = false;
 	pNew->outlineColour = MFVector::white;
+	pNew->button = 0;
 	pNew->buttonID = buttonID;
 
 	return pNew;
@@ -29,42 +30,49 @@ void Button::Destroy()
 	MFHeap_Free(this);
 }
 
-int Button::UpdateInput()
+bool Button::HandleInputEvent(InputEvent ev, InputInfo &info)
 {
-	float x = MFInput_Read(Mouse_XPos, IDD_Mouse);
-	float y = MFInput_Read(Mouse_YPos, IDD_Mouse);
+	if(info.device == IDD_Mouse && info.deviceID != 0)
+		return false;
 
-	if(MFInput_WasPressed(Mouse_LeftButton, IDD_Mouse))
+	switch(ev)
 	{
-		if(MFTypes_PointInRect(x, y, &pos))
-		{
-			if(bTriggerOnDown)
+		case IE_Down:
+			if(info.buttonID == button)
 			{
-				if(pCallback)
-					pCallback(0, pUserData, buttonID);
+				if(bTriggerOnDown)
+				{
+					if(pCallback)
+						pCallback(0, pUserData, buttonID);
+				}
+				else
+				{
+					bIsPressed = true;
+				}
+
+				pInputManager->SetExclusiveContactReceiver(info.contact, this);
 			}
-			else
-				bIsPressed = true;
-
-			SetExclusive();
-			return 1;
-		}
+			return true;
+		case IE_Up:
+			if(info.buttonID == button)
+			{
+				bIsPressed = false;
+				if(!bTriggerOnDown)
+				{
+					if(MFTypes_PointInRect(info.up.x, info.up.y, &pos))
+					{
+						if(pCallback)
+							pCallback(0, pUserData, buttonID);
+					}
+				}
+			}
+			return true;
+		case IE_Tap:
+		case IE_Drag:
+			return true;
 	}
 
-	if(MFInput_WasReleased(Mouse_LeftButton, IDD_Mouse))
-	{
-		ReleaseExclusive();
-		bIsPressed = false;
-
-		if(bIsPressed && MFTypes_PointInRect(x, y, &pos))
-		{
-			if(pCallback)
-				pCallback(0, pUserData, buttonID);
-			return 1;
-		}
-	}
-
-	return 0;
+	return false;
 }
 
 void Button::Draw()

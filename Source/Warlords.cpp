@@ -12,6 +12,8 @@
 #include "MFSystem.h"
 
 /*** Global Stuff ***/
+InputManager *pInputManager = NULL;
+
 Game *pGame;
 
 Editor *pEditor = NULL;
@@ -36,6 +38,8 @@ void Game_Init()
 	mountData.pPath = MFFile_SystemPath("Data/");
 	MFFileSystem_Mount(hNative, &mountData);
 
+	pInputManager = new InputManager;
+
 	pGame = new Game("Map");
 
 #if 1
@@ -49,6 +53,8 @@ void Game_Init()
 void Game_Update()
 {
 	MFCALLSTACKc;
+
+	pInputManager->Update();
 
 	Screen::UpdateScreen();
 }

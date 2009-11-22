@@ -7,13 +7,17 @@
 #include "MFPrimitive.h"
 #include "MFIni.h"
 
-UnitDefinitions *UnitDefinitions::Load(const char *pUnits, int numTerrainTypes)
+extern Game *pGame;
+
+UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numTerrainTypes)
 {
 	MFIni *pIni = MFIni::Create("Units");
 	if(!pIni)
 		return NULL;
 
 	UnitDefinitions *pUnitDefs = new UnitDefinitions;
+	pUnitDefs->units.Init("Unit List", 4096);
+	pUnitDefs->pGame = pGame;
 
 	pUnitDefs->pUnitDefs = pIni;
 
@@ -322,6 +326,8 @@ void UnitDefinitions::Free()
 	if(pUnitDefs)
 		MFIni::Destroy(pUnitDefs);
 
+	units.Deinit();
+
 	delete this;
 }
 
@@ -331,12 +337,12 @@ MFVector UnitDefinitions::GetRaceColour(int race) const
 	return MakeVector(((c >> 16) & 0xFF) * (1.f/255.f), ((c >> 8) & 0xFF) * (1.f/255.f), (c & 0xFF) * (1.f/255.f));
 }
 
-Unit *UnitDefinitions::CreateUnit(int unit, int race)
+Unit *UnitDefinitions::CreateUnit(int unit, int player)
 {
-	Unit *pUnit = new Unit;
+	Unit *pUnit = units.Create();
 
 	pUnit->id = unit;
-	pUnit->race = race;
+	pUnit->player = player;
 
 	pUnit->pUnitDefs = this;
 	pUnit->details = pUnits[unit];
@@ -348,22 +354,26 @@ Unit *UnitDefinitions::CreateUnit(int unit, int race)
 	return pUnit;
 }
 
-void UnitDefinitions::AddRenderUnit(int unit, float x, float y, int race, bool bFlip)
+void UnitDefinitions::DestroyUnit(Unit *pUnits)
+{
+	units.Destroy(pUnits);
+}
+
+void UnitDefinitions::AddRenderUnit(int unit, float x, float y, int player, bool bFlip, float alpha)
 {
 	renderUnits[numRenderUnits].unit = unit;
 	renderUnits[numRenderUnits].x = x;
 	renderUnits[numRenderUnits].y = y;
-	renderUnits[numRenderUnits].race = race;
+	renderUnits[numRenderUnits].player = player;
+	renderUnits[numRenderUnits].alpha = alpha;
 	renderUnits[numRenderUnits].bFlip = bFlip;
 	++numRenderUnits;
 }
 
-void UnitDefinitions::DrawUnits(float texelOffset, bool bHead)
+void UnitDefinitions::DrawUnits(float scale, float texelOffset, bool bHead)
 {
 	if(!numRenderUnits)
 		return;
-
-	float scale = 64.f;
 
 	for(int a=0; a<2; ++a)
 	{
@@ -379,16 +389,15 @@ void UnitDefinitions::DrawUnits(float texelOffset, bool bHead)
 		MFPrimitive(PT_TriList);
 		MFBegin(6*numRenderUnits);
 
-		if(a == 0)
-			MFSetColour(MFVector::white);
-
 		for(int u=0; u<numRenderUnits; ++u)
 		{
 			UnitRender &unit = renderUnits[u];
 			UnitDetails &def = pUnits[unit.unit];
 
-			if(a == 1)
-				MFSetColour(GetRaceColour(unit.race));
+			if(a == 0)
+				MFSetColour(1, 1, 1, unit.alpha);
+			else
+				MFSetColour(MakeVector(pGame->GetPlayerColour(unit.player), unit.alpha));
 
 			MFRect uvs;
 			GetUnitUVs(unit.unit, unit.bFlip, &uvs, texelOffset);
@@ -497,10 +506,86 @@ void UnitDefinitions::GetSpecialUVs(int index, MFRect *pUVs, float texelOffset)
 
 void Unit::Destroy()
 {
+	pUnitDefs->DestroyUnit(this);
+}
+
+void Unit::Draw(float x, float y, bool bFlip, float alpha)
+{
+	pUnitDefs->AddRenderUnit(id, x, y, player, bFlip, alpha);
+}
+
+int Unit::GetRace()
+{
+	return pGame->GetPlayerRace(player);
+}
+
+MFVector Unit::GetColour()
+{
+	return pGame->GetPlayerColour(player);
+}
+
+void Castle::Init(CastleDetails *pDetails, int _player, UnitDefinitions *_pUnitDefs)
+{
+	pUnitDefs = _pUnitDefs;
+
+	details = *pDetails;
+	player = _player;
+
+	building = -1;
+	buildTime = 0;
+}
+
+Group *Group::Create(int _player)
+{
+	Group * pGroup = new Group;
+	pGroup->player = _player;
+	pGroup->numForwardUnits = pGroup->numRearUnits = 0;
+	pGroup->forwardPlan = AP_AttackFront;
+	pGroup->rearPlan = AP_AttackRear;
+	pGroup->bSelected = false;
+	pGroup->pPath = NULL;
+	pGroup->pNext = NULL;
+	pGroup->pVehicle = NULL;
+	return pGroup;
+}
+
+void Group::Destroy()
+{
 	delete this;
 }
 
-void Unit::Draw(float x, float y, bool bFlip)
+void Group::AddUnit(Unit *pUnit)
 {
-	pUnitDefs->AddRenderUnit(id, x, y, race, bFlip);
+	bool bRear = pUnit->IsRanged();
+
+	if(bRear)
+		pRearUnits[numRearUnits++] = pUnit;
+	else
+		pForwardUnits[numForwardUnits++] = pUnit;
+}
+
+void Group::RemoveUnit(Unit *pUnit)
+{
+	for(int a=0; a<numForwardUnits; ++a)
+	{
+		if(pUnit == pForwardUnits[a])
+		{
+			--numForwardUnits;
+			for(int b=a; b<numForwardUnits; ++b)
+				pForwardUnits[b] = pForwardUnits[b+1];
+			pForwardUnits[numForwardUnits] = NULL;
+			break;
+		}
+	}
+	for(int a=0; a<numRearUnits; ++a)
+	{
+		if(pUnit == pRearUnits[a])
+		{
+			--numRearUnits;
+			for(int b=a; b<numRearUnits; ++b)
+				pRearUnits[b] = pRearUnits[b+1];
+			pRearUnits[numRearUnits] = NULL;
+			break;
+		}
+	}
 }

@@ -17,6 +17,7 @@ public:
 	virtual void Draw();
 	virtual void Deselect();
 
+	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 	virtual int UpdateInput();
 
 	static void BrushSelect(int button, void *pUserData, int buttonID);

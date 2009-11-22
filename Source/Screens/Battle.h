@@ -22,6 +22,7 @@ public:
 	virtual void Draw();
 	virtual void Deselect();
 
+	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 	virtual int UpdateInput();
 
 protected:
@@ -31,6 +32,7 @@ protected:
 		US_Waiting,         // unit is waiting for target to be available
 		US_Engaging,        // unit is engaging a unit
 		US_Dying,           // unit is dying
+		US_Dead				// unit is dead
 	};
 
 	struct BattleUnit
@@ -63,6 +65,7 @@ protected:
 		Group *pGroup;
 		BattleUnit units[10];
 		int numUnits;
+		int numUnitsAlive;
 	};
 
 	// member functions

@@ -26,7 +26,108 @@ static const char * const pObjectTypes[] =
 	"road"
 };
 
-Map *Map::Create(const char *pMapFilename)
+void MapTile::AddGroup(Group *_pGroup)
+{
+	_pGroup->pNext = pGroup;
+	pGroup = _pGroup;
+	pGroup->pTile = this;
+}
+
+void MapTile::RemoveGroup(Group *_pGroup)
+{
+	if(!pGroup || !_pGroup)
+		return;
+
+	if(pGroup == _pGroup)
+	{
+		pGroup = pGroup->pNext;
+	}
+	else
+	{
+		Group *pG = pGroup;
+		while(pG->pNext != _pGroup)
+			pG = pG->pNext;
+		if(pG->pNext)
+			pG->pNext = pG->pNext->pNext;
+		_pGroup->pNext = NULL;
+	}
+
+	_pGroup->pTile = NULL;
+}
+
+int MapTile::GetNumGroups()
+{
+	int groups = 0;
+	for(Group *pG = pGroup; pG; pG = pG->pNext)
+		++groups;
+	return groups;
+}
+
+Group *MapTile::GetGroup(int group)
+{
+	for(Group *pG = pGroup; pG; pG = pG->pNext)
+	{
+		if(!group--)
+			return pG;
+	}
+	return NULL;
+}
+
+Unit *MapTile::FindVehicle()
+{
+	for(Group *pG = pGroup; pG; pG = pG->pNext)
+	{
+		Unit *pVehicle = pG->GetVehicle();
+		if(pVehicle)
+			return pVehicle;
+	}
+	return NULL;
+}
+
+void MapTile::BringGroupToFront(Group *pGroup)
+{
+	RemoveGroup(pGroup);
+	AddGroup(pGroup);
+}
+
+int MapTile::GetNumUnits()
+{
+	int units = 0;
+	for(Group *pG = pGroup; pG; pG = pG->pNext)
+		units += pG->GetNumUnits();
+	return units;
+}
+
+bool MapTile::IsFriendlyTile(int player)
+{
+	if(pGroup)
+		return pGroup->player == player;
+	Castle *pCastle = GetCastle();
+	if(pCastle)
+		return pCastle->player == player;
+	return false;
+}
+
+bool MapTile::IsEnemyTile(int player)
+{
+	if(pGroup)
+		return pGroup->player != player;
+	Castle *pCastle = GetCastle();
+	if(pCastle)
+		return pCastle->player != player;
+	return false;
+}
+
+bool MapTile::CanMove(Group *_pGroup)
+{
+	if(IsEnemyTile(_pGroup->player))
+		return false;
+	if(pGroup)
+		return _pGroup->GetNumUnits() <= GetAvailableUnitSpace();
+	return true;
+}
+
+Map *Map::Create(Game *pGame, const char *pMapFilename)
 {
 	MFIni *pIni = MFIni::Create(pMapFilename);
 	if(!pIni)
@@ -41,6 +142,7 @@ Map *Map::Create(const char *pMapFilename)
 		{
 			pMap = (Map*)MFHeap_AllocAndZero(sizeof(Map));
 			pMap = new(pMap) Map;
+			pMap->pGame = pGame;
 
 			MFIniLine *pMapLine = pLine->Sub();
 
@@ -57,8 +159,8 @@ Map *Map::Create(const char *pMapFilename)
 				}
 				else if(pMapLine->IsString(0, "units"))
 				{
-					MFString_Copy(pMap->units, pMapLine->GetString(1));
-					pMap->pUnits = UnitDefinitions::Load(pMapLine->GetString(1), pMap->pTiles->GetNumTerrainTypes());
+					MFString_Copy(pMap->unitset, pMapLine->GetString(1));
+					pMap->pUnits = UnitDefinitions::Load(pGame, pMapLine->GetString(1), pMap->pTiles->GetNumTerrainTypes());
 				}
 				else if(pMapLine->IsString(0, "map_width"))
 				{
@@ -73,6 +175,11 @@ Map *Map::Create(const char *pMapFilename)
 					MFDebug_Assert(pMap->mapWidth && pMap->mapHeight, "Invalid map dimensions");
 
 					pMap->pMap = (MapTile*)MFHeap_AllocAndZero(pMap->mapWidth * pMap->mapHeight * sizeof(MapTile));
+					for(int a=0; a<pMap->mapWidth * pMap->mapHeight; ++a)
+					{
+						pMap->pMap[a].x = a % pMap->mapWidth;
+						pMap->pMap[a].y = a / pMap->mapWidth;
+					}
 
 					int i = 0;
 
@@ -117,44 +224,74 @@ Map *Map::Create(const char *pMapFilename)
 				{
 					MFIniLine *pCastles = pMapLine->Sub();
 
+					pMap->numCastles = 0;
+					pMap->pCastles = NULL;
+
 					while(pCastles)
 					{
 						if(pCastles->IsSection("Castle"))
+							++pMap->numCastles;
+						pCastles = pCastles->Next();
+					}
+
+					if(pMap->numCastles)
+					{
+						pMap->pCastles = (Castle*)MFHeap_AllocAndZero(sizeof(Castle) * pMap->numCastles);
+						int castle = 0;
+
+						pCastles = pMapLine->Sub();
+
+						while(pCastles)
 						{
-							MFIniLine *pCastle = pCastles->Sub();
-
-							char name[32];
-							int x = 0;
-							int y = 0;
-							int race;
-
-							while(pCastle)
+							if(pCastles->IsSection("Castle"))
 							{
-								if(!MFString_CaseCmp(pCastle->GetString(0), "name"))
+								MFIniLine *pCastle = pCastles->Sub();
+
+								const char *pName;
+								int x = 0;
+								int y = 0;
+								int race;
+
+								while(pCastle)
 								{
-									MFString_Copy(name, pCastle->GetString(1));
-								}
-								else if(!MFString_CaseCmp(pCastle->GetString(0), "position"))
-								{
-									x = pCastle->GetInt(1);
-									y = pCastle->GetInt(2);
-								}
-								else if(!MFString_CaseCmp(pCastle->GetString(0), "race"))
-								{
-									race = pCastle->GetInt(1);
+									if(!MFString_CaseCmp(pCastle->GetString(0), "name"))
+									{
+										pName = pCastle->GetString(1);
+									}
+									else if(!MFString_CaseCmp(pCastle->GetString(0), "position"))
+									{
+										x = pCastle->GetInt(1);
+										y = pCastle->GetInt(2);
+									}
+									else if(!MFString_CaseCmp(pCastle->GetString(0), "race"))
+									{
+										race = pCastle->GetInt(1);
+									}
+
+									pCastle = pCastle->Next();
 								}
 
-								pCastle = pCastle->Next();
+								for(int a=0; a<4; ++a)
+								{
+									MapTile &tile = pMap->pMap[(y + (a >> 1))*pMap->mapWidth + x + (a & 1)];
+									tile.pObject = &pMap->pCastles[castle];
+									tile.type = OT_Castle;
+									tile.index = castle;
+									tile.castleTile = a;
+								}
+
+								CastleDetails details;
+								details.pName = pName;
+								details.x = x;
+								details.y = y;
+								details.numBuildUnits = 0;
+								details.income = 0;
+
+								pMap->pCastles[castle++].Init(&details, race-1, pMap->pUnits);
 							}
 
-							MapTile &tile = pMap->pMap[y*pMap->mapWidth + x];
-							tile.type = OT_Castle;
-							tile.index = race;
-
-							// insert additional map data...
+							pCastles = pCastles->Next();
 						}
-
-						pCastles = pCastles->Next();
 					}
 				}
 
@@ -200,7 +337,7 @@ Map *Map::Create(const char *pMapFilename)
 	pMap->pMinimap = NULL;
 	pMap->pMinimapMaterial = NULL;
 
-	pMap->bRightMove = false;
+	pMap->moveButton = 0;
 
 	return pMap;
 }
@@ -227,21 +364,28 @@ int Map::ChooseTile(int *pSelectedTiles, int numVariants)
 	return 0;
 }
 
-Map *Map::CreateNew(const char *pTileset, const char *pUnits)
+Map *Map::CreateNew(Game *pGame, const char *pTileset, const char *pUnits)
 {
 	Map *pNew = (Map*)MFHeap_AllocAndZero(sizeof(Map));
 	pNew = new(pNew) Map;
 
+	pNew->pGame = pGame;
+
 	MFString_Copy(pNew->name, "Untitled");
 	MFString_Copy(pNew->tileset, pTileset);
-	MFString_Copy(pNew->units, pUnits);
+	MFString_Copy(pNew->unitset, pUnits);
 
 	pNew->mapWidth = 128;
 	pNew->mapHeight = 128;
 	pNew->pMap = (MapTile*)MFHeap_AllocAndZero(pNew->mapWidth * pNew->mapHeight * sizeof(MapTile));
+	for(int a=0; a<pNew->mapWidth * pNew->mapHeight; ++a)
+	{
+		pNew->pMap[a].x = a % pNew->mapWidth;
+		pNew->pMap[a].y = a / pNew->mapWidth;
+	}
 
 	pNew->pTiles = Tileset::Create(pTileset);
-	pNew->pUnits = UnitDefinitions::Load(pUnits, pNew->pTiles->GetNumTerrainTypes());
+	pNew->pUnits = UnitDefinitions::Load(pGame, pUnits, pNew->pTiles->GetNumTerrainTypes());
 
 	pNew->path.Init(pNew);
 
@@ -278,7 +422,7 @@ Map *Map::CreateNew(const char *pTileset, const char *pUnits)
 	pNew->pChangeList = (MapCoord*)MFHeap_Alloc(sizeof(MapCoord)*1024);
 	pNew->numChanges = 0;
 
-	pNew->bRightMove = false;
+	pNew->moveButton = 0;
 
 	return pNew;
 }
@@ -311,7 +455,7 @@ void Map::Save(const char *pFilename)
 		"\n"
 		"\t[Tiles]\n"
 		"\t{\n",
-		name, tileset, units, mapWidth, mapHeight);
+		name, tileset, unitset, mapWidth, mapHeight);
 	int len = MFString_Length(pMapData);
 	MFFile_Write(pFile, pMapData, len);
 
@@ -361,9 +505,10 @@ void Map::Save(const char *pFilename)
 	{
 		for(int b=0; b<mapWidth; ++b)
 		{
-			if(pMap[a*mapWidth + b].type == OT_Castle)
+			MapTile &tile = pMap[a*mapWidth + b];
+			if(tile.type == OT_Castle && tile.castleTile == 0)
 			{
-				int race = pMap[a*mapWidth + b].index;
+				int race = tile.index;
 				int len = sprintf(buffer, "\t\t[Castle]\n\t\t{\n\t\t\tname = \"%s\"\n\t\t\tposition = %d, %d\n\t\t\trace = %d\n\t\t}\n", "unnamed", b, a, race);
 				MFFile_Write(pFile, buffer, len);
 			}
@@ -389,49 +534,51 @@ void Map::GetVisibleTileSize(float *pWidth, float *pHeight)
 		*pHeight = tileHeight*zoom;
 }
 
-void Map::GetCursor(int *pX, int *pY)
+void Map::GetCursor(float x, float y, int *pX, int *pY)
 {
 	float tileWidth, tileHeight;
 	GetVisibleTileSize(&tileWidth, &tileHeight);
 
-	*pX = (int)(xOffset + MFInput_Read(Mouse_XPos, IDD_Mouse) / tileWidth);
-	*pY = (int)(yOffset + MFInput_Read(Mouse_YPos, IDD_Mouse) / tileHeight);
+	if(pX)
+		*pX = (int)(xOffset + x / tileWidth);
+	if(pY)
+		*pY = (int)(yOffset + y / tileHeight);
 }
 
-int Map::UpdateInput()
+bool Map::HandleInputEvent(InputEvent ev, InputInfo &info)
 {
+	if(info.device == IDD_Mouse && info.deviceID != 0)
+		return false;
+
 	float tileWidth, tileHeight;
-	GetVisibleTileSize(&tileWidth, &tileHeight);
 
-	float mouseZoom = MFInput_Read(Mouse_Wheel, IDD_Mouse);
-	if(mouseZoom)
+	switch(ev)
 	{
-		float mouseX = MFInput_Read(Mouse_XPos, IDD_Mouse);
-		float mouseY = MFInput_Read(Mouse_YPos, IDD_Mouse);
-		SetZoom(zoom + 0.25f*mouseZoom, mouseX/tileWidth, mouseY/tileHeight);
+		case IE_Down:
+			if(info.buttonID == moveButton)
+			{
+				pInputManager->SetExclusiveContactReceiver(info.contact, this);
+				return true;
+			}
+			break;
+		case IE_Drag:
+			if(info.buttonID == moveButton)
+			{
+				GetVisibleTileSize(&tileWidth, &tileHeight);
+				SetOffset(xOffset + -info.drag.deltaX/tileWidth, yOffset + -info.drag.deltaY/tileHeight);
+				return true;
+			}
+			break;
+		case IE_Pinch:
+		{
+			float newZoom = (info.device == IDD_Mouse) ? zoom + (info.pinch.deltaScale < 1.f ? -.25f : .25f) : zoom * info.pinch.deltaScale;
+			GetVisibleTileSize(&tileWidth, &tileHeight);
+			SetZoom(newZoom, info.pinch.centerX/tileWidth, info.pinch.centerY/tileHeight);
+			return true;
+		}
 	}
 
-	if(MFInput_WasReleased(bRightMove ? Mouse_RightButton : Mouse_LeftButton, IDD_Mouse))
-	{
-		bIsDragging = false;
-		ReleaseExclusive();
-	}
-
-	if(bIsDragging)
-	{
-		float xDelta = -MFInput_Read(Mouse_XDelta, IDD_Mouse);
-		float yDelta = -MFInput_Read(Mouse_YDelta, IDD_Mouse);
-
-		SetOffset(xOffset + xDelta/tileWidth, yOffset + yDelta/tileHeight);
-	}
-
-	if(MFInput_WasPressed(bRightMove ? Mouse_RightButton : Mouse_LeftButton, IDD_Mouse))
-	{
-		bIsDragging = true;
-		SetExclusive();
-	}
-
-	return 0;
+	return false;
 }
 
 void Map::Update()
@@ -448,9 +595,9 @@ void Map::Draw()
 	int yStart = (int)yOffset;
 
 	int xTiles, yTiles;
-	SetMapOrtho(&xTiles, &yTiles);
+	SetRTOrtho(&xTiles, &yTiles);
 
-	MapTile *pStart = &pMap[yStart*mapWidth + xStart];
+	MapTile *pStart = pMap + yStart*mapWidth + xStart;
 
 	// blit map portion to a render target
 	pTiles->DrawMap(xTiles, yTiles, &pStart->terrain, sizeof(MapTile), mapWidth);
@@ -461,6 +608,20 @@ void Map::Draw()
 		for(int x=0; x<xTiles; ++x)
 		{
 			MapTile *pTile = pStart + x;
+
+			bool bDrawSelection = false;
+			if(pTile->GetNumGroups())
+			{
+				Unit *pVehicle = pTile->FindVehicle();
+				if(pVehicle)
+					pVehicle->Draw((float)x, (float)y);
+
+				Group *pGroup = pTile->GetGroup(0);
+				bDrawSelection = pGroup->IsSelected();
+
+				Unit *pUnit = pGroup->GetFeatureUnit();
+				pUnit->Draw((float)x, (float)y);
+			}
 
 			if(pTile->type == OT_None)
 				continue;
@@ -485,12 +646,22 @@ void Map::Draw()
 				switch(pTile->type)
 				{
 					case OT_Castle:
-						pUnits->GetCastleUVs(pTile->index, &uvs);
+					{
+						if(pTile->castleTile != 0)
+							continue;
+
+						Castle *pCastle = GetCastle(pTile->index);
+						int race = pGame->GetPlayerRace(pCastle->player);
+						pUnits->GetCastleUVs(race, &uvs);
 						tileWidth = 2.f;
 						break;
+					}
 					case OT_Flag:
-						pUnits->GetFlagUVs(pTile->index, &uvs);
+					{
+						int race = pGame->GetPlayerRace((int8)pTile->index);
+						pUnits->GetFlagUVs(race, &uvs);
 						break;
+					}
 					case OT_Special:
 						pUnits->GetSpecialUVs(pTile->index, &uvs);
 						break;
@@ -499,12 +670,17 @@ void Map::Draw()
 
 			MFMaterial_SetMaterial(pMat);
 			MFPrimitive_DrawQuad((float)x, (float)y, tileWidth, tileWidth, MFVector::one, uvs.x, uvs.y, uvs.x + uvs.width, uvs.y + uvs.height);
+
+			// draw selection
+			if(bDrawSelection)
+				MFPrimitive_DrawUntexturedQuad((float)x, (float)y, 1.f, 1.f, MakeVector(0.f, 0.f, 0.8f, 0.4f));
 		}
 
 		pStart += mapWidth;
 	}
 
 	// and now the units
+	pUnits->DrawUnits();
 
 	MFRenderer_SetDeviceRenderTarget();
 
@@ -599,7 +775,7 @@ void Map::DrawDebug()
 	MFFont_DrawTextf(MFFont_GetDebugFont(), MakeVector(8, 8), 24, MFVector::yellow, "%d, %d", cursorX, cursorY);
 }
 
-void Map::SetMapOrtho(int *pXTiles, int *pYTiles)
+void Map::SetRTOrtho(int *pXTiles, int *pYTiles)
 {
 	int targetWidth, targetHeight;
 	int tileWidth, tileHeight;
@@ -628,6 +804,29 @@ void Map::SetMapOrtho(int *pXTiles, int *pYTiles)
 		*pYTiles = (int)MFCeil((screenRect.height / tileHeight) / zoom + 1.f);
 }
 
+void Map::SetMapOrtho(int *pXTiles, int *pYTiles)
+{
+	float tileWidth, tileHeight;
+	GetVisibleTileSize(&tileWidth, &tileHeight);
+
+	MFRect screenRect;
+	MFDisplay_GetDisplayRect(&screenRect);
+	float screenWidth = screenRect.width / tileWidth;
+	float screenHeight = screenRect.height / tileHeight;
+
+	MFRect rect;
+	rect.x = xOffset;
+	rect.y = yOffset;
+	rect.width = screenWidth;
+	rect.height = screenHeight;
+	MFView_SetOrtho(&rect);
+
+	if(pXTiles)
+		*pXTiles = (int)MFCeil(screenWidth) + 1;
+	if(pYTiles)
+		*pYTiles = (int)MFCeil(screenHeight) + 1;
+}
+
 void Map::SetOffset(float x, float y)
 {
 	float tileWidth, tileHeight;
@@ -640,6 +839,14 @@ void Map::SetOffset(float x, float y)
 	yOffset = MFClamp(0.f, y, maxY);
 }
 
+void Map::GetOffset(float *pX, float *pY)
+{
+	if(pX)
+		*pX = xOffset;
+	if(pY)
+		*pY = yOffset;
+}
+
 void Map::CenterView(int x, int y)
 {
 	float tileWidth, tileHeight;
@@ -649,7 +856,7 @@ void Map::CenterView(int x, int y)
 	float screenHeight = gDefaults.display.displayHeight / tileHeight;
 
 	xOffset = (float)x + 0.5f - screenWidth*0.5f;
-	yOffset = (float)y + 0.5f - screenWidth*0.5f;
+	yOffset = (float)y + 0.5f - screenHeight*0.5f;
 
 	xOffset = MFClamp(0.f, xOffset, mapWidth - screenWidth);
 	yOffset = MFClamp(0.f, yOffset, mapHeight - screenHeight);
@@ -850,10 +1057,10 @@ bool Map::PlaceCastle(int x, int y, int race)
 		return false;
 
 	// get the terrain tiles
-	const Tile *pT0 = GetTile(x, y);
-	const Tile *pT1 = GetTile(x+1, y);
-	const Tile *pT2 = GetTile(x, y+1);
-	const Tile *pT3 = GetTile(x+1, y+1);
+	const Tile *pT0 = GetTerrainTileAt(x, y);
+	const Tile *pT1 = GetTerrainTileAt(x+1, y);
+	const Tile *pT2 = GetTerrainTileAt(x, y+1);
+	const Tile *pT3 = GetTerrainTileAt(x+1, y+1);
 
 	// test we can build here...
 	if(!pT0->canBuild)
@@ -880,7 +1087,7 @@ bool Map::PlaceCastle(int x, int y, int race)
 bool Map::PlaceFlag(int x, int y, int race)
 {
 	// check for compatible terrain
-	const Tile *pT = GetTile(x, y);
+	const Tile *pT = GetTerrainTileAt(x, y);
 
 	// check if we can build on this terrain type
 	if(!pT->canBuild)
@@ -899,7 +1106,7 @@ bool Map::PlaceFlag(int x, int y, int race)
 bool Map::PlaceSpecial(int x, int y, int index)
 {
 	// check for compatible terrain
-	const Tile *pT = GetTile(x, y);
+	const Tile *pT = GetTerrainTileAt(x, y);
 
 	// check if the terrain type matches the special target.
 	// TODO: for now, place on flat land...
@@ -921,7 +1128,7 @@ bool Map::PlaceRoad(int x, int y)
 		return true;
 
 	// check for compatible terrain
-	const Tile *pT = GetTile(x, y);
+	const Tile *pT = GetTerrainTileAt(x, y);
 
 	// HACK: just assume grass for now
 	if(pT->terrain != 0)
@@ -961,22 +1168,12 @@ bool Map::PlaceRoad(int x, int y)
 	return true;
 }
 
-ObjectType Map::GetDetailType(int x, int y)
+ObjectType Map::GetDetailType(int x, int y) const
 {
-	if(pMap[y*mapWidth + x].type)
-		return (ObjectType)pMap[y*mapWidth + x].type;
-
-	// check if we are in the space of an oversize castle
-	if((x > 0 && pMap[y*mapWidth + x-1].type == OT_Castle) ||
-		(y > 0 && pMap[(y-1)*mapWidth + x].type == OT_Castle) ||
-		(x > 0 && y > 0 && pMap[(y-1)*mapWidth + x-1].type == OT_Castle))
-		return OT_Castle;
-
-	// nothing there
-	return OT_None;
+	return (ObjectType)pMap[y*mapWidth + x].type;
 }
 
-int Map::GetDetail(int x, int y)
+int Map::GetDetail(int x, int y) const
 {
 	if(pMap[y*mapWidth + x].type)
 		return pMap[y*mapWidth + x].index;
@@ -1043,4 +1240,19 @@ void Map::ClearDetail(int x, int y)
 		pMap[(y-1)*mapWidth + x-1].type = OT_None;
 		pMap[(y-1)*mapWidth + x-1].index = 0;
 	}
+}
+
+Step *Map::FindPath(int player, int startX, int startY, int destX, int destY)
+{
+	return path.FindPath(player, startX, startY, destX, destY);
+}
+
+Step *Map::StripStep(Step *pPath)
+{
+	return path.StripStep(pPath);
+}
+
+void Map::DestroyPath(Step *pPath)
+{
+	path.Destroy(pPath);
 }

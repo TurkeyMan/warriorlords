@@ -18,32 +18,26 @@ public:
 	virtual void Draw();
 	virtual void Deselect();
 
+	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 	virtual int UpdateInput();
 
 	static void ShowMiniMap(int button, void *pUserData, int buttonID);
 
+	void SelectGroup(Group *pGroup);
+	void DeselectGroup(Group *pGroup);
+	Group *GetSelected();
+
 protected:
-	class Selection
-	{
-	public:
-		void DrawSelection();
-
-		void SelectUnit(Unit *_pUnit) { pUnit = _pUnit; pCastle = NULL; }
-		void SelectCastle(Castle *_pCastle) { pCastle = _pCastle; pUnit = NULL; }
-		void Deselect() { pUnit = NULL; pCastle = NULL; }
-
-	protected:
-		Unit *pUnit;
-		Castle *pCastle;
-	};
-
 	Game *pGame;
 
 	MFMaterial *pIcons;
 
 	Button *pMiniMap;
 
-	Selection selection;
+	Group *pSelection;
+
+	bool bMoving;
+	float countdown;
 };
 
 #endif
