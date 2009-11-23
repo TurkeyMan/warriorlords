@@ -24,8 +24,8 @@ public:
 
 	void BeginGame();
 	void BeginTurn(int player);
-	void BeginBattle(Group *pGroup1, Group *pGroup2);
-	void EndBattle(Group *pGroup1, Group *pGroup2);
+	void BeginBattle(Group *pGroup, MapTile *pTarget);
+	void EndBattle(Group *pGroup, MapTile *pTarget);
 
 	Map *GetMap() { return pMap; }
 	UnitDefinitions *GetUnitDefs() { return pUnitDefs; }

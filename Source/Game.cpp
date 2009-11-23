@@ -119,25 +119,72 @@ void Game::BeginTurn(int player)
 	pMap->CenterView(players[player].cursorX, players[player].cursorY);
 }
 
-void Game::BeginBattle(Group *pGroup1, Group *pGroup2)
+void Game::BeginBattle(Group *pGroup, MapTile *pTarget)
 {
 	// enter the battle
-	pBattle->Begin(pGroup1, pGroup2, 0, 2, -1);
+	pBattle->Begin(pGroup, pTarget, 0, 2, -1);
 }
 
-void Game::EndBattle(Group *pGroup1, Group *pGroup2)
+void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 {
 	// destroy dead units
-
-	// group1 is the artificial group, so we need to find the units in their real groups and remove them from there
-
-	if(pGroup1)
+	for(int a=0; a<pGroup->GetNumUnits(); ++a)
 	{
-		// check if the target is clear, and move there
-		//...
+		Unit *pUnit = pGroup->GetUnit(a);
+		if(pUnit->IsDead())
+		{
+			pGroup->RemoveUnit(pUnit);
+			pUnit->Destroy();
+			--a;
+		}
+	}
 
+	// if all units in the group were destroyed
+	MapTile *pCurrentTile = pGroup->GetTile();
+	if(pGroup->GetNumUnits() == 0)
+	{
+		pCurrentTile->RemoveGroup(pGroup);
+		pGroup->Destroy();
+		pGroup = NULL;
+	}
+
+	// remove units from all groups on the target tile
+	for(int a=0; a<pTarget->GetNumGroups(); ++a)
+	{
+		Group *pG = pTarget->GetGroup(a);
+		for(int b=0; b<pG->GetNumUnits(); ++b)
+		{
+			Unit *pUnit = pG->GetUnit(b);
+			if(pUnit->IsDead())
+			{
+				pG->RemoveUnit(pUnit);
+				pUnit->Destroy();
+				--b;
+			}
+		}
+
+		if(pG->GetNumUnits() == 0)
+		{
+			pTarget->RemoveGroup(pG);
+			pG->Destroy();
+		}
+	}
+
+	if(pGroup)
+	{
 		// if the target is an empty castle, capture it
-		//...
+		Castle *pCastle = pTarget->GetCastle();
+		if(pCastle && pCastle->IsEmpty())
+			pCastle->Capture(pGroup->GetPlayer());
+
+		// check if the target is clear, and move there
+		if(pTarget->CanMove(pGroup))
+		{
+			pCurrentTile->RemoveGroup(pGroup);
+			pTarget->AddGroup(pGroup);
+			pMap->DestroyPath(pGroup->pPath);
+			pGroup->pPath = NULL;
+		}
 	}
 
 	Screen::SetNext(pMapScreen);

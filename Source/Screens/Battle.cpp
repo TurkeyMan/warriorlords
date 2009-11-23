@@ -27,10 +27,6 @@ Battle::Battle(Game *_pGame)
 	pGame = _pGame;
 
 	// load lots of battle related stuff
-	pCooldownHead = pCooldownTail = NULL;
-	pActionHead = pActionTail = NULL;
-	cooldownCount = 0;
-
 	pIcons = MFMaterial_Create("BattleIcons");
 
 	pTileSet = pGame->GetMap()->GetTileset();
@@ -73,11 +69,15 @@ Battle::~Battle()
 	MFHeap_Free(ppCastles);
 }
 
-void Battle::Begin(Group *pGroup1, Group *pGroup2, int foreground, int background, int castle)
+void Battle::Begin(Group *pGroup, MapTile *pTarget, int foreground, int background, int castle)
 {
 	pForeground = ppForegrounds[foreground];
 	pBackground = ppBackgrounds[background];
 	pCastle = castle != -1 ? ppCastles[castle] : NULL;
+
+	pCooldownHead = pCooldownTail = NULL;
+	pActionHead = pActionTail = NULL;
+	cooldownCount = 0;
 
 #if 0
 	MFIni *pIni = MFIni::Create("TestBattle");
@@ -177,13 +177,11 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, int foreground, int backgroun
 	// initialise the battle units
 	armies[0].pGroup = &groups[races[0]];
 	armies[1].pGroup = &groups[races[1]];
-#else
-	// initialise the battle units
-	armies[0].pGroup = pGroup1;
-	armies[1].pGroup = pGroup2;
 #endif
-	armies[0].numUnits = 0;
-	armies[1].numUnits = 0;
+
+	// initialise the battle units
+	MFZeroMemory(armies, sizeof(armies));
+	MFZeroMemory(armies, sizeof(armies));
 
 	MFRect rect;
 	MFDisplay_GetDisplayRect(&rect);
@@ -192,45 +190,81 @@ void Battle::Begin(Group *pGroup1, Group *pGroup2, int foreground, int backgroun
 	int centerField = centerLine + centerLine / 2;
 	int horizSpacing = (int)(rect.width / 32);
 
+	// populate the armies
+	for(int b=0; b<5; ++b)
+	{
+		if(b < pGroup->GetNumForwardUnits())
+		{
+			BattleUnit *pUnit = &armies[0].units[armies[0].numUnits++];
+			pUnit->Init(pGroup->GetForwardUnit(b));
+			pUnit->pGroup = pGroup;
+			pUnit->army = 0;
+			pUnit->row = 0;
+			++armies[0].numForwardUnits;
+		}
+		if(b < pGroup->GetNumRearUnits())
+		{
+			BattleUnit *pUnit = &armies[0].units[armies[0].numUnits++];
+			pUnit->Init(pGroup->GetRearUnit(b));
+			pUnit->pGroup = pGroup;
+			pUnit->army = 0;
+			pUnit->row = 1;
+			++armies[0].numRearUnits;
+		}
+	}
+	armies[0].numUnitsAlive = armies[0].numUnits;
+	armies[0].player = pGroup->GetPlayer();
+
+	for(int a=0; a<pTarget->GetNumGroups(); ++a)
+	{
+		Group *pTileGroup = pTarget->GetGroup(a);
+
+		for(int b=0; b<5; ++b)
+		{
+			if(b < pTileGroup->GetNumForwardUnits())
+			{
+				BattleUnit *pUnit = &armies[1].units[armies[1].numUnits++];
+				pUnit->Init(pTileGroup->GetForwardUnit(b));
+				pUnit->pGroup = pTileGroup;
+				pUnit->army = 1;
+				pUnit->row = 0;
+				++armies[1].numForwardUnits;
+			}
+			if(b < pTileGroup->GetNumRearUnits())
+			{
+				BattleUnit *pUnit = &armies[1].units[armies[1].numUnits++];
+				pUnit->Init(pTileGroup->GetRearUnit(b));
+				pUnit->pGroup = pTileGroup;
+				pUnit->army = 1;
+				pUnit->row = 1;
+				++armies[1].numRearUnits;
+			}
+		}
+		armies[1].numUnitsAlive = armies[1].numUnits;
+		armies[1].player = pTileGroup->GetPlayer();
+	}
+
+	// unit the units
 	int rowSeparation[2][2];
-	rowSeparation[0][0] = (centerLine + 64) / (groups[races[0]].numForwardUnits + 1);
-	rowSeparation[0][1] = (centerLine + 64) / (groups[races[0]].numRearUnits + 1);
-	rowSeparation[1][0] = (centerLine + 64) / (groups[races[1]].numForwardUnits + 1);
-	rowSeparation[1][1] = (centerLine + 64) / (groups[races[1]].numRearUnits + 1);
+	rowSeparation[0][0] = (centerLine + 64) / (armies[0].numForwardUnits + 1);
+	rowSeparation[0][1] = (centerLine + 64) / (armies[0].numRearUnits + 1);
+	rowSeparation[1][0] = (centerLine + 64) / (armies[1].numForwardUnits + 1);
+	rowSeparation[1][1] = (centerLine + 64) / (armies[1].numRearUnits + 1);
+
+	int scale[2][2] = { { 11, 4 }, { 21, 28 } };
 
 	for(int a=0; a<2; ++a)
 	{
-		for(int b=0; b<5; ++b)
+		int index[2] = { 0, 0 };
+		for(int b=0; b<armies[a].numUnits; ++b)
 		{
-			if(b < armies[a].pGroup->numForwardUnits)
-			{
-				BattleUnit *pUnit = &armies[a].units[armies[a].numUnits++];
-				pUnit->Init(armies[a].pGroup->pForwardUnits[b]);
-				pUnit->army = a;
-				pUnit->row = 0;
+			BattleUnit *pUnit = &armies[a].units[b];
+			int y = centerLine - 32 + (index[pUnit->row]++ + 1)*rowSeparation[a][pUnit->row];
+			int offset = (a == 0 ? centerField - y : y - centerField);
+			pUnit->SetPos(horizSpacing*scale[a][pUnit->row] + int(offset * (pUnit->row ? 0.3f : 0.1f)) - 32, y - 64 + 4);
 
-				int y = centerLine - 32 + (b+1)*rowSeparation[a][0];
-				int offset = (a == 0 ? centerField - y : y - centerField);
-				pUnit->SetPos(horizSpacing*(a == 0 ? 11 : 21) + int(offset * 0.1f) - 32, y - 64 + 4);
-
-				StartCooldown(pUnit);
-			}
-			if(b < armies[a].pGroup->numRearUnits)
-			{
-				BattleUnit *pUnit = &armies[a].units[armies[a].numUnits++];
-				pUnit->Init(armies[a].pGroup->pRearUnits[b]);
-				pUnit->army = a;
-				pUnit->row = 1;
-
-				int y = centerLine - 32 + (b+1)*rowSeparation[a][1];
-				int offset = (a == 0 ? centerField - y : y - centerField);
-				pUnit->SetPos(horizSpacing*(a == 0 ? 4 : 28) + int(offset * 0.3f) - 32, y - 64 + 4);
-
-				StartCooldown(pUnit);
-			}
+			StartCooldown(pUnit);
 		}
-
-		armies[a].numUnitsAlive = armies[a].numUnits;
 	}
 
 	SetNext(this);
@@ -345,14 +379,14 @@ int Battle::Update()
 	{
 		if(!pUnit->bEngaged && pUnit->damageIndicatorTime == 0.f)
 		{
-			bool bCanAttackBackRow = pUnit->pUnit->IsRanged() || armies[1 - pUnit->army].pGroup->GetNumForwardUnits() == 0;
+			Army &opponent = armies[1 - pUnit->army];
+			bool bCanAttackBackRow = pUnit->pUnit->IsRanged() || opponent.numForwardUnits == 0;
 
 			// pick target...
 			BattleUnit *pTarget = NULL;
-			Army &army = armies[1-pUnit->army];
-			for(int a=0; a<army.numUnits; ++a)
+			for(int a=0; a<opponent.numUnits; ++a)
 			{
-				BattleUnit *pT = &army.units[a];
+				BattleUnit *pT = &opponent.units[a];
 				if(!pT->bEngaged && !pT->damageIndicatorTime && pT->pUnit->GetHealth() && (pT->state == US_Cooldown || pT->state == US_Waiting) && (bCanAttackBackRow || pT->row == 0))
 				{
 					pTarget = pT;
@@ -459,7 +493,7 @@ void Battle::Draw()
 	BattleUnit *pUnit = pCooldownTail;
 	while(pUnit)
 	{
-		int offset = pUnit->pUnit->GetPlayer() == armies[0].pGroup->player ? -1 : 1;
+		int offset = pUnit->pUnit->GetPlayer() == armies[0].player ? -1 : 1;
 		int x = left + (int)(width*(pUnit->stateTime/7.0f));
 		int y = timelineY + pUnit->cooldownOffset + offset*20;
 
@@ -496,7 +530,7 @@ bool Battle::HandleInputEvent(InputEvent ev, InputInfo &info)
 		if(armies[0].numUnitsAlive == 0 || armies[1].numUnitsAlive == 0)
 		{
 			// battle is finished
-			pGame->EndBattle(armies[0].pGroup, armies[1].pGroup);
+			pGame->EndBattle(armies[0].units[0].pGroup, armies[1].units[0].pGroup->GetTile());
 		}
 	}
 

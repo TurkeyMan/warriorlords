@@ -110,16 +110,23 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 							// we have an attack command!
 
 							// check the castle is occuppied
-							if(!pTile->GetGroup(0))
+							if(pTile->GetNumGroups() == 0)
 							{
 								// search castle squares for units
-								//...
-								// pTile = another tile...
+								Castle *pCastle = pTile->GetCastle();
+
+								for(int a=0; a<4; ++a)
+								{
+									MapTile *pCastleTile = pCastle->GetTile(a);
+									if(pCastleTile->GetNumGroups() != 0)
+									{
+										pTile = pCastleTile;
+										break;
+									}
+								}
 							}
 
-							Group *pGroup = pTile->GetGroup(0);
-
-							if(!pGroup)
+							if(pTile->GetNumUnits() == 0)
 							{
 								Castle *pCastle = pTile->GetCastle();
 
@@ -128,26 +135,22 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 								{
 									// create merc group
 									//...
-									pGroup = NULL;
+//									pGroup = NULL;
+//									pTile->AddGroup(pGroup);
 
-//									pGame->BeginBattle(pSelection, pGroup);
+//									pGame->BeginBattle(pSelection, pTile);
 									break;
 								}
 								else
 								{
 									// the castle is empty! claim that shit!
-									pCastle->player = pGame->CurrentPlayer();
-									pCastle->building = -1;
-									pCastle->buildTime = 0;
+									pCastle->Capture(pGame->CurrentPlayer());
 								}
 							}
 							else
 							{
-								// combine groups on target tile into defence force
-								//...
-								pGroup = pTile->GetGroup(0);
-
-								pGame->BeginBattle(pSelection, pGroup);
+								// begin the battle!
+								pGame->BeginBattle(pSelection, pTile);
 								break;
 							}
 						}

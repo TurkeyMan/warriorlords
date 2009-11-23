@@ -16,7 +16,7 @@ public:
 	Battle(Game *pGame);
 	virtual ~Battle();
 
-	void Begin(Group *pGroup1, Group *pGroup2, int foreground, int background, int castle = -1);
+	void Begin(Group *pGroup, MapTile *pTarget, int foreground, int background, int castle = -1);
 
 	virtual int Update();
 	virtual void Draw();
@@ -40,6 +40,7 @@ protected:
 		void Init(Unit *pUnit);
 		void SetPos(int x, int y);
 
+		Group *pGroup;
 		Unit *pUnit;
 		int army, row;
 
@@ -62,9 +63,10 @@ protected:
 
 	struct Army
 	{
-		Group *pGroup;
 		BattleUnit units[10];
+		int player;
 		int numUnits;
+		int numForwardUnits, numRearUnits;
 		int numUnitsAlive;
 	};
 

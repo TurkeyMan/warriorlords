@@ -73,6 +73,16 @@ Group *MapTile::GetGroup(int group)
 	return NULL;
 }
 
+Group *MapTile::FindUnitGroup(Unit *pUnit)
+{
+	for(Group *pG = pGroup; pG; pG = pG->pNext)
+	{
+		if(pG->IsInGroup(pUnit))
+			return pG;
+	}
+	return NULL;
+}
+
 Unit *MapTile::FindVehicle()
 {
 	for(Group *pG = pGroup; pG; pG = pG->pNext)
@@ -271,6 +281,13 @@ Map *Map::Create(Game *pGame, const char *pMapFilename)
 									pCastle = pCastle->Next();
 								}
 
+								CastleDetails details;
+								details.pName = pName;
+								details.x = x;
+								details.y = y;
+								details.numBuildUnits = 0;
+								details.income = 0;
+
 								for(int a=0; a<4; ++a)
 								{
 									MapTile &tile = pMap->pMap[(y + (a >> 1))*pMap->mapWidth + x + (a & 1)];
@@ -280,14 +297,9 @@ Map *Map::Create(Game *pGame, const char *pMapFilename)
 									tile.castleTile = a;
 								}
 
-								CastleDetails details;
-								details.pName = pName;
-								details.x = x;
-								details.y = y;
-								details.numBuildUnits = 0;
-								details.income = 0;
-
-								pMap->pCastles[castle++].Init(&details, race-1, pMap->pUnits);
+								Castle *pNewCastle = &pMap->pCastles[castle++];
+								pNewCastle->Init(&details, race-1, pMap->pUnits);
+								pNewCastle->pTile = pMap->pMap + y*pMap->mapWidth + x;
 							}
 
 							pCastles = pCastles->Next();

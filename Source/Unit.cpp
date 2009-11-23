@@ -404,19 +404,21 @@ void UnitDefinitions::DrawUnits(float scale, float texelOffset, bool bHead)
 
 			float depth = bHead ? 0.f : (1000.f - unit.y) / 1000.f;
 
+			float xOffset = -(def.width - 1) / 2.f * scale;
+			float yOffset = -(def.height - 1) / 2.f * scale;
 			MFSetTexCoord1(uvs.x, uvs.y);
-			MFSetPosition(unit.x, unit.y, depth);
+			MFSetPosition(unit.x+xOffset, unit.y+yOffset, depth);
 			MFSetTexCoord1(uvs.x+uvs.width, uvs.y);
-			MFSetPosition(unit.x+def.width*scale, unit.y, depth);
+			MFSetPosition(unit.x+xOffset+def.width*scale, unit.y+yOffset, depth);
 			MFSetTexCoord1(uvs.x, uvs.y+uvs.height);
-			MFSetPosition(unit.x, unit.y+def.height*scale, depth);
+			MFSetPosition(unit.x+xOffset, unit.y+yOffset+def.height*scale, depth);
 
 			MFSetTexCoord1(uvs.x+uvs.width, uvs.y);
-			MFSetPosition(unit.x+def.width*scale, unit.y, depth);
+			MFSetPosition(unit.x+xOffset+def.width*scale, unit.y+yOffset, depth);
 			MFSetTexCoord1(uvs.x+uvs.width, uvs.y+uvs.height);
-			MFSetPosition(unit.x+def.width*scale, unit.y+def.height*scale, depth);
+			MFSetPosition(unit.x+xOffset+def.width*scale, unit.y+yOffset+def.height*scale, depth);
 			MFSetTexCoord1(uvs.x, uvs.y+uvs.height);
-			MFSetPosition(unit.x, unit.y+def.height*scale, depth);
+			MFSetPosition(unit.x+xOffset, unit.y+yOffset+def.height*scale, depth);
 		}
 
 		MFEnd();
@@ -535,6 +537,41 @@ void Castle::Init(CastleDetails *pDetails, int _player, UnitDefinitions *_pUnitD
 	buildTime = 0;
 }
 
+MapTile *Castle::GetTile(int index)
+{
+	if(index >= 2)
+	{
+		int width;
+		Map *pMap = pUnitDefs->GetGame()->GetMap();
+		pMap->GetMapSize(&width, NULL);
+		return pTile + width + (index & 1);
+	}
+	else
+	{
+		return pTile + index;
+	}
+}
+
+bool Castle::IsEmpty()
+{
+	if(pTile->GetNumGroups() != 0 || pTile[1].GetNumGroups() != 0)
+		return false;
+
+	// check the second row... very painfully mind you.
+	int width;
+	Map *pMap = pUnitDefs->GetGame()->GetMap();
+	pMap->GetMapSize(&width, NULL);
+	MapTile *pT = pTile + width;
+	return pT[0].GetNumGroups() == 0 && pTile[1].GetNumGroups() == 0;
+}
+
+void Castle::Capture(int _player)
+{
+	player = _player;
+	building = -1;
+	buildTime = 0;
+}
+
 Group *Group::Create(int _player)
 {
 	Group * pGroup = new Group;
@@ -551,6 +588,8 @@ Group *Group::Create(int _player)
 
 void Group::Destroy()
 {
+	if(pVehicle)
+		pVehicle->Destroy();
 	delete this;
 }
 
@@ -588,4 +627,19 @@ void Group::RemoveUnit(Unit *pUnit)
 			break;
 		}
 	}
+}
+
+bool Group::IsInGroup(Unit *pUnit)
+{
+	for(int a=0; a<numForwardUnits; ++a)
+	{
+		if(pUnit == pForwardUnits[a])
+			return true;
+	}
+	for(int a=0; a<numRearUnits; ++a)
+	{
+		if(pUnit == pRearUnits[a])
+			return true;
+	}
+	return false;
 }

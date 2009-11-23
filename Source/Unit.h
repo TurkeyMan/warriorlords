@@ -73,6 +73,8 @@ public:
 	static UnitDefinitions *Load(Game *pGame, const char *pUnits, int numTerrainTypes);
 	void Free();
 
+	Game *GetGame() { return pGame; }
+
 	inline int GetNumRaces() { return raceCount; }
 	inline const char *GetRaceName(int type) { return pRaces[type].pName; }
 	MFVector GetRaceColour(int race) const;
@@ -191,6 +193,7 @@ public:
 
 	float GetHealth() { return (float)life / (float)details.life; }
 	int Damage(int damage) { life -= MFMin(life, damage); return life; }
+	bool IsDead() { return life == 0; }
 
 	bool IsRanged() { return pUnitDefs->IsRanged(details.attackClass); }
 
@@ -225,7 +228,15 @@ class Castle
 public:
 	void Init(CastleDetails *pDetails, int player, UnitDefinitions *pUnitDefs);
 
+	MapTile *GetTile(int index = 0);
+	bool IsEmpty();
+
+	void Capture(int player);
+
+//protected:
+public:
 	UnitDefinitions *pUnitDefs;
+	MapTile *pTile;
 
 	CastleDetails details;
 	int player;
@@ -248,13 +259,14 @@ public:
 
 	void AddUnit(Unit *pUnit);
 	void RemoveUnit(Unit *pUnit);
+	bool IsInGroup(Unit *pUnit);
 
 	int GetNumUnits() const { return numForwardUnits + numRearUnits; }
 	int GetNumForwardUnits() const { return numForwardUnits; }
 	int GetNumRearUnits() const { return numRearUnits; }
 
 	Unit *GetUnit(int unit) { return (unit >= numForwardUnits) ? pRearUnits[unit - numForwardUnits] : pForwardUnits[unit]; }
-	Unit *GetForwardUnit(int forwardUnit) { pForwardUnits[forwardUnit]; }
+	Unit *GetForwardUnit(int forwardUnit) { return pForwardUnits[forwardUnit]; }
 	Unit *GetRearUnit(int rearUnit) { return pRearUnits[rearUnit]; }
 
 	Unit *GetFeatureUnit() { return GetUnit(0); }

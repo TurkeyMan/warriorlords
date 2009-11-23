@@ -38,12 +38,13 @@ public:
 
 	int GetNumGroups();
 	Group *GetGroup(int group);
-	Unit *FindVehicle();
-
 	void BringGroupToFront(Group *pGroup);
 
 	int GetNumUnits();
 	int GetAvailableUnitSpace() { return 10 - GetNumUnits(); }
+
+	Group *FindUnitGroup(Unit *pUnit);
+	Unit *FindVehicle();
 
 	Castle *GetCastle() { if(type == OT_Castle) return (Castle*)pObject; return NULL; }
 
@@ -79,7 +80,7 @@ public:
 
 	void DrawDebug();
 
-	void GetMapSize(int *pWidth, int *pHeight) { *pWidth = mapWidth; *pHeight = mapHeight; }
+	void GetMapSize(int *pWidth, int *pHeight) { if(pWidth) *pWidth = mapWidth; if(pHeight) *pHeight = mapHeight; }
 	void GetCursor(float x, float y, int *pX, int *pY);
 	void GetVisibleTileSize(float *pWidth, float *pHeight);
 
