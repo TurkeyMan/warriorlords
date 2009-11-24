@@ -24,6 +24,7 @@ public:
 
 	void BeginGame();
 	void BeginTurn(int player);
+	void EndTurn();
 	void BeginBattle(Group *pGroup, MapTile *pTarget);
 	void EndBattle(Group *pGroup, MapTile *pTarget);
 
@@ -32,7 +33,7 @@ public:
 
 	int CurrentPlayer() { return currentPlayer; }
 	int GetPlayerRace(int player) { return player == -1 ? 0 : players[player].race; }
-	MFVector GetPlayerColour(int player) { return players[player].colour; }
+	MFVector GetPlayerColour(int player) { return player == -1 ? pUnitDefs->GetRaceColour(0) : players[player].colour; }
 
 protected:
 	// game data

@@ -21,6 +21,7 @@ public:
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 	virtual int UpdateInput();
 
+	static void EndTurn(int button, void *pUserData, int buttonID);
 	static void ShowMiniMap(int button, void *pUserData, int buttonID);
 
 	void SelectGroup(Group *pGroup);
@@ -32,6 +33,7 @@ protected:
 
 	MFMaterial *pIcons;
 
+	Button *pEndTurn;
 	Button *pMiniMap;
 
 	Group *pSelection;

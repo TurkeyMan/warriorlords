@@ -58,7 +58,7 @@ void Game::BeginGame()
 
 			// produce starting hero (or flag that hero wants to join on the first turn)
 			Unit *pHero = pUnitDefs->CreateUnit(pCastle->player, pCastle->player);
-			
+
 			Group *pGroup = Group::Create(pCastle->player);
 			pGroup->AddUnit(pHero);
 			MapTile *pTile = pMap->GetTile(pCastle->details.x, pCastle->details.y);
@@ -119,6 +119,12 @@ void Game::BeginTurn(int player)
 	pMap->CenterView(players[player].cursorX, players[player].cursorY);
 }
 
+void Game::EndTurn()
+{
+	int numPlayers = 6;
+	BeginTurn((currentPlayer + 1) % numPlayers);
+}
+
 void Game::BeginBattle(Group *pGroup, MapTile *pTarget)
 {
 	// enter the battle
@@ -155,7 +161,7 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 		for(int b=0; b<pG->GetNumUnits(); ++b)
 		{
 			Unit *pUnit = pG->GetUnit(b);
-			if(pUnit->IsDead())
+			if(pUnit->IsDead() || pUnit->GetPlayer() == -1)
 			{
 				pG->RemoveUnit(pUnit);
 				pUnit->Destroy();
@@ -182,6 +188,7 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 		{
 			pCurrentTile->RemoveGroup(pGroup);
 			pTarget->AddGroup(pGroup);
+			pMap->ClaimFlags(pTarget->GetX(), pTarget->GetY(), pGroup->GetPlayer());
 			pMap->DestroyPath(pGroup->pPath);
 			pGroup->pPath = NULL;
 		}

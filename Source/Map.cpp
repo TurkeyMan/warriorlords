@@ -874,6 +874,24 @@ void Map::CenterView(int x, int y)
 	yOffset = MFClamp(0.f, yOffset, mapHeight - screenHeight);
 }
 
+void Map::ClaimFlags(int x, int y, int player)
+{
+	int startX = MFMax(x - 2, 0);
+	int startY = MFMax(y - 2, 0);
+	int endX = MFMin(x + 3, mapWidth);
+	int endY = MFMin(y + 3, mapHeight);
+
+	for(int y = startY; y < endY; ++y)
+	{
+		for(int x = startX; x < endX; ++x)
+		{
+			MapTile *pTile = GetTile(x, y);
+			if(pTile->type == OT_Flag)
+				pTile->index = player;
+		}
+	}
+}
+
 void Map::SetZoom(float _zoom, float pointX, float pointY)
 {
 	float tileWidth, tileHeight;

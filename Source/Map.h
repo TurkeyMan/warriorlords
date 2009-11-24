@@ -89,6 +89,8 @@ public:
 	void SetZoom(float zoom, float centerX = -1.f, float centerY = -1.f);
 	void CenterView(int x, int y);
 
+	void ClaimFlags(int x, int y, int player);
+
 	void SetMapOrtho(int *pXTiles = NULL, int *pYTiles = NULL);
 
 	MapTile *GetTile(int x, int y) const { return pMap + y*mapWidth + x; }

@@ -33,11 +33,17 @@ MapScreen::MapScreen(Game *_pGame)
 
 	MFRect uvs, pos = { 0, 0, (float)tileWidth, (float)tileHeight };
 
+	// end turn button
 	pos.x = (float)(gDefaults.display.displayWidth - (16 + tileWidth));
+	pos.y = (float)(gDefaults.display.displayHeight - (16 + tileHeight));
+	uvs.x = 0.25f + (1.f/256.f); uvs.y = 0.f + (1.f/256.f);
+	uvs.width = 0.25f; uvs.height = 0.25f;
+	pEndTurn = Button::Create(pIcons, &pos, &uvs, EndTurn, this, 0, false);
+
+	// minimap button
 	pos.y = 16.f;
 	uvs.x = 0.75f + (1.f/256.f); uvs.y = 0.f + (1.f/256.f);
-	uvs.width = 0.25f; uvs.height = 0.25f;
-	pMiniMap = Button::Create(pIcons, &pos, &uvs, ShowMiniMap, this, 0, true);
+	pMiniMap = Button::Create(pIcons, &pos, &uvs, ShowMiniMap, this, 0, false);
 }
 
 MapScreen::~MapScreen()
@@ -49,6 +55,7 @@ void MapScreen::Select()
 	pInputManager->ClearReceivers();
 	pInputManager->PushReceiver(this);
 	pInputManager->PushReceiver(pGame->GetMap());
+	pInputManager->PushReceiver(pEndTurn);
 	pInputManager->PushReceiver(pMiniMap);
 }
 
@@ -134,11 +141,13 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 								if(pCastle->player == -1)
 								{
 									// create merc group
-									//...
-//									pGroup = NULL;
-//									pTile->AddGroup(pGroup);
+									Group *pGroup = Group::Create(-1);
+									int numUnits = MFRand()%3 + 1;
+									for(int a=0; a<numUnits; ++a)
+										pGroup->AddUnit(pGame->GetUnitDefs()->CreateUnit(24 + (MFRand()&1), -1));
 
-//									pGame->BeginBattle(pSelection, pTile);
+									pTile->AddGroup(pGroup);
+									pGame->BeginBattle(pSelection, pTile);
 									break;
 								}
 								else
@@ -234,6 +243,7 @@ int MapScreen::Update()
 
 			// add the group to the new tile
 			pNewTile->AddGroup(pSelection);
+			pMap->ClaimFlags(x, y, pSelection->GetPlayer());
 
 			// strip the step from the path
 			pSelection->pPath = pMap->StripStep(pSelection->pPath);
@@ -297,6 +307,7 @@ void MapScreen::Draw()
 		// draw the group info
 	}
 
+	pEndTurn->Draw();
 	pMiniMap->Draw();
 
 	// now draw any UI that might be on the screen.
@@ -306,6 +317,12 @@ void MapScreen::Draw()
 void MapScreen::Deselect()
 {
 
+}
+
+void MapScreen::EndTurn(int button, void *pUserData, int buttonID)
+{
+	MapScreen *pThis = (MapScreen*)pUserData;
+	pThis->pGame->EndTurn();
 }
 
 void MapScreen::ShowMiniMap(int button, void *pUserData, int buttonID)
