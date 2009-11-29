@@ -209,6 +209,8 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 				pUnit->attackSpeed = pUnits->GetFloat(15);
 				pUnit->life = pUnits->GetInt(16);
 
+				pUnit->buildTime = 1;
+
 				++pUnit;
 				pUnits = pUnits->Next();
 			}
@@ -565,11 +567,33 @@ bool Castle::IsEmpty()
 	return pT[0].GetNumGroups() == 0 && pTile[1].GetNumGroups() == 0;
 }
 
+Group *Castle::GetMercGroup()
+{
+	static const int odds[16] = { 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4 };
+
+	Group *pGroup = Group::Create(-1);
+
+	int numUnits = odds[MFRand() & 0xF];
+	for(int a=0; a<numUnits; ++a)
+		pGroup->AddUnit(pGame->GetUnitDefs()->CreateUnit(24 + (MFRand()&1), -1));
+
+	return pGroup;
+}
+
 void Castle::Capture(int _player)
 {
 	player = _player;
 	building = -1;
 	buildTime = 0;
+}
+
+void Castle::SetBuildUnit(int slot)
+{
+	int unit = details.buildUnits[slot].unit;
+	UnitDetails *pUnit = pUnitDefs->GetUnitDetails(unit);
+
+	building = slot;
+	buildTime = pUnit->buildTime + details.buildUnits[slot].buildTimeMod;
 }
 
 Group *Group::Create(int _player)

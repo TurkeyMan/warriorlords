@@ -21,6 +21,7 @@ Button *Button::Create(MFMaterial *pImage, MFRect *pPosition, MFRect *pUVs, Trig
 	pNew->outlineColour = MFVector::white;
 	pNew->button = 0;
 	pNew->buttonID = buttonID;
+	pNew->pOverlay = NULL;
 
 	return pNew;
 }
@@ -94,6 +95,11 @@ void Button::Draw()
 
 	MFMaterial_SetMaterial(pMaterial);
 	MFPrimitive_DrawQuad(pos.x, pos.y, pos.width, pos.height, bDark ? MakeVector(0.6f, 0.6f, 0.6f, 1.f) : MFVector::one, uvs.x, uvs.y, uvs.x+uvs.width, uvs.y+uvs.height);
+	if(pOverlay)
+	{
+		MFMaterial_SetMaterial(pOverlay);
+		MFPrimitive_DrawQuad(pos.x, pos.y, pos.width, pos.height, bDark ? MakeVector(0.6f, 0.6f, 0.6f, 1.f) * overlayColour : overlayColour, uvs.x, uvs.y, uvs.x+uvs.width, uvs.y+uvs.height);
+	}
 }
 
 void Button::SetPos(MFRect *pPos)
@@ -111,4 +117,10 @@ void Button::SetOutline(bool bEnable, const MFVector &colour)
 {
 	bOutline = bEnable;
 	outlineColour = colour;
+}
+
+void Button::SetOverlay(MFMaterial *pImage, const MFVector &colour)
+{
+	pOverlay = pImage;
+	overlayColour = colour;
 }

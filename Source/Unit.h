@@ -10,6 +10,7 @@ struct MFMaterial;
 class CastleSet;
 class Game;
 class MapTile;
+class Group;
 
 struct Race
 {
@@ -61,6 +62,7 @@ struct UnitDetails
 	int attackClass, defenceClass, movementClass;
 	float cooldown, attackSpeed;
 	int life;
+	int buildTime;
 
 	// visible info
 	int x, y;
@@ -82,6 +84,7 @@ public:
 	inline int GetNumUnitTypes() { return numUnits; }
 	inline const char *GetUnitTypeName(int unit) { return pUnits[unit].pName; }
 
+	UnitDetails *GetUnitDetails(int unit) { return &pUnits[unit]; }
 	class Unit *CreateUnit(int unit, int player);
 	void DestroyUnit(Unit *pUnits);
 
@@ -99,6 +102,9 @@ public:
 	int GetNumMovementClasses() { return numMovementClasses; }
 	const char *GetMovementClassName(int movementClass) { return ppMovementClasses[movementClass]; }
 	int GetMovementPenalty(int movementClass, int terrainType) { return pMovementPenalty[movementClass*numTerrainTypes + terrainType]; }
+
+	MFMaterial *GetUnitDetailMap() { return pDetailLayer; }
+	MFMaterial *GetUnitColourMap() { return pColourLayer; }
 
 	// rendering
 	void AddRenderUnit(int unit, float x, float y, int player = -1, bool bFlip = false, float alpha = 1.f);
@@ -180,6 +186,8 @@ class Unit
 public:
 	void Destroy();
 
+	UnitDefinitions *GetDefs() { return pUnitDefs; }
+
 	void Draw(float x, float y, bool bFlip = false, float alpha = 1.f);
 
 	const char *GetName() { return pName; }
@@ -212,12 +220,19 @@ protected:
 	int kills, victories;
 };
 
+struct BuildUnit
+{
+	int unit;
+	int cost;
+	int buildTimeMod;
+};
+
 struct CastleDetails
 {
 	const char *pName;
 	int x, y;
 
-	int buildUnits[4];
+	BuildUnit buildUnits[4];
 	int numBuildUnits;
 
 	int income;
@@ -231,12 +246,16 @@ public:
 	MapTile *GetTile(int index = 0);
 	bool IsEmpty();
 
+	Group *GetMercGroup();
 	void Capture(int player);
+
+	void SetBuildUnit(int slot);
 
 //protected:
 public:
 	UnitDefinitions *pUnitDefs;
 	MapTile *pTile;
+//	Group *pMercGroup;
 
 	CastleDetails details;
 	int player;

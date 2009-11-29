@@ -113,6 +113,73 @@ int GameMain(MFInitParams *pInitParams)
 	return MFMain(pInitParams);
 }
 
+void DivideRect_Horiz(const MFRect &rect, float split, float margin, MFRect *pLeft, MFRect *pRight, bool bSplitPixels)
+{
+	float s = MFFloor(bSplitPixels ? split : rect.width*split);
+
+	pLeft->x = rect.x + margin;
+	pLeft->y = rect.y + margin;
+	pLeft->width = s - margin*2;
+	pLeft->height = rect.height - margin*2;
+
+	pRight->x = rect.x + s + margin;
+	pRight->y = rect.y + margin;
+	pRight->width = rect.width - s - margin*2;
+	pRight->height = rect.height - margin*2;
+}
+
+void DivideRect_Vert(const MFRect &rect, float split, float margin, MFRect *pTop, MFRect *pBottom, bool bSplitPixels)
+{
+	float s = MFFloor(bSplitPixels ? split : rect.height*split);
+
+	pTop->x = rect.x + margin;
+	pTop->y = rect.y + margin;
+	pTop->width = rect.width - margin*2;
+	pTop->height = s - margin*2;
+
+	pBottom->x = rect.x + margin;
+	pBottom->y = rect.y + s + margin;
+	pBottom->width = rect.width - margin*2;
+	pBottom->height = rect.height - s - margin*2;
+}
+
+void DivideRect_Quad(const MFRect &rect, float hSplit, float vSplit, float margin, MFRect *pTL, MFRect *pTR, MFRect *pBL, MFRect *pBR, bool bSplitPixels)
+{
+	float hs = MFFloor(bSplitPixels ? hSplit : rect.width*hSplit);
+	float vs = MFFloor(bSplitPixels ? vSplit : rect.height*vSplit);
+
+	pTL->x = rect.x + margin;
+	pTL->y = rect.y + margin;
+	pTL->width = hs - margin*2;
+	pTL->height = vs - margin*2;
+
+	pTR->x = rect.x + hs + margin;
+	pTR->y = rect.y + margin;
+	pTR->width = rect.width - hs - margin*2;
+	pTR->height = vs - margin*2;
+
+	pBL->x = rect.x + margin;
+	pBL->y = rect.y + vs + margin;
+	pBL->width = hs - margin*2;
+	pBL->height = rect.height - vs - margin*2;
+
+	pBR->x = rect.x + hs + margin;
+	pBR->y = rect.y + vs + margin;
+	pBR->width = rect.width - hs - margin*2;
+	pBR->height = rect.height - vs - margin*2;
+}
+
+void AdjustRect_Margin(MFRect *pRect, float margin, bool bPixels)
+{
+	float hMargin = bPixels ? margin : pRect->width * margin;
+	float vMargin = bPixels ? margin : pRect->width * margin;
+
+	pRect->x += hMargin;
+	pRect->y += vMargin;
+	pRect->width -= hMargin*2;
+	pRect->height -= vMargin*2;
+}
+
 #if defined(MF_WINDOWS) || defined(_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>

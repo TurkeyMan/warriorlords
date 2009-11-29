@@ -49,9 +49,6 @@ void Game::BeginGame()
 		Castle *pCastle = pMap->GetCastle(a);
 		if(pCastle->player != -1)
 		{
-			pCastle->building = 24;
-			pCastle->buildTime = 2;
-
 			// set each players map focus on starting castle
 			players[pCastle->player].cursorX = pCastle->details.x;
 			players[pCastle->player].cursorY = pCastle->details.y;
@@ -85,7 +82,7 @@ void Game::BeginTurn(int player)
 		{
 			players[currentPlayer].gold += pCastle->details.income;
 
-			if(pCastle->building != -1 && --pCastle->buildTime == 0)
+			if(pCastle->building != -1 && --pCastle->buildTime <= 0)
 			{
 				// find space in the castle for the unit
 				MapTile *pTile = NULL;
@@ -103,8 +100,8 @@ void Game::BeginTurn(int player)
 				if(pTile)
 				{
 					// create the unit
-					Unit *pUnit = pUnitDefs->CreateUnit(pCastle->building, currentPlayer);
-					pCastle->buildTime += 1;// TODO: get unit build time
+					Unit *pUnit = pUnitDefs->CreateUnit(pCastle->details.buildUnits[pCastle->building].unit, currentPlayer);
+					pCastle->SetBuildUnit(pCastle->building);
 
 					// create a group for the unit, and add it to the tile
 					Group *pGroup = Group::Create(player);

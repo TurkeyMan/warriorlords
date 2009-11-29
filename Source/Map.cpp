@@ -257,40 +257,49 @@ Map *Map::Create(Game *pGame, const char *pMapFilename)
 							{
 								MFIniLine *pCastle = pCastles->Sub();
 
-								const char *pName;
-								int x = 0;
-								int y = 0;
 								int race;
+
+								CastleDetails details;
+								details.pName = "Untitled";
+								details.x = -1;
+								details.y = -1;
+								details.numBuildUnits = 0;
+								details.income = 0;
 
 								while(pCastle)
 								{
 									if(!MFString_CaseCmp(pCastle->GetString(0), "name"))
 									{
-										pName = pCastle->GetString(1);
+										details.pName = pCastle->GetString(1);
 									}
 									else if(!MFString_CaseCmp(pCastle->GetString(0), "position"))
 									{
-										x = pCastle->GetInt(1);
-										y = pCastle->GetInt(2);
+										details.x = pCastle->GetInt(1);
+										details.y = pCastle->GetInt(2);
 									}
 									else if(!MFString_CaseCmp(pCastle->GetString(0), "race"))
 									{
 										race = pCastle->GetInt(1);
 									}
+									else if(!MFString_CaseCmp(pCastle->GetString(0), "income"))
+									{
+										details.income = pCastle->GetInt(1);
+									}
+									else if(!MFString_CaseCmp(pCastle->GetString(0), "unit"))
+									{
+										int unit = pCastle->GetInt(1);
+										details.numBuildUnits = MFMax(details.numBuildUnits, unit + 1);
+										details.buildUnits[unit].unit = pCastle->GetInt(3);
+										details.buildUnits[unit].cost = pCastle->GetInt(4);
+										details.buildUnits[unit].buildTimeMod = pCastle->GetInt(5);
+									}
 
 									pCastle = pCastle->Next();
 								}
 
-								CastleDetails details;
-								details.pName = pName;
-								details.x = x;
-								details.y = y;
-								details.numBuildUnits = 0;
-								details.income = 0;
-
 								for(int a=0; a<4; ++a)
 								{
-									MapTile &tile = pMap->pMap[(y + (a >> 1))*pMap->mapWidth + x + (a & 1)];
+									MapTile &tile = pMap->pMap[(details.y + (a >> 1))*pMap->mapWidth + details.x + (a & 1)];
 									tile.pObject = &pMap->pCastles[castle];
 									tile.type = OT_Castle;
 									tile.index = castle;
@@ -298,8 +307,8 @@ Map *Map::Create(Game *pGame, const char *pMapFilename)
 								}
 
 								Castle *pNewCastle = &pMap->pCastles[castle++];
-								pNewCastle->Init(&details, race-1, pMap->pUnits);
-								pNewCastle->pTile = pMap->pMap + y*pMap->mapWidth + x;
+								pNewCastle->Init(&details, race, pMap->pUnits);
+								pNewCastle->pTile = pMap->pMap + details.y*pMap->mapWidth + details.x;
 							}
 
 							pCastles = pCastles->Next();

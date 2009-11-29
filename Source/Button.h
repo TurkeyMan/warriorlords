@@ -23,13 +23,14 @@ public:
 	void SetPos(MFRect *pPos);
 
 	void SetOutline(bool bEnable, const MFVector &colour);
+	void SetOverlay(MFMaterial *pImage, const MFVector &colour = MFVector::white);
 
 protected:
-	MFMaterial *pMaterial;
+	MFMaterial *pMaterial, *pOverlay;
 	MFRect pos;
 	MFRect uvs;
 
-	MFVector outlineColour;
+	MFVector outlineColour, overlayColour;
 	bool bOutline;
 
 	bool bTriggerOnDown;
