@@ -117,7 +117,7 @@ Step *Path::FindPath(int player, int startX, int startY, int destX, int destY)
 					if(1) // if land unit
 					{
 						// if we have water on the neighbouring edge, we can't traverse
-						if((pMap->GetTerrain(item.x, item.y) & mask) == (0x01010101 & mask))
+						if((pMap->GetTerrainAt(item.x, item.y) & mask) == (0x01010101 & mask))
 							continue;
 					}
 //					else // if sea unit
@@ -144,8 +144,8 @@ Step *Path::FindPath(int player, int startX, int startY, int destX, int destY)
 					MapTile *pTile = pMap->GetTile(tx, ty);
 
 					ObjectType type = pTile->GetType();
-					int terrain = pTile->GetTerrain();
-					int terrainSpeed = pMap->GetTerrainTile(terrain)->speed;
+					int tile = pTile->GetTile();
+					int terrainSpeed = pMap->GetTerrainTile(tile)->speed;
 					int cornerPenalty = (tx != item.x) && (ty != item.y) ? 1 : 0;
 
 					int tg = item.gScore + ((type == OT_Road || type == OT_Castle) ? 2 : terrainSpeed * 4) + cornerPenalty + (pTile->IsEnemyTile(player) ? 100 : 0);

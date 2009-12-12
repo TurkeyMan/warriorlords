@@ -101,7 +101,7 @@ public:
 
 	int GetNumMovementClasses() { return numMovementClasses; }
 	const char *GetMovementClassName(int movementClass) { return ppMovementClasses[movementClass]; }
-	int GetMovementPenalty(int movementClass, int terrainType) { return pMovementPenalty[movementClass*numTerrainTypes + terrainType]; }
+	int GetMovementPenalty(int movementClass, int terrainType) { return pMovementPenalty[movementClass*numTerrainTypes + terrainType] * 2; }
 
 	MFMaterial *GetUnitDetailMap() { return pDetailLayer; }
 	MFMaterial *GetUnitColourMap() { return pColourLayer; }
@@ -205,6 +205,12 @@ public:
 
 	bool IsRanged() { return pUnitDefs->IsRanged(details.attackClass); }
 
+	int GetMovement() { return movement; }
+	int GetMovementPenalty(MapTile *pTile);
+	void Move(int penalty) { movement -= penalty; }
+
+	void Restore();
+
 protected:
 	UnitDefinitions *pUnitDefs;
 	int id;
@@ -250,6 +256,7 @@ public:
 	void Capture(int player);
 
 	void SetBuildUnit(int slot);
+	int GetBuildUnit();
 
 //protected:
 public:
@@ -270,15 +277,21 @@ public:
 	static Group *Create(int player);
 	void Destroy();
 
+	bool AddUnit(Unit *pUnit);
+	bool AddForwardUnit(Unit *pUnit);
+	bool AddRearUnit(Unit *pUnit);
+	void RemoveUnit(Unit *pUnit);
+	void SwapUnits(Unit *pUnit1, Unit *pUnit2);
+
+	int GetMovement();
+	bool SubtractMovementCost(MapTile *pTile);
+
+	bool IsSelected() { return bSelected; }
+	bool IsInGroup(Unit *pUnit);
+
 	int GetPlayer() { return player; }
 
 	MapTile *GetTile() { return pTile; }
-
-	bool IsSelected() { return bSelected; }
-
-	void AddUnit(Unit *pUnit);
-	void RemoveUnit(Unit *pUnit);
-	bool IsInGroup(Unit *pUnit);
 
 	int GetNumUnits() const { return numForwardUnits + numRearUnits; }
 	int GetNumForwardUnits() const { return numForwardUnits; }

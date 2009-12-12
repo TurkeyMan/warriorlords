@@ -10,6 +10,8 @@
 #include "MFFont.h"
 #include "MFMaterial.h"
 
+Game *Game::pCurrent = NULL;
+
 Game::Game(const char *_pMap)
 {
 	pMap = Map::Create(this, "Map");
@@ -72,7 +74,33 @@ void Game::BeginTurn(int player)
 {
 	currentPlayer = player;
 
-	// heal units
+	// heal units and restore movement
+	int width, height;
+	pMap->GetMapSize(&width, &height);
+
+	for(int y=0; y<height; ++y)
+	{
+		for(int x=0; x<width; ++x)
+		{
+			MapTile *pTile = pMap->GetTile(x, y);
+
+			int numGroups = pTile->GetNumGroups();
+			if(numGroups && pTile->IsFriendlyTile(player))
+			{
+				for(int a=0; a<numGroups; ++a)
+				{
+					Group *pGroup = pTile->GetGroup(a);
+
+					int numUnits = pGroup->GetNumUnits();
+					for(int b=0; b<numUnits; ++b)
+					{
+						Unit *pUnit = pGroup->GetUnit(b);
+						pUnit->Restore();
+					}
+				}
+			}
+		}
+	}
 
 	// get money + add new units
 	for(int a = 0; a < pMap->GetNumCastles(); ++a)
@@ -125,6 +153,7 @@ void Game::EndTurn()
 void Game::BeginBattle(Group *pGroup, MapTile *pTarget)
 {
 	// enter the battle
+	pMapScreen->DeselectGroup();
 	pBattle->Begin(pGroup, pTarget, 0, 2, -1);
 }
 
@@ -175,6 +204,9 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 
 	if(pGroup)
 	{
+		// select the victorious group
+		pMapScreen->SelectGroup(pGroup);
+
 		// if the target is an empty castle, capture it
 		Castle *pCastle = pTarget->GetCastle();
 		if(pCastle && pCastle->IsEmpty())

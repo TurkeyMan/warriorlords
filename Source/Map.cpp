@@ -26,11 +26,35 @@ static const char * const pObjectTypes[] =
 	"road"
 };
 
+uint32 MapTile::GetTerrain() const
+{
+	Map *pMap = Game::GetCurrent()->GetMap();
+	return pMap->GetTerrain(terrain);
+}
+
 void MapTile::AddGroup(Group *_pGroup)
 {
+	_pGroup->pTile = this;
 	_pGroup->pNext = pGroup;
 	pGroup = _pGroup;
-	pGroup->pTile = this;
+}
+
+void MapTile::AddGroupToBack(Group *_pGroup)
+{
+	_pGroup->pTile = this;
+	_pGroup->pNext = NULL;
+
+	if(!pGroup)
+	{
+		pGroup = _pGroup;
+	}
+	else
+	{
+		Group *pT = pGroup;
+		while(pT->pNext)
+			pT = pT->pNext;
+		pT->pNext = _pGroup;
+	}
 }
 
 void MapTile::RemoveGroup(Group *_pGroup)
@@ -94,10 +118,12 @@ Unit *MapTile::FindVehicle()
 	return NULL;
 }
 
-void MapTile::BringGroupToFront(Group *pGroup)
+void MapTile::BringGroupToFront(Group *_pGroup)
 {
-	RemoveGroup(pGroup);
-	AddGroup(pGroup);
+	RemoveGroup(_pGroup);
+	_pGroup->pTile = this;
+	_pGroup->pNext = pGroup;
+	pGroup = _pGroup;
 }
 
 int MapTile::GetNumUnits()
@@ -655,7 +681,7 @@ void Map::Draw()
 			{
 				pMat = pTiles->GetRoadMaterial();
 
-				int r = pTiles->FindRoad(pTile->index, GetTerrain(xStart+x, yStart+y));
+				int r = pTiles->FindRoad(pTile->index, GetTerrainAt(xStart+x, yStart+y));
 				MFDebug_Assert(r >= 0, "Invalid road!");
 
 				pTiles->GetRoadUVs(r, &uvs);
@@ -931,7 +957,7 @@ void Map::SetZoom(float _zoom, float pointX, float pointY)
 
 bool Map::SetTile(int x, int y, uint32 tile, uint32 mask)
 {
-	if(tile == GetTerrain(x, y))
+	if(tile == GetTerrainAt(x, y))
  		return true;
 
 	int tiles[8];
@@ -991,7 +1017,7 @@ bool Map::SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask)
 	{
 		x = pChangeList[a].x;
 		y = pChangeList[a].y;
-		DecodeTile(GetTerrain(x, y), &tl, &tr, &bl, &br);
+		DecodeTile(GetTerrainAt(x, y), &tl, &tr, &bl, &br);
 
 		// perform a bunch of logic to find a tile type suggestion...
 		int tlm = 0, trm = 0, blm = 0, brm = 0;
@@ -999,7 +1025,7 @@ bool Map::SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask)
 		// update adjacent tiles
 		if(y > 0 && pTouched[(y-1)*mapWidth + x])
 		{
-			int t = GetTerrain(x, y-1);
+			int t = GetTerrainAt(x, y-1);
 			tl = DecodeBL(t);
 			tr = DecodeBR(t);
 			tlm = 0xFF;
@@ -1007,7 +1033,7 @@ bool Map::SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask)
 		}
 		if(y < mapHeight-1 && pTouched[(y+1)*mapWidth + x])
 		{
-			int b = GetTerrain(x, y+1);
+			int b = GetTerrainAt(x, y+1);
 			bl = DecodeTL(b);
 			br = DecodeTR(b);
 			blm = 0xFF;
@@ -1015,7 +1041,7 @@ bool Map::SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask)
 		}
 		if(x > 0 && pTouched[y*mapWidth + x - 1])
 		{
-			int l = GetTerrain(x-1, y);
+			int l = GetTerrainAt(x-1, y);
 			tl = DecodeTR(l);
 			bl = DecodeBR(l);
 			tlm = 0xFF;
@@ -1023,7 +1049,7 @@ bool Map::SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask)
 		}
 		if(x < mapWidth-1 && pTouched[y*mapWidth + x + 1])
 		{
-			int r = GetTerrain(x+1, y);
+			int r = GetTerrainAt(x+1, y);
 			tr = DecodeTL(r);
 			br = DecodeBL(r);
 			trm = 0xFF;
@@ -1045,7 +1071,7 @@ int Map::UpdateChange(int a)
 
 	x = pChangeList[a].x;
 	y = pChangeList[a].y;
-	DecodeTile(GetTerrain(x, y), &tl, &tr, &bl, &br);
+	DecodeTile(GetTerrainAt(x, y), &tl, &tr, &bl, &br);
 
 	// perform a bunch of logic to find a tile type suggestion...
 	int tlm = 0, trm = 0, blm = 0, brm = 0;
@@ -1053,7 +1079,7 @@ int Map::UpdateChange(int a)
 	// update adjacent tiles
 	if(y > 0 && pTouched[(y-1)*mapWidth + x])
 	{
-		int t = GetTerrain(x, y-1);
+		int t = GetTerrainAt(x, y-1);
 		tl = DecodeBL(t);
 		tr = DecodeBR(t);
 		tlm = 0xFF;
@@ -1061,7 +1087,7 @@ int Map::UpdateChange(int a)
 	}
 	if(y < mapHeight-1 && pTouched[(y+1)*mapWidth + x])
 	{
-		int b = GetTerrain(x, y+1);
+		int b = GetTerrainAt(x, y+1);
 		bl = DecodeTL(b);
 		br = DecodeTR(b);
 		blm = 0xFF;
@@ -1069,7 +1095,7 @@ int Map::UpdateChange(int a)
 	}
 	if(x > 0 && pTouched[y*mapWidth + x - 1])
 	{
-		int l = GetTerrain(x-1, y);
+		int l = GetTerrainAt(x-1, y);
 		tl = DecodeTR(l);
 		bl = DecodeBR(l);
 		tlm = 0xFF;
@@ -1077,7 +1103,7 @@ int Map::UpdateChange(int a)
 	}
 	if(x < mapWidth-1 && pTouched[y*mapWidth + x + 1])
 	{
-		int r = GetTerrain(x+1, y);
+		int r = GetTerrainAt(x+1, y);
 		tr = DecodeTL(r);
 		br = DecodeBL(r);
 		trm = 0xFF;

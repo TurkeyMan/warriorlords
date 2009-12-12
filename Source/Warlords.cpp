@@ -19,8 +19,6 @@ Game *pGame;
 Editor *pEditor = NULL;
 Battle *pBattle = NULL;
 
-MapScreen *pMapScreen = NULL;
-
 /*** Game Functions ***/
 
 
@@ -41,6 +39,7 @@ void Game_Init()
 	pInputManager = new InputManager;
 
 	pGame = new Game("Map");
+	Game::SetCurrent(pGame);
 
 #if 1
 	pGame->BeginGame();

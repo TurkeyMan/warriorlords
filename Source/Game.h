@@ -22,6 +22,9 @@ public:
 	Game(const char *pMap);
 	~Game();
 
+	MapScreen *GetMapScreen() { return pMapScreen; }
+	Battle *GetBattleScreen() { return pBattle; }
+
 	void BeginGame();
 	void BeginTurn(int player);
 	void EndTurn();
@@ -34,6 +37,9 @@ public:
 	int CurrentPlayer() { return currentPlayer; }
 	int GetPlayerRace(int player) { return player == -1 ? 0 : players[player].race; }
 	MFVector GetPlayerColour(int player) { return player == -1 ? pUnitDefs->GetRaceColour(0) : players[player].colour; }
+
+	static void SetCurrent(Game *pGame) { pCurrent = pGame; }
+	static Game *GetCurrent() { return pCurrent; }
 
 protected:
 	// game data
@@ -53,6 +59,8 @@ protected:
 	// castles
 
 	// units
+
+	static Game *pCurrent;
 };
 
 #endif

@@ -30,15 +30,17 @@ public:
 	int GetX() { return x; }
 	int GetY() { return y; }
 
-	int GetTerrain() { return terrain; }
-	ObjectType GetType() { return (ObjectType)type; }
+	int GetTile() const { return terrain; }
+	uint32 GetTerrain() const;
+	ObjectType GetType() const { return (ObjectType)type; }
 
 	void AddGroup(Group *pGroup);
+	void AddGroupToBack(Group *pGroup);
+	void BringGroupToFront(Group *pGroup);
 	void RemoveGroup(Group *pGroup);
 
 	int GetNumGroups();
 	Group *GetGroup(int group);
-	void BringGroupToFront(Group *pGroup);
 
 	int GetNumUnits();
 	int GetAvailableUnitSpace() { return 10 - GetNumUnits(); }
@@ -94,9 +96,10 @@ public:
 	void SetMapOrtho(int *pXTiles = NULL, int *pYTiles = NULL);
 
 	MapTile *GetTile(int x, int y) const { return pMap + y*mapWidth + x; }
-	const Tile *GetTerrainTile(int terrain) const { return pTiles->GetTile(terrain); }
+	const Tile *GetTerrainTile(int terrainTile) const { return pTiles->GetTile(terrainTile); }
 	const Tile *GetTerrainTileAt(int x, int y) const { return pTiles->GetTile(pMap[y*mapWidth + x].terrain); }
-	uint32 GetTerrain(int x, int y) const { return pTiles->GetTile(pMap[y*mapWidth + x].terrain)->terrain; }
+	uint32 GetTerrain(int terrainTile) const { return pTiles->GetTile(terrainTile)->terrain; }
+	uint32 GetTerrainAt(int x, int y) const { return pTiles->GetTile(pMap[y*mapWidth + x].terrain)->terrain; }
 
 	int GetNumCastles() const { return numCastles; }
 	Castle *GetCastle(int id) const { return &pCastles[id]; }

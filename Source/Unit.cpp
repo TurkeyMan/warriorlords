@@ -350,7 +350,7 @@ Unit *UnitDefinitions::CreateUnit(int unit, int player)
 	pUnit->details = pUnits[unit];
 	pUnit->kills = pUnit->victories = 0;
 	pUnit->life = pUnit->details.life;
-	pUnit->movement = pUnit->details.movement;
+	pUnit->movement = pUnit->details.movement * 2;
 	pUnit->pName = pUnit->details.pName;
 
 	return pUnit;
@@ -404,7 +404,7 @@ void UnitDefinitions::DrawUnits(float scale, float texelOffset, bool bHead)
 			MFRect uvs;
 			GetUnitUVs(unit.unit, unit.bFlip, &uvs, texelOffset);
 
-			float depth = bHead ? 0.f : (1000.f - unit.y) / 1000.f;
+			float depth = 0.f;//bHead ? 0.f : (1000.f - unit.y) / 1000.f;
 
 			float xOffset = -(def.width - 1) / 2.f * scale;
 			float yOffset = -(def.height - 1) / 2.f * scale;
@@ -528,6 +528,29 @@ MFVector Unit::GetColour()
 	return pGame->GetPlayerColour(player);
 }
 
+int Unit::GetMovementPenalty(MapTile *pTile)
+{
+	ObjectType type = pTile->GetType();
+	if(type == OT_Road || (type == OT_Castle && pTile->IsFriendlyTile(player)))
+		return 1;
+
+	uint32 terrain = pTile->GetTerrain();
+	int penalty = pUnitDefs->GetMovementPenalty(details.movementClass, terrain & 0xFF);
+	penalty = MFMax(penalty, pUnitDefs->GetMovementPenalty(details.movementClass, (terrain >> 8) & 0xFF));
+	penalty = MFMax(penalty, pUnitDefs->GetMovementPenalty(details.movementClass, (terrain >> 16) & 0xFF));
+	penalty = MFMax(penalty, pUnitDefs->GetMovementPenalty(details.movementClass, (terrain >> 24) & 0xFF));
+	return penalty;
+}
+
+void Unit::Restore()
+{
+	// restore movement
+	movement = details.movement * 2;
+
+	// heal 25% life
+	life = MFMin(life + (details.life + 3) / 4, details.life);
+}
+
 void Castle::Init(CastleDetails *pDetails, int _player, UnitDefinitions *_pUnitDefs)
 {
 	pUnitDefs = _pUnitDefs;
@@ -596,6 +619,13 @@ void Castle::SetBuildUnit(int slot)
 	buildTime = pUnit->buildTime + details.buildUnits[slot].buildTimeMod;
 }
 
+int Castle::GetBuildUnit()
+{
+	if(building == -1)
+		return -1;
+	return details.buildUnits[building].unit;
+}
+
 Group *Group::Create(int _player)
 {
 	Group * pGroup = new Group;
@@ -617,14 +647,49 @@ void Group::Destroy()
 	delete this;
 }
 
-void Group::AddUnit(Unit *pUnit)
+bool Group::AddUnit(Unit *pUnit)
 {
+	if(numForwardUnits + numRearUnits >= 10)
+		return false;
+
 	bool bRear = pUnit->IsRanged();
 
 	if(bRear)
-		pRearUnits[numRearUnits++] = pUnit;
+	{
+		if(numRearUnits < 5)
+			pRearUnits[numRearUnits++] = pUnit;
+		else
+			pForwardUnits[numForwardUnits++] = pUnit;
+	}
 	else
-		pForwardUnits[numForwardUnits++] = pUnit;
+	{
+		if(numForwardUnits < 5)
+			pForwardUnits[numForwardUnits++] = pUnit;
+		else
+			pRearUnits[numRearUnits++] = pUnit;
+	}
+
+	return true;
+}
+
+bool Group::AddForwardUnit(Unit *pUnit)
+{
+	if(numForwardUnits >= 5)
+		return false;
+
+	pForwardUnits[numForwardUnits++] = pUnit;
+
+	return true;
+}
+
+bool Group::AddRearUnit(Unit *pUnit)
+{
+	if(numRearUnits >= 5)
+		return false;
+
+	pRearUnits[numRearUnits++] = pUnit;
+
+	return true;
 }
 
 void Group::RemoveUnit(Unit *pUnit)
@@ -651,6 +716,70 @@ void Group::RemoveUnit(Unit *pUnit)
 			break;
 		}
 	}
+}
+
+void Group::SwapUnits(Unit *pUnit1, Unit *pUnit2)
+{
+	for(int a=0; a<numForwardUnits; ++a)
+	{
+		if(pForwardUnits[a] == pUnit1)
+			pForwardUnits[a] = pUnit2;
+		else if(pForwardUnits[a] == pUnit2)
+			pForwardUnits[a] = pUnit1;
+	}
+	for(int a=0; a<numRearUnits; ++a)
+	{
+		if(pRearUnits[a] == pUnit1)
+			pRearUnits[a] = pUnit2;
+		else if(pRearUnits[a] == pUnit2)
+			pRearUnits[a] = pUnit1;
+	}	
+}
+
+int Group::GetMovement()
+{
+	int movement = 0x7FFFFFFF;
+
+	for(int a=0; a<numForwardUnits; ++a)
+	{
+		movement = MFMin(movement, pForwardUnits[a]->GetMovement());
+	}
+	for(int a=0; a<numRearUnits; ++a)
+	{
+		movement = MFMin(movement, pRearUnits[a]->GetMovement());
+	}
+
+	return movement;
+}
+
+bool Group::SubtractMovementCost(MapTile *pTile)
+{
+	for(int a=0; a<numForwardUnits; ++a)
+	{
+		int penalty = pForwardUnits[a]->GetMovementPenalty(pTile);
+		if(!penalty || pForwardUnits[a]->GetMovement() < penalty)
+			return false;
+	}
+	for(int a=0; a<numRearUnits; ++a)
+	{
+		int penalty = pRearUnits[a]->GetMovementPenalty(pTile);
+		if(!penalty || pRearUnits[a]->GetMovement() < penalty)
+			return false;
+	}
+
+	// all units can move, lets go!
+	for(int a=0; a<numForwardUnits; ++a)
+	{
+		int penalty = pForwardUnits[a]->GetMovementPenalty(pTile);
+		pForwardUnits[a]->Move(penalty);
+	}
+	for(int a=0; a<numRearUnits; ++a)
+	{
+		int penalty = pRearUnits[a]->GetMovementPenalty(pTile);
+		pRearUnits[a]->Move(penalty);
+	}
+
+	return true;
 }
 
 bool Group::IsInGroup(Unit *pUnit)

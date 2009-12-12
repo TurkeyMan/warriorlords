@@ -27,27 +27,31 @@ protected:
 
 	MFFont *pFont;
 
-	MFRect window, top, rear, front, bottom;
-
-	struct GroupEdit
-	{
-		int group;
-		int numFront, numRear;
-		Group *pGroup;
-	} group[20];
+	MFRect window, top, rear, front, lower, bottom[4], empty;
 
 	struct GroupUnit
 	{
 		int x, y;
 		int rank;
 		Unit *pUnit;
-		GroupEdit *pGroup;
-	} units[10];
+		Group *pGroup;
+	} units[20];
 
-	int numGroups;
 	int numUnits;
+	int numFront;
+	int numRear;
+	int numExtraGroups;
+	Group *pExtraGroups[4];
+
+	int dragUnit;
+	Group *pDragGroup;
 
 	bool bVisible;
+
+	void PositionUnits();
+	int GetUnitFromPoint(float x, float y);
+	int GetFileFromPoint(float x, float y);
+	int GetGroupFromPoint(float x, float y);
 };
 
 class CastleConfig : public InputReceiver
@@ -72,7 +76,6 @@ protected:
 
 	Button *pBuildUnits[4];
 
-
 	bool bVisible;
 
 	static void SelectUnit(int button, void *pUserData, int buttonID);
@@ -96,7 +99,7 @@ public:
 	static void ShowMiniMap(int button, void *pUserData, int buttonID);
 
 	void SelectGroup(Group *pGroup);
-	void DeselectGroup(Group *pGroup);
+	void DeselectGroup();
 	Group *GetSelected();
 
 protected:
