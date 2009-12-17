@@ -1,0 +1,345 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 45;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1D60589F0D05DD5A006BFB54 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D30AB110D05D00D00671497 /* Foundation.framework */; };
+		1DF5F4E00D08C38300B7A737 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DF5F4DF0D08C38300B7A737 /* UIKit.framework */; };
+		28FD15000DC6FC520079059D /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28FD14FF0DC6FC520079059D /* OpenGLES.framework */; };
+		28FD15080DC6FC5B0079059D /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28FD15070DC6FC5B0079059D /* QuartzCore.framework */; };
+		326BAD2310D8FB5900E014B5 /* MainWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = 326BAD2110D8FB5900E014B5 /* MainWindow.xib */; };
+		326BAD2410D8FB5900E014B5 /* Warlords-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 326BAD2210D8FB5900E014B5 /* Warlords-Info.plist */; };
+		326BAD4B10D8FBD400E014B5 /* Button.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD3010D8FBD400E014B5 /* Button.cpp */; };
+		326BAD4D10D8FBD400E014B5 /* Editor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD3410D8FBD400E014B5 /* Editor.cpp */; };
+		326BAD4E10D8FBD400E014B5 /* Game.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD3610D8FBD400E014B5 /* Game.cpp */; };
+		326BAD4F10D8FBD400E014B5 /* InputHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD3810D8FBD400E014B5 /* InputHandler.cpp */; };
+		326BAD5010D8FBD400E014B5 /* Map.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD3A10D8FBD400E014B5 /* Map.cpp */; };
+		326BAD5110D8FBD400E014B5 /* Path.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD3C10D8FBD400E014B5 /* Path.cpp */; };
+		326BAD5210D8FBD400E014B5 /* Screen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD3E10D8FBD400E014B5 /* Screen.cpp */; };
+		326BAD5310D8FBD400E014B5 /* Battle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD4110D8FBD400E014B5 /* Battle.cpp */; };
+		326BAD5410D8FBD400E014B5 /* MapScreen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD4310D8FBD400E014B5 /* MapScreen.cpp */; };
+		326BAD5510D8FBD400E014B5 /* Tileset.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD4510D8FBD400E014B5 /* Tileset.cpp */; };
+		326BAD5610D8FBD400E014B5 /* Unit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD4710D8FBD400E014B5 /* Unit.cpp */; };
+		326BAD5710D8FBD400E014B5 /* Warlords.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD4910D8FBD400E014B5 /* Warlords.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		326BBAB410D9299300E014B5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 326BBAB010D9299300E014B5 /* Fuji.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 326BB39D10D9130500E014B5 /* libFuji.a */;
+			remoteInfo = Fuji;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		1D30AB110D05D00D00671497 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		1D6058910D05DD3D006BFB54 /* Warlords.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Warlords.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1DF5F4DF0D08C38300B7A737 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		28FD14FF0DC6FC520079059D /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
+		28FD15070DC6FC5B0079059D /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		326BAD2110D8FB5900E014B5 /* MainWindow.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = MainWindow.xib; path = Res/MainWindow.xib; sourceTree = "<group>"; };
+		326BAD2210D8FB5900E014B5 /* Warlords-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "Warlords-Info.plist"; path = "Res/Warlords-Info.plist"; sourceTree = "<group>"; };
+		326BAD3010D8FBD400E014B5 /* Button.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Button.cpp; sourceTree = "<group>"; };
+		326BAD3110D8FBD400E014B5 /* Button.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Button.h; sourceTree = "<group>"; };
+		326BAD3410D8FBD400E014B5 /* Editor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Editor.cpp; sourceTree = "<group>"; };
+		326BAD3510D8FBD400E014B5 /* Editor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Editor.h; sourceTree = "<group>"; };
+		326BAD3610D8FBD400E014B5 /* Game.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Game.cpp; sourceTree = "<group>"; };
+		326BAD3710D8FBD400E014B5 /* Game.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Game.h; sourceTree = "<group>"; };
+		326BAD3810D8FBD400E014B5 /* InputHandler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InputHandler.cpp; sourceTree = "<group>"; };
+		326BAD3910D8FBD400E014B5 /* InputHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InputHandler.h; sourceTree = "<group>"; };
+		326BAD3A10D8FBD400E014B5 /* Map.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Map.cpp; sourceTree = "<group>"; };
+		326BAD3B10D8FBD400E014B5 /* Map.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Map.h; sourceTree = "<group>"; };
+		326BAD3C10D8FBD400E014B5 /* Path.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Path.cpp; sourceTree = "<group>"; };
+		326BAD3D10D8FBD400E014B5 /* Path.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Path.h; sourceTree = "<group>"; };
+		326BAD3E10D8FBD400E014B5 /* Screen.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Screen.cpp; sourceTree = "<group>"; };
+		326BAD3F10D8FBD400E014B5 /* Screen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Screen.h; sourceTree = "<group>"; };
+		326BAD4110D8FBD400E014B5 /* Battle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Battle.cpp; sourceTree = "<group>"; };
+		326BAD4210D8FBD400E014B5 /* Battle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Battle.h; sourceTree = "<group>"; };
+		326BAD4310D8FBD400E014B5 /* MapScreen.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MapScreen.cpp; sourceTree = "<group>"; };
+		326BAD4410D8FBD400E014B5 /* MapScreen.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MapScreen.h; sourceTree = "<group>"; };
+		326BAD4510D8FBD400E014B5 /* Tileset.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Tileset.cpp; sourceTree = "<group>"; };
+		326BAD4610D8FBD400E014B5 /* Tileset.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Tileset.h; sourceTree = "<group>"; };
+		326BAD4710D8FBD400E014B5 /* Unit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Unit.cpp; sourceTree = "<group>"; };
+		326BAD4810D8FBD400E014B5 /* Unit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Unit.h; sourceTree = "<group>"; };
+		326BAD4910D8FBD400E014B5 /* Warlords.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Warlords.cpp; sourceTree = "<group>"; };
+		326BAD4A10D8FBD400E014B5 /* Warlords.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Warlords.h; sourceTree = "<group>"; };
+		326BBAB010D9299300E014B5 /* Fuji.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Fuji.xcodeproj; path = ../Fuji/Fuji.xcodeproj; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1D60588F0D05DD3D006BFB54 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D60589F0D05DD5A006BFB54 /* Foundation.framework in Frameworks */,
+				1DF5F4E00D08C38300B7A737 /* UIKit.framework in Frameworks */,
+				28FD15000DC6FC520079059D /* OpenGLES.framework in Frameworks */,
+				28FD15080DC6FC5B0079059D /* QuartzCore.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		19C28FACFE9D520D11CA2CBB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1D6058910D05DD3D006BFB54 /* Warlords.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		29B97314FDCFA39411CA2CEA /* CustomTemplate */ = {
+			isa = PBXGroup;
+			children = (
+				326BBAB010D9299300E014B5 /* Fuji.xcodeproj */,
+				326BAD2F10D8FBD400E014B5 /* Source */,
+				29B97317FDCFA39411CA2CEA /* Resources */,
+				29B97323FDCFA39411CA2CEA /* Frameworks */,
+				19C28FACFE9D520D11CA2CBB /* Products */,
+			);
+			name = CustomTemplate;
+			sourceTree = "<group>";
+		};
+		29B97317FDCFA39411CA2CEA /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				326BAD2110D8FB5900E014B5 /* MainWindow.xib */,
+				326BAD2210D8FB5900E014B5 /* Warlords-Info.plist */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		29B97323FDCFA39411CA2CEA /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				28FD15070DC6FC5B0079059D /* QuartzCore.framework */,
+				28FD14FF0DC6FC520079059D /* OpenGLES.framework */,
+				1DF5F4DF0D08C38300B7A737 /* UIKit.framework */,
+				1D30AB110D05D00D00671497 /* Foundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		326BAD2F10D8FBD400E014B5 /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				326BAD3010D8FBD400E014B5 /* Button.cpp */,
+				326BAD3110D8FBD400E014B5 /* Button.h */,
+				326BAD3410D8FBD400E014B5 /* Editor.cpp */,
+				326BAD3510D8FBD400E014B5 /* Editor.h */,
+				326BAD3610D8FBD400E014B5 /* Game.cpp */,
+				326BAD3710D8FBD400E014B5 /* Game.h */,
+				326BAD3810D8FBD400E014B5 /* InputHandler.cpp */,
+				326BAD3910D8FBD400E014B5 /* InputHandler.h */,
+				326BAD3A10D8FBD400E014B5 /* Map.cpp */,
+				326BAD3B10D8FBD400E014B5 /* Map.h */,
+				326BAD3C10D8FBD400E014B5 /* Path.cpp */,
+				326BAD3D10D8FBD400E014B5 /* Path.h */,
+				326BAD3E10D8FBD400E014B5 /* Screen.cpp */,
+				326BAD3F10D8FBD400E014B5 /* Screen.h */,
+				326BAD4010D8FBD400E014B5 /* Screens */,
+				326BAD4510D8FBD400E014B5 /* Tileset.cpp */,
+				326BAD4610D8FBD400E014B5 /* Tileset.h */,
+				326BAD4710D8FBD400E014B5 /* Unit.cpp */,
+				326BAD4810D8FBD400E014B5 /* Unit.h */,
+				326BAD4910D8FBD400E014B5 /* Warlords.cpp */,
+				326BAD4A10D8FBD400E014B5 /* Warlords.h */,
+			);
+			path = Source;
+			sourceTree = "<group>";
+		};
+		326BAD4010D8FBD400E014B5 /* Screens */ = {
+			isa = PBXGroup;
+			children = (
+				326BAD4110D8FBD400E014B5 /* Battle.cpp */,
+				326BAD4210D8FBD400E014B5 /* Battle.h */,
+				326BAD4310D8FBD400E014B5 /* MapScreen.cpp */,
+				326BAD4410D8FBD400E014B5 /* MapScreen.h */,
+			);
+			path = Screens;
+			sourceTree = "<group>";
+		};
+		326BBAB110D9299300E014B5 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				326BBAB510D9299300E014B5 /* libFuji.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1D6058900D05DD3D006BFB54 /* Warlords */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D6058960D05DD3E006BFB54 /* Build configuration list for PBXNativeTarget "Warlords" */;
+			buildPhases = (
+				1D60588D0D05DD3D006BFB54 /* Resources */,
+				1D60588E0D05DD3D006BFB54 /* Sources */,
+				1D60588F0D05DD3D006BFB54 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Warlords;
+			productName = Warlords;
+			productReference = 1D6058910D05DD3D006BFB54 /* Warlords.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		29B97313FDCFA39411CA2CEA /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "Warlords" */;
+			compatibilityVersion = "Xcode 3.1";
+			hasScannedForEncodings = 1;
+			mainGroup = 29B97314FDCFA39411CA2CEA /* CustomTemplate */;
+			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = 326BBAB110D9299300E014B5 /* Products */;
+					ProjectRef = 326BBAB010D9299300E014B5 /* Fuji.xcodeproj */;
+				},
+			);
+			projectRoot = "";
+			targets = (
+				1D6058900D05DD3D006BFB54 /* Warlords */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		326BBAB510D9299300E014B5 /* libFuji.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libFuji.a;
+			remoteRef = 326BBAB410D9299300E014B5 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1D60588D0D05DD3D006BFB54 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				326BAD2310D8FB5900E014B5 /* MainWindow.xib in Resources */,
+				326BAD2410D8FB5900E014B5 /* Warlords-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1D60588E0D05DD3D006BFB54 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				326BAD4B10D8FBD400E014B5 /* Button.cpp in Sources */,
+				326BAD4D10D8FBD400E014B5 /* Editor.cpp in Sources */,
+				326BAD4E10D8FBD400E014B5 /* Game.cpp in Sources */,
+				326BAD4F10D8FBD400E014B5 /* InputHandler.cpp in Sources */,
+				326BAD5010D8FBD400E014B5 /* Map.cpp in Sources */,
+				326BAD5110D8FBD400E014B5 /* Path.cpp in Sources */,
+				326BAD5210D8FBD400E014B5 /* Screen.cpp in Sources */,
+				326BAD5310D8FBD400E014B5 /* Battle.cpp in Sources */,
+				326BAD5410D8FBD400E014B5 /* MapScreen.cpp in Sources */,
+				326BAD5510D8FBD400E014B5 /* Tileset.cpp in Sources */,
+				326BAD5610D8FBD400E014B5 /* Unit.cpp in Sources */,
+				326BAD5710D8FBD400E014B5 /* Warlords.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1D6058940D05DD3E006BFB54 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = Warlords_Prefix.pch;
+				"GCC_THUMB_SUPPORT[arch=armv6]" = "";
+				INFOPLIST_FILE = "Warlords-Info.plist";
+				PRODUCT_NAME = Warlords;
+			};
+			name = Debug;
+		};
+		1D6058950D05DD3E006BFB54 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = Warlords_Prefix.pch;
+				"GCC_THUMB_SUPPORT[arch=armv6]" = "";
+				INFOPLIST_FILE = "Warlords-Info.plist";
+				PRODUCT_NAME = Warlords;
+			};
+			name = Release;
+		};
+		C01FCF4F08A954540054247B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = ../Fuji/Include/;
+				PREBINDING = NO;
+				SDKROOT = iphoneos3.0;
+			};
+			name = Debug;
+		};
+		C01FCF5008A954540054247B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = ../Fuji/Include/;
+				PREBINDING = NO;
+				SDKROOT = iphoneos3.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1D6058960D05DD3E006BFB54 /* Build configuration list for PBXNativeTarget "Warlords" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1D6058940D05DD3E006BFB54 /* Debug */,
+				1D6058950D05DD3E006BFB54 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C01FCF4E08A954540054247B /* Build configuration list for PBXProject "Warlords" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C01FCF4F08A954540054247B /* Debug */,
+				C01FCF5008A954540054247B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 29B97313FDCFA39411CA2CEA /* Project object */;
+}

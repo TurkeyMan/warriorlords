@@ -1,0 +1,546 @@
+// !$*UTF8*$!
+{
+	1D6058900D05DD3D006BFB54 /* Warlords */ = {
+		activeExec = 0;
+		executables = (
+			3236BE4010D8ECFD00D2BCE3 /* Warlords */,
+		);
+	};
+	29B97313FDCFA39411CA2CEA /* Project object */ = {
+		activeArchitecturePreference = i386;
+		activeBuildConfigurationName = Debug;
+		activeExecutable = 3236BE4010D8ECFD00D2BCE3 /* Warlords */;
+		activeSDKPreference = iphonesimulator3.0;
+		activeTarget = 1D6058900D05DD3D006BFB54 /* Warlords */;
+		addToTargets = (
+			1D6058900D05DD3D006BFB54 /* Warlords */,
+		);
+		codeSenseManager = 3236BE4C10D8ED1B00D2BCE3 /* Code sense */;
+		executables = (
+			3236BE4010D8ECFD00D2BCE3 /* Warlords */,
+		);
+		perUserDictionary = {
+			PBXConfiguration.PBXFileTableDataSource3.PBXBookmarksDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXBookmarksDataSource_NameID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					200,
+					200,
+					182,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXBookmarksDataSource_LocationID,
+					PBXBookmarksDataSource_NameID,
+					PBXBookmarksDataSource_CommentsID,
+				);
+			};
+			PBXConfiguration.PBXFileTableDataSource3.PBXErrorsWarningsDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXErrorsWarningsDataSource_LocationID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					300,
+					413,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXErrorsWarningsDataSource_TypeID,
+					PBXErrorsWarningsDataSource_MessageID,
+					PBXErrorsWarningsDataSource_LocationID,
+				);
+			};
+			PBXConfiguration.PBXFileTableDataSource3.PBXExecutablesDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXExecutablesDataSource_NameID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					22,
+					300,
+					168,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXExecutablesDataSource_ActiveFlagID,
+					PBXExecutablesDataSource_NameID,
+					PBXExecutablesDataSource_CommentsID,
+				);
+			};
+			PBXConfiguration.PBXFileTableDataSource3.PBXFileTableDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXFileDataSource_Filename_ColumnID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					523,
+					20,
+					48,
+					43,
+					43,
+					20,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXFileDataSource_FiletypeID,
+					PBXFileDataSource_Filename_ColumnID,
+					PBXFileDataSource_Built_ColumnID,
+					PBXFileDataSource_ObjectSize_ColumnID,
+					PBXFileDataSource_Errors_ColumnID,
+					PBXFileDataSource_Warnings_ColumnID,
+					PBXFileDataSource_Target_ColumnID,
+				);
+			};
+			PBXConfiguration.PBXFileTableDataSource3.PBXFindDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXFindDataSource_LocationID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					200,
+					536.20849609375,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXFindDataSource_MessageID,
+					PBXFindDataSource_LocationID,
+				);
+			};
+			PBXConfiguration.PBXFileTableDataSource3.PBXSymbolsDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXSymbolsDataSource_SymbolNameID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					16,
+					200,
+					50,
+					462,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXSymbolsDataSource_SymbolTypeIconID,
+					PBXSymbolsDataSource_SymbolNameID,
+					PBXSymbolsDataSource_SymbolTypeID,
+					PBXSymbolsDataSource_ReferenceNameID,
+				);
+			};
+			PBXConfiguration.PBXFileTableDataSource3.XCSCMDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXFileDataSource_Filename_ColumnID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					20,
+					348,
+					20,
+					48,
+					43,
+					43,
+					20,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXFileDataSource_SCM_ColumnID,
+					PBXFileDataSource_FiletypeID,
+					PBXFileDataSource_Filename_ColumnID,
+					PBXFileDataSource_Built_ColumnID,
+					PBXFileDataSource_ObjectSize_ColumnID,
+					PBXFileDataSource_Errors_ColumnID,
+					PBXFileDataSource_Warnings_ColumnID,
+					PBXFileDataSource_Target_ColumnID,
+				);
+			};
+			PBXConfiguration.PBXTargetDataSource.PBXTargetDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXFileDataSource_Filename_ColumnID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					482,
+					60,
+					20,
+					48,
+					43,
+					43,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXFileDataSource_FiletypeID,
+					PBXFileDataSource_Filename_ColumnID,
+					PBXTargetDataSource_PrimaryAttribute,
+					PBXFileDataSource_Built_ColumnID,
+					PBXFileDataSource_ObjectSize_ColumnID,
+					PBXFileDataSource_Errors_ColumnID,
+					PBXFileDataSource_Warnings_ColumnID,
+				);
+			};
+			PBXPerProjectTemplateStateSaveDate = 282663372;
+			PBXWorkspaceStateSaveDate = 282663372;
+		};
+		perUserProjectItems = {
+			326BAD6410D9032C00E014B5 /* PBXTextBookmark */ = 326BAD6410D9032C00E014B5 /* PBXTextBookmark */;
+			326BAD6510D9032C00E014B5 /* PBXTextBookmark */ = 326BAD6510D9032C00E014B5 /* PBXTextBookmark */;
+			326BAD6610D9032C00E014B5 /* PBXTextBookmark */ = 326BAD6610D9032C00E014B5 /* PBXTextBookmark */;
+			326BAD6710D9032C00E014B5 /* PBXTextBookmark */ = 326BAD6710D9032C00E014B5 /* PBXTextBookmark */;
+			326BAD6810D9032C00E014B5 /* PBXTextBookmark */ = 326BAD6810D9032C00E014B5 /* PBXTextBookmark */;
+			326BAD6910D9032C00E014B5 /* PlistBookmark */ = 326BAD6910D9032C00E014B5 /* PlistBookmark */;
+			326BAD6B10D9032C00E014B5 /* PlistBookmark */ = 326BAD6B10D9032C00E014B5 /* PlistBookmark */;
+			326BAD6C10D9032C00E014B5 /* PBXTextBookmark */ = 326BAD6C10D9032C00E014B5 /* PBXTextBookmark */;
+			326BAD6D10D9032C00E014B5 /* PBXTextBookmark */ = 326BAD6D10D9032C00E014B5 /* PBXTextBookmark */;
+			326BAD6E10D9032C00E014B5 /* PBXTextBookmark */ = 326BAD6E10D9032C00E014B5 /* PBXTextBookmark */;
+			326BAD7010D9032C00E014B5 /* PBXTextBookmark */ = 326BAD7010D9032C00E014B5 /* PBXTextBookmark */;
+			326BAD7110D9032C00E014B5 /* PBXTextBookmark */ = 326BAD7110D9032C00E014B5 /* PBXTextBookmark */;
+			326BAD7210D9032C00E014B5 /* PBXTextBookmark */ = 326BAD7210D9032C00E014B5 /* PBXTextBookmark */;
+			326BAD9510D9087100E014B5 /* PBXTextBookmark */ = 326BAD9510D9087100E014B5 /* PBXTextBookmark */;
+			326BAD9910D9087100E014B5 /* PBXTextBookmark */ = 326BAD9910D9087100E014B5 /* PBXTextBookmark */;
+			326BAD9C10D9087100E014B5 /* PBXTextBookmark */ = 326BAD9C10D9087100E014B5 /* PBXTextBookmark */;
+			326BBAB710D929A400E014B5 /* PBXTextBookmark */ = 326BBAB710D929A400E014B5 /* PBXTextBookmark */;
+			326BBAC010D92A0900E014B5 /* PBXTextBookmark */ = 326BBAC010D92A0900E014B5 /* PBXTextBookmark */;
+			326BBAC310D92A0900E014B5 /* PBXTextBookmark */ = 326BBAC310D92A0900E014B5 /* PBXTextBookmark */;
+		};
+		sourceControlManager = 3236BE4B10D8ED1B00D2BCE3 /* Source Control */;
+		userBuildSettings = {
+		};
+	};
+	3236BE4010D8ECFD00D2BCE3 /* Warlords */ = {
+		isa = PBXExecutable;
+		activeArgIndices = (
+		);
+		argumentStrings = (
+		);
+		autoAttachOnCrash = 1;
+		breakpointsEnabled = 1;
+		configStateDict = {
+		};
+		customDataFormattersEnabled = 1;
+		debuggerPlugin = GDBDebugging;
+		disassemblyDisplayState = 0;
+		enableDebugStr = 1;
+		environmentEntries = (
+		);
+		executableSystemSymbolLevel = 0;
+		executableUserSymbolLevel = 0;
+		libgmallocEnabled = 0;
+		name = Warlords;
+		sourceDirectories = (
+		);
+	};
+	3236BE4B10D8ED1B00D2BCE3 /* Source Control */ = {
+		isa = PBXSourceControlManager;
+		fallbackIsa = XCSourceControlManager;
+		isSCMEnabled = 0;
+		scmConfiguration = {
+		};
+	};
+	3236BE4C10D8ED1B00D2BCE3 /* Code sense */ = {
+		isa = PBXCodeSenseManager;
+		indexTemplatePath = "";
+	};
+	326BAD2210D8FB5900E014B5 /* Warlords-Info.plist */ = {
+		uiCtxt = {
+			sepNavWindowFrame = "{{153, 89}, {750, 558}}";
+		};
+	};
+	326BAD3010D8FBD400E014B5 /* Button.cpp */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {942, 1818}}";
+			sepNavSelRange = "{119, 0}";
+			sepNavVisRange = "{0, 879}";
+			sepNavWindowFrame = "{{-6, 43}, {750, 558}}";
+		};
+	};
+	326BAD3110D8FBD400E014B5 /* Button.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1038, 616}}";
+			sepNavSelRange = "{95, 0}";
+			sepNavVisRange = "{0, 622}";
+		};
+	};
+	326BAD3410D8FBD400E014B5 /* Editor.cpp */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {691, 6622}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 545}";
+			sepNavWindowFrame = "{{329, 146}, {750, 558}}";
+		};
+	};
+	326BAD3510D8FBD400E014B5 /* Editor.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {704, 896}}";
+			sepNavSelRange = "{127, 30}";
+			sepNavVisRange = "{0, 314}";
+		};
+	};
+	326BAD3710D8FBD400E014B5 /* Game.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {732, 840}}";
+			sepNavSelRange = "{209, 12}";
+			sepNavVisRange = "{131, 262}";
+			sepNavWindowFrame = "{{130, 110}, {750, 558}}";
+		};
+	};
+	326BAD3910D8FBD400E014B5 /* InputHandler.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {704, 2632}}";
+			sepNavSelRange = "{2123, 20}";
+			sepNavVisRange = "{1976, 284}";
+		};
+	};
+	326BAD3B10D8FBD400E014B5 /* Map.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {704, 2674}}";
+			sepNavSelRange = "{1360, 34}";
+			sepNavVisRange = "{1170, 534}";
+		};
+	};
+	326BAD3E10D8FBD400E014B5 /* Screen.cpp */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {691, 616}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 429}";
+			sepNavWindowFrame = "{{15, 215}, {750, 558}}";
+		};
+	};
+	326BAD3F10D8FBD400E014B5 /* Screen.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {704, 350}}";
+			sepNavSelRange = "{75, 58}";
+			sepNavVisRange = "{0, 354}";
+		};
+	};
+	326BAD4110D8FBD400E014B5 /* Battle.cpp */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1110, 9422}}";
+			sepNavSelRange = "{16749, 0}";
+			sepNavVisRange = "{0, 615}";
+			sepNavWindowFrame = "{{229, 44}, {750, 558}}";
+		};
+	};
+	326BAD4210D8FBD400E014B5 /* Battle.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {704, 1610}}";
+			sepNavSelRange = "{160, 30}";
+			sepNavVisRange = "{0, 248}";
+		};
+	};
+	326BAD4410D8FBD400E014B5 /* MapScreen.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {704, 1680}}";
+			sepNavSelRange = "{1351, 33}";
+			sepNavVisRange = "{1229, 320}";
+		};
+	};
+	326BAD4510D8FBD400E014B5 /* Tileset.cpp */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1182, 5264}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{7522, 962}";
+			sepNavWindowFrame = "{{107, 131}, {750, 558}}";
+		};
+	};
+	326BAD4610D8FBD400E014B5 /* Tileset.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {691, 1946}}";
+			sepNavSelRange = "{273, 15}";
+			sepNavVisRange = "{0, 622}";
+			sepNavWindowFrame = "{{84, 152}, {750, 558}}";
+		};
+	};
+	326BAD4810D8FBD400E014B5 /* Unit.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {852, 4480}}";
+			sepNavSelRange = "{960, 23}";
+			sepNavVisRange = "{3395, 521}";
+			sepNavWindowFrame = "{{61, 173}, {750, 558}}";
+		};
+	};
+	326BAD4910D8FBD400E014B5 /* Warlords.cpp */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {930, 3192}}";
+			sepNavSelRange = "{5266, 0}";
+			sepNavVisRange = "{4962, 499}";
+			sepNavWindowFrame = "{{106, 131}, {750, 558}}";
+		};
+	};
+	326BAD4A10D8FBD400E014B5 /* Warlords.h */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {936, 210}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRange = "{0, 595}";
+		};
+	};
+	326BAD6410D9032C00E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD3510D8FBD400E014B5 /* Editor.h */;
+		name = "Editor.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 552;
+		vrLoc = 0;
+	};
+	326BAD6510D9032C00E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD3010D8FBD400E014B5 /* Button.cpp */;
+		name = "Button.cpp: 7";
+		rLen = 0;
+		rLoc = 119;
+		rType = 0;
+		vrLen = 453;
+		vrLoc = 0;
+	};
+	326BAD6610D9032C00E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD3910D8FBD400E014B5 /* InputHandler.h */;
+		name = "InputHandler.h: 6";
+		rLen = 0;
+		rLoc = 100;
+		rType = 0;
+		vrLen = 251;
+		vrLoc = 0;
+	};
+	326BAD6710D9032C00E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD4A10D8FBD400E014B5 /* Warlords.h */;
+		name = "Warlords.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 595;
+		vrLoc = 0;
+	};
+	326BAD6810D9032C00E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD4910D8FBD400E014B5 /* Warlords.cpp */;
+		name = "Warlords.cpp: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 351;
+		vrLoc = 0;
+	};
+	326BAD6910D9032C00E014B5 /* PlistBookmark */ = {
+		isa = PlistBookmark;
+		fRef = 326BAD2210D8FB5900E014B5 /* Warlords-Info.plist */;
+		fallbackIsa = PBXBookmark;
+		isK = 0;
+		kPath = (
+		);
+		name = "/Users/manu/Documents/Projects/Warlords/Res/Warlords-Info.plist";
+		rLen = 0;
+		rLoc = 2147483647;
+	};
+	326BAD6B10D9032C00E014B5 /* PlistBookmark */ = {
+		isa = PlistBookmark;
+		fRef = 326BAD2210D8FB5900E014B5 /* Warlords-Info.plist */;
+		fallbackIsa = PBXBookmark;
+		isK = 0;
+		kPath = (
+		);
+		name = "/Users/manu/Documents/Projects/Warlords/Res/Warlords-Info.plist";
+		rLen = 0;
+		rLoc = 2147483647;
+	};
+	326BAD6C10D9032C00E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD3110D8FBD400E014B5 /* Button.h */;
+		name = "Button.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 653;
+		vrLoc = 0;
+	};
+	326BAD6D10D9032C00E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD3010D8FBD400E014B5 /* Button.cpp */;
+		name = "Button.cpp: 7";
+		rLen = 0;
+		rLoc = 119;
+		rType = 0;
+		vrLen = 453;
+		vrLoc = 0;
+	};
+	326BAD6E10D9032C00E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD3510D8FBD400E014B5 /* Editor.h */;
+		name = "Editor.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 552;
+		vrLoc = 0;
+	};
+	326BAD7010D9032C00E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD3910D8FBD400E014B5 /* InputHandler.h */;
+		name = "InputHandler.h: 6";
+		rLen = 0;
+		rLoc = 100;
+		rType = 0;
+		vrLen = 251;
+		vrLoc = 0;
+	};
+	326BAD7110D9032C00E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD4910D8FBD400E014B5 /* Warlords.cpp */;
+		name = "Warlords.cpp: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 351;
+		vrLoc = 0;
+	};
+	326BAD7210D9032C00E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD4A10D8FBD400E014B5 /* Warlords.h */;
+		name = "Warlords.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 595;
+		vrLoc = 0;
+	};
+	326BAD9510D9087100E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD4810D8FBD400E014B5 /* Unit.h */;
+		name = "Unit.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 199;
+		vrLoc = 0;
+	};
+	326BAD9910D9087100E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD4810D8FBD400E014B5 /* Unit.h */;
+		name = "Unit.h: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 199;
+		vrLoc = 0;
+	};
+	326BAD9C10D9087100E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD3110D8FBD400E014B5 /* Button.h */;
+		name = "Button.h: 9";
+		rLen = 0;
+		rLoc = 119;
+		rType = 0;
+		vrLen = 299;
+		vrLoc = 0;
+	};
+	326BBAB710D929A400E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		comments = "error: Castle.h: No such file or directory";
+		fRef = 326BAD4110D8FBD400E014B5 /* Battle.cpp */;
+		rLen = 0;
+		rLoc = 3;
+		rType = 1;
+	};
+	326BBAC010D92A0900E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD3110D8FBD400E014B5 /* Button.h */;
+		name = "Button.h: 6";
+		rLen = 0;
+		rLoc = 95;
+		rType = 0;
+		vrLen = 622;
+		vrLoc = 0;
+	};
+	326BBAC310D92A0900E014B5 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 326BAD4110D8FBD400E014B5 /* Battle.cpp */;
+		name = "Battle.cpp: 667";
+		rLen = 0;
+		rLoc = 16749;
+		rType = 0;
+		vrLen = 653;
+		vrLoc = 0;
+	};
+}
