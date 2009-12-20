@@ -69,7 +69,7 @@ protected:
 class Map : public InputReceiver
 {
 public:
-	static Map *Create(Game *pGame, const char *pMapFilename);
+	static Map *Create(Game *pGame, const char *pMapFilename, bool bEditable = false);
 	static Map *CreateNew(Game *pGame, const char *pTileset, const char *pUnits);
 	void Destroy();
 
@@ -112,7 +112,7 @@ public:
 
 	bool SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask = 0xFFFFFFFF);
 
-	bool PlaceCastle(int x, int y, int race);
+	bool PlaceCastle(int x, int y, int player);
 	bool PlaceFlag(int x, int y, int race = 0);
 	bool PlaceSpecial(int x, int y, int index);
 	bool PlaceRoad(int x, int y);
@@ -123,7 +123,7 @@ public:
 
 	int UpdateChange(int a);
 
-	Step *FindPath(int player, int startX, int startY, int destX, int destY);
+	Step *FindPath(Group *pGroup, int destX, int destY);
 	Step *StripStep(Step *pPath);
 	void DestroyPath(Step *pPath);
 
@@ -161,6 +161,8 @@ protected:
 	{
 		uint16 x, y;
 	};
+
+	bool bEditable;
 
 	uint8 *pTouched;
 	MapCoord *pChangeList;

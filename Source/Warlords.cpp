@@ -38,12 +38,14 @@ void Game_Init()
 
 	pInputManager = new InputManager;
 
+#if 1
 	pGame = new Game("Map");
 	Game::SetCurrent(pGame);
-
-#if 1
 	pGame->BeginGame();
 #else
+	pGame = new Game("Map", true);
+	Game::SetCurrent(pGame);
+
 	pEditor = new Editor(pGame);
 	Screen::SetNext(pEditor);
 #endif
@@ -211,7 +213,7 @@ int main(int argc, char *argv[])
 
 #else
 
-int main(int argc, char *argv[])
+int main(int argc, const char *argv[])
 {
 	MFInitParams initParams;
 	MFZeroMemory(&initParams, sizeof(MFInitParams));

@@ -22,12 +22,8 @@ Editor::Editor(Game *pGame)
 	brushIndex[1] = 1;
 	brush = 1;
 
-	bIsPainting = false;
 	bPaintMode = true;
 	pMap->SetMoveKey(bPaintMode);
-
-	tileChooser = 0;
-	numPages = 0;
 
 	pIcons = MFMaterial_Create("Icons");
 
@@ -69,105 +65,56 @@ Editor::Editor(Game *pGame)
 		pBrushButton[a]->SetOutline(true, brush == a ? MFVector::blue : MFVector::white);
 	}
 
-	// terrain selector
-	const int numRows[16]    = { 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
-	const int numColumns[16] = { 0, 1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 5, 5, 5 };
-	const int numButtons = 12; // only have 12 buttons for now
-
-	int rows = numRows[numButtons];
-	int columns = numColumns[numButtons];
-
-	float width = (float)(tileWidth*columns + 16*(columns-1));
-	float height = (float)(tileHeight*rows + 16*(rows-1));
-	float left = gDefaults.display.displayWidth*0.5f - width*0.5f;
-	float top = gDefaults.display.displayHeight*0.5f - height*0.5f;
-
+	// init terrain selector:
 	// terrain page
 	int terrainCount = pTiles->GetNumTerrainTypes();
-	pageButtonCount[numPages] = terrainCount;
 
 	for(int a=0; a<terrainCount; ++a)
 	{
 		int tile = 0;
 		pTiles->FindBestTiles(&tile, EncodeTile(a, a, a, a), 0xFFFFFFFF, 1);
+
 		pTiles->GetTileUVs(tile, &uvs);
 
-		pos.x = left + (a % columns)*(tileWidth+16);
-		pos.y = top + (a / columns)*(tileHeight+16);
-
-		pChooserButtons[numPages][a] = Button::Create(pTileMat, &pos, &uvs, ChooseBrush, this, (OT_Terrain << 16) | a, true);
-		pChooserButtons[numPages][a]->SetOutline(true, MFVector::black);
+		brushSelect.AddButton(0, &uvs, pTileMat, (OT_Terrain << 16) | a, ChooseBrush, this, true);
 	}
-
-	++numPages;
 
 	// castle buttons
 	int raceCount = pUnits->GetNumRaces();
-	pageButtonCount[numPages] = raceCount + 2;
 
 	for(int a=0; a<raceCount; ++a)
 	{
-		pUnits->GetCastleUVs(a, &uvs);
+		int race = (a + 1) % raceCount;
+		int player = race - 1;
 
-		pos.x = left + (a % columns)*(tileWidth+16);
-		pos.y = top + (a / columns)*(tileHeight+16);
+		pUnits->GetCastleUVs(race, &uvs);
 
-		pChooserButtons[numPages][a] = Button::Create(pCastleMat, &pos, &uvs, ChooseBrush, this, (OT_Castle << 16) | a, true);
-		pChooserButtons[numPages][a]->SetOutline(true, MFVector::black);
+		brushSelect.AddButton(1, &uvs, pCastleMat, (OT_Castle << 16) | (uint16)player, ChooseBrush, this, true);
 	}
 
 	// add the merc flag
 	pUnits->GetFlagUVs(0, &uvs);
-
-	pos.x = left + (raceCount % columns)*(tileWidth+16);
-	pos.y = top + (raceCount / columns)*(tileHeight+16);
-
-	pChooserButtons[numPages][raceCount] = Button::Create(pCastleMat, &pos, &uvs, ChooseBrush, this, (OT_Flag << 16) | 0, true);
-	pChooserButtons[numPages][raceCount]->SetOutline(true, MFVector::black);
+	brushSelect.AddButton(1, &uvs, pCastleMat, OT_Flag << 16, ChooseBrush, this, true);
 
 	// add the road
 	pTiles->GetRoadUVs(0, &uvs);
-	++raceCount;
-
-	pos.x = left + (raceCount % columns)*(tileWidth+16);
-	pos.y = top + (raceCount / columns)*(tileHeight+16);
-
-	pChooserButtons[numPages][raceCount] = Button::Create(pRoadMat, &pos, &uvs, ChooseBrush, this, (OT_Road << 16) | 0, true);
-	pChooserButtons[numPages][raceCount]->SetOutline(true, MFVector::black);
-
-	++numPages;
+	brushSelect.AddButton(1, &uvs, pRoadMat, OT_Road << 16, ChooseBrush, this, true);
 
 	// special buttons
 	int specialCount = pUnits->GetNumSpecials();
-	int specialIndex = 0;
-	while(specialIndex < specialCount)
+	for(int a=0; a<specialCount; ++a)
 	{
-		pageButtonCount[numPages] = MFMin(specialCount - specialIndex, 11);
+		pUnits->GetSpecialUVs(a, &uvs);
 
-		for(int a=specialIndex; a<specialIndex + pageButtonCount[numPages]; ++a)
-		{
-			pUnits->GetSpecialUVs(a, &uvs);
-
-			pos.x = left + (a % columns)*(tileWidth+16);
-			pos.y = top + (a / columns)*(tileHeight+16);
-
-			pChooserButtons[numPages][a] = Button::Create(pCastleMat, &pos, &uvs, ChooseBrush, this, (OT_Special << 16) | a, true);
-			pChooserButtons[numPages][a]->SetOutline(true, MFVector::black);
-		}
-
-		specialIndex += pageButtonCount[numPages];
-		++numPages;
+		brushSelect.AddButton(2 + a/11, &uvs, pCastleMat, (OT_Special << 16) | a, ChooseBrush, this, true);
 	}
 
-	// page flip button
-	pos.x = left + (11 % columns)*(tileWidth+16);
-	pos.y = top + (11 / columns)*(tileHeight+16);
-	uvs.x = 0.0f + (1.f/256.f); uvs.y = 0.0f + (1.f/256.f);
-	uvs.width = 0.25f; uvs.height = 0.25f;
-	pFlipButton = Button::Create(pIcons, &pos, &uvs, FlipPage, this, 0, true);
-
-	terrainSelectWindowWidth = width + 32.f;
-	terrainSelectWindowHeight = height + 32.f;
+	// init unit selector:
+	int numUnits = pUnits->GetNumUnitTypes();
+	for(int a=0; a<numUnits; ++a)
+	{
+		
+	}
 }
 
 Editor::~Editor()
@@ -190,27 +137,20 @@ void Editor::Select()
 
 bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
 {
-	return false;
-}
+	if(info.device == IDD_Mouse && info.deviceID != 0)
+		return false;
 
-int Editor::UpdateInput()
-{
-	if(!tileChooser)
+	if(bPaintMode)
 	{
-		if(MFInput_WasPressed(Key_S, IDD_Keyboard))
-			pMap->Save("Map.ini");
-
-		// handle tile placement
-		if(bPaintMode)
+		switch(ev)
 		{
-			int cursorX, cursorY;
-			pMap->GetCursor(MFInput_Read(Mouse_XPos, IDD_Mouse), MFInput_Read(Mouse_YPos, IDD_Mouse), &cursorX, &cursorY);
-
-			bool bWasPressed = MFInput_WasPressed(Mouse_LeftButton, IDD_Mouse);
-			ObjectType detail = pMap->GetDetailType(cursorX, cursorY);
-
-			if(bWasPressed)
+			case IE_Down:
 			{
+				int cursorX, cursorY;
+				pMap->GetCursor(info.down.x, info.down.y, &cursorX, &cursorY);
+
+				ObjectType detail = pMap->GetDetailType(cursorX, cursorY);
+
 				if(brushType[brush] == OT_Road)
 					bRemoveRoad = (detail == OT_Road);
 
@@ -247,39 +187,61 @@ int Editor::UpdateInput()
 					}
 				}
 			}
-
-			if(MFInput_Read(Mouse_LeftButton, IDD_Mouse))
+			case IE_Drag:
 			{
-				switch(brushType[brush])
+				int cursorX, cursorY;
+				pMap->GetCursor(info.drag.x, info.drag.y, &cursorX, &cursorY);
+
+				if(cursorX != lastX || cursorY != lastY)
 				{
-					case OT_None:
+					switch(brushType[brush])
 					{
-						pMap->ClearDetail(cursorX, cursorY);
-						break;
-					}
-					case OT_Terrain:
-					{
-						int terrain = brushIndex[brush];
-						pMap->SetTerrain(cursorX, cursorY, terrain, terrain, terrain, terrain);
-						break;
-					}
-					case OT_Road:
-					{
-						if(bRemoveRoad)
+						case OT_None:
 						{
-							if(pMap->GetDetailType(cursorX, cursorY) == OT_Road)
-								pMap->ClearDetail(cursorX, cursorY);
+							pMap->ClearDetail(cursorX, cursorY);
+							break;
 						}
-						else
+						case OT_Terrain:
 						{
-							pMap->PlaceRoad(cursorX, cursorY);
+							int terrain = brushIndex[brush];
+							pMap->SetTerrain(cursorX, cursorY, terrain, terrain, terrain, terrain);
+							break;
 						}
-						break;
+						case OT_Road:
+						{
+							if(bRemoveRoad)
+							{
+								if(pMap->GetDetailType(cursorX, cursorY) == OT_Road)
+									pMap->ClearDetail(cursorX, cursorY);
+							}
+							else
+							{
+								pMap->PlaceRoad(cursorX, cursorY);
+							}
+							break;
+						}
 					}
+
+					lastX = cursorX;
+					lastY = cursorY;
 				}
+
+				break;
 			}
+
+			case IE_Up:
+				lastX = lastY = -1;
+				break;
 		}
 	}
+
+	return false;
+}
+
+int Editor::UpdateInput()
+{
+	if(MFInput_WasPressed(Key_S, IDD_Keyboard))
+		pMap->Save("Map.ini");
 
 	return 0;
 }
@@ -309,25 +271,7 @@ void Editor::Draw()
 	pBrushButton[0]->Draw();
 	pBrushButton[1]->Draw();
 
-	if(tileChooser)
-	{
-		// render background
-		float x = gDefaults.display.displayWidth*0.5f - terrainSelectWindowWidth*0.5f;
-		float y = gDefaults.display.displayHeight*0.5f - terrainSelectWindowHeight*0.5f;
-		MFPrimitive_DrawUntexturedQuad(x, y, terrainSelectWindowWidth, terrainSelectWindowHeight, MakeVector(0,0,0,.8f));
-
-//		Tileset *pTiles = pMap->GetTileset();
-//		MFFont_DrawTextAnchored(NULL, const char *pText, const MFVector &pos, MFFontJustify justification, float lineWidth, float textHeight, const MFVector &color);
-
-		// render the buttons
-		Tileset *pTiles = pMap->GetTileset();
-		int chooserPage = tileChooser - 1;
-
-		for(int a=0; a<pageButtonCount[chooserPage]; ++a)
-			pChooserButtons[chooserPage][a]->Draw();
-
-		pFlipButton->Draw();
-	}
+	brushSelect.Draw();
 }
 
 void Editor::Deselect()
@@ -341,17 +285,8 @@ void Editor::BrushSelect(int button, void *pUserData, int buttonID)
 
 	if(pThis->brush == buttonID)
 	{
-		if(pThis->tileChooser == 0)
-		{
-			// show brush selector window...
-			pThis->tileChooser = 1;
-
-			pInputManager->PushReceiver(pThis->pFlipButton);
-
-			int chooserPage = pThis->tileChooser - 1;
-			for(int a=0; a<pThis->pageButtonCount[chooserPage]; ++a)
-				pInputManager->PushReceiver(pThis->pChooserButtons[chooserPage][a]);
-		}
+		// show brush selector window...
+		pThis->brushSelect.Show();
 	}
 	else
 	{
@@ -366,7 +301,7 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 	Editor *pThis = (Editor*)pUserData;
 
 	ObjectType type = (ObjectType)(buttonID >> 16);
-	int index = buttonID & 0xFFFF;
+	int index = (int16)(buttonID & 0xFFFF);
 
 	pThis->brushType[pThis->brush] = type;
 	pThis->brushIndex[pThis->brush] = index;
@@ -390,9 +325,8 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 		case OT_Castle:
 		{
 			UnitDefinitions *pUnits = pThis->pMap->GetUnitDefinitions();
-			pUnits->GetCastleUVs(index - 1, &rect);
+			pUnits->GetCastleUVs(index + 1, &rect);
 			pMat = pUnits->GetCastleMaterial();
-			--pThis->brushIndex[pThis->brush];
 			break;
 		}
 		case OT_Flag:
@@ -422,26 +356,7 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 	// update the brush image
 	pThis->pBrushButton[pThis->brush]->SetImage(pMat, &rect);
 
-	// pop everything above the flip button
-	pInputManager->PopReceiver(pThis->pFlipButton);
-
-	pThis->tileChooser = 0;
-}
-
-void Editor::FlipPage(int button, void *pUserData, int buttonID)
-{
-	Editor *pThis = (Editor*)pUserData;
-
-	// pop the last page buttons
-	pInputManager->PopReceiver(pThis->pChooserButtons[pThis->tileChooser - 1][0]);
-
-	// update the page
-	pThis->tileChooser = (pThis->tileChooser % pThis->numPages) + 1;
-
-	// push the new page buttons
-	int chooserPage = pThis->tileChooser - 1;
-	for(int a=0; a<pThis->pageButtonCount[chooserPage]; ++a)
-		pInputManager->PushReceiver(pThis->pChooserButtons[chooserPage][a]);
+	pThis->brushSelect.Hide();
 }
 
 void Editor::ShowMiniMap(int button, void *pUserData, int buttonID)
@@ -460,4 +375,153 @@ void Editor::ChangeMode(int button, void *pUserData, int buttonID)
 	uvs.x = (pThis->bPaintMode ? 0.75f : 0.5f) + (1.f/256.f); uvs.y = 0.25f + (1.f/256.f);
 	uvs.width = 0.25f; uvs.height = 0.25f;
 	pThis->pModeButton->SetImage(pThis->pIcons, &uvs);
+}
+
+Chooser::Chooser()
+{
+	MFZeroMemory(numButtons, sizeof(numButtons));
+	numPages = 0;
+	bVisible = false;
+
+	pIcons = MFMaterial_Create("Icons");
+
+	// page flip button
+	MFRect pos = { 0.f, 0.f, 64.f, 64.f };
+	MFRect uvs = { 1.f/256.f, 1.f/256.f, 0.25f, 0.25f};
+
+	pFlipButton = Button::Create(pIcons, &pos, &uvs, FlipPage, this, 0, true);
+}
+
+Chooser::~Chooser()
+{
+	for(int p=0; p<numPages; ++p)
+	{
+		for(int b=0; b<numButtons[p]; ++b)
+			pButtons[p][b]->Destroy();
+	}
+
+	pFlipButton->Destroy();
+
+	MFMaterial_Destroy(pIcons);
+}
+
+Button *Chooser::AddButton(int page, MFRect *pUVs, MFMaterial *pImage, int buttonID, Button::TriggerCallback *pCallback, void *pUserData, bool bTriggerOnDown)
+{
+	MFRect rect = { 0.f, 0.f, 64.f, 64.f };
+	Button *pButton = Button::Create(pImage, &rect, pUVs, pCallback, pUserData, buttonID, bTriggerOnDown);
+	pButton->SetOutline(true, MFVector::black);
+
+	pButtons[page][numButtons[page]++] = pButton;
+	numPages = MFMax(numPages, page+1);
+
+	return pButton;
+}
+
+void Chooser::Show()
+{
+	currentPage = 0;
+	bVisible = true;
+
+	AssembleButtons();
+
+	pInputManager->PushReceiver(this);
+
+	for(int a=0; a<numButtons[currentPage]; ++a)
+		pInputManager->PushReceiver(pButtons[currentPage][a]);
+
+	if(numPages > 1)
+		pInputManager->PushReceiver(pFlipButton);
+}
+
+void Chooser::Hide()
+{
+	pInputManager->PopReceiver(this);
+	bVisible = false;
+}
+
+void Chooser::Draw()
+{
+	if(bVisible)
+	{
+		// render background
+		float x = gDefaults.display.displayWidth*0.5f - windowWidth*0.5f;
+		float y = gDefaults.display.displayHeight*0.5f - windowHeight*0.5f;
+		MFPrimitive_DrawUntexturedQuad(x, y, windowWidth, windowHeight, MakeVector(0,0,0,.8f));
+
+		// render the buttons
+		for(int a=0; a<numButtons[currentPage]; ++a)
+			pButtons[currentPage][a]->Draw();
+
+		if(numPages > 1)
+			pFlipButton->Draw();
+	}
+}
+
+bool Chooser::HandleInputEvent(InputEvent ev, InputInfo &info)
+{
+	if(info.buttonID == 0)
+		return true;
+
+	return false;
+}
+
+void Chooser::AssembleButtons()
+{
+	const int numRows[16]    = { 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
+	const int numColumns[16] = { 0, 1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 5, 5, 5 };
+	const float tileWidth = 64.f, tileHeight = 64.f;
+
+	int buttons = (numPages == 1 ? numButtons[currentPage] : 12);
+	int rows = numRows[buttons];
+	int columns = numColumns[buttons];
+
+	float width = (float)(tileWidth*columns + 16*(columns-1));
+	float height = (float)(tileHeight*rows + 16*(rows-1));
+	float left = gDefaults.display.displayWidth*0.5f - width*0.5f;
+	float top = gDefaults.display.displayHeight*0.5f - height*0.5f;
+
+	windowWidth = width + 32.f;
+	windowHeight = height + 32.f;
+
+	for(int a=0; a<numButtons[currentPage]; ++a)
+	{
+		MFRect pos;
+		pos.x = left + (a % columns)*(tileWidth+16);
+		pos.y = top + (a / columns)*(tileHeight+16);
+		pos.width = pos.height = tileWidth;
+
+		pButtons[currentPage][a]->SetPos(&pos);
+	}
+
+	if(numPages > 1)
+	{
+		MFRect pos;
+		pos.x = left + (11 % columns)*(tileWidth+16);
+		pos.y = top + (11 / columns)*(tileHeight+16);
+		pos.width = pos.height = tileWidth;
+
+		pFlipButton->SetPos(&pos);
+	}
+}
+
+void Chooser::FlipPage(int button, void *pUserData, int buttonID)
+{
+	Chooser *pThis = (Chooser*)pUserData;
+
+	// pop the last page buttons
+	pInputManager->PopReceiver(pThis);
+
+	// update the page
+	pThis->currentPage = (pThis->currentPage + 1) % pThis->numPages;
+
+	pThis->AssembleButtons();
+
+	// push the new page buttons
+	pInputManager->PushReceiver(pThis);
+
+	for(int a=0; a<pThis->numButtons[pThis->currentPage]; ++a)
+		pInputManager->PushReceiver(pThis->pButtons[pThis->currentPage][a]);
+
+	if(pThis->numPages > 1)
+		pInputManager->PushReceiver(pThis->pFlipButton);
 }

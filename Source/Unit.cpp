@@ -528,6 +528,11 @@ MFVector Unit::GetColour()
 	return pGame->GetPlayerColour(player);
 }
 
+int Unit::GetMovementPenalty(int terrainType)
+{
+	return pUnitDefs->GetMovementPenalty(details.movementClass, terrainType);
+}
+
 int Unit::GetMovementPenalty(MapTile *pTile)
 {
 	ObjectType type = pTile->GetType();

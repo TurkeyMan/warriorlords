@@ -6,6 +6,40 @@
 #include "Map.h"
 #include "Button.h"
 
+class Chooser : public InputReceiver
+{
+public:
+	Chooser();
+	~Chooser();
+
+	Button *AddButton(int page, MFRect *pUVs, MFMaterial *pImage, int buttonID, Button::TriggerCallback *pCallback, void *pUserData, bool bTriggerOnDown = false);
+
+	void Show();
+	void Hide();
+
+	void Draw();
+
+	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
+
+protected:
+	void AssembleButtons();
+
+	float windowWidth;
+	float windowHeight;
+
+	MFMaterial *pIcons;
+
+	Button *pFlipButton;
+	Button *pButtons[8][12];
+	int numButtons[8];
+	int numPages;
+
+	int currentPage;
+	bool bVisible;
+
+	static void FlipPage(int button, void *pUserData, int buttonID);
+};
+
 class Editor : public Screen
 {
 public:
@@ -34,26 +68,19 @@ protected:
 
 	Button *pMiniMap;
 	Button *pModeButton;
-
 	Button *pBrushButton[2];
-	Button *pChooserButtons[3][11];
-	Button *pFlipButton;
 
-	int pageButtonCount[3];
-	int numPages;
-
-	float terrainSelectWindowWidth;
-	float terrainSelectWindowHeight;
+	Chooser brushSelect;
+	Chooser unitSelect;
 
 	ObjectType brushType[2];
 	int brushIndex[2];
 	int brush;
 
 	bool bPaintMode;
-	bool bIsPainting;
 	bool bRemoveRoad;
 
-	int tileChooser;
+	int lastX, lastY;
 };
 
 #endif

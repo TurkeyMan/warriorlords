@@ -206,6 +206,7 @@ public:
 	bool IsRanged() { return pUnitDefs->IsRanged(details.attackClass); }
 
 	int GetMovement() { return movement; }
+	int GetMovementPenalty(int terrainType);
 	int GetMovementPenalty(MapTile *pTile);
 	void Move(int penalty) { movement -= penalty; }
 

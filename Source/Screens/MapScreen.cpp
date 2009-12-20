@@ -69,7 +69,7 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 	// only handle left clicks
 	if(info.buttonID != 0)
 	{
-		if(info.buttonID == 1 && ev == IE_Tap)
+		if(info.buttonID == 1 && ev == IE_Tap && !bMoving)
 			DeselectGroup();
 		return false;
 	}
@@ -183,7 +183,7 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 				// plot a path to the new location
 				if(pSelection->pPath)
 					pMap->DestroyPath(pSelection->pPath);
-				pSelection->pPath = pMap->FindPath(pSelection->GetPlayer(), pTile->GetX(), pTile->GetY(), cursorX, cursorY);
+				pSelection->pPath = pMap->FindPath(pSelection, cursorX, cursorY);
 			}
 			else
 			{

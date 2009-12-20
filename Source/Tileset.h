@@ -14,10 +14,9 @@ struct Tile
 
 	uint32 terrain;
 	uint8 x, y;
-	uint8 speed;
+	uint8 bias;
 	uint8 canBuild : 1;
-	uint8 canWalk  : 1;
-	uint8 bias     : 6;
+	uint8 flags    : 7;
 };
 
 class Tileset
@@ -30,12 +29,13 @@ public:
 	inline const char *GetTerrainName(int type) const { return pTerrainTypes[type].name; }
 	const MFVector &GetTerrainColour(int terrain) const { return pTerrainTypes[terrain].mapColour; }
 
-	int FindBestTiles(int *pTiles, uint32 tile, uint32 mask = 0xFFFFFFFF, int maxMatches = 8);
+	int FindBestTiles(int *pTiles, uint32 tile, uint32 mask = 0xFFFFFFFF, int maxMatches = 8) const;
+	int FindBestRoads(int *pRoads, uint32 directions, uint32 terrain) const;
 	int FindRoad(uint32 directions, uint32 terrain) const;
+	uint32 GetRoadConnections(int road) const { return pRoads[road].directions; }
 
 	inline void GetTileSize(int *pWidth, int *pHeight) const { *pWidth = tileWidth; *pHeight = tileHeight; }
 	inline const Tile *GetTile(int tile) const { return &tiles[tile]; }
-	int GetTileSpeed(uint32 terrain) const;
 
 	void DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride, float texelOffset = 0.5f);
 
@@ -49,7 +49,6 @@ protected:
 	struct TerrainType
 	{
 		char name[28];
-		int speed;
 		MFVector mapColour;
 	};
 
@@ -83,7 +82,7 @@ protected:
 	uint8 terrainTransitions[16][16];
 
 	// private functions
-	inline int GetTileError(uint32 t1, uint32 t2)
+	inline int GetTileError(uint32 t1, uint32 t2) const
 	{
 		int error = 0;
 		error += terrainTransitions[t1&0xFF][t2&0xFF];

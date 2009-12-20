@@ -3,8 +3,6 @@
 #include "Unit.h"
 #include "Path.h"
 
-#include "Castle.h"
-
 #include "MFInput.h"
 #include "MFSystem.h"
 #include "MFPrimitive.h"
@@ -18,9 +16,6 @@
 
 // remove me!
 #include "MFIni.h"
-
-static Group groups[8];
-static int races[2] = { 0, 1 };
 
 Battle::Battle(Game *_pGame)
 {

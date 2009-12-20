@@ -27,7 +27,6 @@ public:
 
 protected:
 	MFMaterial *pMaterial, *pOverlay;
-	MFRect pos;
 	MFRect uvs;
 
 	MFVector outlineColour, overlayColour;

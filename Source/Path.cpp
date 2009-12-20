@@ -2,12 +2,33 @@
 #include "Path.h"
 #include "Map.h"
 
+struct Cell
+{
+	uint16 from;
+	uint16 gScore, hScore, fScore;
+	uint8 x, y;
+	uint8 open;
+
+	void Set(int _x, int _y, int _gScore, int _hScore, int _fScore)
+	{
+		x = _x; y = _y;
+		gScore = _gScore;
+		hScore = _hScore;
+		fScore = _fScore;
+		from = 0;
+		open = 1;
+	}
+};
+
+Cell *gpSearchList = NULL;
+
 void Path::Init(Map *_pMap)
 {
 	pMap = _pMap;
 
 	int width, height;
 	pMap->GetMapSize(&width, &height);
+	gpSearchList = (Cell*)MFHeap_Alloc(sizeof(Cell)*width*height);
 
 	stepPool.Init("Step pool", 8*1024);
 }
@@ -15,39 +36,73 @@ void Path::Init(Map *_pMap)
 void Path::Deinit()
 {
 	stepPool.Deinit();
+	MFHeap_Free(gpSearchList);
+	gpSearchList = NULL;
 }
 
-Step *Path::FindPath(int player, int startX, int startY, int destX, int destY)
+Step *Path::FindPath(Group *pGroup, int destX, int destY)
 {
+	Game *pGame = Game::GetCurrent();
+	Map *pMap = pGame->GetMap();
+	Tileset *pTileset = pMap->GetTileset();
+
+	MapTile *pTile = pGroup->GetTile();
+	int player = pGroup->GetPlayer();
+	int startX = pTile->GetX();
+	int startY = pTile->GetY();
+
+	// calculate the terrain penalties from the group
+	int terrainPenalties[64];
+	MFMemSet(terrainPenalties, 0xFF, sizeof(terrainPenalties));
+
+	int numTerrainTypes = pTileset->GetNumTerrainTypes();
+
+	Unit *pVehicle = pGroup->GetVehicle();
+	if(pVehicle)
+	{
+		for(int a=0; a<numTerrainTypes; ++a)
+			terrainPenalties[a] = pVehicle->GetMovementPenalty(a);
+	}
+	else
+	{
+		int numUnits = pGroup->GetNumUnits();
+		for(int a=0; a<numUnits; ++a)
+		{
+			Unit *pUnit = pGroup->GetUnit(a);
+
+			for(int b=0; b<numTerrainTypes; ++b)
+			{
+				if(terrainPenalties[b] != 0)
+				{
+					int penalty = pUnit->GetMovementPenalty(b);
+					terrainPenalties[b] = MFMax(terrainPenalties[b], penalty);
+				}
+			}
+		}
+	}
+
+	int nonTraversible[64];
+	int numNonTraversible = 0;
+	for(int a=0; a<numTerrainTypes; ++a)
+	{
+		if(terrainPenalties[a] == 0)
+			nonTraversible[numNonTraversible++] = a;
+	}
+
+
 	// check target is not the source
 	if(startX == destX && startY == destY)
 		return NULL;
+
+	// check the unit can actually move to target
+	//...
 
 	// initialise the search data
 	int width, height;
 	pMap->GetMapSize(&width, &height);
 
-	struct Cell
-	{
-		uint16 from;
-		uint16 gScore, hScore, fScore;
-		uint8 x, y;
-		uint8 open;
-
-		void Set(int _x, int _y, int _gScore, int _hScore, int _fScore)
-		{
-			x = _x; y = _y;
-			gScore = _gScore;
-			hScore = _hScore;
-			fScore = _fScore;
-			from = 0;
-			open = 1;
-		}
-	};
-
-	Cell searchList[8*1024];
 	int dist = MFMax(MFAbs(destX - startX), MFAbs(destY - startY));
-	searchList[0].Set(startX, startY, 0, dist, dist);
+	gpSearchList[0].Set(startX, startY, 0, dist, dist);
 	int item = 0;
 	int numItems = 1;
 
@@ -59,9 +114,9 @@ Step *Path::FindPath(int player, int startX, int startY, int destX, int destY)
 		int cf = 1 << 30;
 		for(int a=0; a<numItems; ++a)
 		{
-			if(searchList[a].open == 1 && searchList[a].fScore < cf)
+			if(gpSearchList[a].open == 1 && gpSearchList[a].fScore < cf)
 			{
-				cf = searchList[a].fScore;
+				cf = gpSearchList[a].fScore;
 				x = a;
 			}
 		}
@@ -69,7 +124,7 @@ Step *Path::FindPath(int player, int startX, int startY, int destX, int destY)
 		if(x == -1)
 			break;
 
-		Cell &item = searchList[x];
+		Cell &item = gpSearchList[x];
 
 		if(item.x == destX && item.y == destY)
 		{
@@ -82,10 +137,10 @@ Step *Path::FindPath(int player, int startX, int startY, int destX, int destY)
 				pStep->pNext = pPath;
 				pPath = pStep;
 
-				pStep->x = searchList[x].x;
-				pStep->y = searchList[x].y;
+				pStep->x = gpSearchList[x].x;
+				pStep->y = gpSearchList[x].y;
 
-				x = searchList[x].from;
+				x = gpSearchList[x].from;
 			}
 
 			return pPath;
@@ -100,71 +155,67 @@ Step *Path::FindPath(int player, int startX, int startY, int destX, int destY)
 				if(tx == item.x && ty == item.y)
 					continue;
 
-				if(1)// if not flying...
-				{
-					// check our neighbour does not cross water
-					// TODO: add a rule to allow crossing water if there is a bridge!
-					uint32 mask = 0xFFFFFFFF;
-					if(tx < item.x)
-						mask &= 0x00FF00FF;
-					else if(tx > item.x)
-						mask &= 0xFF00FF00;
-					if(ty < item.y)
-						mask &= 0x0000FFFF;
-					else if(ty > item.y)
-						mask &= 0xFFFF0000;
+				// TODO: add a rule to allow crossing water if there is a bridge!
+				bool bNonTraversible = false;
 
-					if(1) // if land unit
-					{
-						// if we have water on the neighbouring edge, we can't traverse
-						if((pMap->GetTerrainAt(item.x, item.y) & mask) == (0x01010101 & mask))
-							continue;
-					}
-//					else // if sea unit
-//					{
-//						// if we don't have water on the neighbouring edge, we can't traverse
-//						if((pMap->GetTerrain(item.x, item.y) & mask) != (0x01010101 & mask))
-//							continue;
-//					}
+				// build a tile movement mask
+				uint32 mask = 0xFFFFFFFF;
+				if(tx < item.x)
+					mask &= 0x00FF00FF;
+				else if(tx > item.x)
+					mask &= 0xFF00FF00;
+				if(ty < item.y)
+					mask &= 0x0000FFFF;
+				else if(ty > item.y)
+					mask &= 0xFFFF0000;
+
+				// check our neighbour does not cross water
+				for(int a=0; a<numNonTraversible; ++a)
+				{
+					// if we have water on the neighbouring edge, we can't traverse
+					uint32 terrain = nonTraversible[a] | (nonTraversible[a] << 8) | (nonTraversible[a] << 16) | (nonTraversible[a] << 24);
+					if((pMap->GetTerrainAt(item.x, item.y) & mask) == (terrain & mask))
+						bNonTraversible = true;
 				}
+
+				// if we can't move that way
+				if(bNonTraversible)
+					continue;
 
 				int y = -1;
 				for(int a=0; a<numItems; ++a)
 				{
-					if(tx == searchList[a].x && ty == searchList[a].y)
+					if(tx == gpSearchList[a].x && ty == gpSearchList[a].y)
 					{
 						y = a;
 						break;
 					}
 				}
 
-				if(y == -1 || searchList[y].open != 2)
+				if(y == -1 || gpSearchList[y].open != 2)
 				{
 					// calculate the path score
 					MapTile *pTile = pMap->GetTile(tx, ty);
-
-					ObjectType type = pTile->GetType();
-					int tile = pTile->GetTile();
-					int terrainSpeed = pMap->GetTerrainTile(tile)->speed;
+					int terrainSpeed = GetMovementPenalty(pTile, terrainPenalties, player);
 					int cornerPenalty = (tx != item.x) && (ty != item.y) ? 1 : 0;
 
-					int tg = item.gScore + ((type == OT_Road || type == OT_Castle) ? 2 : terrainSpeed * 4) + cornerPenalty + (pTile->IsEnemyTile(player) ? 100 : 0);
+					int tg = item.gScore + (terrainSpeed*2) + cornerPenalty + (pTile->IsEnemyTile(player) ? 100 : 0);
 					bool isBetter = false;
 
 					if(y == -1)
 					{
 						y = numItems;
-						searchList[numItems++].Set(tx, ty, 0, MFMax(MFAbs(destX - tx), MFAbs(destY - ty)), 0);
+						gpSearchList[numItems++].Set(tx, ty, 0, MFMax(MFAbs(destX - tx), MFAbs(destY - ty)), 0);
 						isBetter = true;
 					}
-					else if(tg < searchList[y].gScore)
+					else if(tg < gpSearchList[y].gScore)
 						isBetter = true;
 
 					if(isBetter)
 					{
-						searchList[y].from = x;
-						searchList[y].gScore = tg;
-						searchList[y].fScore = tg + searchList[y].hScore;
+						gpSearchList[y].from = x;
+						gpSearchList[y].gScore = tg;
+						gpSearchList[y].fScore = tg + gpSearchList[y].hScore;
 					}
 				}
 			}
@@ -173,6 +224,24 @@ Step *Path::FindPath(int player, int startX, int startY, int destX, int destY)
 
 	// there is no path!
 	return NULL;
+}
+
+int Path::GetMovementPenalty(MapTile *pTile, int *pTerrainPenalties, int player)
+{
+	// HACK: if units can't move on water, than they are NOT flying or seafaring
+	if(pTerrainPenalties[1] == 0)
+	{
+		ObjectType type = pTile->GetType();
+		if(type == OT_Road || (type == OT_Castle && pTile->IsFriendlyTile(player)))
+			return 1;
+	}
+
+	uint32 terrain = pTile->GetTerrain();
+	int penalty = pTerrainPenalties[terrain & 0xFF];
+	penalty = MFMax(penalty, pTerrainPenalties[(terrain >> 8) & 0xFF]);
+	penalty = MFMax(penalty, pTerrainPenalties[(terrain >> 16) & 0xFF]);
+	penalty = MFMax(penalty, pTerrainPenalties[(terrain >> 24) & 0xFF]);
+	return penalty;
 }
 
 Step *Path::StripStep(Step *pPath)

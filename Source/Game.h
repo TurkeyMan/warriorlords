@@ -19,7 +19,7 @@ struct Player
 class Game
 {
 public:
-	Game(const char *pMap);
+	Game(const char *pMap, bool bEditable = false);
 	~Game();
 
 	MapScreen *GetMapScreen() { return pMapScreen; }

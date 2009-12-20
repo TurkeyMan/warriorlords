@@ -113,17 +113,6 @@ Tileset *Tileset::Create(const char *pFilename)
 								pColours = pColours->Next();
 							}
 						}
-						else if(pTerrain->IsSection("Speed"))
-						{
-							MFIniLine *pSpeeds = pTerrain->Sub();
-
-							while(pSpeeds)
-							{
-								uint32 speed = MFString_AsciiToInteger(pSpeeds->GetString(1));
-								pNew->pTerrainTypes[pSpeeds->GetInt(0)].speed = speed;
-								pSpeeds = pSpeeds->Next();
-							}
-						}
 
 						pTerrain = pTerrain->Next();
 					}
@@ -144,21 +133,19 @@ Tileset *Tileset::Create(const char *pFilename)
 						t.x = x;
 						t.y = y;
 						t.terrain = EncodeTile(pTile->GetInt(3), pTile->GetInt(4), pTile->GetInt(5), pTile->GetInt(6));
-						t.speed = pNew->GetTileSpeed(t.terrain);
-						t.bias = 63;
+						t.bias = 255;
+						t.canBuild = 0;
 
 						int numStrings = pTile->GetStringCount();
 						for(int f = 7; f < numStrings; ++f)
 						{
 							const char *pDetail = pTile->GetString(f);
-							if(!MFString_CaseCmp(pDetail, "walk"))
-								t.canWalk = 1;
-							else if(!MFString_CaseCmp(pDetail, "build"))
+							if(!MFString_CaseCmp(pDetail, "build"))
 								t.canBuild = 1;
 							else if(pDetail[MFString_Length(pDetail)-1] == '%')
 							{
 								int percent = MFString_AsciiToInteger(pDetail);
-								t.bias = (percent * 63) / 100;
+								t.bias = (percent * 255) / 100;
 							}
 						}
 
@@ -287,16 +274,7 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 	MFEnd();
 }
 
-int Tileset::GetTileSpeed(uint32 terrain) const
-{
-	uint32 t0 = terrain & 0xFF;
-	uint32 t1 = (terrain >> 8) & 0xFF;
-	uint32 t2 = (terrain >> 16) & 0xFF;
-	uint32 t3 = (terrain >> 24) & 0xFF;
-	return MFMax(MFMax(pTerrainTypes[t0].speed, pTerrainTypes[t1].speed), MFMax(pTerrainTypes[t0].speed, pTerrainTypes[t1].speed));
-}
-
-int Tileset::FindBestTiles(int *pTiles, uint32 tile, uint32 mask, int maxMatches)
+int Tileset::FindBestTiles(int *pTiles, uint32 tile, uint32 mask, int maxMatches) const
 {
 	uint32 maskedTile = tile & mask;
 
@@ -319,6 +297,36 @@ int Tileset::FindBestTiles(int *pTiles, uint32 tile, uint32 mask, int maxMatches
 	}
 
 	return found;
+}
+
+int Tileset::FindBestRoads(int *pRoad, uint32 directions, uint32 terrain) const
+{
+	int numRoads = 0;
+	int error = 4;
+
+	for(int a=0; a<roadCount; ++a)
+	{
+		if(pRoads[a].terrain == terrain)
+		{
+			uint32 d = pRoads[a].directions ^ directions;
+			int e = 0;
+			for(int b=1; b<0x10; b<<=1)
+			{
+				if(d & b)
+					++e;
+			}
+
+			if(e < error)
+			{
+				numRoads = 0;
+				error = e;
+			}
+			if(e == error)
+				pRoad[numRoads++] = a;
+		}
+	}
+
+	return numRoads;
 }
 
 void Tileset::GetTileUVs(int tile, MFRect *pUVs)

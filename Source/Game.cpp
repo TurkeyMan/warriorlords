@@ -12,13 +12,19 @@
 
 Game *Game::pCurrent = NULL;
 
-Game::Game(const char *_pMap)
+Game::Game(const char *_pMap, bool bEditable)
 {
-	pMap = Map::Create(this, "Map");
+	pMap = Map::Create(this, "Map", bEditable);
 	pUnitDefs = pMap->GetUnitDefinitions();
 
 	pMapScreen = new MapScreen(this);
 	pBattle = new Battle(this);
+
+	for(int a=0; a<8; ++a)
+	{
+		players[a].race = a + 1;
+		players[a].colour = pUnitDefs->GetRaceColour(a);
+	}
 }
 
 Game::~Game()

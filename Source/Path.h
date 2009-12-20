@@ -4,6 +4,8 @@
 #include "MFPtrList.h"
 
 class Map;
+class Group;
+class MapTile;
 
 struct Step
 {
@@ -17,9 +19,11 @@ public:
 	void Init(Map *pMap);
 	void Deinit();
 
-	Step *FindPath(int player, int startX, int startY, int destX, int destY);
+	Step *FindPath(Group *pGroup, int destX, int destY);
 	Step *StripStep(Step *pPath);
 	void Destroy(Step *pPath);
+
+	int GetMovementPenalty(MapTile *pTile, int *pTerrainPenalties, int player);
 
 private:
 	Map *pMap;

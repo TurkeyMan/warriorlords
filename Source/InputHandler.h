@@ -119,6 +119,8 @@ public:
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info) = 0;
 
+	void UpdateRect(MFRect *pRect) { rect = *pRect; }
+
 protected:
 	bool bSpacial;
 	MFRect rect;

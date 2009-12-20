@@ -11,7 +11,6 @@ Button *Button::Create(MFMaterial *pImage, MFRect *pPosition, MFRect *pUVs, Trig
 	pNew = new(pNew) Button(*pPosition);
 
 	pNew->pMaterial = pImage;
-	pNew->pos = *pPosition;
 	pNew->uvs = *pUVs;
 	pNew->pCallback = pCallback;
 	pNew->pUserData = pUserData;
@@ -60,7 +59,7 @@ bool Button::HandleInputEvent(InputEvent ev, InputInfo &info)
 				bIsPressed = false;
 				if(!bTriggerOnDown)
 				{
-					if(MFTypes_PointInRect(info.up.x, info.up.y, &pos))
+					if(MFTypes_PointInRect(info.up.x, info.up.y, &rect))
 					{
 						if(pCallback)
 							pCallback(0, pUserData, buttonID);
@@ -85,26 +84,26 @@ void Button::Draw()
 		float x = MFInput_Read(Mouse_XPos, IDD_Mouse);
 		float y = MFInput_Read(Mouse_YPos, IDD_Mouse);
 
-		if(MFTypes_PointInRect(x, y, &pos))
+		if(MFTypes_PointInRect(x, y, &rect))
 			bDark = true;
 	}
 
 	// outline?
 	if(bOutline)
-		MFPrimitive_DrawUntexturedQuad(pos.x - 2, pos.y - 2, pos.width + 4, pos.height + 4, outlineColour);
+		MFPrimitive_DrawUntexturedQuad(rect.x - 2, rect.y - 2, rect.width + 4, rect.height + 4, outlineColour);
 
 	MFMaterial_SetMaterial(pMaterial);
-	MFPrimitive_DrawQuad(pos.x, pos.y, pos.width, pos.height, bDark ? MakeVector(0.6f, 0.6f, 0.6f, 1.f) : MFVector::one, uvs.x, uvs.y, uvs.x+uvs.width, uvs.y+uvs.height);
+	MFPrimitive_DrawQuad(rect.x, rect.y, rect.width, rect.height, bDark ? MakeVector(0.6f, 0.6f, 0.6f, 1.f) : MFVector::one, uvs.x, uvs.y, uvs.x+uvs.width, uvs.y+uvs.height);
 	if(pOverlay)
 	{
 		MFMaterial_SetMaterial(pOverlay);
-		MFPrimitive_DrawQuad(pos.x, pos.y, pos.width, pos.height, bDark ? MakeVector(0.6f, 0.6f, 0.6f, 1.f) * overlayColour : overlayColour, uvs.x, uvs.y, uvs.x+uvs.width, uvs.y+uvs.height);
+		MFPrimitive_DrawQuad(rect.x, rect.y, rect.width, rect.height, bDark ? MakeVector(0.6f, 0.6f, 0.6f, 1.f) * overlayColour : overlayColour, uvs.x, uvs.y, uvs.x+uvs.width, uvs.y+uvs.height);
 	}
 }
 
 void Button::SetPos(MFRect *pPos)
 {
-	pos = *pPos;
+	UpdateRect(pPos);
 }
 
 void Button::SetImage(MFMaterial *pImage, MFRect *pUVs)
