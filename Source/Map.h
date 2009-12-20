@@ -33,6 +33,7 @@ public:
 	int GetTile() const { return terrain; }
 	uint32 GetTerrain() const;
 	ObjectType GetType() const { return (ObjectType)type; }
+	uint32 GetRoadDirections() const { return type == OT_Road ? index : 0; }
 
 	void AddGroup(Group *pGroup);
 	void AddGroupToBack(Group *pGroup);

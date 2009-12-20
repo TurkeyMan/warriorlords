@@ -148,6 +148,10 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 
 		item.open = 2;
 
+		uint32 roadDirections = 0;
+		MapTile *pCurTile = pMap->GetTile(item.x, item.y);
+		roadDirections = pCurTile->GetRoadDirections();
+
 		for(int ty = MFMax(item.y-1, 0); ty < MFMin(item.y+2, height); ++ty)
 		{
 			for(int tx = MFMax(item.x-1, 0); tx < MFMin(item.x+2, width); ++tx)
@@ -155,32 +159,37 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 				if(tx == item.x && ty == item.y)
 					continue;
 
-				// TODO: add a rule to allow crossing water if there is a bridge!
-				bool bNonTraversible = false;
-
-				// build a tile movement mask
-				uint32 mask = 0xFFFFFFFF;
-				if(tx < item.x)
-					mask &= 0x00FF00FF;
-				else if(tx > item.x)
-					mask &= 0xFF00FF00;
-				if(ty < item.y)
-					mask &= 0x0000FFFF;
-				else if(ty > item.y)
-					mask &= 0xFFFF0000;
-
-				// check our neighbour does not cross water
-				for(int a=0; a<numNonTraversible; ++a)
+				if(!(((roadDirections & 8) && ty < item.y && tx == item.x) ||
+					((roadDirections & 4) && ty > item.y && tx == item.x) ||
+					((roadDirections & 2) && ty == item.y && tx < item.x) ||
+					((roadDirections & 1) && ty == item.y && tx > item.x)))
 				{
-					// if we have water on the neighbouring edge, we can't traverse
-					uint32 terrain = nonTraversible[a] | (nonTraversible[a] << 8) | (nonTraversible[a] << 16) | (nonTraversible[a] << 24);
-					if((pMap->GetTerrainAt(item.x, item.y) & mask) == (terrain & mask))
-						bNonTraversible = true;
-				}
+					bool bNonTraversible = false;
 
-				// if we can't move that way
-				if(bNonTraversible)
-					continue;
+					// build a tile movement mask
+					uint32 mask = 0xFFFFFFFF;
+					if(tx < item.x)
+						mask &= 0x00FF00FF;
+					else if(tx > item.x)
+						mask &= 0xFF00FF00;
+					if(ty < item.y)
+						mask &= 0x0000FFFF;
+					else if(ty > item.y)
+						mask &= 0xFFFF0000;
+
+					// check our neighbour does not cross unpassable terrain
+					for(int a=0; a<numNonTraversible; ++a)
+					{
+						// impassable terrain on the neighbouring edge, we can't traverse
+						uint32 terrain = nonTraversible[a] | (nonTraversible[a] << 8) | (nonTraversible[a] << 16) | (nonTraversible[a] << 24);
+						if((pMap->GetTerrainAt(item.x, item.y) & mask) == (terrain & mask))
+							bNonTraversible = true;
+					}
+
+					// if we can't move that way
+					if(bNonTraversible)
+						continue;
+				}
 
 				int y = -1;
 				for(int a=0; a<numItems; ++a)

@@ -6,6 +6,8 @@
 #include "Map.h"
 #include "Button.h"
 
+struct MFFont;
+
 class Chooser : public InputReceiver
 {
 public:
@@ -40,6 +42,33 @@ protected:
 	static void FlipPage(int button, void *pUserData, int buttonID);
 };
 
+class CastleEdit : public InputReceiver
+{
+public:
+	CastleEdit();
+	~CastleEdit();
+
+	void Draw();
+
+	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
+
+	void Show(Castle *pCastle);
+	void Hide();
+
+protected:
+	Castle *pCastle;
+
+	MFFont *pFont;
+
+	MFRect window, title, units, lower, right;
+
+	Button *pBuildUnits[4];
+
+	bool bVisible;
+
+	static void SelectUnit(int button, void *pUserData, int buttonID);
+};
+
 class Editor : public Screen
 {
 public:
@@ -72,6 +101,7 @@ protected:
 
 	Chooser brushSelect;
 	Chooser unitSelect;
+	CastleEdit castleEdit;
 
 	ObjectType brushType[2];
 	int brushIndex[2];

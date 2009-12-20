@@ -556,7 +556,7 @@ void Map::Save(const char *pFilename)
 			int type = pMap[a*mapWidth + b].type;
 			if(type && type != OT_Castle)
 			{
-				int len = sprintf(buffer, "\t\t%d, %d = %s %d\n", b, a, pObjectTypes[type], pMap[a*mapWidth + b].index);
+				int len = sprintf(buffer, "\t\t%d, %d = %s %d\n", b, a, pObjectTypes[type], (int)(int8)pMap[a*mapWidth + b].index);
 				MFFile_Write(pFile, buffer, len);
 			}
 		}
@@ -576,9 +576,15 @@ void Map::Save(const char *pFilename)
 			MapTile &tile = pMap[a*mapWidth + b];
 			if(tile.type == OT_Castle && tile.castleTile == 0)
 			{
-				int race = tile.index;
-				int len = sprintf(buffer, "\t\t[Castle]\n\t\t{\n\t\t\tname = \"%s\"\n\t\t\tposition = %d, %d\n\t\t\trace = %d\n\t\t}\n", "unnamed", b, a, race);
+				Castle &castle = pCastles[tile.index];
+				int len = sprintf(buffer, "\t\t[Castle]\n\t\t{\n\t\t\tname = \"%s\"\n\t\t\tposition = %d, %d\n\t\t\tincome = %d\n\t\t\trace = %d\n", castle.details.pName, b, a, castle.details.income, castle.player);
 				MFFile_Write(pFile, buffer, len);
+				for(int c=0; c<castle.details.numBuildUnits; ++c)
+				{
+					int len = sprintf(buffer, "\t\t\tunit %d = %d, %d, %d\n", c, castle.details.buildUnits[c].unit, castle.details.buildUnits[c].cost, castle.details.buildUnits[c].buildTimeMod);
+					MFFile_Write(pFile, buffer, len);
+				}
+				MFFile_Write(pFile, "\t\t}\n", MFString_Length("\t\t}\n"));
 			}
 		}
 	}
@@ -1172,12 +1178,16 @@ bool Map::PlaceCastle(int x, int y, int player)
 	// place castle
 	for(int a=0; a<4; ++a)
 	{
-		pMap[(y + (a >>1))*mapWidth + x + (a & 1)].type = OT_Castle;
-		pMap[(y + (a >>1))*mapWidth + x + (a & 1)].index = numCastles;
-		pMap[(y + (a >>1))*mapWidth + x + (a & 1)].castleTile = a;
+		MapTile *pTile = pMap + (y + (a >>1))*mapWidth + x + (a & 1);
+		pTile->type = OT_Castle;
+		pTile->index = numCastles;
+		pTile->castleTile = a;
+		pTile->pObject = GetCastle(numCastles);
 	}
 
 	MFZeroMemory(&pCastles[numCastles], sizeof(Castle));
+	pCastles[numCastles].pUnitDefs = pUnits;
+	pCastles[numCastles].pTile = pMap + y*mapWidth + x;
 	pCastles[numCastles].player = player;
 	pCastles[numCastles].details.x = x;
 	pCastles[numCastles].details.y = y;
