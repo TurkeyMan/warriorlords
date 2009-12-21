@@ -109,11 +109,14 @@ void Game::BeginTurn(int player)
 	}
 
 	// get money + add new units
+	int numCastles = 0;
+
 	for(int a = 0; a < pMap->GetNumCastles(); ++a)
 	{
 		Castle *pCastle = pMap->GetCastle(a);
 		if(pCastle->player == currentPlayer)
 		{
+			++numCastles;
 			players[currentPlayer].gold += pCastle->details.income;
 
 			if(pCastle->building != -1 && --pCastle->buildTime <= 0)
@@ -185,6 +188,14 @@ void Game::BeginTurn(int player)
 				}
 			}
 		}
+	}
+
+	// if the player has no castles left, go to next player
+	if(numCastles == 0)
+	{
+		int numPlayers = 6;
+		BeginTurn((currentPlayer + 1) % numPlayers);
+		return;
 	}
 
 	// focus map on starting castle, oooor maybe not (focus on last focused position?)
