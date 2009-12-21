@@ -314,7 +314,7 @@ void MapScreen::Draw()
 			Unit *pUnit = pSelection->GetUnit(a);
 			pUnit->Draw(5.f + (float)a*32.f, 5.f);
 		}
-		pSelection->GetUnit(0)->GetDefs()->DrawUnits(64.f);
+		Game::GetCurrent()->GetUnitDefs()->DrawUnits(64.f);
 
 		int tx = 42 + numUnits*32;
 		int ty = 37 - (int)MFFont_GetFontHeight(pFont)/2;

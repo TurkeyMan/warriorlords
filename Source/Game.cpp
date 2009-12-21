@@ -120,21 +120,62 @@ void Game::BeginTurn(int player)
 			{
 				// find space in the castle for the unit
 				MapTile *pTile = NULL;
-				for(int i = 0; i < 4; ++i)
+
+				int x = pCastle->details.x;
+				int y = pCastle->details.y;
+
+				int buildUnit = pCastle->details.buildUnits[pCastle->building].unit;
+				UnitDetails *pDetails = pUnitDefs->GetUnitDetails(buildUnit);
+				uint32 castleTerrain = pMap->GetTerrainAt(x, y);
+
+				if(pUnitDefs->GetMovementPenalty(pDetails->movementClass, castleTerrain & 0xFF) == 0)
 				{
-					MapTile *pT = pMap->GetTile(pCastle->details.x + (i & 1), pCastle->details.y + (1 >> 1));
-					int numUnits = pT->GetNumUnits();
-					if(numUnits < 10)
+					// the unit can't go on the castle, it must be a boat or something
+					// find a patch of terrain around the castle where it can begin
+					const int searchTable[12] = { 4, 8, 7, 11, 13, 14, 1, 2, 10, 15, 0, 3 };
+
+					int width, height;
+					pMap->GetMapSize(&width, &height);
+
+					for(int i = 0; i < 12; ++i)
 					{
-						pTile = pT;
-						break;
+						int tx = x - 1 + (searchTable[i] & 3);
+						int ty = y - 1 + (searchTable[i] >> 2);
+
+						if(tx < 0 || ty < 0 || tx >= width || ty >= height)
+							continue;
+
+						MapTile *pT = pMap->GetTile(tx, ty);
+
+						if(pUnitDefs->GetMovementPenalty(pDetails->movementClass, pT->GetTerrain() & 0xFF) != 0)
+						{
+							if(pDetails->type == UT_Vehicle || pT->GetNumUnits() < 10)
+							{
+								if(!pTile || pTile->GetType() == OT_Road)
+									pTile = pT;
+								break;
+							}
+						}
+					}
+				}
+				else
+				{
+					for(int i = 0; i < 4; ++i)
+					{
+						MapTile *pT = pMap->GetTile(x + (i & 1), y + (i >> 1));
+						int numUnits = pT->GetNumUnits();
+						if(numUnits < 10)
+						{
+							pTile = pT;
+							break;
+						}
 					}
 				}
 
 				if(pTile)
 				{
 					// create the unit
-					Unit *pUnit = pUnitDefs->CreateUnit(pCastle->details.buildUnits[pCastle->building].unit, currentPlayer);
+					Unit *pUnit = pUnitDefs->CreateUnit(buildUnit, currentPlayer);
 					pCastle->SetBuildUnit(pCastle->building);
 
 					// create a group for the unit, and add it to the tile

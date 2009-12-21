@@ -700,7 +700,8 @@ void Map::Draw()
 				bDrawSelection = pGroup->IsSelected();
 
 				Unit *pUnit = pGroup->GetFeatureUnit();
-				pUnit->Draw((float)x, (float)y);
+				if(pUnit && (!pVehicle || pGroup->GetVehicle() != pVehicle))
+					pUnit->Draw((float)x, (float)y);
 			}
 
 			if(pTile->type == OT_None)

@@ -654,6 +654,14 @@ void Group::Destroy()
 
 bool Group::AddUnit(Unit *pUnit)
 {
+	if(pUnit->IsVehicle())
+	{
+		if(pVehicle)
+			return false;
+		pVehicle = pUnit;
+		return true;
+	}
+
 	if(numForwardUnits + numRearUnits >= 10)
 		return false;
 
@@ -699,6 +707,12 @@ bool Group::AddRearUnit(Unit *pUnit)
 
 void Group::RemoveUnit(Unit *pUnit)
 {
+	if(pUnit->IsVehicle() && pVehicle == pUnit)
+	{
+		pVehicle = NULL;
+		return;
+	}
+
 	for(int a=0; a<numForwardUnits; ++a)
 	{
 		if(pUnit == pForwardUnits[a])
