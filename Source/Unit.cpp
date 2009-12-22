@@ -209,7 +209,8 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 				pUnit->attackSpeed = pUnits->GetFloat(15);
 				pUnit->life = pUnits->GetInt(16);
 
-				pUnit->buildTime = 1;
+				pUnit->buildTime = pUnits->GetInt(17);
+				pUnit->cost = pUnits->GetInt(18);
 
 				++pUnit;
 				pUnits = pUnits->Next();

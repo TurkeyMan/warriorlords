@@ -14,7 +14,7 @@ Button *Button::Create(MFMaterial *pImage, MFRect *pPosition, MFRect *pUVs, Trig
 	pNew->uvs = *pUVs;
 	pNew->pCallback = pCallback;
 	pNew->pUserData = pUserData;
-	pNew->bIsPressed = false;
+	pNew->isPressed = -1;
 	pNew->bTriggerOnDown = bTriggerOnDown;
 	pNew->bOutline = false;
 	pNew->outlineColour = MFVector::white;
@@ -27,7 +27,7 @@ Button *Button::Create(MFMaterial *pImage, MFRect *pPosition, MFRect *pUVs, Trig
 
 void Button::Destroy()
 {
-	MFHeap_Free(this);
+	delete this;
 }
 
 bool Button::HandleInputEvent(InputEvent ev, InputInfo &info)
@@ -38,32 +38,29 @@ bool Button::HandleInputEvent(InputEvent ev, InputInfo &info)
 	switch(ev)
 	{
 		case IE_Down:
-			if(info.buttonID == button)
+			if(button == -1 || info.buttonID == button)
 			{
 				if(bTriggerOnDown)
 				{
 					if(pCallback)
-						pCallback(0, pUserData, buttonID);
+						pCallback(info.buttonID, pUserData, buttonID);
 				}
 				else
 				{
-					bIsPressed = true;
+					isPressed = info.contact;
+					pInputManager->SetExclusiveContactReceiver(info.contact, this);
 				}
-
-				pInputManager->SetExclusiveContactReceiver(info.contact, this);
 			}
 			return true;
 		case IE_Up:
-			if(info.buttonID == button)
+			if(button == -1 || info.buttonID == button && info.contact == isPressed)
 			{
-				bIsPressed = false;
-				if(!bTriggerOnDown)
+				isPressed = -1;
+
+				if(MFTypes_PointInRect(info.up.x, info.up.y, &rect))
 				{
-					if(MFTypes_PointInRect(info.up.x, info.up.y, &rect))
-					{
-						if(pCallback)
-							pCallback(0, pUserData, buttonID);
-					}
+					if(pCallback)
+						pCallback(info.buttonID, pUserData, buttonID);
 				}
 			}
 			return true;
@@ -79,7 +76,7 @@ void Button::Draw()
 {
 	bool bDark = false;
 
-	if(bIsPressed)
+	if(isPressed >= 0)
 	{
 		float x = MFInput_Read(Mouse_XPos, IDD_Mouse);
 		float y = MFInput_Read(Mouse_YPos, IDD_Mouse);

@@ -33,7 +33,7 @@ protected:
 	bool bOutline;
 
 	bool bTriggerOnDown;
-	bool bIsPressed;
+	int  isPressed;
 
 	TriggerCallback *pCallback;
 	void *pUserData;

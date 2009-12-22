@@ -77,7 +77,7 @@ Editor::Editor(Game *pGame)
 
 		pTiles->GetTileUVs(tile, &uvs);
 
-		brushSelect.AddButton(0, &uvs, pTileMat, (OT_Terrain << 16) | a, ChooseBrush, this, true);
+		brushSelect.AddButton(0, &uvs, pTileMat, (OT_Terrain << 16) | a, ChooseBrush, this);
 	}
 
 	// castle buttons
@@ -90,16 +90,16 @@ Editor::Editor(Game *pGame)
 
 		pUnits->GetCastleUVs(race, &uvs);
 
-		brushSelect.AddButton(1, &uvs, pCastleMat, (OT_Castle << 16) | (uint16)player, ChooseBrush, this, true);
+		brushSelect.AddButton(1, &uvs, pCastleMat, (OT_Castle << 16) | (uint16)player, ChooseBrush, this);
 	}
 
 	// add the merc flag
 	pUnits->GetFlagUVs(0, &uvs);
-	brushSelect.AddButton(1, &uvs, pCastleMat, OT_Flag << 16, ChooseBrush, this, true);
+	brushSelect.AddButton(1, &uvs, pCastleMat, OT_Flag << 16, ChooseBrush, this);
 
 	// add the road
 	pTiles->GetRoadUVs(0, &uvs);
-	brushSelect.AddButton(1, &uvs, pRoadMat, OT_Road << 16, ChooseBrush, this, true);
+	brushSelect.AddButton(1, &uvs, pRoadMat, OT_Road << 16, ChooseBrush, this);
 
 	// special buttons
 	int specialCount = pUnits->GetNumSpecials();
@@ -107,7 +107,7 @@ Editor::Editor(Game *pGame)
 	{
 		pUnits->GetSpecialUVs(a, &uvs);
 
-		brushSelect.AddButton(2 + a/11, &uvs, pCastleMat, (OT_Special << 16) | a, ChooseBrush, this, true);
+		brushSelect.AddButton(2 + a/11, &uvs, pCastleMat, (OT_Special << 16) | a, ChooseBrush, this);
 	}
 
 	// init unit selector:
@@ -234,17 +234,14 @@ bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
 	return false;
 }
 
-int Editor::UpdateInput()
-{
-	if(MFInput_WasPressed(Key_S, IDD_Keyboard))
-		pMap->Save("Map.ini");
-
-	return 0;
-}
-
 int Editor::Update()
 {
 	pMap->Update();
+
+	castleEdit.Update();
+
+	if(MFInput_WasPressed(Key_S, IDD_Keyboard) && MFInput_Read(Key_LControl, IDD_Keyboard))
+		pMap->Save("Map.ini");
 
 	return 0;
 }
@@ -268,7 +265,6 @@ void Editor::Draw()
 	pBrushButton[1]->Draw();
 
 	brushSelect.Draw();
-	unitSelect.Draw();
 	castleEdit.Draw();
 }
 
@@ -403,10 +399,10 @@ Chooser::~Chooser()
 	MFMaterial_Destroy(pIcons);
 }
 
-Button *Chooser::AddButton(int page, MFRect *pUVs, MFMaterial *pImage, int buttonID, Button::TriggerCallback *pCallback, void *pUserData, bool bTriggerOnDown)
+Button *Chooser::AddButton(int page, MFRect *pUVs, MFMaterial *pImage, int buttonID, Button::TriggerCallback *pCallback, void *pUserData)
 {
 	MFRect rect = { 0.f, 0.f, 64.f, 64.f };
-	Button *pButton = Button::Create(pImage, &rect, pUVs, pCallback, pUserData, buttonID, bTriggerOnDown);
+	Button *pButton = Button::Create(pImage, &rect, pUVs, pCallback, pUserData, buttonID, true);
 	pButton->SetOutline(true, MFVector::black);
 
 	pButtons[page][numButtons[page]++] = pButton;
@@ -527,8 +523,10 @@ void Chooser::FlipPage(int button, void *pUserData, int buttonID)
 CastleEdit::CastleEdit()
 {
 	pFont = MFFont_Create("Font/Charlemagne");
+	pIcons = MFMaterial_Create("Icons");
 
 	bVisible = false;
+	bHide = false;
 
 	float margin = 5.f;
 	MFDisplay_GetDisplayRect(&window);
@@ -558,6 +556,26 @@ CastleEdit::CastleEdit()
 	pBuildUnits[2] = Button::Create(NULL, &button, &uvs, SelectUnit, this, 2);
 	button.x = units.x + units.width - 64.f - 5.f; button.y = units.y + units.height - 64.f - 5.f;
 	pBuildUnits[3] = Button::Create(NULL, &button, &uvs, SelectUnit, this, 3);
+
+	pName = StringBox::Create(pFont, &title, ChangeCallback, this);
+
+	// set up the unit picker
+	MFRect rect = { 0.5f, 0, 0.25f, 0.25f };
+	unitSelect.AddButton(0, &rect, pIcons, -1, SetUnit, this);
+
+	UnitDefinitions *pDefs = Game::GetCurrent()->GetUnitDefs();
+	MFMaterial *pDetail = pDefs->GetUnitDetailMap();
+	MFMaterial *pColour = pDefs->GetUnitColourMap();
+	int numUnits = pDefs->GetNumUnitTypes();
+
+	int addedCount = 1;
+	for(int a=8; a<numUnits; ++a)
+	{
+		pDefs->GetUnitUVs(a, false, &rect);
+		Button *pButton = unitSelect.AddButton(addedCount / 11, &rect, pDetail, a, SetUnit, this);
+		pButton->SetOverlay(pColour);
+		++addedCount;
+	}
 }
 
 CastleEdit::~CastleEdit()
@@ -565,9 +583,19 @@ CastleEdit::~CastleEdit()
 	MFFont_Destroy(pFont);
 }
 
+void CastleEdit::Update()
+{
+	pName->Update();
+}
+
 void CastleEdit::Draw()
 {
 	if(!bVisible)
+		return;
+
+	unitSelect.Draw();
+
+	if(bHide)
 		return;
 
 	MFPrimitive_DrawUntexturedQuad(window.x, window.y, window.width, window.height, MakeVector(0, 0, 0, 0.8f));
@@ -577,7 +605,7 @@ void CastleEdit::Draw()
 	MFPrimitive_DrawUntexturedQuad(right.x, right.y, right.width, right.height, MakeVector(0, 0, 0, .8f));
 	MFPrimitive_DrawUntexturedQuad(lower.x, lower.y, lower.width, lower.height, MakeVector(0, 0, 0, .8f));
 
-	MFFont_BlitTextf(pFont, (int)title.x, (int)title.y, MFVector::yellow, pCastle->details.pName);
+	pName->Draw();
 
 	int building = pCastle->GetBuildUnit();
 	if(building > -1)
@@ -610,6 +638,13 @@ bool CastleEdit::HandleInputEvent(InputEvent ev, InputInfo &info)
 	if(info.device == IDD_Mouse && info.deviceID != 0)
 		return false;
 
+	switch(ev)
+	{
+		case IE_Down:
+			pName->Enable(false);
+			break;
+	}
+
 	// HACK: right click returns
 	if(info.buttonID == 1 && ev == IE_Tap)
 		Hide();
@@ -630,36 +665,39 @@ void CastleEdit::Show(Castle *pCastle)
 	MFMaterial *pDetailMap = pUnitDefs->GetUnitDetailMap();
 	MFMaterial *pColourMap = pUnitDefs->GetUnitColourMap();
 
-	for(int a=0; a<pCastle->details.numBuildUnits; ++a)
+	for(int b=pCastle->details.numBuildUnits; b<4; ++b)
+		pCastle->details.buildUnits[b].unit = -1;
+
+	pCastle->details.numBuildUnits = 4;
+
+	for(int a=0; a<4; ++a)
 	{
 		MFRect uvs;
 		int unit = pCastle->details.buildUnits[a].unit;
-		pUnitDefs->GetUnitUVs(pCastle->details.buildUnits[a].unit, false, &uvs);
-		pBuildUnits[a]->SetImage(pDetailMap, &uvs);
 
-		if(a == 2)
+		if(unit != -1)
 		{
-			MFRect pos;
-			pos.x = units.x;
-			pos.y = units.y + units.height - 64.f - 5.f;
-			pos.width = pos.height = 64.f;
+			pUnitDefs->GetUnitUVs(pCastle->details.buildUnits[a].unit, false, &uvs);
+			pBuildUnits[a]->SetImage(pDetailMap, &uvs);
 
-			if(pCastle->details.numBuildUnits == 3)
-			{
-				float ratio = uvs.width/uvs.height;
-				float width = 64.f * ratio;
-				pos.x = MFFloor(units.x + units.width*0.5f - width*0.5f);
-				pos.width = MFFloor(pos.width * ratio);
-			}
-
-			pBuildUnits[a]->SetPos(&pos);
+			pBuildUnits[a]->SetOutline(true, pCastle->building == a ? MFVector::blue : MFVector::white);
+			pBuildUnits[a]->SetOverlay(pColourMap, pGame->GetPlayerColour(pCastle->player));
 		}
-
-		pBuildUnits[a]->SetOutline(true, pCastle->building == a ? MFVector::blue : MFVector::white);
-		pBuildUnits[a]->SetOverlay(pColourMap, pGame->GetPlayerColour(pCastle->player));
+		else
+		{
+			uvs.x = 0.5f; uvs.y = 0.f;
+			uvs.width = uvs.height = 0.25f;
+			pBuildUnits[a]->SetImage(pIcons, &uvs);
+			pBuildUnits[a]->SetOverlay(NULL);
+			pBuildUnits[a]->SetOutline(true, pCastle->building == a ? MFVector::blue : MFVector::white);
+		}
 
 		pInputManager->PushReceiver(pBuildUnits[a]);
 	}
+
+	pName->SetString(pCastle->GetName());
+
+	pInputManager->PushReceiver(pName);
 }
 
 void CastleEdit::Hide()
@@ -667,6 +705,14 @@ void CastleEdit::Hide()
 	pInputManager->PopReceiver(this);
 
 	bVisible = false;
+
+	// collate the build units into the lower slots
+	pCastle->details.numBuildUnits = 0;
+	for(int a=0; a<4; ++a)
+	{
+		if(pCastle->details.buildUnits[a].unit != -1)
+			pCastle->details.buildUnits[pCastle->details.numBuildUnits++] = pCastle->details.buildUnits[a];
+	}
 }
 
 void CastleEdit::SelectUnit(int button, void *pUserData, int buttonID)
@@ -674,8 +720,62 @@ void CastleEdit::SelectUnit(int button, void *pUserData, int buttonID)
 	CastleEdit *pThis = (CastleEdit*)pUserData;
 	Castle *pCastle = pThis->pCastle;
 
-	for(int a=0; a<pCastle->details.numBuildUnits; ++a)
-		pThis->pBuildUnits[a]->SetOutline(true, buttonID == a ? MFVector::blue : MFVector::white);
+	if(pCastle->building != buttonID)
+	{
+		for(int a=0; a<pCastle->details.numBuildUnits; ++a)
+			pThis->pBuildUnits[a]->SetOutline(true, buttonID == a ? MFVector::blue : MFVector::white);
 
-	pCastle->SetBuildUnit(buttonID);
+		pCastle->SetBuildUnit(buttonID);
+	}
+	else
+	{
+		// show chooser
+		pThis->unitSelect.Show();
+		pThis->bHide = true;
+	}
+}
+
+void CastleEdit::SetUnit(int button, void *pUserData, int buttonID)
+{
+	CastleEdit *pThis = (CastleEdit*)pUserData;
+	UnitDefinitions *pDefs = Game::GetCurrent()->GetUnitDefs();
+
+	int selected = pThis->pCastle->building;
+
+	// set the new unit
+	BuildUnit &unit = pThis->pCastle->details.buildUnits[selected];
+	unit.unit = buttonID;
+	unit.cost = pDefs->GetUnitDetails(buttonID)->cost;
+	unit.buildTimeMod = 0;
+
+	pThis->pCastle->buildTime = pDefs->GetUnitDetails(buttonID)->buildTime + unit.buildTimeMod;
+
+	// update the button image
+	if(buttonID != -1)
+	{
+		MFRect rect;
+		MFMaterial *pDetail = pDefs->GetUnitDetailMap();
+		MFMaterial *pColour = pDefs->GetUnitColourMap();
+		pDefs->GetUnitUVs(buttonID, false, &rect);
+
+		pThis->pBuildUnits[selected]->SetImage(pDetail, &rect);
+		pThis->pBuildUnits[selected]->SetOverlay(pColour);
+	}
+	else
+	{
+		MFRect rect = { 0.5f, 0, 0.25f, 0.25f };
+		pThis->pBuildUnits[selected]->SetImage(pThis->pIcons, &rect);
+		pThis->pBuildUnits[selected]->SetOverlay(NULL);
+	}
+
+	pThis->unitSelect.Hide();
+	pThis->bHide = false;
+}
+
+void CastleEdit::ChangeCallback(const char *pString, void *pUserData)
+{
+	CastleEdit *pThis = (CastleEdit*)pUserData;
+	Castle *pCastle = pThis->pCastle;
+
+	pCastle->SetName(pString);
 }

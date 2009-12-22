@@ -61,7 +61,7 @@ protected:
 
 	uint16 x, y;
 
-	uint8 terrain;		// terrain type
+	uint8 terrain;		// terrain tile
 	uint8 type;			// type of detail on tile
 	uint8 index;		// index of item on tile
 	uint8 castleTile;	// castle square: 0 = top left, 1 = top right, 2 = bottom left, 3 = bottom right

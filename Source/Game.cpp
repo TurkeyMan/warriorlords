@@ -204,6 +204,7 @@ void Game::BeginTurn(int player)
 
 void Game::EndTurn()
 {
+	// begin the next players turn
 	int numPlayers = 6;
 	BeginTurn((currentPlayer + 1) % numPlayers);
 }

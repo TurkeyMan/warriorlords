@@ -3,7 +3,7 @@
 
 #include "InputHandler.h"
 
-class Screen : public InputHandler, public InputReceiver
+class Screen : public InputReceiver
 {
 public:
 	Screen();

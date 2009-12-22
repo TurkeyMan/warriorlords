@@ -3,10 +3,6 @@
 
 #include "MFSystem.h"
 
-InputHandler *InputHandler::pCurrent = NULL;
-InputHandler *InputHandler::pExclusive = NULL;
-
-
 InputManager::InputManager()
 {
 	MFZeroMemory(contacts, sizeof(contacts));

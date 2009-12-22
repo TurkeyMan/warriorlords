@@ -5,6 +5,7 @@
 #include "Game.h"
 #include "Map.h"
 #include "Button.h"
+#include "StringBox.h"
 
 struct MFFont;
 
@@ -14,7 +15,7 @@ public:
 	Chooser();
 	~Chooser();
 
-	Button *AddButton(int page, MFRect *pUVs, MFMaterial *pImage, int buttonID, Button::TriggerCallback *pCallback, void *pUserData, bool bTriggerOnDown = false);
+	Button *AddButton(int page, MFRect *pUVs, MFMaterial *pImage, int buttonID, Button::TriggerCallback *pCallback, void *pUserData);
 
 	void Show();
 	void Hide();
@@ -48,6 +49,7 @@ public:
 	CastleEdit();
 	~CastleEdit();
 
+	void Update();
 	void Draw();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
@@ -59,14 +61,22 @@ protected:
 	Castle *pCastle;
 
 	MFFont *pFont;
+	MFMaterial *pIcons;
 
 	MFRect window, title, units, lower, right;
 
 	Button *pBuildUnits[4];
+	StringBox *pName;
+	StringBox *pIncome;
+
+	Chooser unitSelect;
 
 	bool bVisible;
+	bool bHide;
 
 	static void SelectUnit(int button, void *pUserData, int buttonID);
+	static void SetUnit(int button, void *pUserData, int buttonID);
+	static void ChangeCallback(const char *pString, void *pUserData);
 };
 
 class Editor : public Screen
@@ -81,7 +91,6 @@ public:
 	virtual void Deselect();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
-	virtual int UpdateInput();
 
 	static void BrushSelect(int button, void *pUserData, int buttonID);
 	static void ChooseBrush(int button, void *pUserData, int buttonID);
@@ -100,7 +109,6 @@ protected:
 	Button *pBrushButton[2];
 
 	Chooser brushSelect;
-	Chooser unitSelect;
 	CastleEdit castleEdit;
 
 	ObjectType brushType[2];

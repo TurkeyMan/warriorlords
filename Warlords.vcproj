@@ -314,6 +314,22 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Source\StringBox.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\StringBox.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\StringEntryLogic.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\StringEntryLogic.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Source\Tileset.cpp"
 				>
 			</File>

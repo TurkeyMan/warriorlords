@@ -62,7 +62,7 @@ struct UnitDetails
 	int attackClass, defenceClass, movementClass;
 	float cooldown, attackSpeed;
 	int life;
-	int buildTime;
+	int buildTime, cost;
 
 	// visible info
 	int x, y;
@@ -258,6 +258,9 @@ public:
 
 	void SetBuildUnit(int slot);
 	int GetBuildUnit();
+
+	const char *GetName() { return details.pName; }
+	void SetName(const char *pName) { MFString_Copy((char*)details.pName, pName); }
 
 //protected:
 public:

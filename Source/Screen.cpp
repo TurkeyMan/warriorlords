@@ -18,13 +18,10 @@ int Screen::UpdateScreen()
 	{
 		if(pCurrent)
 			pCurrent->Deselect();
-		SetCurrentInputHandler(pNext);
 		pNext->Select();
 		pCurrent = pNext;
 		pNext = NULL;
 	}
-
-	HandleInput();
 
 	if(pCurrent)
 		return pCurrent->Update();
