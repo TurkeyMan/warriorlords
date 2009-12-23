@@ -24,9 +24,9 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 	pUnitDefs->pUnits = NULL;
 	pUnitDefs->numUnits = 0;
 
-	pUnitDefs->pDetailLayer = NULL;
-	pUnitDefs->pColourLayer = NULL;
-	pUnitDefs->pCastleMap = NULL;
+	pUnitDefs->pUnitMat = NULL;
+	pUnitDefs->pHeadMat = NULL;
+	pUnitDefs->pCastleMat = NULL;
 
 	pUnitDefs->unitMapWidth = pUnitDefs->unitMapHeight = 0;
 	pUnitDefs->castleMapWidth = pUnitDefs->castleMapHeight = 0;
@@ -59,34 +59,30 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 		}
 		else if(pLine->IsString(0, "detail_map"))
 		{
-			pUnitDefs->pDetailLayer = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
+			pUnitDefs->pUnitMat = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
 
-			if(pUnitDefs->pDetailLayer)
+			if(pUnitDefs->pUnitMat)
 			{
 				MFTexture *pTex;
-				int diffuse = MFMaterial_GetParameterIndexFromName(pUnitDefs->pDetailLayer, "diffuseMap");
-				MFMaterial_GetParameter(pUnitDefs->pDetailLayer, diffuse, 0, &pTex);
+				int diffuse = MFMaterial_GetParameterIndexFromName(pUnitDefs->pUnitMat, "diffuseMap");
+				MFMaterial_GetParameter(pUnitDefs->pUnitMat, diffuse, 0, &pTex);
 				if(pTex)
 					MFTexture_GetTextureDimensions(pTex, &pUnitDefs->unitMapWidth, &pUnitDefs->unitMapHeight);
 			}
 		}
-		else if(pLine->IsString(0, "colour_map"))
-		{
-			pUnitDefs->pColourLayer = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
-		}
 		else if(pLine->IsString(0, "heads_map"))
 		{
-			pUnitDefs->pUnitHeads = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
+			pUnitDefs->pHeadMat = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
 		}
 		else if(pLine->IsString(0, "castle_map"))
 		{
-			pUnitDefs->pCastleMap = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
+			pUnitDefs->pCastleMat = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
 
-			if(pUnitDefs->pCastleMap)
+			if(pUnitDefs->pCastleMat)
 			{
 				MFTexture *pTex;
-				int diffuse = MFMaterial_GetParameterIndexFromName(pUnitDefs->pDetailLayer, "diffuseMap");
-				MFMaterial_GetParameter(pUnitDefs->pDetailLayer, diffuse, 0, &pTex);
+				int diffuse = MFMaterial_GetParameterIndexFromName(pUnitDefs->pCastleMat, "diffuseMap");
+				MFMaterial_GetParameter(pUnitDefs->pCastleMat, diffuse, 0, &pTex);
 				if(pTex)
 					MFTexture_GetTextureDimensions(pTex, &pUnitDefs->castleMapWidth, &pUnitDefs->castleMapHeight);
 			}
@@ -310,12 +306,12 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 
 void UnitDefinitions::Free()
 {
-	if(pDetailLayer)
-		MFMaterial_Destroy(pDetailLayer);
-	if(pColourLayer)
-		MFMaterial_Destroy(pColourLayer);
-	if(pCastleMap)
-		MFMaterial_Destroy(pCastleMap);
+	if(pUnitMat)
+		MFMaterial_Destroy(pUnitMat);
+	if(pHeadMat)
+		MFMaterial_Destroy(pHeadMat);
+	if(pCastleMat)
+		MFMaterial_Destroy(pCastleMat);
 
 	if(pRaces)
 		MFHeap_Free(pRaces);
@@ -378,54 +374,41 @@ void UnitDefinitions::DrawUnits(float scale, float texelOffset, bool bHead)
 	if(!numRenderUnits)
 		return;
 
-	for(int a=0; a<2; ++a)
+	MFMaterial_SetMaterial(bHead ? pHeadMat : pUnitMat);
+
+	MFPrimitive(PT_TriList);
+	MFBegin(6*numRenderUnits);
+
+	for(int u=0; u<numRenderUnits; ++u)
 	{
-		if(bHead)
-		{
-			MFMaterial_SetMaterial(a == 0 ? pUnitHeads : NULL);
-			if(a != 0)
-				break; // we don't have the head colour sheet yet.
-		}
-		else
-			MFMaterial_SetMaterial(a == 0 ? pDetailLayer : pColourLayer);
+		UnitRender &unit = renderUnits[u];
+		UnitDetails &def = pUnits[unit.unit];
 
-		MFPrimitive(PT_TriList);
-		MFBegin(6*numRenderUnits);
+		MFSetColour(MakeVector(pGame->GetPlayerColour(unit.player), unit.alpha));
 
-		for(int u=0; u<numRenderUnits; ++u)
-		{
-			UnitRender &unit = renderUnits[u];
-			UnitDetails &def = pUnits[unit.unit];
+		MFRect uvs;
+		GetUnitUVs(unit.unit, unit.bFlip, &uvs, texelOffset);
 
-			if(a == 0)
-				MFSetColour(1, 1, 1, unit.alpha);
-			else
-				MFSetColour(MakeVector(pGame->GetPlayerColour(unit.player), unit.alpha));
+		float depth = 0.f;//bHead ? 0.f : (1000.f - unit.y) / 1000.f;
 
-			MFRect uvs;
-			GetUnitUVs(unit.unit, unit.bFlip, &uvs, texelOffset);
+		float xOffset = -(def.width - 1) / 2.f * scale;
+		float yOffset = -(def.height - 1) / 2.f * scale;
+		MFSetTexCoord1(uvs.x, uvs.y);
+		MFSetPosition(unit.x+xOffset, unit.y+yOffset, depth);
+		MFSetTexCoord1(uvs.x+uvs.width, uvs.y);
+		MFSetPosition(unit.x+xOffset+def.width*scale, unit.y+yOffset, depth);
+		MFSetTexCoord1(uvs.x, uvs.y+uvs.height);
+		MFSetPosition(unit.x+xOffset, unit.y+yOffset+def.height*scale, depth);
 
-			float depth = 0.f;//bHead ? 0.f : (1000.f - unit.y) / 1000.f;
-
-			float xOffset = -(def.width - 1) / 2.f * scale;
-			float yOffset = -(def.height - 1) / 2.f * scale;
-			MFSetTexCoord1(uvs.x, uvs.y);
-			MFSetPosition(unit.x+xOffset, unit.y+yOffset, depth);
-			MFSetTexCoord1(uvs.x+uvs.width, uvs.y);
-			MFSetPosition(unit.x+xOffset+def.width*scale, unit.y+yOffset, depth);
-			MFSetTexCoord1(uvs.x, uvs.y+uvs.height);
-			MFSetPosition(unit.x+xOffset, unit.y+yOffset+def.height*scale, depth);
-
-			MFSetTexCoord1(uvs.x+uvs.width, uvs.y);
-			MFSetPosition(unit.x+xOffset+def.width*scale, unit.y+yOffset, depth);
-			MFSetTexCoord1(uvs.x+uvs.width, uvs.y+uvs.height);
-			MFSetPosition(unit.x+xOffset+def.width*scale, unit.y+yOffset+def.height*scale, depth);
-			MFSetTexCoord1(uvs.x, uvs.y+uvs.height);
-			MFSetPosition(unit.x+xOffset, unit.y+yOffset+def.height*scale, depth);
-		}
-
-		MFEnd();
+		MFSetTexCoord1(uvs.x+uvs.width, uvs.y);
+		MFSetPosition(unit.x+xOffset+def.width*scale, unit.y+yOffset, depth);
+		MFSetTexCoord1(uvs.x+uvs.width, uvs.y+uvs.height);
+		MFSetPosition(unit.x+xOffset+def.width*scale, unit.y+yOffset+def.height*scale, depth);
+		MFSetTexCoord1(uvs.x, uvs.y+uvs.height);
+		MFSetPosition(unit.x+xOffset, unit.y+yOffset+def.height*scale, depth);
 	}
+
+	MFEnd();
 
 	numRenderUnits = 0;
 }

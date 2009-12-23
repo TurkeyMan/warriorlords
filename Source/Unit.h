@@ -103,8 +103,7 @@ public:
 	const char *GetMovementClassName(int movementClass) { return ppMovementClasses[movementClass]; }
 	int GetMovementPenalty(int movementClass, int terrainType) { return pMovementPenalty[movementClass*numTerrainTypes + terrainType] * 2; }
 
-	MFMaterial *GetUnitDetailMap() { return pDetailLayer; }
-	MFMaterial *GetUnitColourMap() { return pColourLayer; }
+	MFMaterial *GetUnitMaterial() { return pUnitMat; }
 
 	// rendering
 	void AddRenderUnit(int unit, float x, float y, int player = -1, bool bFlip = false, float alpha = 1.f);
@@ -119,7 +118,7 @@ public:
 	void GetUnitUVs(int unit, bool bFlip, MFRect *pUVs, float texelOffset = 0.5f);
 	void GetSpecialUVs(int index, MFRect *pUVs, float texelOffset = 0.5f);
 
-	inline MFMaterial *GetCastleMaterial() const { return pCastleMap; }
+	inline MFMaterial *GetCastleMaterial() const { return pCastleMat; }
 
 protected:
 	struct WeaponClass
@@ -135,10 +134,9 @@ protected:
 
 	const char *pName;
 
-	MFMaterial *pColourLayer;
-	MFMaterial *pDetailLayer;
-	MFMaterial *pUnitHeads;
-	MFMaterial *pCastleMap;
+	MFMaterial *pUnitMat;
+	MFMaterial *pHeadMat;
+	MFMaterial *pCastleMat;
 
 	int tileWidth, tileHeight;
 	int unitMapWidth, unitMapHeight;

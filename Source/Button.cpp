@@ -5,7 +5,7 @@
 #include "MFPrimitive.h"
 #include "MFInput.h"
 
-Button *Button::Create(MFMaterial *pImage, MFRect *pPosition, MFRect *pUVs, TriggerCallback *pCallback, void *pUserData, int buttonID, bool bTriggerOnDown)
+Button *Button::Create(const MFMaterial *pImage, const MFRect *pPosition, const MFRect *pUVs, const MFVector &colour, TriggerCallback *pCallback, void *pUserData, int buttonID, bool bTriggerOnDown)
 {
 	Button *pNew = (Button*)MFHeap_Alloc(sizeof(Button));
 	pNew = new(pNew) Button(*pPosition);
@@ -17,6 +17,7 @@ Button *Button::Create(MFMaterial *pImage, MFRect *pPosition, MFRect *pUVs, Trig
 	pNew->isPressed = -1;
 	pNew->bTriggerOnDown = bTriggerOnDown;
 	pNew->bOutline = false;
+	pNew->colour = colour;
 	pNew->outlineColour = MFVector::white;
 	pNew->button = 0;
 	pNew->buttonID = buttonID;
@@ -90,33 +91,23 @@ void Button::Draw()
 		MFPrimitive_DrawUntexturedQuad(rect.x - 2, rect.y - 2, rect.width + 4, rect.height + 4, outlineColour);
 
 	MFMaterial_SetMaterial(pMaterial);
-	MFPrimitive_DrawQuad(rect.x, rect.y, rect.width, rect.height, bDark ? MakeVector(0.6f, 0.6f, 0.6f, 1.f) : MFVector::one, uvs.x, uvs.y, uvs.x+uvs.width, uvs.y+uvs.height);
-	if(pOverlay)
-	{
-		MFMaterial_SetMaterial(pOverlay);
-		MFPrimitive_DrawQuad(rect.x, rect.y, rect.width, rect.height, bDark ? MakeVector(0.6f, 0.6f, 0.6f, 1.f) * overlayColour : overlayColour, uvs.x, uvs.y, uvs.x+uvs.width, uvs.y+uvs.height);
-	}
+	MFPrimitive_DrawQuad(rect.x, rect.y, rect.width, rect.height, bDark ? MakeVector(0.6f, 0.6f, 0.6f, 1.f)*colour : colour, uvs.x, uvs.y, uvs.x+uvs.width, uvs.y+uvs.height);
 }
 
-void Button::SetPos(MFRect *pPos)
+void Button::SetPos(const MFRect *pPos)
 {
 	UpdateRect(pPos);
 }
 
-void Button::SetImage(MFMaterial *pImage, MFRect *pUVs)
+void Button::SetImage(const MFMaterial *pImage, const MFRect *pUVs, const MFVector &_colour)
 {
 	pMaterial = pImage;
 	uvs = *pUVs;
+	colour = _colour;
 }
 
 void Button::SetOutline(bool bEnable, const MFVector &colour)
 {
 	bOutline = bEnable;
 	outlineColour = colour;
-}
-
-void Button::SetOverlay(MFMaterial *pImage, const MFVector &colour)
-{
-	pOverlay = pImage;
-	overlayColour = colour;
 }

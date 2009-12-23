@@ -710,6 +710,7 @@ void Map::Draw()
 			float tileWidth = 1.f;
 			MFMaterial *pMat;
 			MFRect uvs;
+			MFVector colour = MFVector::one;
 
 			if(pTile->type == OT_Road)
 			{
@@ -732,15 +733,16 @@ void Map::Draw()
 							continue;
 
 						Castle *pCastle = GetCastle(pTile->index);
-						int race = pGame->GetPlayerRace(pCastle->player);
-						pUnits->GetCastleUVs(race, &uvs);
+						colour = pGame->GetPlayerColour(pCastle->player);
+						pUnits->GetCastleUVs(pGame->GetPlayerRace(pCastle->player), &uvs);
 						tileWidth = 2.f;
 						break;
 					}
 					case OT_Flag:
 					{
-						int race = pGame->GetPlayerRace((int8)pTile->index);
-						pUnits->GetFlagUVs(race, &uvs);
+						int player = (int8)pTile->index;
+						colour = pGame->GetPlayerColour(player);
+						pUnits->GetFlagUVs(pGame->GetPlayerRace(player), &uvs);
 						break;
 					}
 					case OT_Special:
@@ -750,7 +752,7 @@ void Map::Draw()
 			}
 
 			MFMaterial_SetMaterial(pMat);
-			MFPrimitive_DrawQuad((float)x, (float)y, tileWidth, tileWidth, MFVector::one, uvs.x, uvs.y, uvs.x + uvs.width, uvs.y + uvs.height);
+			MFPrimitive_DrawQuad((float)x, (float)y, tileWidth, tileWidth, colour, uvs.x, uvs.y, uvs.x + uvs.width, uvs.y + uvs.height);
 
 			// draw selection
 			if(bDrawSelection)

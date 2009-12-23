@@ -38,7 +38,7 @@ void Game_Init()
 
 	pInputManager = new InputManager;
 
-#if 0
+#if 1
 	pGame = new Game("Map");
 	Game::SetCurrent(pGame);
 	pGame->BeginGame();

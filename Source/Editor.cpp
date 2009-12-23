@@ -45,12 +45,12 @@ Editor::Editor(Game *pGame)
 	pos.y = 16.f;
 	uvs.x = 0.75f + (1.f/256.f); uvs.y = 0.f + (1.f/256.f);
 	uvs.width = 0.25f; uvs.height = 0.25f;
-	pMiniMap = Button::Create(pIcons, &pos, &uvs, ShowMiniMap, this, 0, true);
+	pMiniMap = Button::Create(pIcons, &pos, &uvs, MFVector::one, ShowMiniMap, this, 0, true);
 
 	pos.x = 16.f;
 	pos.y = 16.f;
 	uvs.x = 0.75f + (1.f/256.f); uvs.y = 0.25f + (1.f/256.f);
-	pModeButton = Button::Create(pIcons, &pos, &uvs, ChangeMode, this, 0, true);
+	pModeButton = Button::Create(pIcons, &pos, &uvs, MFVector::one, ChangeMode, this, 0, true);
 
 	// brush buttons
 	for(int a=0; a<2; ++a)
@@ -62,7 +62,7 @@ Editor::Editor(Game *pGame)
 		pos.x = (float)(gDefaults.display.displayWidth - (16 + tileWidth));
 		pos.y = (float)(gDefaults.display.displayHeight - (16 + tileHeight)*(2-a));
 
-		pBrushButton[a] = Button::Create(pTileMat, &pos, &uvs, BrushSelect, this, a, true);
+		pBrushButton[a] = Button::Create(pTileMat, &pos, &uvs, MFVector::one, BrushSelect, this, a, true);
 		pBrushButton[a]->SetOutline(true, brush == a ? MFVector::blue : MFVector::white);
 	}
 
@@ -77,7 +77,7 @@ Editor::Editor(Game *pGame)
 
 		pTiles->GetTileUVs(tile, &uvs);
 
-		brushSelect.AddButton(0, &uvs, pTileMat, (OT_Terrain << 16) | a, ChooseBrush, this);
+		brushSelect.AddButton(0, pTileMat, &uvs, MFVector::one, (OT_Terrain << 16) | a, ChooseBrush, this);
 	}
 
 	// castle buttons
@@ -90,16 +90,16 @@ Editor::Editor(Game *pGame)
 
 		pUnits->GetCastleUVs(race, &uvs);
 
-		brushSelect.AddButton(1, &uvs, pCastleMat, (OT_Castle << 16) | (uint16)player, ChooseBrush, this);
+		brushSelect.AddButton(1, pCastleMat, &uvs, pGame->GetPlayerColour(player), (OT_Castle << 16) | (uint16)player, ChooseBrush, this);
 	}
 
 	// add the merc flag
 	pUnits->GetFlagUVs(0, &uvs);
-	brushSelect.AddButton(1, &uvs, pCastleMat, OT_Flag << 16, ChooseBrush, this);
+	brushSelect.AddButton(1, pCastleMat, &uvs, pGame->GetPlayerColour(-1), OT_Flag << 16, ChooseBrush, this);
 
 	// add the road
 	pTiles->GetRoadUVs(0, &uvs);
-	brushSelect.AddButton(1, &uvs, pRoadMat, OT_Road << 16, ChooseBrush, this);
+	brushSelect.AddButton(1, pRoadMat, &uvs, MFVector::one, OT_Road << 16, ChooseBrush, this);
 
 	// special buttons
 	int specialCount = pUnits->GetNumSpecials();
@@ -107,7 +107,7 @@ Editor::Editor(Game *pGame)
 	{
 		pUnits->GetSpecialUVs(a, &uvs);
 
-		brushSelect.AddButton(2 + a/11, &uvs, pCastleMat, (OT_Special << 16) | a, ChooseBrush, this);
+		brushSelect.AddButton(2 + a/11, pCastleMat, &uvs, MFVector::one, (OT_Special << 16) | a, ChooseBrush, this);
 	}
 
 	// init unit selector:
@@ -302,6 +302,7 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 
 	MFMaterial *pMat = NULL;
 	MFRect rect = { 0, 0, 1, 1 };
+	MFVector colour = MFVector::one;
 
 	switch(type)
 	{
@@ -320,6 +321,7 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 		{
 			UnitDefinitions *pUnits = pThis->pMap->GetUnitDefinitions();
 			pUnits->GetCastleUVs(index + 1, &rect);
+			colour = Game::GetCurrent()->GetPlayerColour(index);
 			pMat = pUnits->GetCastleMaterial();
 			break;
 		}
@@ -348,7 +350,7 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 	}
 
 	// update the brush image
-	pThis->pBrushButton[pThis->brush]->SetImage(pMat, &rect);
+	pThis->pBrushButton[pThis->brush]->SetImage(pMat, &rect, colour);
 
 	pThis->brushSelect.Hide();
 }
@@ -383,7 +385,7 @@ Chooser::Chooser()
 	MFRect pos = { 0.f, 0.f, 64.f, 64.f };
 	MFRect uvs = { 1.f/256.f, 1.f/256.f, 0.25f, 0.25f};
 
-	pFlipButton = Button::Create(pIcons, &pos, &uvs, FlipPage, this, 0, true);
+	pFlipButton = Button::Create(pIcons, &pos, &uvs, MFVector::one, FlipPage, this, 0, true);
 }
 
 Chooser::~Chooser()
@@ -399,10 +401,10 @@ Chooser::~Chooser()
 	MFMaterial_Destroy(pIcons);
 }
 
-Button *Chooser::AddButton(int page, MFRect *pUVs, MFMaterial *pImage, int buttonID, Button::TriggerCallback *pCallback, void *pUserData)
+Button *Chooser::AddButton(int page, MFMaterial *pImage, MFRect *pUVs, const MFVector &colour, int buttonID, Button::TriggerCallback *pCallback, void *pUserData)
 {
 	MFRect rect = { 0.f, 0.f, 64.f, 64.f };
-	Button *pButton = Button::Create(pImage, &rect, pUVs, pCallback, pUserData, buttonID, true);
+	Button *pButton = Button::Create(pImage, &rect, pUVs, colour, pCallback, pUserData, buttonID, true);
 	pButton->SetOutline(true, MFVector::black);
 
 	pButtons[page][numButtons[page]++] = pButton;
@@ -549,31 +551,29 @@ CastleEdit::CastleEdit()
 	button.width = 64.f; button.height = 64.f;
 
 	button.x = units.x + 5.f; button.y = units.y + 5.f;
-	pBuildUnits[0] = Button::Create(NULL, &button, &uvs, SelectUnit, this, 0);
+	pBuildUnits[0] = Button::Create(NULL, &button, &uvs, MFVector::one, SelectUnit, this, 0);
 	button.x = units.x + units.width - 64.f - 5.f; button.y = units.y + 5.f;
-	pBuildUnits[1] = Button::Create(NULL, &button, &uvs, SelectUnit, this, 1);
+	pBuildUnits[1] = Button::Create(NULL, &button, &uvs, MFVector::one, SelectUnit, this, 1);
 	button.x = units.x + 5.f; button.y = units.y + units.height - 64.f - 5.f;
-	pBuildUnits[2] = Button::Create(NULL, &button, &uvs, SelectUnit, this, 2);
+	pBuildUnits[2] = Button::Create(NULL, &button, &uvs, MFVector::one, SelectUnit, this, 2);
 	button.x = units.x + units.width - 64.f - 5.f; button.y = units.y + units.height - 64.f - 5.f;
-	pBuildUnits[3] = Button::Create(NULL, &button, &uvs, SelectUnit, this, 3);
+	pBuildUnits[3] = Button::Create(NULL, &button, &uvs, MFVector::one, SelectUnit, this, 3);
 
 	pName = StringBox::Create(pFont, &title, ChangeCallback, this);
 
 	// set up the unit picker
 	MFRect rect = { 0.5f, 0, 0.25f, 0.25f };
-	unitSelect.AddButton(0, &rect, pIcons, -1, SetUnit, this);
+	unitSelect.AddButton(0, pIcons, &rect, MFVector::one, -1, SetUnit, this);
 
 	UnitDefinitions *pDefs = Game::GetCurrent()->GetUnitDefs();
-	MFMaterial *pDetail = pDefs->GetUnitDetailMap();
-	MFMaterial *pColour = pDefs->GetUnitColourMap();
+	MFMaterial *pUnitMat = pDefs->GetUnitMaterial();
 	int numUnits = pDefs->GetNumUnitTypes();
 
 	int addedCount = 1;
 	for(int a=8; a<numUnits; ++a)
 	{
 		pDefs->GetUnitUVs(a, false, &rect);
-		Button *pButton = unitSelect.AddButton(addedCount / 11, &rect, pDetail, a, SetUnit, this);
-		pButton->SetOverlay(pColour);
+		Button *pButton = unitSelect.AddButton(addedCount / 11, pUnitMat, &rect, Game::GetCurrent()->GetPlayerColour(-1), a, SetUnit, this);
 		++addedCount;
 	}
 }
@@ -662,8 +662,7 @@ void CastleEdit::Show(Castle *pCastle)
 	UnitDefinitions *pUnitDefs = pCastle->pUnitDefs;
 	Game *pGame = pUnitDefs->GetGame();
 
-	MFMaterial *pDetailMap = pUnitDefs->GetUnitDetailMap();
-	MFMaterial *pColourMap = pUnitDefs->GetUnitColourMap();
+	MFMaterial *pUnitMat = pUnitDefs->GetUnitMaterial();
 
 	for(int b=pCastle->details.numBuildUnits; b<4; ++b)
 		pCastle->details.buildUnits[b].unit = -1;
@@ -678,17 +677,14 @@ void CastleEdit::Show(Castle *pCastle)
 		if(unit != -1)
 		{
 			pUnitDefs->GetUnitUVs(pCastle->details.buildUnits[a].unit, false, &uvs);
-			pBuildUnits[a]->SetImage(pDetailMap, &uvs);
-
+			pBuildUnits[a]->SetImage(pUnitMat, &uvs, pGame->GetPlayerColour(pCastle->player));
 			pBuildUnits[a]->SetOutline(true, pCastle->building == a ? MFVector::blue : MFVector::white);
-			pBuildUnits[a]->SetOverlay(pColourMap, pGame->GetPlayerColour(pCastle->player));
 		}
 		else
 		{
 			uvs.x = 0.5f; uvs.y = 0.f;
 			uvs.width = uvs.height = 0.25f;
 			pBuildUnits[a]->SetImage(pIcons, &uvs);
-			pBuildUnits[a]->SetOverlay(NULL);
 			pBuildUnits[a]->SetOutline(true, pCastle->building == a ? MFVector::blue : MFVector::white);
 		}
 
@@ -739,6 +735,7 @@ void CastleEdit::SetUnit(int button, void *pUserData, int buttonID)
 {
 	CastleEdit *pThis = (CastleEdit*)pUserData;
 	UnitDefinitions *pDefs = Game::GetCurrent()->GetUnitDefs();
+	Castle *pCastle = pThis->pCastle;
 
 	int selected = pThis->pCastle->building;
 
@@ -754,18 +751,15 @@ void CastleEdit::SetUnit(int button, void *pUserData, int buttonID)
 	if(buttonID != -1)
 	{
 		MFRect rect;
-		MFMaterial *pDetail = pDefs->GetUnitDetailMap();
-		MFMaterial *pColour = pDefs->GetUnitColourMap();
+		MFMaterial *pUnitMat = pDefs->GetUnitMaterial();
 		pDefs->GetUnitUVs(buttonID, false, &rect);
 
-		pThis->pBuildUnits[selected]->SetImage(pDetail, &rect);
-		pThis->pBuildUnits[selected]->SetOverlay(pColour);
+		pThis->pBuildUnits[selected]->SetImage(pUnitMat, &rect, Game::GetCurrent()->GetPlayerColour(pCastle->player));
 	}
 	else
 	{
 		MFRect rect = { 0.5f, 0, 0.25f, 0.25f };
 		pThis->pBuildUnits[selected]->SetImage(pThis->pIcons, &rect);
-		pThis->pBuildUnits[selected]->SetOverlay(NULL);
 	}
 
 	pThis->unitSelect.Hide();

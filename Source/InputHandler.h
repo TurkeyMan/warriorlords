@@ -76,12 +76,12 @@ class InputReceiver
 	friend class InputManager;
 public:
 	InputReceiver() { pNext = NULL; bSpacial = false; }
-	InputReceiver(MFRect &rect) { pNext = NULL; bSpacial = true; this->rect = rect; }
+	InputReceiver(const MFRect &rect) { pNext = NULL; bSpacial = true; this->rect = rect; }
 	~InputReceiver() { }
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info) = 0;
 
-	void UpdateRect(MFRect *pRect) { rect = *pRect; }
+	void UpdateRect(const MFRect *pRect) { rect = *pRect; }
 
 protected:
 	bool bSpacial;

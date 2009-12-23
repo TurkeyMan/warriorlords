@@ -40,12 +40,12 @@ MapScreen::MapScreen(Game *_pGame)
 	pos.y = (float)(gDefaults.display.displayHeight - (16 + tileHeight));
 	uvs.x = 0.25f + (1.f/256.f); uvs.y = 0.f + (1.f/256.f);
 	uvs.width = 0.25f; uvs.height = 0.25f;
-	pEndTurn = Button::Create(pIcons, &pos, &uvs, EndTurn, this, 0, false);
+	pEndTurn = Button::Create(pIcons, &pos, &uvs, MFVector::one, EndTurn, this, 0, false);
 
 	// minimap button
 	pos.y = 16.f;
 	uvs.x = 0.75f + (1.f/256.f); uvs.y = 0.f + (1.f/256.f);
-	pMiniMap = Button::Create(pIcons, &pos, &uvs, ShowMiniMap, this, 0, false);
+	pMiniMap = Button::Create(pIcons, &pos, &uvs, MFVector::one, ShowMiniMap, this, 0, false);
 }
 
 MapScreen::~MapScreen()
@@ -864,13 +864,13 @@ CastleConfig::CastleConfig()
 	button.width = 64.f; button.height = 64.f;
 
 	button.x = units.x + 5.f; button.y = units.y + 5.f;
-	pBuildUnits[0] = Button::Create(NULL, &button, &uvs, SelectUnit, this, 0);
+	pBuildUnits[0] = Button::Create(NULL, &button, &uvs, MFVector::one, SelectUnit, this, 0);
 	button.x = units.x + units.width - 64.f - 5.f; button.y = units.y + 5.f;
-	pBuildUnits[1] = Button::Create(NULL, &button, &uvs, SelectUnit, this, 1);
+	pBuildUnits[1] = Button::Create(NULL, &button, &uvs, MFVector::one, SelectUnit, this, 1);
 	button.x = units.x + 5.f; button.y = units.y + units.height - 64.f - 5.f;
-	pBuildUnits[2] = Button::Create(NULL, &button, &uvs, SelectUnit, this, 2);
+	pBuildUnits[2] = Button::Create(NULL, &button, &uvs, MFVector::one, SelectUnit, this, 2);
 	button.x = units.x + units.width - 64.f - 5.f; button.y = units.y + units.height - 64.f - 5.f;
-	pBuildUnits[3] = Button::Create(NULL, &button, &uvs, SelectUnit, this, 3);
+	pBuildUnits[3] = Button::Create(NULL, &button, &uvs, MFVector::one, SelectUnit, this, 3);
 }
 
 CastleConfig::~CastleConfig()
@@ -940,15 +940,14 @@ void CastleConfig::Show(Castle *pCastle)
 	UnitDefinitions *pUnitDefs = pCastle->pUnitDefs;
 	Game *pGame = pUnitDefs->GetGame();
 
-	MFMaterial *pDetailMap = pUnitDefs->GetUnitDetailMap();
-	MFMaterial *pColourMap = pUnitDefs->GetUnitColourMap();
+	MFMaterial *pUnitMat = pUnitDefs->GetUnitMaterial();
 
 	for(int a=0; a<pCastle->details.numBuildUnits; ++a)
 	{
 		MFRect uvs;
 		int unit = pCastle->details.buildUnits[a].unit;
 		pUnitDefs->GetUnitUVs(pCastle->details.buildUnits[a].unit, false, &uvs);
-		pBuildUnits[a]->SetImage(pDetailMap, &uvs);
+		pBuildUnits[a]->SetImage(pUnitMat, &uvs, pGame->GetPlayerColour(pCastle->player));
 
 		if(a == 2)
 		{
@@ -969,7 +968,6 @@ void CastleConfig::Show(Castle *pCastle)
 		}
 
 		pBuildUnits[a]->SetOutline(true, pCastle->building == a ? MFVector::blue : MFVector::white);
-		pBuildUnits[a]->SetOverlay(pColourMap, pGame->GetPlayerColour(pCastle->player));
 
 		pInputManager->PushReceiver(pBuildUnits[a]);
 	}

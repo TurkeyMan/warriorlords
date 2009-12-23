@@ -23,7 +23,7 @@ Game::Game(const char *_pMap, bool bEditable)
 	for(int a=0; a<8; ++a)
 	{
 		players[a].race = a + 1;
-		players[a].colour = pUnitDefs->GetRaceColour(a);
+		players[a].colour = pUnitDefs->GetRaceColour(a + 1);
 	}
 }
 

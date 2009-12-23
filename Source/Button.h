@@ -11,25 +11,24 @@ class Button : public InputReceiver
 public:
 	typedef void (TriggerCallback)(int button, void *pUserData, int buttonID); 
 
-	Button(MFRect &rect) : InputReceiver(rect) { }
+	Button(const MFRect &rect) : InputReceiver(rect) { }
 
-	static Button *Create(MFMaterial *pImage, MFRect *pPosition, MFRect *pUVs, TriggerCallback *pCallback, void *pUserData, int ButtonID = 0, bool bTriggerOnDown = false);
+	static Button *Create(const MFMaterial *pImage, const MFRect *pPosition, const MFRect *pUVs, const MFVector &colour, TriggerCallback *pCallback, void *pUserData, int ButtonID = 0, bool bTriggerOnDown = false);
 	void Destroy();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 	void Draw();
 
-	void SetImage(MFMaterial *pImage, MFRect *pUVs);
-	void SetPos(MFRect *pPos);
+	void SetImage(const MFMaterial *pImage, const MFRect *pUVs, const MFVector &colour = MFVector::one);
+	void SetPos(const MFRect *pPos);
 
 	void SetOutline(bool bEnable, const MFVector &colour);
-	void SetOverlay(MFMaterial *pImage, const MFVector &colour = MFVector::white);
 
 protected:
-	MFMaterial *pMaterial, *pOverlay;
+	MFVector colour;
+	MFVector outlineColour;
 	MFRect uvs;
-
-	MFVector outlineColour, overlayColour;
+	const MFMaterial *pMaterial, *pOverlay;
 	bool bOutline;
 
 	bool bTriggerOnDown;

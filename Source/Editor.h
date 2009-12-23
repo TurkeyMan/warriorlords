@@ -15,7 +15,7 @@ public:
 	Chooser();
 	~Chooser();
 
-	Button *AddButton(int page, MFRect *pUVs, MFMaterial *pImage, int buttonID, Button::TriggerCallback *pCallback, void *pUserData);
+	Button *AddButton(int page, MFMaterial *pImage, MFRect *pUVs, const MFVector &colour, int buttonID, Button::TriggerCallback *pCallback, void *pUserData);
 
 	void Show();
 	void Hide();
