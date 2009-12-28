@@ -212,6 +212,7 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 	float yScale = (1.f / imageHeight) * tileHeight;
 	float halfX = texelOffset / imageWidth;
 	float halfY = texelOffset / imageHeight;
+	float waterOffset = texelOffset / 64.f;
 
 	MFMaterial_SetMaterial(pWater);
 
@@ -223,18 +224,18 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 	{
 		for(int x=0; x<xTiles; ++x)
 		{
-			MFSetTexCoord1(0 + (0.5f/64.f), 0 + (0.5f/64.f));
+			MFSetTexCoord1(0 + waterOffset, 0 + waterOffset);
 			MFSetPosition((float)x, (float)y, 0);
-			MFSetTexCoord1(1 + (0.5f/64.f), 0 + (0.5f/64.f));
+			MFSetTexCoord1(1 + waterOffset, 0 + waterOffset);
 			MFSetPosition((float)(x+1), (float)y, 0);
-			MFSetTexCoord1(0 + (0.5f/64.f), 1 + (0.5f/64.f));
+			MFSetTexCoord1(0 + waterOffset, 1 + waterOffset);
 			MFSetPosition((float)x, (float)(y+1), 0);
 
-			MFSetTexCoord1(1 + (0.5f/64.f), 0 + (0.5f/64.f));
+			MFSetTexCoord1(1 + waterOffset, 0 + waterOffset);
 			MFSetPosition((float)(x+1), (float)y, 0);
-			MFSetTexCoord1(1 + (0.5f/64.f), 1 + (0.5f/64.f));
+			MFSetTexCoord1(1 + waterOffset, 1 + waterOffset);
 			MFSetPosition((float)(x+1), (float)(y+1), 0);
-			MFSetTexCoord1(0 + (0.5f/64.f), 1 + (0.5f/64.f));
+			MFSetTexCoord1(0 + waterOffset, 1 + waterOffset);
 			MFSetPosition((float)x, (float)(y+1), 0);
 		}
 	}
@@ -329,14 +330,14 @@ int Tileset::FindBestRoads(int *pRoad, uint32 directions, uint32 terrain) const
 	return numRoads;
 }
 
-void Tileset::GetTileUVs(int tile, MFRect *pUVs)
+void Tileset::GetTileUVs(int tile, MFRect *pUVs, float texelOffset)
 {
 	float fWidth = (float)imageWidth;
 	float fHeight = (float)imageHeight;
 	float xScale = (1.f / fWidth) * tileWidth;
 	float yScale = (1.f / fHeight) * tileHeight;
-	float halfX = 0.5f / fWidth;
-	float halfY = 0.5f / fHeight;
+	float halfX = texelOffset / fWidth;
+	float halfY = texelOffset / fHeight;
 
 	Tile &t = tiles[tile];
 	pUVs->x = t.x*xScale + halfX;
@@ -359,6 +360,19 @@ void Tileset::GetRoadUVs(int index, MFRect *pUVs, float texelOffset)
 	pUVs->y = r.y*yScale + halfY;
 	pUVs->width = xScale;
 	pUVs->height = yScale;
+}
+
+void Tileset::GetWaterUVs(MFRect *pUVs, float texelOffset)
+{
+	float fWidth = (float)tileWidth;
+	float fHeight = (float)tileHeight;
+	float halfX = texelOffset / fWidth;
+	float halfY = texelOffset / fHeight;
+
+	pUVs->x = halfX;
+	pUVs->y = halfY;
+	pUVs->width = 1.f;
+	pUVs->height = 1.f;
 }
 
 int Tileset::FindRoad(uint32 directions, uint32 terrain) const

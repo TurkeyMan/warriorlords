@@ -432,6 +432,8 @@ void Battle::Draw()
 	MFDisplay_GetDisplayRect(&rect);
 	MFView_SetOrtho(&rect);
 
+	float texelCenter = MFRenderer_GetTexelCenterOffset();
+
 	for(int a=0; a<2; ++a)
 	{
 		for(int b=0; b<armies[a].numUnits; ++b)
@@ -443,7 +445,7 @@ void Battle::Draw()
 		}
 	}
 
-	pUnitDefs->DrawUnits(64.f);
+	pUnitDefs->DrawUnits(64.f, texelCenter);
 
 	// health bars + damage indicators
 	for(int a=0; a<2; ++a)
@@ -496,16 +498,13 @@ void Battle::Draw()
 		MFPrimitive_Blit(x, y, 0, 32, 32, 32);
 		pUnit->pUnit->Draw(x-16.f, y-16.f);
 
-		// draw the unit head here for correct overlap behaviour
-//		pUnitDefs->DrawUnits(64.f 0.5f, true);
-
 		pUnit = pUnit->pPrev;
 	}
 
 	MFPrimitive_EndBlitter();
 
 	// draw deferred unit heads
-	pUnitDefs->DrawUnits(64.f, 0.5f, true);
+	pUnitDefs->DrawUnits(64.f, texelCenter, true);
 
 	MFView_Pop();
 }

@@ -100,23 +100,24 @@ public:
 	bool IsRanged(int weaponClass) { return pWeaponClasses[weaponClass].ranged != 0; }
 
 	int GetNumMovementClasses() { return numMovementClasses; }
-	const char *GetMovementClassName(int movementClass) { return ppMovementClasses[movementClass]; }
-	int GetMovementPenalty(int movementClass, int terrainType) { return pMovementPenalty[movementClass*numTerrainTypes + terrainType] * 2; }
+	const char *GetMovementClassName(int movementClass) { return pMovementClasses[movementClass].pName; }
+	int GetMovementPenalty(int movementClass, int terrainType) { return pMovementClasses[movementClass].pMovementPenalty[terrainType] * 2; }
+	bool HasRoadWalk(int movementClass) { return pMovementClasses[movementClass].roadWalk != 0; }
 
 	MFMaterial *GetUnitMaterial() { return pUnitMat; }
 
 	// rendering
 	void AddRenderUnit(int unit, float x, float y, int player = -1, bool bFlip = false, float alpha = 1.f);
-	void DrawUnits(float scale = 1.f, float texelOffset = 0.5f, bool bHead = false);
+	void DrawUnits(float scale, float texelOffset, bool bHead = false);
 
 	int DrawCastle(int race);
 	int DrawFlag(int race);
 	int DrawSpecial(int index);
 
-	void GetCastleUVs(int race, MFRect *pUVs, float texelOffset = 0.5f);
-	void GetFlagUVs(int race, MFRect *pUVs, float texelOffset = 0.5f);
-	void GetUnitUVs(int unit, bool bFlip, MFRect *pUVs, float texelOffset = 0.5f);
-	void GetSpecialUVs(int index, MFRect *pUVs, float texelOffset = 0.5f);
+	void GetCastleUVs(int race, MFRect *pUVs, float texelOffset);
+	void GetFlagUVs(int race, MFRect *pUVs, float texelOffset);
+	void GetUnitUVs(int unit, bool bFlip, MFRect *pUVs, float texelOffset);
+	void GetSpecialUVs(int index, MFRect *pUVs, float texelOffset);
 
 	inline MFMaterial *GetCastleMaterial() const { return pCastleMat; }
 
@@ -126,6 +127,13 @@ protected:
 		const char *pName;
 		int ranged;
 		float *pAttackModifiers;
+	};
+
+	struct MovementClass
+	{
+		const char *pName;
+		int roadWalk;
+		int *pMovementPenalty;
 	};
 
 	Game *pGame;
@@ -157,8 +165,7 @@ protected:
 	WeaponClass *pWeaponClasses;
 	int numWeaponClasses;
 
-	const char **ppMovementClasses;
-	int *pMovementPenalty;
+	MovementClass *pMovementClasses;
 	int numMovementClasses;
 	int numTerrainTypes;
 
@@ -206,6 +213,7 @@ public:
 	int GetMovement() { return movement; }
 	int GetMovementPenalty(int terrainType);
 	int GetMovementPenalty(MapTile *pTile);
+	bool HasRoadWalk() { return pUnitDefs->HasRoadWalk(details.movementClass); }
 	void Move(int penalty) { movement -= penalty; }
 
 	void Restore();
@@ -259,6 +267,8 @@ public:
 
 	const char *GetName() { return details.pName; }
 	void SetName(const char *pName) { MFString_Copy((char*)details.pName, pName); }
+
+	int GetPlayer() { return player; }
 
 //protected:
 public:

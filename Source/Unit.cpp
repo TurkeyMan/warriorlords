@@ -32,9 +32,9 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 	pUnitDefs->castleMapWidth = pUnitDefs->castleMapHeight = 0;
 
 	pUnitDefs->numArmourClasses = pUnitDefs->numWeaponClasses = pUnitDefs->numMovementClasses = 0;
-	pUnitDefs->ppArmourClasses = pUnitDefs->ppMovementClasses = NULL;
+	pUnitDefs->ppArmourClasses = NULL;
 	pUnitDefs->pWeaponClasses = NULL;
-	pUnitDefs->pMovementPenalty = NULL;
+	pUnitDefs->pMovementClasses = NULL;
 
 	pUnitDefs->numTerrainTypes = numTerrainTypes;
 
@@ -251,16 +251,31 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 						pMovement = pMovement->Next();
 					}
 
-					pUnitDefs->ppMovementClasses = (const char **)MFHeap_Alloc(sizeof(const char *)*pUnitDefs->numMovementClasses);
-					pUnitDefs->pMovementPenalty = (int*)MFHeap_Alloc(sizeof(int)*pUnitDefs->numMovementClasses*numTerrainTypes);
+					pUnitDefs->pMovementClasses = (MovementClass*)MFHeap_AllocAndZero((sizeof(MovementClass)+sizeof(int)*numTerrainTypes)*pUnitDefs->numMovementClasses);
+					int *pMovementPenalties = (int*)(pUnitDefs->pMovementClasses + pUnitDefs->numMovementClasses);
+
+					for(int a=0; a<pUnitDefs->numMovementClasses; ++a)
+					{
+						pUnitDefs->pMovementClasses[a].pMovementPenalty = pMovementPenalties;
+						pMovementPenalties += numTerrainTypes;
+					}
 
 					pMovement = pClasses->Sub();
 					while(pMovement)
 					{
 						int movClass = pMovement->GetInt(0);
-						pUnitDefs->ppMovementClasses[movClass] = pMovement->GetString(1);
+						pUnitDefs->pMovementClasses[movClass].pName = pMovement->GetString(1);
 						for(int a=0; a<numTerrainTypes; ++a)
-							pUnitDefs->pMovementPenalty[movClass*numTerrainTypes + a] = pMovement->GetInt(2 + a);
+							pUnitDefs->pMovementClasses[movClass].pMovementPenalty[a] = pMovement->GetInt(2 + a);
+
+						int flagsStart = 2 + numTerrainTypes;
+						const char *pFlags = NULL;
+						while((pFlags = pMovement->GetString(flagsStart++)))
+						{
+							if(pFlags && !MFString_CaseCmp(pFlags, "roadwalk"))
+								pUnitDefs->pMovementClasses[movClass].roadWalk = 1;							
+						}
+
 						pMovement = pMovement->Next();
 					}
 				}
@@ -585,9 +600,29 @@ Group *Castle::GetMercGroup()
 
 	Group *pGroup = Group::Create(-1);
 
+	int choices[4];
+	int numChoices = 0;
+	for(int a=0; a<details.numBuildUnits; ++a)
+	{
+		int unit = details.buildUnits[a].unit;
+		if(pUnitDefs->GetUnitDetails(unit)->type == UT_Unit)
+			choices[numChoices++] = unit;
+
+	}
+
+
+	if(numChoices == 0)
+	{
+		// OH NO! This castle doesn't seem to have a unit type!!
+		choices[numChoices++] = 24; // spearman
+		choices[numChoices++] = 25; // maceman
+	}
+
 	int numUnits = odds[MFRand() & 0xF];
 	for(int a=0; a<numUnits; ++a)
-		pGroup->AddUnit(pGame->GetUnitDefs()->CreateUnit(24 + (MFRand()&1), -1));
+	{
+		pGroup->AddUnit(pGame->GetUnitDefs()->CreateUnit(choices[MFRand()%numChoices], -1));
+	}
 
 	return pGroup;
 }

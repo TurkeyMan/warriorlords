@@ -6,6 +6,7 @@
 #include "MFPrimitive.h"
 #include "MFFont.h"
 #include "MFMaterial.h"
+#include "MFRenderer.h"
 #include "Display.h"
 
 #include "Path.h"
@@ -33,13 +34,16 @@ Editor::Editor(Game *pGame)
 	UnitDefinitions *pUnits = pMap->GetUnitDefinitions();
 
 	MFMaterial *pTileMat = pTiles->GetTileMaterial();
+	MFMaterial *pWater = pTiles->GetWaterMaterial();
 	MFMaterial *pRoadMat = pTiles->GetRoadMaterial();
 	MFMaterial *pCastleMat = pUnits->GetCastleMaterial();
 
 	int tileWidth, tileHeight;
 	pTiles->GetTileSize(&tileWidth, &tileHeight);
+	float texelOffset = MFRenderer_GetTexelCenterOffset();
 
 	MFRect uvs, pos = { 0, 0, (float)tileWidth, (float)tileHeight };
+	MFRect water = { 0, 0, 1, 1 };
 
 	pos.x = (float)(gDefaults.display.displayWidth - (16 + tileWidth));
 	pos.y = 16.f;
@@ -55,14 +59,24 @@ Editor::Editor(Game *pGame)
 	// brush buttons
 	for(int a=0; a<2; ++a)
 	{
-		int tile = 0;
-		pTiles->FindBestTiles(&tile, EncodeTile(brushIndex[a], brushIndex[a], brushIndex[a], brushIndex[a]), 0xFFFFFFFF, 1);
-		pTiles->GetTileUVs(tile, &uvs);
-
 		pos.x = (float)(gDefaults.display.displayWidth - (16 + tileWidth));
 		pos.y = (float)(gDefaults.display.displayHeight - (16 + tileHeight)*(2-a));
 
-		pBrushButton[a] = Button::Create(pTileMat, &pos, &uvs, MFVector::one, BrushSelect, this, a, true);
+		if(a == 0)
+		{
+			int tile = 0;
+			pTiles->FindBestTiles(&tile, EncodeTile(brushIndex[a], brushIndex[a], brushIndex[a], brushIndex[a]), 0xFFFFFFFF, 1);
+			pTiles->GetTileUVs(tile, &uvs, texelOffset);
+
+			pBrushButton[a] = Button::Create(pTileMat, &pos, &uvs, MFVector::one, BrushSelect, this, a, true);
+		}
+		else
+		{
+			pTiles->GetWaterUVs(&uvs, texelOffset);
+
+			pBrushButton[a] = Button::Create(pWater, &pos, &uvs, MFVector::one, BrushSelect, this, a, true);
+		}
+
 		pBrushButton[a]->SetOutline(true, brush == a ? MFVector::blue : MFVector::white);
 	}
 
@@ -72,12 +86,21 @@ Editor::Editor(Game *pGame)
 
 	for(int a=0; a<terrainCount; ++a)
 	{
-		int tile = 0;
-		pTiles->FindBestTiles(&tile, EncodeTile(a, a, a, a), 0xFFFFFFFF, 1);
+		if(a == 1)
+		{
+			pTiles->GetWaterUVs(&uvs, texelOffset);
 
-		pTiles->GetTileUVs(tile, &uvs);
+			brushSelect.AddButton(0, pWater, &uvs, MFVector::one, (OT_Terrain << 16) | a, ChooseBrush, this);
+		}
+		else
+		{
+			int tile = 0;
+			pTiles->FindBestTiles(&tile, EncodeTile(a, a, a, a), 0xFFFFFFFF, 1);
 
-		brushSelect.AddButton(0, pTileMat, &uvs, MFVector::one, (OT_Terrain << 16) | a, ChooseBrush, this);
+			pTiles->GetTileUVs(tile, &uvs, texelOffset);
+
+			brushSelect.AddButton(0, pTileMat, &uvs, MFVector::one, (OT_Terrain << 16) | a, ChooseBrush, this);
+		}
 	}
 
 	// castle buttons
@@ -88,24 +111,24 @@ Editor::Editor(Game *pGame)
 		int race = (a + 1) % raceCount;
 		int player = race - 1;
 
-		pUnits->GetCastleUVs(race, &uvs);
+		pUnits->GetCastleUVs(race, &uvs, texelOffset);
 
 		brushSelect.AddButton(1, pCastleMat, &uvs, pGame->GetPlayerColour(player), (OT_Castle << 16) | (uint16)player, ChooseBrush, this);
 	}
 
 	// add the merc flag
-	pUnits->GetFlagUVs(0, &uvs);
+	pUnits->GetFlagUVs(0, &uvs, texelOffset);
 	brushSelect.AddButton(1, pCastleMat, &uvs, pGame->GetPlayerColour(-1), OT_Flag << 16, ChooseBrush, this);
 
 	// add the road
-	pTiles->GetRoadUVs(0, &uvs);
+	pTiles->GetRoadUVs(0, &uvs, texelOffset);
 	brushSelect.AddButton(1, pRoadMat, &uvs, MFVector::one, OT_Road << 16, ChooseBrush, this);
 
 	// special buttons
 	int specialCount = pUnits->GetNumSpecials();
 	for(int a=0; a<specialCount; ++a)
 	{
-		pUnits->GetSpecialUVs(a, &uvs);
+		pUnits->GetSpecialUVs(a, &uvs, texelOffset);
 
 		brushSelect.AddButton(2 + a/11, pCastleMat, &uvs, MFVector::one, (OT_Special << 16) | a, ChooseBrush, this);
 	}
@@ -303,6 +326,7 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 	MFMaterial *pMat = NULL;
 	MFRect rect = { 0, 0, 1, 1 };
 	MFVector colour = MFVector::one;
+	float texelOffset = MFRenderer_GetTexelCenterOffset();
 
 	switch(type)
 	{
@@ -310,17 +334,25 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 		{
 			Tileset *pTiles = pThis->pMap->GetTileset();
 
-			int tile = 0;
-			pTiles->FindBestTiles(&tile, EncodeTile(buttonID, buttonID, buttonID, buttonID), 0xFFFFFFFF, 1);
+			if(index == 1)
+			{
+				pTiles->GetWaterUVs(&rect, texelOffset);
+				pMat = pTiles->GetWaterMaterial();
+			}
+			else
+			{
+				int tile = 0;
+				pTiles->FindBestTiles(&tile, EncodeTile(index, index, index, index), 0xFFFFFFFF, 1);
 
-			pTiles->GetTileUVs(tile, &rect);
-			pMat = pTiles->GetTileMaterial();
+				pTiles->GetTileUVs(tile, &rect, texelOffset);
+				pMat = pTiles->GetTileMaterial();
+			}
 			break;
 		}
 		case OT_Castle:
 		{
 			UnitDefinitions *pUnits = pThis->pMap->GetUnitDefinitions();
-			pUnits->GetCastleUVs(index + 1, &rect);
+			pUnits->GetCastleUVs(index + 1, &rect, texelOffset);
 			colour = Game::GetCurrent()->GetPlayerColour(index);
 			pMat = pUnits->GetCastleMaterial();
 			break;
@@ -328,7 +360,7 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 		case OT_Flag:
 		{
 			UnitDefinitions *pUnits = pThis->pMap->GetUnitDefinitions();
-			pUnits->GetFlagUVs(index - 1, &rect);
+			pUnits->GetFlagUVs(index - 1, &rect, texelOffset);
 			pMat = pUnits->GetCastleMaterial();
 			--pThis->brushIndex[pThis->brush];
 			break;
@@ -336,14 +368,14 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 		case OT_Special:
 		{
 			UnitDefinitions *pUnits = pThis->pMap->GetUnitDefinitions();
-			pUnits->GetSpecialUVs(index, &rect);
+			pUnits->GetSpecialUVs(index, &rect, texelOffset);
 			pMat = pUnits->GetCastleMaterial();
 			break;
 		}
 		case OT_Road:
 		{
 			Tileset *pTiles = pThis->pMap->GetTileset();
-			pTiles->GetRoadUVs(index, &rect);
+			pTiles->GetRoadUVs(index, &rect, texelOffset);
 			pMat = pTiles->GetRoadMaterial();
 			break;
 		}
@@ -530,6 +562,8 @@ CastleEdit::CastleEdit()
 	bVisible = false;
 	bHide = false;
 
+	float texelOffset = MFRenderer_GetTexelCenterOffset();
+
 	float margin = 5.f;
 	MFDisplay_GetDisplayRect(&window);
 	window.x = window.width*0.5f - 240.f;
@@ -572,7 +606,7 @@ CastleEdit::CastleEdit()
 	int addedCount = 1;
 	for(int a=8; a<numUnits; ++a)
 	{
-		pDefs->GetUnitUVs(a, false, &rect);
+		pDefs->GetUnitUVs(a, false, &rect, texelOffset);
 		Button *pButton = unitSelect.AddButton(addedCount / 11, pUnitMat, &rect, Game::GetCurrent()->GetPlayerColour(-1), a, SetUnit, this);
 		++addedCount;
 	}
@@ -663,6 +697,7 @@ void CastleEdit::Show(Castle *pCastle)
 	Game *pGame = pUnitDefs->GetGame();
 
 	MFMaterial *pUnitMat = pUnitDefs->GetUnitMaterial();
+	float texelOffset = MFRenderer_GetTexelCenterOffset();
 
 	for(int b=pCastle->details.numBuildUnits; b<4; ++b)
 		pCastle->details.buildUnits[b].unit = -1;
@@ -676,7 +711,7 @@ void CastleEdit::Show(Castle *pCastle)
 
 		if(unit != -1)
 		{
-			pUnitDefs->GetUnitUVs(pCastle->details.buildUnits[a].unit, false, &uvs);
+			pUnitDefs->GetUnitUVs(pCastle->details.buildUnits[a].unit, false, &uvs, texelOffset);
 			pBuildUnits[a]->SetImage(pUnitMat, &uvs, pGame->GetPlayerColour(pCastle->player));
 			pBuildUnits[a]->SetOutline(true, pCastle->building == a ? MFVector::blue : MFVector::white);
 		}
@@ -752,7 +787,7 @@ void CastleEdit::SetUnit(int button, void *pUserData, int buttonID)
 	{
 		MFRect rect;
 		MFMaterial *pUnitMat = pDefs->GetUnitMaterial();
-		pDefs->GetUnitUVs(buttonID, false, &rect);
+		pDefs->GetUnitUVs(buttonID, false, &rect, MFRenderer_GetTexelCenterOffset());
 
 		pThis->pBuildUnits[selected]->SetImage(pUnitMat, &rect, Game::GetCurrent()->GetPlayerColour(pCastle->player));
 	}

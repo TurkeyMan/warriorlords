@@ -23,7 +23,7 @@ public:
 	Step *StripStep(Step *pPath);
 	void Destroy(Step *pPath);
 
-	int GetMovementPenalty(MapTile *pTile, int *pTerrainPenalties, int player);
+	int GetMovementPenalty(MapTile *pTile, int *pTerrainPenalties, int player, bool bRoadWalk);
 
 private:
 	Map *pMap;

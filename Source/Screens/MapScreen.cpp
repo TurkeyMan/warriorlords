@@ -8,6 +8,7 @@
 #include "MFFont.h"
 #include "MFMaterial.h"
 #include "MFView.h"
+#include "MFRenderer.h"
 #include "Display.h"
 
 #include "Path.h"
@@ -198,7 +199,7 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 				{
 					// see if there's a castle on the square
 					Castle *pCastle = pTile->GetCastle();
-					if(pCastle)
+					if(pCastle && pCastle->GetPlayer() == pGame->CurrentPlayer())
 					{
 						// enter the castle config menu
 						castleConfig.Show(pCastle);
@@ -314,7 +315,7 @@ void MapScreen::Draw()
 			Unit *pUnit = pSelection->GetUnit(a);
 			pUnit->Draw(5.f + (float)a*32.f, 5.f);
 		}
-		Game::GetCurrent()->GetUnitDefs()->DrawUnits(64.f);
+		Game::GetCurrent()->GetUnitDefs()->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset());
 
 		int tx = 42 + numUnits*32;
 		int ty = 37 - (int)MFFont_GetFontHeight(pFont)/2;
@@ -437,7 +438,7 @@ void GroupConfig::Draw()
 	}
 
 	if(pDefs)
-		pDefs->DrawUnits(64.f);
+		pDefs->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset());
 }
 
 bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
@@ -941,12 +942,13 @@ void CastleConfig::Show(Castle *pCastle)
 	Game *pGame = pUnitDefs->GetGame();
 
 	MFMaterial *pUnitMat = pUnitDefs->GetUnitMaterial();
+	float texelCenter = MFRenderer_GetTexelCenterOffset();
 
 	for(int a=0; a<pCastle->details.numBuildUnits; ++a)
 	{
 		MFRect uvs;
 		int unit = pCastle->details.buildUnits[a].unit;
-		pUnitDefs->GetUnitUVs(pCastle->details.buildUnits[a].unit, false, &uvs);
+		pUnitDefs->GetUnitUVs(pCastle->details.buildUnits[a].unit, false, &uvs, texelCenter);
 		pBuildUnits[a]->SetImage(pUnitMat, &uvs, pGame->GetPlayerColour(pCastle->player));
 
 		if(a == 2)

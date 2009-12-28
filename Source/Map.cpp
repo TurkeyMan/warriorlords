@@ -665,6 +665,7 @@ void Map::Draw()
 
 	MFRenderer_SetRenderTarget(pRenderTarget, NULL);
 
+	float texelCenter = MFRenderer_GetTexelCenterOffset();
 	int xStart = (int)xOffset;
 	int yStart = (int)yOffset;
 
@@ -680,7 +681,7 @@ void Map::Draw()
 	MapTile *pStart = pMap + yStart*mapWidth + xStart;
 
 	// blit map portion to a render target
-	pTiles->DrawMap(xTiles, yTiles, &pStart->terrain, sizeof(MapTile), mapWidth);
+	pTiles->DrawMap(xTiles, yTiles, &pStart->terrain, sizeof(MapTile), mapWidth, texelCenter);
 
 	// now we should, like, render all the extra stuff, except the roads
 	for(int y=0; y<yTiles; ++y)
@@ -719,7 +720,7 @@ void Map::Draw()
 				int r = pTiles->FindRoad(pTile->index, GetTerrainAt(xStart+x, yStart+y));
 				MFDebug_Assert(r >= 0, "Invalid road!");
 
-				pTiles->GetRoadUVs(r, &uvs);
+				pTiles->GetRoadUVs(r, &uvs, texelCenter);
 			}
 			else
 			{
@@ -734,7 +735,7 @@ void Map::Draw()
 
 						Castle *pCastle = GetCastle(pTile->index);
 						colour = pGame->GetPlayerColour(pCastle->player);
-						pUnits->GetCastleUVs(pGame->GetPlayerRace(pCastle->player), &uvs);
+						pUnits->GetCastleUVs(pGame->GetPlayerRace(pCastle->player), &uvs, texelCenter);
 						tileWidth = 2.f;
 						break;
 					}
@@ -742,11 +743,11 @@ void Map::Draw()
 					{
 						int player = (int8)pTile->index;
 						colour = pGame->GetPlayerColour(player);
-						pUnits->GetFlagUVs(pGame->GetPlayerRace(player), &uvs);
+						pUnits->GetFlagUVs(pGame->GetPlayerRace(player), &uvs, texelCenter);
 						break;
 					}
 					case OT_Special:
-						pUnits->GetSpecialUVs(pTile->index, &uvs);
+						pUnits->GetSpecialUVs(pTile->index, &uvs, texelCenter);
 						break;
 				}
 			}
@@ -763,7 +764,7 @@ void Map::Draw()
 	}
 
 	// and now the units
-	pUnits->DrawUnits();
+	pUnits->DrawUnits(1.f, texelCenter);
 
 	MFRenderer_SetDeviceRenderTarget();
 
@@ -780,7 +781,7 @@ void Map::Draw()
 	MFTexture_GetTextureDimensions(pRenderTarget, &targetWidth, &targetHeight);
 	pTiles->GetTileSize(&tileWidth, &tileHeight);
 
-	float texelOffset = zoom <= 0.5f ? 1.f : 0.5f;
+	float texelOffset = zoom <= 0.5f ? 0.f : texelCenter;
 	uvs.x = (xOffset - (float)(int)xOffset) * (tileWidth / targetWidth) + (texelOffset/targetWidth);
 	uvs.y = (yOffset - (float)(int)yOffset) * (tileHeight / targetHeight) + (texelOffset/targetHeight);
 	uvs.width = uvs.width / targetWidth / zoom;

@@ -37,12 +37,14 @@ public:
 	inline void GetTileSize(int *pWidth, int *pHeight) const { *pWidth = tileWidth; *pHeight = tileHeight; }
 	inline const Tile *GetTile(int tile) const { return &tiles[tile]; }
 
-	void DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride, float texelOffset = 0.5f);
+	void DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride, float texelOffset);
 
-	void GetTileUVs(int tile, MFRect *pUVs);
-	void GetRoadUVs(int index, MFRect *pUVs, float texelOffset = 0.5f);
+	void GetTileUVs(int tile, MFRect *pUVs, float texelOffset);
+	void GetRoadUVs(int index, MFRect *pUVs, float texelOffset);
+	void GetWaterUVs(MFRect *pUVs, float texelOffset);
 
 	inline MFMaterial *GetTileMaterial() const { return pTileMap; }
+	inline MFMaterial *GetWaterMaterial() const { return pWater; }
 	inline MFMaterial *GetRoadMaterial() const { return pRoadMap; }
 
 protected:

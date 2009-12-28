@@ -53,6 +53,7 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 
 	// calculate the terrain penalties from the group
 	int terrainPenalties[64];
+	bool bRoadWalk = false;
 	MFMemSet(terrainPenalties, 0xFF, sizeof(terrainPenalties));
 
 	int numTerrainTypes = pTileset->GetNumTerrainTypes();
@@ -62,6 +63,7 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 	{
 		for(int a=0; a<numTerrainTypes; ++a)
 			terrainPenalties[a] = pVehicle->GetMovementPenalty(a);
+		bRoadWalk = pVehicle->HasRoadWalk();
 	}
 	else
 	{
@@ -69,13 +71,17 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 		for(int a=0; a<numUnits; ++a)
 		{
 			Unit *pUnit = pGroup->GetUnit(a);
+			bRoadWalk = bRoadWalk || pUnit->HasRoadWalk();
 
 			for(int b=0; b<numTerrainTypes; ++b)
 			{
 				if(terrainPenalties[b] != 0)
 				{
 					int penalty = pUnit->GetMovementPenalty(b);
-					terrainPenalties[b] = MFMax(terrainPenalties[b], penalty);
+					if(penalty == 0)
+						terrainPenalties[b] = 0;
+					else
+						terrainPenalties[b] = MFMax(terrainPenalties[b], penalty);
 				}
 			}
 		}
@@ -205,7 +211,7 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 				{
 					// calculate the path score
 					MapTile *pTile = pMap->GetTile(tx, ty);
-					int terrainSpeed = GetMovementPenalty(pTile, terrainPenalties, player);
+					int terrainSpeed = GetMovementPenalty(pTile, terrainPenalties, player, bRoadWalk);
 					int cornerPenalty = (tx != item.x) && (ty != item.y) ? 1 : 0;
 
 					int tg = item.gScore + (terrainSpeed*2) + cornerPenalty + (pTile->IsEnemyTile(player) ? 100 : 0);
@@ -235,10 +241,9 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 	return NULL;
 }
 
-int Path::GetMovementPenalty(MapTile *pTile, int *pTerrainPenalties, int player)
+int Path::GetMovementPenalty(MapTile *pTile, int *pTerrainPenalties, int player, bool bRoadWalk)
 {
-	// HACK: if units can't move on water, than they are NOT flying or seafaring
-	if(pTerrainPenalties[1] == 0)
+	if(bRoadWalk)
 	{
 		ObjectType type = pTile->GetType();
 		if(type == OT_Road || (type == OT_Castle && pTile->IsFriendlyTile(player)))
