@@ -19,22 +19,33 @@ Game *pGame;
 Editor *pEditor = NULL;
 Battle *pBattle = NULL;
 
+MFSystemCallbackFunction pInitFujiFS;
+
 /*** Game Functions ***/
 
-
-void Game_Init()
+void Game_InitFilesystem()
 {
-	MFCALLSTACK;
-
 	// mount the game directory
 	MFFileSystemHandle hNative = MFFileSystem_GetInternalFileSystemHandle(MFFSH_NativeFileSystem);
 	MFMountDataNative mountData;
 	mountData.cbSize = sizeof(MFMountDataNative);
 	mountData.priority = MFMP_Normal;
-	mountData.flags = MFMF_DontCacheTOC;
+	mountData.flags = MFMF_FlattenDirectoryStructure | MFMF_Recursive;
 	mountData.pMountpoint = "game";
+#if defined(MF_IPHONE)
+	mountData.pPath = MFFile_SystemPath();
+#else
 	mountData.pPath = MFFile_SystemPath("Data/");
+#endif
 	MFFileSystem_Mount(hNative, &mountData);
+
+	if(pInitFujiFS)
+		pInitFujiFS();
+}
+
+void Game_Init()
+{
+	MFCALLSTACK;
 
 	pInputManager = new InputManager;
 
@@ -106,6 +117,7 @@ int GameMain(MFInitParams *pInitParams)
 //	gDefaults.system.threadPriority = MFPriority_AboveNormal;
 	gDefaults.display.pWindowTitle = "Warlords";
 
+	pInitFujiFS = MFSystem_RegisterSystemCallback(MFCB_FileSystemInit, Game_InitFilesystem);
 	MFSystem_RegisterSystemCallback(MFCB_InitDone, Game_Init);
 	MFSystem_RegisterSystemCallback(MFCB_Update, Game_Update);
 	MFSystem_RegisterSystemCallback(MFCB_Draw, Game_Draw);

@@ -30,8 +30,8 @@ Battle::Battle(Game *_pGame)
 	ppBackgrounds = (MFMaterial**)MFHeap_AllocAndZero(sizeof(MFMaterial*)*numTerrains);
 	for(int a=0; a<numTerrains; ++a)
 	{
-		ppForegrounds[a] = MFMaterial_Create(MFStr("Battle/fg-%s", pTileSet->GetTerrainName(a)));
-		ppBackgrounds[a] = MFMaterial_Create(MFStr("Battle/bg-%s", pTileSet->GetTerrainName(a)));
+		ppForegrounds[a] = MFMaterial_Create(MFStr("fg-%s", pTileSet->GetTerrainName(a)));
+		ppBackgrounds[a] = MFMaterial_Create(MFStr("bg-%s", pTileSet->GetTerrainName(a)));
 	}
 
 	pUnitDefs = pGame->GetUnitDefs();
@@ -39,7 +39,7 @@ Battle::Battle(Game *_pGame)
 	ppCastles = (MFMaterial**)MFHeap_AllocAndZero(sizeof(MFMaterial*)*numRaces);
 	for(int a=0; a<numRaces; ++a)
 	{
-		ppCastles[a] = MFMaterial_Create(MFStr("Battle/castle-%s", pUnitDefs->GetRaceName(a)));
+		ppCastles[a] = MFMaterial_Create(MFStr("castle-%s", pUnitDefs->GetRaceName(a)));
 	}
 }
 

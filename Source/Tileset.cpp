@@ -214,65 +214,85 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 	float halfY = texelOffset / imageHeight;
 	float waterOffset = texelOffset / 64.f;
 
-	MFMaterial_SetMaterial(pWater);
+	struct RenderTile
+	{
+		uint8 x, y, tx, ty, flags;
+	} renderTiles[1024];
 
-	MFPrimitive(PT_TriList);
-	MFBegin(6*xTiles*yTiles);
-	MFSetColour(MFVector::white);
+	int numTiles = 0;
+	int numTerrainTiles = 0;
+	int numWaterTiles = 0;
 
+	// count the tiles to render
 	for(int y=0; y<yTiles; ++y)
 	{
 		for(int x=0; x<xTiles; ++x)
 		{
-			MFSetTexCoord1(0 + waterOffset, 0 + waterOffset);
-			MFSetPosition((float)x, (float)y, 0);
-			MFSetTexCoord1(1 + waterOffset, 0 + waterOffset);
-			MFSetPosition((float)(x+1), (float)y, 0);
-			MFSetTexCoord1(0 + waterOffset, 1 + waterOffset);
-			MFSetPosition((float)x, (float)(y+1), 0);
+			renderTiles[numTiles].x = x;
+			renderTiles[numTiles].y = y;
 
-			MFSetTexCoord1(1 + waterOffset, 0 + waterOffset);
-			MFSetPosition((float)(x+1), (float)y, 0);
-			MFSetTexCoord1(1 + waterOffset, 1 + waterOffset);
-			MFSetPosition((float)(x+1), (float)(y+1), 0);
-			MFSetTexCoord1(0 + waterOffset, 1 + waterOffset);
-			MFSetPosition((float)x, (float)(y+1), 0);
-		}
-	}
-
-	MFEnd();
-
-	MFMaterial_SetMaterial(pTileMap);
-
-	MFPrimitive(PT_TriList);
-	MFBegin(6*xTiles*yTiles);
-	MFSetColour(MFVector::white);
-
-	for(int y=0; y<yTiles; ++y)
-	{
-		for(int x=0; x<xTiles; ++x)
-		{
 			Tile &t = tiles[pTileData[x*stride]];
+			renderTiles[numTiles].tx = t.x;
+			renderTiles[numTiles].ty = t.y;
 
-			MFSetTexCoord1(t.x*xScale + halfX, t.y*yScale + halfY);
-			MFSetPosition((float)x, (float)y, 0);
-			MFSetTexCoord1((t.x+1)*xScale + halfX, t.y*yScale + halfY);
-			MFSetPosition((float)(x+1), (float)y, 0);
-			MFSetTexCoord1(t.x*xScale + halfX, (t.y+1)*yScale + halfY);
-			MFSetPosition((float)x, (float)(y+1), 0);
+			int water = (int)TileContains(t.terrain, 1);
+			renderTiles[numTiles].flags = water;
+			numWaterTiles += water;
 
-			MFSetTexCoord1((t.x+1)*xScale + halfX, t.y*yScale + halfY);
-			MFSetPosition((float)(x+1), (float)y, 0);
-			MFSetTexCoord1((t.x+1)*xScale + halfX, (t.y+1)*yScale + halfY);
-			MFSetPosition((float)(x+1), (float)(y+1), 0);
-			MFSetTexCoord1(t.x*xScale + halfX, (t.y+1)*yScale + halfY);
-			MFSetPosition((float)x, (float)(y+1), 0);
+			if(t.terrain != 0x01010101)
+			{
+				++numTerrainTiles;
+				renderTiles[numTiles].flags |= 2;
+			}
+
+			++numTiles;
 		}
-
 		pTileData += lineStride*stride;
 	}
 
-	MFEnd();
+	// render any water tiles
+	if(numWaterTiles)
+	{
+		MFMaterial_SetMaterial(pWater);
+
+		MFPrimitive(PT_QuadList);
+		MFBegin(numWaterTiles*2);
+
+		for(int a=0; a<numTiles; ++a)
+		{
+			if(renderTiles[a].flags & 1)
+			{
+				MFSetTexCoord1(0 + waterOffset, 0 + waterOffset);
+				MFSetPosition((float)renderTiles[a].x, (float)renderTiles[a].y, 0);
+				MFSetTexCoord1(1 + waterOffset, 1 + waterOffset);
+				MFSetPosition((float)(renderTiles[a].x+1), (float)(renderTiles[a].y+1), 0);
+			}
+		}
+
+		MFEnd();
+	}
+
+	// render any terrain tiles
+	if(numTerrainTiles)
+	{
+		MFMaterial_SetMaterial(pTileMap);
+
+		MFPrimitive(PT_QuadList);
+		MFBegin(numTerrainTiles*2);
+
+		for(int a=0; a<numTiles; ++a)
+		{
+			if(renderTiles[a].flags & 2)
+			{
+				MFSetTexCoord1(renderTiles[a].tx*xScale + halfX, renderTiles[a].ty*xScale + halfX);
+				MFSetPosition((float)renderTiles[a].x, (float)renderTiles[a].y, 0);
+				MFSetTexCoord1((renderTiles[a].tx+1)*xScale + halfX, (renderTiles[a].ty+1)*xScale + halfX);
+				MFSetPosition((float)(renderTiles[a].x+1), (float)(renderTiles[a].y+1), 0);
+			}
+		}
+
+		MFEnd();
+	}
 }
 
 int Tileset::FindBestTiles(int *pTiles, uint32 tile, uint32 mask, int maxMatches) const

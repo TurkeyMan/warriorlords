@@ -21,7 +21,7 @@ MapScreen::MapScreen(Game *_pGame)
 	bMoving = false;
 
 	pIcons = MFMaterial_Create("Icons");
-	pFont = MFFont_Create("Font/Charlemagne");
+	pFont = MFFont_Create("Charlemagne");
 
 	// buttons
 	Tileset *pTiles = pGame->GetMap()->GetTileset();
@@ -386,7 +386,7 @@ static float gPositions[5][5][2] =
 
 GroupConfig::GroupConfig()
 {
-	pFont = MFFont_Create("Font/Charlemagne");
+	pFont = MFFont_Create("Charlemagne");
 
 	bVisible = false;
 
@@ -840,7 +840,7 @@ void GroupConfig::Hide()
 
 CastleConfig::CastleConfig()
 {
-	pFont = MFFont_Create("Font/Charlemagne");
+	pFont = MFFont_Create("Charlemagne");
 
 	bVisible = false;
 

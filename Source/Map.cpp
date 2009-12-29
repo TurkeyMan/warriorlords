@@ -370,7 +370,7 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 	pMap->zoom = 1.0f;
 
 	// if we want to edit the map, we need some memory for map traversal
-	if(1)
+	if(bEditable)
 	{
 		pMap->pTouched = (uint8*)MFHeap_AllocAndZero(pMap->mapWidth * pMap->mapHeight * sizeof(*pMap->pTouched));
 		pMap->pChangeList = (MapCoord*)MFHeap_Alloc(sizeof(MapCoord)*1024);
@@ -389,7 +389,7 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 	rtHeight -= rtHeight%tileHeight;
 	rtWidth = MFUtil_NextPowerOf2(rtWidth);
 	rtHeight = MFUtil_NextPowerOf2(rtHeight);
-	pMap->pRenderTarget = MFTexture_CreateRenderTarget("MapSurface", rtWidth, rtHeight);
+	pMap->pRenderTarget = MFTexture_CreateRenderTarget("MapSurface", rtWidth, rtHeight, TexFmt_SelectFastest_NoAlpha);
 	pMap->pRenderTargetMaterial = MFMaterial_Create("MapSurface");
 
 //	pMap->pMinimap = MFTexture_CreateRenderTarget("MiniMap", MFUtil_NextPowerOf2(pMap->mapWidth), MFUtil_NextPowerOf2(pMap->mapHeight));
@@ -686,7 +686,7 @@ void Map::Draw()
 	// now we should, like, render all the extra stuff, except the roads
 	for(int y=0; y<yTiles; ++y)
 	{
-		for(int x=0; x<xTiles; ++x)
+		for(int x=xTiles-1; x>=0; --x)
 		{
 			MapTile *pTile = pStart + x;
 

@@ -556,7 +556,7 @@ void Chooser::FlipPage(int button, void *pUserData, int buttonID)
 
 CastleEdit::CastleEdit()
 {
-	pFont = MFFont_Create("Font/Charlemagne");
+	pFont = MFFont_Create("Charlemagne");
 	pIcons = MFMaterial_Create("Icons");
 
 	bVisible = false;

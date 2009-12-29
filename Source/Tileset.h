@@ -145,4 +145,11 @@ inline int DecodeBR(uint32 tile)
 	return t.br;
 }
 
+inline bool TileContains(uint32 tile, int terrain)
+{
+	tile ^= 0xFFFFFFFF/255 * terrain;
+	uint32 hasZeroByte = (tile - 0x01010101) & ~tile & 0x80808080;
+	return !!hasZeroByte;
+}
+
 #endif
