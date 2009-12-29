@@ -134,6 +134,8 @@ protected:
 	int mouseContacts[16];
 	int mouseButtonContacts[16][Mouse_MaxButtons];
 
+	int touchContacts[16];
+
 	float dragThreshold;
 
 	InputReceiver *pInputStack;

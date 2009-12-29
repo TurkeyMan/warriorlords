@@ -1,6 +1,5 @@
 #include "Warlords.h"
 #include "StringBox.h"
-#include "Control.h"
 
 #include "MFPrimitive.h"
 #include "MFView.h"

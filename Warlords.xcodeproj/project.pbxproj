@@ -11,8 +11,6 @@
 		1DF5F4E00D08C38300B7A737 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DF5F4DF0D08C38300B7A737 /* UIKit.framework */; };
 		28FD15000DC6FC520079059D /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28FD14FF0DC6FC520079059D /* OpenGLES.framework */; };
 		28FD15080DC6FC5B0079059D /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28FD15070DC6FC5B0079059D /* QuartzCore.framework */; };
-		326BAD2310D8FB5900E014B5 /* MainWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = 326BAD2110D8FB5900E014B5 /* MainWindow.xib */; };
-		326BAD2410D8FB5900E014B5 /* Warlords-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 326BAD2210D8FB5900E014B5 /* Warlords-Info.plist */; };
 		326BAD4B10D8FBD400E014B5 /* Button.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD3010D8FBD400E014B5 /* Button.cpp */; };
 		326BAD4D10D8FBD400E014B5 /* Editor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD3410D8FBD400E014B5 /* Editor.cpp */; };
 		326BAD4E10D8FBD400E014B5 /* Game.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD3610D8FBD400E014B5 /* Game.cpp */; };
@@ -25,17 +23,40 @@
 		326BAD5510D8FBD400E014B5 /* Tileset.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD4510D8FBD400E014B5 /* Tileset.cpp */; };
 		326BAD5610D8FBD400E014B5 /* Unit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD4710D8FBD400E014B5 /* Unit.cpp */; };
 		326BAD5710D8FBD400E014B5 /* Warlords.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 326BAD4910D8FBD400E014B5 /* Warlords.cpp */; };
+		AE6EDEDD10E89D8400E3CE09 /* libz.1.2.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AE6EDEDC10E89D8400E3CE09 /* libz.1.2.3.dylib */; };
+		AE7ACD9110E50D3E002AFB79 /* StringBox.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE7ACD8D10E50D3E002AFB79 /* StringBox.cpp */; };
+		AE7ACD9210E50D3E002AFB79 /* StringEntryLogic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE7ACD8F10E50D3E002AFB79 /* StringEntryLogic.cpp */; };
+		AE7CF4BE10E5E62200D31041 /* Arial_00.tga in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4A010E5E62200D31041 /* Arial_00.tga */; };
+		AE7CF4BF10E5E62200D31041 /* Georgia.fnt in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4A110E5E62200D31041 /* Georgia.fnt */; };
+		AE7CF4C010E5E62200D31041 /* Georgia_00.tga in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4A210E5E62200D31041 /* Georgia_00.tga */; };
+		AE7CF4C110E5E62200D31041 /* Charlemagne_0.png in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4A310E5E62200D31041 /* Charlemagne_0.png */; };
+		AE7CF4C210E5E62200D31041 /* ArialBlack.fnt in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4A410E5E62200D31041 /* ArialBlack.fnt */; };
+		AE7CF4C310E5E62200D31041 /* Charlemagne.fnt in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4A510E5E62200D31041 /* Charlemagne.fnt */; };
+		AE7CF4C410E5E62200D31041 /* Arial.fnt in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4A610E5E62200D31041 /* Arial.fnt */; };
+		AE7CF4C510E5E62200D31041 /* ArialBlack_00.tga in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4A710E5E62200D31041 /* ArialBlack_00.tga */; };
+		AE7CF4C610E5E62200D31041 /* fg-field.png in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4A910E5E62200D31041 /* fg-field.png */; };
+		AE7CF4C710E5E62200D31041 /* bg-forest.png in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4AA10E5E62200D31041 /* bg-forest.png */; };
+		AE7CF4C810E5E62200D31041 /* TestBattle.ini in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4AB10E5E62200D31041 /* TestBattle.ini */; };
+		AE7CF4C910E5E62200D31041 /* BattleIcons.png in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4AC10E5E62200D31041 /* BattleIcons.png */; };
+		AE7CF4CA10E5E62200D31041 /* Icons.png in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4AD10E5E62200D31041 /* Icons.png */; };
+		AE7CF4CB10E5E62200D31041 /* DefaultMap.ini in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4AE10E5E62200D31041 /* DefaultMap.ini */; };
+		AE7CF4CC10E5E62200D31041 /* Tiles.png in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4AF10E5E62200D31041 /* Tiles.png */; };
+		AE7CF4CD10E5E62200D31041 /* water.png in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4B010E5E62200D31041 /* water.png */; };
+		AE7CF4CE10E5E62200D31041 /* UnitHeads.png in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4B110E5E62200D31041 /* UnitHeads.png */; };
+		AE7CF4CF10E5E62200D31041 /* dTiles.png in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4B210E5E62200D31041 /* dTiles.png */; };
+		AE7CF4D010E5E62200D31041 /* Illuria.ini in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4B310E5E62200D31041 /* Illuria.ini */; };
+		AE7CF4D110E5E62200D31041 /* Units.ini in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4B410E5E62200D31041 /* Units.ini */; };
+		AE7CF4D210E5E62200D31041 /* CastleDetail.png in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4B510E5E62200D31041 /* CastleDetail.png */; };
+		AE7CF4D310E5E62200D31041 /* CastleColour.png in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4B610E5E62200D31041 /* CastleColour.png */; };
+		AE7CF4D410E5E62200D31041 /* UnitDetail.png in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4B710E5E62200D31041 /* UnitDetail.png */; };
+		AE7CF4D510E5E62200D31041 /* UnitColour.png in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4B810E5E62200D31041 /* UnitColour.png */; };
+		AE7CF4D610E5E62200D31041 /* TileSet.ini in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4B910E5E62200D31041 /* TileSet.ini */; };
+		AE7CF4D710E5E62200D31041 /* Roads.png in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4BA10E5E62200D31041 /* Roads.png */; };
+		AE7CF4D810E5E62200D31041 /* Map.ini in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4BB10E5E62200D31041 /* Map.ini */; };
+		AE7CF4DA10E5E62200D31041 /* Materials.ini in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4BD10E5E62200D31041 /* Materials.ini */; };
+		AE7CF4DC10E5E64100D31041 /* Data_IPH.zip in Resources */ = {isa = PBXBuildFile; fileRef = AE7CF4DB10E5E64100D31041 /* Data_IPH.zip */; };
+		AE82B90610E5BFD9004C6181 /* MainWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = AE82B90510E5BFD9004C6181 /* MainWindow.xib */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		326BBAB410D9299300E014B5 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 326BBAB010D9299300E014B5 /* Fuji.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 326BB39D10D9130500E014B5 /* libFuji.a */;
-			remoteInfo = Fuji;
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		1D30AB110D05D00D00671497 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -43,8 +64,6 @@
 		1DF5F4DF0D08C38300B7A737 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		28FD14FF0DC6FC520079059D /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
 		28FD15070DC6FC5B0079059D /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
-		326BAD2110D8FB5900E014B5 /* MainWindow.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = MainWindow.xib; path = Res/MainWindow.xib; sourceTree = "<group>"; };
-		326BAD2210D8FB5900E014B5 /* Warlords-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "Warlords-Info.plist"; path = "Res/Warlords-Info.plist"; sourceTree = "<group>"; };
 		326BAD3010D8FBD400E014B5 /* Button.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Button.cpp; sourceTree = "<group>"; };
 		326BAD3110D8FBD400E014B5 /* Button.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Button.h; sourceTree = "<group>"; };
 		326BAD3410D8FBD400E014B5 /* Editor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Editor.cpp; sourceTree = "<group>"; };
@@ -69,7 +88,43 @@
 		326BAD4810D8FBD400E014B5 /* Unit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Unit.h; sourceTree = "<group>"; };
 		326BAD4910D8FBD400E014B5 /* Warlords.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Warlords.cpp; sourceTree = "<group>"; };
 		326BAD4A10D8FBD400E014B5 /* Warlords.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Warlords.h; sourceTree = "<group>"; };
-		326BBAB010D9299300E014B5 /* Fuji.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Fuji.xcodeproj; path = ../Fuji/Fuji.xcodeproj; sourceTree = SOURCE_ROOT; };
+		AE6EDEDC10E89D8400E3CE09 /* libz.1.2.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.1.2.3.dylib; path = usr/lib/libz.1.2.3.dylib; sourceTree = SDKROOT; };
+		AE7ACC1B10E4E4F3002AFB79 /* Warlords-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "Warlords-Info.plist"; sourceTree = "<group>"; };
+		AE7ACC2210E4E55E002AFB79 /* Warlords_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Warlords_Prefix.pch; sourceTree = "<group>"; };
+		AE7ACD8D10E50D3E002AFB79 /* StringBox.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StringBox.cpp; sourceTree = "<group>"; };
+		AE7ACD8E10E50D3E002AFB79 /* StringBox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StringBox.h; sourceTree = "<group>"; };
+		AE7ACD8F10E50D3E002AFB79 /* StringEntryLogic.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StringEntryLogic.cpp; sourceTree = "<group>"; };
+		AE7ACD9010E50D3E002AFB79 /* StringEntryLogic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StringEntryLogic.h; sourceTree = "<group>"; };
+		AE7CF4A010E5E62200D31041 /* Arial_00.tga */ = {isa = PBXFileReference; lastKnownFileType = file; path = Arial_00.tga; sourceTree = "<group>"; };
+		AE7CF4A110E5E62200D31041 /* Georgia.fnt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Georgia.fnt; sourceTree = "<group>"; };
+		AE7CF4A210E5E62200D31041 /* Georgia_00.tga */ = {isa = PBXFileReference; lastKnownFileType = file; path = Georgia_00.tga; sourceTree = "<group>"; };
+		AE7CF4A310E5E62200D31041 /* Charlemagne_0.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Charlemagne_0.png; sourceTree = "<group>"; };
+		AE7CF4A410E5E62200D31041 /* ArialBlack.fnt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ArialBlack.fnt; sourceTree = "<group>"; };
+		AE7CF4A510E5E62200D31041 /* Charlemagne.fnt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Charlemagne.fnt; sourceTree = "<group>"; };
+		AE7CF4A610E5E62200D31041 /* Arial.fnt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Arial.fnt; sourceTree = "<group>"; };
+		AE7CF4A710E5E62200D31041 /* ArialBlack_00.tga */ = {isa = PBXFileReference; lastKnownFileType = file; path = ArialBlack_00.tga; sourceTree = "<group>"; };
+		AE7CF4A910E5E62200D31041 /* fg-field.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "fg-field.png"; sourceTree = "<group>"; };
+		AE7CF4AA10E5E62200D31041 /* bg-forest.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "bg-forest.png"; sourceTree = "<group>"; };
+		AE7CF4AB10E5E62200D31041 /* TestBattle.ini */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TestBattle.ini; sourceTree = "<group>"; };
+		AE7CF4AC10E5E62200D31041 /* BattleIcons.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BattleIcons.png; sourceTree = "<group>"; };
+		AE7CF4AD10E5E62200D31041 /* Icons.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icons.png; sourceTree = "<group>"; };
+		AE7CF4AE10E5E62200D31041 /* DefaultMap.ini */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = DefaultMap.ini; sourceTree = "<group>"; };
+		AE7CF4AF10E5E62200D31041 /* Tiles.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Tiles.png; sourceTree = "<group>"; };
+		AE7CF4B010E5E62200D31041 /* water.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = water.png; sourceTree = "<group>"; };
+		AE7CF4B110E5E62200D31041 /* UnitHeads.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = UnitHeads.png; sourceTree = "<group>"; };
+		AE7CF4B210E5E62200D31041 /* dTiles.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = dTiles.png; sourceTree = "<group>"; };
+		AE7CF4B310E5E62200D31041 /* Illuria.ini */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Illuria.ini; sourceTree = "<group>"; };
+		AE7CF4B410E5E62200D31041 /* Units.ini */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Units.ini; sourceTree = "<group>"; };
+		AE7CF4B510E5E62200D31041 /* CastleDetail.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = CastleDetail.png; sourceTree = "<group>"; };
+		AE7CF4B610E5E62200D31041 /* CastleColour.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = CastleColour.png; sourceTree = "<group>"; };
+		AE7CF4B710E5E62200D31041 /* UnitDetail.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = UnitDetail.png; sourceTree = "<group>"; };
+		AE7CF4B810E5E62200D31041 /* UnitColour.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = UnitColour.png; sourceTree = "<group>"; };
+		AE7CF4B910E5E62200D31041 /* TileSet.ini */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TileSet.ini; sourceTree = "<group>"; };
+		AE7CF4BA10E5E62200D31041 /* Roads.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Roads.png; sourceTree = "<group>"; };
+		AE7CF4BB10E5E62200D31041 /* Map.ini */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Map.ini; sourceTree = "<group>"; };
+		AE7CF4BD10E5E62200D31041 /* Materials.ini */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Materials.ini; sourceTree = "<group>"; };
+		AE7CF4DB10E5E64100D31041 /* Data_IPH.zip */ = {isa = PBXFileReference; lastKnownFileType = archive.zip; path = Data_IPH.zip; sourceTree = "<group>"; };
+		AE82B90510E5BFD9004C6181 /* MainWindow.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = MainWindow.xib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -81,6 +136,7 @@
 				1DF5F4E00D08C38300B7A737 /* UIKit.framework in Frameworks */,
 				28FD15000DC6FC520079059D /* OpenGLES.framework in Frameworks */,
 				28FD15080DC6FC5B0079059D /* QuartzCore.framework in Frameworks */,
+				AE6EDEDD10E89D8400E3CE09 /* libz.1.2.3.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -98,11 +154,13 @@
 		29B97314FDCFA39411CA2CEA /* CustomTemplate */ = {
 			isa = PBXGroup;
 			children = (
-				326BBAB010D9299300E014B5 /* Fuji.xcodeproj */,
+				AE7ACC2210E4E55E002AFB79 /* Warlords_Prefix.pch */,
+				AE7ACC1B10E4E4F3002AFB79 /* Warlords-Info.plist */,
 				326BAD2F10D8FBD400E014B5 /* Source */,
 				29B97317FDCFA39411CA2CEA /* Resources */,
 				29B97323FDCFA39411CA2CEA /* Frameworks */,
 				19C28FACFE9D520D11CA2CBB /* Products */,
+				AE6EDEDC10E89D8400E3CE09 /* libz.1.2.3.dylib */,
 			);
 			name = CustomTemplate;
 			sourceTree = "<group>";
@@ -110,8 +168,8 @@
 		29B97317FDCFA39411CA2CEA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				326BAD2110D8FB5900E014B5 /* MainWindow.xib */,
-				326BAD2210D8FB5900E014B5 /* Warlords-Info.plist */,
+				AE7CF49E10E5E62200D31041 /* Data */,
+				AE82B90510E5BFD9004C6181 /* MainWindow.xib */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -145,6 +203,10 @@
 				326BAD3E10D8FBD400E014B5 /* Screen.cpp */,
 				326BAD3F10D8FBD400E014B5 /* Screen.h */,
 				326BAD4010D8FBD400E014B5 /* Screens */,
+				AE7ACD8D10E50D3E002AFB79 /* StringBox.cpp */,
+				AE7ACD8E10E50D3E002AFB79 /* StringBox.h */,
+				AE7ACD8F10E50D3E002AFB79 /* StringEntryLogic.cpp */,
+				AE7ACD9010E50D3E002AFB79 /* StringEntryLogic.h */,
 				326BAD4510D8FBD400E014B5 /* Tileset.cpp */,
 				326BAD4610D8FBD400E014B5 /* Tileset.h */,
 				326BAD4710D8FBD400E014B5 /* Unit.cpp */,
@@ -166,12 +228,56 @@
 			path = Screens;
 			sourceTree = "<group>";
 		};
-		326BBAB110D9299300E014B5 /* Products */ = {
+		AE7CF49E10E5E62200D31041 /* Data */ = {
 			isa = PBXGroup;
 			children = (
-				326BBAB510D9299300E014B5 /* libFuji.a */,
+				AE7CF49F10E5E62200D31041 /* Font */,
+				AE7CF4A810E5E62200D31041 /* Battle */,
+				AE7CF4AB10E5E62200D31041 /* TestBattle.ini */,
+				AE7CF4AC10E5E62200D31041 /* BattleIcons.png */,
+				AE7CF4AD10E5E62200D31041 /* Icons.png */,
+				AE7CF4AE10E5E62200D31041 /* DefaultMap.ini */,
+				AE7CF4AF10E5E62200D31041 /* Tiles.png */,
+				AE7CF4B010E5E62200D31041 /* water.png */,
+				AE7CF4B110E5E62200D31041 /* UnitHeads.png */,
+				AE7CF4B210E5E62200D31041 /* dTiles.png */,
+				AE7CF4B310E5E62200D31041 /* Illuria.ini */,
+				AE7CF4B410E5E62200D31041 /* Units.ini */,
+				AE7CF4B510E5E62200D31041 /* CastleDetail.png */,
+				AE7CF4B610E5E62200D31041 /* CastleColour.png */,
+				AE7CF4B710E5E62200D31041 /* UnitDetail.png */,
+				AE7CF4B810E5E62200D31041 /* UnitColour.png */,
+				AE7CF4B910E5E62200D31041 /* TileSet.ini */,
+				AE7CF4BA10E5E62200D31041 /* Roads.png */,
+				AE7CF4BB10E5E62200D31041 /* Map.ini */,
+				AE7CF4DB10E5E64100D31041 /* Data_IPH.zip */,
+				AE7CF4BD10E5E62200D31041 /* Materials.ini */,
 			);
-			name = Products;
+			path = Data;
+			sourceTree = "<group>";
+		};
+		AE7CF49F10E5E62200D31041 /* Font */ = {
+			isa = PBXGroup;
+			children = (
+				AE7CF4A010E5E62200D31041 /* Arial_00.tga */,
+				AE7CF4A110E5E62200D31041 /* Georgia.fnt */,
+				AE7CF4A210E5E62200D31041 /* Georgia_00.tga */,
+				AE7CF4A310E5E62200D31041 /* Charlemagne_0.png */,
+				AE7CF4A410E5E62200D31041 /* ArialBlack.fnt */,
+				AE7CF4A510E5E62200D31041 /* Charlemagne.fnt */,
+				AE7CF4A610E5E62200D31041 /* Arial.fnt */,
+				AE7CF4A710E5E62200D31041 /* ArialBlack_00.tga */,
+			);
+			path = Font;
+			sourceTree = "<group>";
+		};
+		AE7CF4A810E5E62200D31041 /* Battle */ = {
+			isa = PBXGroup;
+			children = (
+				AE7CF4A910E5E62200D31041 /* fg-field.png */,
+				AE7CF4AA10E5E62200D31041 /* bg-forest.png */,
+			);
+			path = Battle;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -204,12 +310,6 @@
 			hasScannedForEncodings = 1;
 			mainGroup = 29B97314FDCFA39411CA2CEA /* CustomTemplate */;
 			projectDirPath = "";
-			projectReferences = (
-				{
-					ProductGroup = 326BBAB110D9299300E014B5 /* Products */;
-					ProjectRef = 326BBAB010D9299300E014B5 /* Fuji.xcodeproj */;
-				},
-			);
 			projectRoot = "";
 			targets = (
 				1D6058900D05DD3D006BFB54 /* Warlords */,
@@ -217,23 +317,41 @@
 		};
 /* End PBXProject section */
 
-/* Begin PBXReferenceProxy section */
-		326BBAB510D9299300E014B5 /* libFuji.a */ = {
-			isa = PBXReferenceProxy;
-			fileType = archive.ar;
-			path = libFuji.a;
-			remoteRef = 326BBAB410D9299300E014B5 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-/* End PBXReferenceProxy section */
-
 /* Begin PBXResourcesBuildPhase section */
 		1D60588D0D05DD3D006BFB54 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				326BAD2310D8FB5900E014B5 /* MainWindow.xib in Resources */,
-				326BAD2410D8FB5900E014B5 /* Warlords-Info.plist in Resources */,
+				AE82B90610E5BFD9004C6181 /* MainWindow.xib in Resources */,
+				AE7CF4BE10E5E62200D31041 /* Arial_00.tga in Resources */,
+				AE7CF4BF10E5E62200D31041 /* Georgia.fnt in Resources */,
+				AE7CF4C010E5E62200D31041 /* Georgia_00.tga in Resources */,
+				AE7CF4C110E5E62200D31041 /* Charlemagne_0.png in Resources */,
+				AE7CF4C210E5E62200D31041 /* ArialBlack.fnt in Resources */,
+				AE7CF4C310E5E62200D31041 /* Charlemagne.fnt in Resources */,
+				AE7CF4C410E5E62200D31041 /* Arial.fnt in Resources */,
+				AE7CF4C510E5E62200D31041 /* ArialBlack_00.tga in Resources */,
+				AE7CF4C610E5E62200D31041 /* fg-field.png in Resources */,
+				AE7CF4C710E5E62200D31041 /* bg-forest.png in Resources */,
+				AE7CF4C810E5E62200D31041 /* TestBattle.ini in Resources */,
+				AE7CF4C910E5E62200D31041 /* BattleIcons.png in Resources */,
+				AE7CF4CA10E5E62200D31041 /* Icons.png in Resources */,
+				AE7CF4DC10E5E64100D31041 /* Data_IPH.zip in Resources */,
+				AE7CF4CB10E5E62200D31041 /* DefaultMap.ini in Resources */,
+				AE7CF4CC10E5E62200D31041 /* Tiles.png in Resources */,
+				AE7CF4CD10E5E62200D31041 /* water.png in Resources */,
+				AE7CF4CE10E5E62200D31041 /* UnitHeads.png in Resources */,
+				AE7CF4CF10E5E62200D31041 /* dTiles.png in Resources */,
+				AE7CF4D010E5E62200D31041 /* Illuria.ini in Resources */,
+				AE7CF4D110E5E62200D31041 /* Units.ini in Resources */,
+				AE7CF4D210E5E62200D31041 /* CastleDetail.png in Resources */,
+				AE7CF4D310E5E62200D31041 /* CastleColour.png in Resources */,
+				AE7CF4D410E5E62200D31041 /* UnitDetail.png in Resources */,
+				AE7CF4D510E5E62200D31041 /* UnitColour.png in Resources */,
+				AE7CF4D610E5E62200D31041 /* TileSet.ini in Resources */,
+				AE7CF4D710E5E62200D31041 /* Roads.png in Resources */,
+				AE7CF4D810E5E62200D31041 /* Map.ini in Resources */,
+				AE7CF4DA10E5E62200D31041 /* Materials.ini in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -256,6 +374,8 @@
 				326BAD5510D8FBD400E014B5 /* Tileset.cpp in Sources */,
 				326BAD5610D8FBD400E014B5 /* Unit.cpp in Sources */,
 				326BAD5710D8FBD400E014B5 /* Warlords.cpp in Sources */,
+				AE7ACD9110E50D3E002AFB79 /* StringBox.cpp in Sources */,
+				AE7ACD9210E50D3E002AFB79 /* StringEntryLogic.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -273,6 +393,10 @@
 				GCC_PREFIX_HEADER = Warlords_Prefix.pch;
 				"GCC_THUMB_SUPPORT[arch=armv6]" = "";
 				INFOPLIST_FILE = "Warlords-Info.plist";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../Fuji/build/Debug-iphoneos\"",
+				);
 				PRODUCT_NAME = Warlords;
 			};
 			name = Debug;
@@ -286,6 +410,10 @@
 				GCC_PREFIX_HEADER = Warlords_Prefix.pch;
 				"GCC_THUMB_SUPPORT[arch=armv6]" = "";
 				INFOPLIST_FILE = "Warlords-Info.plist";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../Fuji/build/Debug-iphoneos\"",
+				);
 				PRODUCT_NAME = Warlords;
 			};
 			name = Release;
@@ -296,9 +424,17 @@
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					TARGET_OS_IPHONE,
+					_DEBUG,
+				);
+				GCC_THUMB_SUPPORT = NO;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ../Fuji/Include/;
+				IPHONE_OPTIMIZE_OPTIONS = "-skip-PNGs";
+				LIBRARY_SEARCH_PATHS = "../Fuji/Build/Debug-iphoneos/**";
+				OTHER_LDFLAGS = "-lFuji";
 				PREBINDING = NO;
 				SDKROOT = iphoneos3.0;
 			};
@@ -310,9 +446,16 @@
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				GCC_C_LANGUAGE_STANDARD = c99;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					TARGET_OS_IPHONE,
+					_DEBUG,
+				);
+				GCC_THUMB_SUPPORT = NO;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ../Fuji/Include/;
+				LIBRARY_SEARCH_PATHS = "../Fuji/Build/Release-iphoneos/**";
+				OTHER_LDFLAGS = "-lFuji";
 				PREBINDING = NO;
 				SDKROOT = iphoneos3.0;
 			};
