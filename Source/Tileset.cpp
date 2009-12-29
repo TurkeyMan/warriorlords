@@ -265,7 +265,7 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 				MFSetTexCoord1(0 + waterOffset, 0 + waterOffset);
 				MFSetPosition((float)renderTiles[a].x, (float)renderTiles[a].y, 0);
 				MFSetTexCoord1(1 + waterOffset, 1 + waterOffset);
-				MFSetPosition((float)(renderTiles[a].x+1), (float)(renderTiles[a].y+1), 0);
+				MFSetPosition((float)renderTiles[a].x + 1.f, (float)renderTiles[a].y + 1.f, 0);
 			}
 		}
 
@@ -286,8 +286,8 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 			{
 				MFSetTexCoord1(renderTiles[a].tx*xScale + halfX, renderTiles[a].ty*xScale + halfX);
 				MFSetPosition((float)renderTiles[a].x, (float)renderTiles[a].y, 0);
-				MFSetTexCoord1((renderTiles[a].tx+1)*xScale + halfX, (renderTiles[a].ty+1)*xScale + halfX);
-				MFSetPosition((float)(renderTiles[a].x+1), (float)(renderTiles[a].y+1), 0);
+				MFSetTexCoord1(((float)renderTiles[a].tx + 1.f)*xScale + halfX, ((float)renderTiles[a].ty + 1.f)*xScale + halfX);
+				MFSetPosition((float)renderTiles[a].x + 1.f, (float)renderTiles[a].y + 1.f, 0);
 			}
 		}
 

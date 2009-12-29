@@ -683,14 +683,25 @@ void Map::Draw()
 	// blit map portion to a render target
 	pTiles->DrawMap(xTiles, yTiles, &pStart->terrain, sizeof(MapTile), mapWidth, texelCenter);
 
-	// now we should, like, render all the extra stuff, except the roads
+	// now we should, like, render all the extra stuff
+	struct RenderTile
+	{
+		uint8 x, y, flags;
+		int8 i;
+	} renderTiles[1024];
+
+	int numTiles = 0;
+	int numRoads = 0;
+	int numCastleTiles = 0;
+
+	Group *pSelection = NULL;
+
 	for(int y=0; y<yTiles; ++y)
 	{
 		for(int x=xTiles-1; x>=0; --x)
 		{
 			MapTile *pTile = pStart + x;
 
-			bool bDrawSelection = false;
 			if(pTile->GetNumGroups())
 			{
 				Unit *pVehicle = pTile->FindVehicle();
@@ -698,7 +709,8 @@ void Map::Draw()
 					pVehicle->Draw((float)x, (float)y);
 
 				Group *pGroup = pTile->GetGroup(0);
-				bDrawSelection = pGroup->IsSelected();
+				if(pGroup->IsSelected())
+					pSelection = pGroup;
 
 				Unit *pUnit = pGroup->GetFeatureUnit();
 				if(pUnit && (!pVehicle || pGroup->GetVehicle() != pVehicle))
@@ -708,66 +720,138 @@ void Map::Draw()
 			if(pTile->type == OT_None)
 				continue;
 
-			float tileWidth = 1.f;
-			MFMaterial *pMat;
-			MFRect uvs;
-			MFVector colour = MFVector::one;
+			RenderTile &drawTile = renderTiles[numTiles++];
+			drawTile.x = x;
+			drawTile.y = y;
 
-			if(pTile->type == OT_Road)
+			switch(pTile->type)
 			{
-				pMat = pTiles->GetRoadMaterial();
+				case OT_Road:
+					drawTile.i = pTiles->FindRoad(pTile->index, GetTerrainAt(xStart+x, yStart+y));
+					MFDebug_Assert(drawTile.i >= 0, "Invalid road!");
 
-				int r = pTiles->FindRoad(pTile->index, GetTerrainAt(xStart+x, yStart+y));
-				MFDebug_Assert(r >= 0, "Invalid road!");
+					drawTile.flags = 8;
+					++numRoads;
+					break;
 
-				pTiles->GetRoadUVs(r, &uvs, texelCenter);
-			}
-			else
-			{
-				pMat = pUnits->GetCastleMaterial();
-
-				switch(pTile->type)
+				case OT_Castle:
 				{
-					case OT_Castle:
+					if(pTile->castleTile != 0)
 					{
-						if(pTile->castleTile != 0)
-							continue;
+						--numTiles;
+						continue;
+					}
 
-						Castle *pCastle = GetCastle(pTile->index);
-						colour = pGame->GetPlayerColour(pCastle->player);
-						pUnits->GetCastleUVs(pGame->GetPlayerRace(pCastle->player), &uvs, texelCenter);
-						tileWidth = 2.f;
-						break;
-					}
-					case OT_Flag:
-					{
-						int player = (int8)pTile->index;
-						colour = pGame->GetPlayerColour(player);
-						pUnits->GetFlagUVs(pGame->GetPlayerRace(player), &uvs, texelCenter);
-						break;
-					}
-					case OT_Special:
-						pUnits->GetSpecialUVs(pTile->index, &uvs, texelCenter);
-						break;
+					Castle *pCastle = GetCastle(pTile->index);
+					drawTile.i = (int8)pCastle->player;
+					drawTile.flags = 0;
+					++numCastleTiles;
+					break;
 				}
+
+				case OT_Flag:
+					drawTile.i = (int8)pTile->index;
+					drawTile.flags = 1;
+					++numCastleTiles;
+					break;
+
+				case OT_Special:
+					drawTile.i = (int8)pTile->index;
+					drawTile.flags = 2;
+					++numCastleTiles;
+					break;
 			}
-
-			MFMaterial_SetMaterial(pMat);
-			MFPrimitive_DrawQuad((float)x, (float)y, tileWidth, tileWidth, colour, uvs.x, uvs.y, uvs.x + uvs.width, uvs.y + uvs.height);
-
-			// draw selection
-			if(bDrawSelection)
-				MFPrimitive_DrawUntexturedQuad((float)x, (float)y, 1.f, 1.f, MakeVector(0.f, 0.f, 0.8f, 0.4f));
 		}
 
 		pStart += mapWidth;
 	}
 
-	// and now the units
+	// draw the roads
+	if(numRoads)
+	{
+		MFMaterial_SetMaterial(pTiles->GetRoadMaterial());
+
+		MFPrimitive(PT_QuadList);
+		MFBegin(numRoads*2);
+		MFRect uvs;
+
+		for(int a=0; a<numTiles; ++a)
+		{
+			RenderTile &drawTile = renderTiles[a];
+
+			if(drawTile.flags & 8)
+			{
+				pTiles->GetRoadUVs(drawTile.i, &uvs, texelCenter);
+				MFSetTexCoord1(uvs.x, uvs.y);
+				MFSetPosition((float)renderTiles[a].x, (float)renderTiles[a].y, 0);
+				MFSetTexCoord1(uvs.x + uvs.width, uvs.y + uvs.height);
+				MFSetPosition((float)renderTiles[a].x + 1.f, (float)renderTiles[a].y + 1.f, 0);
+			}
+		}
+
+		MFEnd();
+	}
+
+	// draw the castle stuff
+	if(numCastleTiles)
+	{
+		MFMaterial_SetMaterial(pUnits->GetCastleMaterial());
+
+		MFPrimitive(PT_QuadList);
+		MFBegin(numCastleTiles*2);
+		MFRect uvs;
+
+		for(int a=0; a<numTiles; ++a)
+		{
+			RenderTile &drawTile = renderTiles[a];
+
+			if(drawTile.flags < 8)
+			{
+				MFVector colour = MFVector::one;
+				float width = 1.f;
+
+				switch(drawTile.flags)
+				{
+					case 0:
+						pUnits->GetCastleUVs(pGame->GetPlayerRace(drawTile.i), &uvs, texelCenter);
+						colour = pGame->GetPlayerColour(drawTile.i);
+						width = 2.f;
+						break;
+					case 1:
+						pUnits->GetFlagUVs(pGame->GetPlayerRace(drawTile.i), &uvs, texelCenter);
+						colour = pGame->GetPlayerColour(drawTile.i);
+						break;
+					case 2:
+						pUnits->GetSpecialUVs(drawTile.i, &uvs, texelCenter);
+						break;
+				}
+
+				MFSetColour(colour);
+				MFSetTexCoord1(uvs.x, uvs.y);
+				MFSetPosition((float)renderTiles[a].x, (float)renderTiles[a].y, 0);
+				MFSetTexCoord1(uvs.x + uvs.width, uvs.y + uvs.height);
+				MFSetPosition((float)renderTiles[a].x + width, (float)renderTiles[a].y + width, 0);
+			}
+		}
+
+		MFEnd();
+	}
+
+	// draw the selection
+	if(pSelection)
+	{
+		int x = pSelection->GetTile()->GetX() - xStart;
+		int y = pSelection->GetTile()->GetY() - yStart;
+		MFPrimitive_DrawUntexturedQuad((float)x, (float)y, 1, 1, MakeVector(0.f, 0.f, 0.8f, 0.4f));
+	}
+
+	// draw the units
 	pUnits->DrawUnits(1.f, texelCenter);
 
+	// reset the render target
 	MFRenderer_SetDeviceRenderTarget();
 
+	// render the map to the screen
 	MFRect orthoRect;
 	orthoRect.x = orthoRect.y = 0;
 	orthoRect.width = orthoRect.height = 1;
