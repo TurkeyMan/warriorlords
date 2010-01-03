@@ -1,6 +1,7 @@
 #include "Warlords.h"
 #include "MapScreen.h"
 #include "Unit.h"
+#include "Display.h"
 
 #include "MFInput.h"
 #include "MFSystem.h"
@@ -9,7 +10,6 @@
 #include "MFMaterial.h"
 #include "MFView.h"
 #include "MFRenderer.h"
-#include "Display.h"
 
 #include "Path.h"
 
@@ -37,8 +37,10 @@ MapScreen::MapScreen(Game *_pGame)
 	MFRect uvs, pos = { 0, 0, (float)tileWidth, (float)tileHeight };
 
 	// end turn button
-	pos.x = (float)(gDefaults.display.displayWidth - (16 + tileWidth));
-	pos.y = (float)(gDefaults.display.displayHeight - (16 + tileHeight));
+	MFRect display;
+	GetDisplayRect(&display);
+	pos.x = display.width - (16.f + (float)tileWidth);
+	pos.y = display.height - (16.f + (float)tileHeight);
 	uvs.x = 0.25f + (1.f/256.f); uvs.y = 0.f + (1.f/256.f);
 	uvs.width = 0.25f; uvs.height = 0.25f;
 	pEndTurn = Button::Create(pIcons, &pos, &uvs, MFVector::one, EndTurn, this, 0, false);
@@ -391,7 +393,7 @@ GroupConfig::GroupConfig()
 	bVisible = false;
 
 	float margin = 5.f;
-	MFDisplay_GetDisplayRect(&window);
+	GetDisplayRect(&window);
 	window.x = window.width*0.5f - 240.f;
 	window.y = window.height*0.5f - 160.f;
 	window.width = 480.f;
@@ -845,7 +847,7 @@ CastleConfig::CastleConfig()
 	bVisible = false;
 
 	float margin = 5.f;
-	MFDisplay_GetDisplayRect(&window);
+	GetDisplayRect(&window);
 	window.x = window.width*0.5f - 240.f;
 	window.y = window.height*0.5f - 160.f;
 	window.width = 480.f;

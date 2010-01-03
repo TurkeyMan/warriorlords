@@ -2,6 +2,7 @@
 #include "Battle.h"
 #include "Unit.h"
 #include "Path.h"
+#include "Display.h"
 
 #include "MFInput.h"
 #include "MFSystem.h"
@@ -12,7 +13,6 @@
 
 #include "MFRenderer.h"
 #include "MFInput.h"
-#include "Display.h"
 
 // remove me!
 #include "MFIni.h"
@@ -179,7 +179,7 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget, int foreground, int backgrou
 	MFZeroMemory(armies, sizeof(armies));
 
 	MFRect rect;
-	MFDisplay_GetDisplayRect(&rect);
+	GetDisplayRect(&rect);
 
 	int centerLine = (int)(rect.height / 2);
 	int centerField = centerLine + centerLine / 2;
@@ -407,12 +407,13 @@ int Battle::Update()
 
 	return 0;
 }
-
+#include "MFDisplay.h"
 void Battle::Draw()
 {
 	MFView_Push();
-	MFRect rect = { 0, 0, 1, 1 };
-	MFView_SetOrtho(&rect);
+	MFMatrix orthoMat;
+	GetOrthoMatrix(&orthoMat, true);
+	MFView_SetCustomProjection(orthoMat, false);
 
 	MFMaterial_SetMaterial(pBackground);
 	MFPrimitive_DrawQuad(0, 0, 1, 0.5, MFVector::one, 0, 0, 1, 1);
@@ -429,8 +430,8 @@ void Battle::Draw()
 	MFRenderer_ClearScreen(CS_ZBuffer | CS_Stencil);
 
 	// render units
-	MFDisplay_GetDisplayRect(&rect);
-	MFView_SetOrtho(&rect);
+	GetOrthoMatrix(&orthoMat);
+	MFView_SetCustomProjection(orthoMat, false);
 
 	float texelCenter = MFRenderer_GetTexelCenterOffset();
 
@@ -471,37 +472,32 @@ void Battle::Draw()
 	}
 
 	// timeline
+	MFRect rect;
+	GetDisplayRect(&rect);
+	float timelineY = MFFloor(rect.height / 6) - 16;
+
+	float left = MFFloor(rect.width * 0.06f);
+	float right = rect.width - left;
+	float width = rect.width - left*2;
+
 	MFMaterial_SetMaterial(pIcons);
-
-	int numQuads = 3 + cooldownCount;
-	MFPrimitive_BeginBlitter(numQuads);
-
-	int timelineY = (int)(rect.height / 6) - 16;
-
-	int left = (int)(rect.width * 0.06f);
-	int right = (int)rect.width - left;
-	int width = (int)rect.width - left*2;
-
-	MFPrimitive_Blit(left, timelineY, 0, 0, 32, 32);
-	MFPrimitive_StretchBlit(left + 32, timelineY, width - 64, 32, 32, 0, 32, 32);
-	MFPrimitive_Blit(right - 32, timelineY, 64, 0, 32, 32);
+	MFPrimitive_DrawQuad(left, timelineY, 32.f, 32.f, MFVector::one, 0.f, 0.f, 0.25f, 0.25f);
+	MFPrimitive_DrawQuad(left + 32, timelineY, width - 64, 32.f, MFVector::one, 0.25f, 0.f, 0.5f, 0.25f);
+	MFPrimitive_DrawQuad(right - 32.f, timelineY, 32.f, 32.f, MFVector::one, 0.5f, 0.f, 0.75f, 0.25f);
 
 	// plot each unit on the timeline
 	BattleUnit *pUnit = pCooldownTail;
 	while(pUnit)
 	{
-		int offset = pUnit->pUnit->GetPlayer() == armies[0].player ? -1 : 1;
-		int x = left + (int)(width*(pUnit->stateTime/7.0f));
-		int y = timelineY + pUnit->cooldownOffset + offset*20;
+		float offset = pUnit->pUnit->GetPlayer() == armies[0].player ? -1.f : 1.f;
+		float x = left + MFFloor(width*(pUnit->stateTime/7.0f));
+		float y = timelineY + pUnit->cooldownOffset + offset*20;
 
-		MFSetColour(MakeVector(pUnit->colour, MFClamp(0.f, (-pUnit->stateTime * 3.f) + 21, 1.f)));
-		MFPrimitive_Blit(x, y, 0, 32, 32, 32);
+		MFPrimitive_DrawQuad(x, y, 32.f, 32.f, MakeVector(pUnit->colour, MFClamp(0.f, (-pUnit->stateTime * 3.f) + 21, 1.f)), 0.f, 0.25f, 0.25f, 0.5f);
 		pUnit->pUnit->Draw(x-16.f, y-16.f);
 
 		pUnit = pUnit->pPrev;
 	}
-
-	MFPrimitive_EndBlitter();
 
 	// draw deferred unit heads
 	pUnitDefs->DrawUnits(64.f, texelCenter, true);

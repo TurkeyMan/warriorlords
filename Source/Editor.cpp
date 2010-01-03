@@ -1,5 +1,6 @@
 #include "Warlords.h"
 #include "Editor.h"
+#include "Display.h"
 
 #include "MFInput.h"
 #include "MFSystem.h"
@@ -7,7 +8,6 @@
 #include "MFFont.h"
 #include "MFMaterial.h"
 #include "MFRenderer.h"
-#include "Display.h"
 
 #include "Path.h"
 
@@ -42,10 +42,12 @@ Editor::Editor(Game *pGame)
 	pTiles->GetTileSize(&tileWidth, &tileHeight);
 	float texelOffset = MFRenderer_GetTexelCenterOffset();
 
-	MFRect uvs, pos = { 0, 0, (float)tileWidth, (float)tileHeight };
+	MFRect display, uvs, pos = { 0, 0, (float)tileWidth, (float)tileHeight };
 	MFRect water = { 0, 0, 1, 1 };
 
-	pos.x = (float)(gDefaults.display.displayWidth - (16 + tileWidth));
+	GetDisplayRect(&display);
+
+	pos.x = (float)(display.width - (16 + tileWidth));
 	pos.y = 16.f;
 	uvs.x = 0.75f + (1.f/256.f); uvs.y = 0.f + (1.f/256.f);
 	uvs.width = 0.25f; uvs.height = 0.25f;
@@ -59,8 +61,8 @@ Editor::Editor(Game *pGame)
 	// brush buttons
 	for(int a=0; a<2; ++a)
 	{
-		pos.x = (float)(gDefaults.display.displayWidth - (16 + tileWidth));
-		pos.y = (float)(gDefaults.display.displayHeight - (16 + tileHeight)*(2-a));
+		pos.x = (float)(display.width - (16 + tileWidth));
+		pos.y = (float)(display.height - (16 + tileHeight)*(2-a));
 
 		if(a == 0)
 		{
@@ -471,9 +473,12 @@ void Chooser::Draw()
 {
 	if(bVisible)
 	{
+		MFRect display;
+		GetDisplayRect(&display);
+
 		// render background
-		float x = gDefaults.display.displayWidth*0.5f - windowWidth*0.5f;
-		float y = gDefaults.display.displayHeight*0.5f - windowHeight*0.5f;
+		float x = display.width*0.5f - windowWidth*0.5f;
+		float y = display.height*0.5f - windowHeight*0.5f;
 		MFPrimitive_DrawUntexturedQuad(x, y, windowWidth, windowHeight, MakeVector(0,0,0,.8f));
 
 		// render the buttons
@@ -503,10 +508,13 @@ void Chooser::AssembleButtons()
 	int rows = numRows[buttons];
 	int columns = numColumns[buttons];
 
+	MFRect display;
+	GetDisplayRect(&display);
+
 	float width = (float)(tileWidth*columns + 16*(columns-1));
 	float height = (float)(tileHeight*rows + 16*(rows-1));
-	float left = gDefaults.display.displayWidth*0.5f - width*0.5f;
-	float top = gDefaults.display.displayHeight*0.5f - height*0.5f;
+	float left = display.width*0.5f - width*0.5f;
+	float top = display.height*0.5f - height*0.5f;
 
 	windowWidth = width + 32.f;
 	windowHeight = height + 32.f;
@@ -565,7 +573,7 @@ CastleEdit::CastleEdit()
 	float texelOffset = MFRenderer_GetTexelCenterOffset();
 
 	float margin = 5.f;
-	MFDisplay_GetDisplayRect(&window);
+	GetDisplayRect(&window);
 	window.x = window.width*0.5f - 240.f;
 	window.y = window.height*0.5f - 160.f;
 	window.width = 480.f;

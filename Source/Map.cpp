@@ -1,8 +1,8 @@
 #include "Warlords.h"
 #include "Map.h"
 #include "Castle.h"
-
 #include "Display.h"
+
 #include "MFRenderer.h"
 #include "MFIni.h"
 #include "MFView.h"
@@ -380,7 +380,7 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 	int tileWidth, tileHeight;
 	MFRect screen;
 	pMap->pTiles->GetTileSize(&tileWidth, &tileHeight);
-	MFDisplay_GetDisplayRect(&screen);
+	GetDisplayRect(&screen);
 
 	const int maxZoom = 2;
 	int rtWidth = (int)screen.width*maxZoom+tileWidth*2-1;
@@ -466,7 +466,7 @@ Map *Map::CreateNew(Game *pGame, const char *pTileset, const char *pUnits)
 	int tileWidth, tileHeight;
 	MFRect screen;
 	pNew->pTiles->GetTileSize(&tileWidth, &tileHeight);
-	MFDisplay_GetDisplayRect(&screen);
+	GetDisplayRect(&screen);
 	int rtWidth = (int)screen.width*4+tileWidth*2-1;
 	int rtHeight = (int)screen.height*4+tileHeight*2-1;
 	rtWidth -= rtWidth%tileWidth;
@@ -852,24 +852,23 @@ void Map::Draw()
 	MFRenderer_SetDeviceRenderTarget();
 
 	// render the map to the screen
-	MFRect orthoRect;
-	orthoRect.x = orthoRect.y = 0;
-	orthoRect.width = orthoRect.height = 1;
-	MFView_SetOrtho(&orthoRect);
+	MFMatrix orthoMat;
+	GetOrthoMatrix(&orthoMat, true);
+	MFView_SetCustomProjection(orthoMat, false);
 
 	MFRect uvs;
 	int targetWidth, targetHeight;
 	int tileWidth, tileHeight;
 
-	MFDisplay_GetDisplayRect(&uvs);
+	GetDisplayRect(&uvs);
 	MFTexture_GetTextureDimensions(pRenderTarget, &targetWidth, &targetHeight);
 	pTiles->GetTileSize(&tileWidth, &tileHeight);
 
 	float texelOffset = zoom <= 0.5f ? 0.f : texelCenter;
 	uvs.x = (xOffset - (float)(int)xOffset) * (tileWidth / targetWidth) + (texelOffset/targetWidth);
-	uvs.y = (yOffset - (float)(int)yOffset) * (tileHeight / targetHeight) + (texelOffset/targetHeight);
+	uvs.y = -(yOffset - (float)(int)yOffset) * (tileHeight / targetHeight) + (texelOffset/targetHeight);
 	uvs.width = uvs.width / targetWidth / zoom;
-	uvs.height = uvs.height / targetHeight / zoom;
+	uvs.height = -uvs.height / targetHeight / zoom;
 
 	MFMaterial_SetMaterial(pRenderTargetMaterial);
 	MFPrimitive_DrawQuad(0, 0, 1, 1, MFVector::one, uvs.x, uvs.y, uvs.x + uvs.width, uvs.y + uvs.height);
@@ -882,7 +881,7 @@ void Map::DrawDebug()
 	MFView_Push();
 
 	MFRect screenRect;
-	MFDisplay_GetDisplayRect(&screenRect);
+	GetDisplayRect(&screenRect);
 
 	int tileW, tileH;
 	pTiles->GetTileSize(&tileW, &tileH);
@@ -964,7 +963,7 @@ void Map::SetRTOrtho(int *pXTiles, int *pYTiles)
 	MFView_SetOrtho(&rect);
 
 	MFRect screenRect;
-	MFDisplay_GetDisplayRect(&screenRect);
+	GetDisplayRect(&screenRect);
 
 	if(pXTiles)
 		*pXTiles = (int)MFCeil((screenRect.width / tileWidth) / zoom + 1.f);
@@ -978,16 +977,22 @@ void Map::SetMapOrtho(int *pXTiles, int *pYTiles)
 	GetVisibleTileSize(&tileWidth, &tileHeight);
 
 	MFRect screenRect;
-	MFDisplay_GetDisplayRect(&screenRect);
+	GetDisplayRect(&screenRect);
 	float screenWidth = screenRect.width / tileWidth;
 	float screenHeight = screenRect.height / tileHeight;
+	float screenHScale = 1.f / screenWidth;
+	float screenVScale = 1.f / screenHeight;
 
-	MFRect rect;
-	rect.x = xOffset;
-	rect.y = yOffset;
-	rect.width = screenWidth;
-	rect.height = screenHeight;
-	MFView_SetOrtho(&rect);
+	MFMatrix proj, mapTrans;
+	mapTrans.SetXAxis3(MFVector::right * screenHScale);
+	mapTrans.SetYAxis3(MFVector::up * screenVScale);
+	mapTrans.SetZAxis3(MFVector::forward);
+	mapTrans.SetTrans3(MakeVector(-xOffset * screenHScale, -yOffset * screenVScale, 0));
+
+	GetOrthoMatrix(&proj, true);
+	mapTrans.Multiply4x4(proj);
+
+	MFView_SetCustomProjection(mapTrans, false);
 
 	if(pXTiles)
 		*pXTiles = (int)MFCeil(screenWidth) + 1;
@@ -1000,8 +1005,10 @@ void Map::SetOffset(float x, float y)
 	float tileWidth, tileHeight;
 	GetVisibleTileSize(&tileWidth, &tileHeight);
 
-	float maxX = mapWidth - gDefaults.display.displayWidth / tileWidth;
-	float maxY = mapHeight - gDefaults.display.displayHeight / tileHeight;
+	MFRect display;
+	GetDisplayRect(&display);
+	float maxX = mapWidth - display.width / tileWidth;
+	float maxY = mapHeight - display.height / tileHeight;
 
 	xOffset = MFClamp(0.f, x, maxX);
 	yOffset = MFClamp(0.f, y, maxY);
@@ -1020,8 +1027,10 @@ void Map::CenterView(int x, int y)
 	float tileWidth, tileHeight;
 	GetVisibleTileSize(&tileWidth, &tileHeight);
 
-	float screenWidth = gDefaults.display.displayWidth / tileWidth;
-	float screenHeight = gDefaults.display.displayHeight / tileHeight;
+	MFRect display;
+	GetDisplayRect(&display);
+	float screenWidth = display.width / tileWidth;
+	float screenHeight = display.height / tileHeight;
 
 	xOffset = (float)x + 0.5f - screenWidth*0.5f;
 	yOffset = (float)y + 0.5f - screenHeight*0.5f;
@@ -1053,10 +1062,13 @@ void Map::SetZoom(float _zoom, float pointX, float pointY)
 	float tileWidth, tileHeight;
 	GetVisibleTileSize(&tileWidth, &tileHeight);
 
+	MFRect display;
+	GetDisplayRect(&display);
+
 	if(pointX < 0.f)
-		pointX = gDefaults.display.displayWidth / tileWidth * 0.5f;
+		pointX = display.width / tileWidth * 0.5f;
 	if(pointY < 0.f)
-		pointY = gDefaults.display.displayHeight / tileHeight * 0.5f;
+		pointY = display.height / tileHeight * 0.5f;
 
 	float newZoom = MFClamp(0.5f, _zoom, 2.f);
 	float zoomDiff = zoom / newZoom;
@@ -1068,8 +1080,8 @@ void Map::SetZoom(float _zoom, float pointX, float pointY)
 
 	// calculate clamps
 	GetVisibleTileSize(&tileWidth, &tileHeight);
-	float maxX = mapWidth - gDefaults.display.displayWidth / tileWidth;
-	float maxY = mapHeight - gDefaults.display.displayHeight / tileHeight;
+	float maxX = mapWidth - display.width / tileWidth;
+	float maxY = mapHeight - display.height / tileHeight;
 
 	// clamp the new position
 	xOffset = MFClamp(0.f, xOffset, maxX);

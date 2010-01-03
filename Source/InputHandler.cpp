@@ -1,5 +1,6 @@
 #include "Warlords.h"
 #include "InputHandler.h"
+#include "Display.h"
 
 #include "MFSystem.h"
 
@@ -109,7 +110,8 @@ void InputManager::Update()
 					mouseContacts[a] = c;
 
 					// create the hover contact
-					contacts[c].Init(IDD_Mouse, a, -1, MFInput_Read(Mouse_XPos, IDD_Mouse, a), MFInput_Read(Mouse_YPos, IDD_Mouse, a));
+					MFVector pos = CorrectPosition(MFInput_Read(Mouse_XPos, IDD_Mouse, a), MFInput_Read(Mouse_YPos, IDD_Mouse, a));
+					contacts[c].Init(IDD_Mouse, a, -1, pos.x, pos.y);
 					contacts[c].downX = contacts[c].downY = 0.f;
 					break;
 				}
@@ -178,7 +180,8 @@ void InputManager::Update()
 						touchContacts[a] = c;
 
 						// create the hover contact
-						contacts[c].Init(IDD_TouchPanel, 0, a, (float)pState->contacts[a].x, (float)pState->contacts[a].y);
+						MFVector pos = CorrectPosition((float)pState->contacts[a].x, (float)pState->contacts[a].y);
+						contacts[c].Init(IDD_TouchPanel, 0, a, pos.x, pos.y);
 						contacts[c].bState = true;
 
 						// send the down event
@@ -244,22 +247,21 @@ void InputManager::Update()
 
 			if(contacts[a].device == IDD_Mouse)
 			{
-				float x = MFInput_Read(Mouse_XPos, contacts[a].device, contacts[a].deviceID);
-				float y = MFInput_Read(Mouse_YPos, contacts[a].device, contacts[a].deviceID);
+				MFVector pos = CorrectPosition(MFInput_Read(Mouse_XPos, contacts[a].device, contacts[a].deviceID), MFInput_Read(Mouse_YPos, contacts[a].device, contacts[a].deviceID));
 
-				if(x != contacts[a].x || y != contacts[a].y)
+				if(pos.x != contacts[a].x || pos.y != contacts[a].y)
 				{
 					InputInfo info;
 					InitEvent(info, IE_Hover, a);
-					info.hover.x = x;
-					info.hover.y = y;
-					info.hover.deltaX = x - contacts[a].x;
-					info.hover.deltaY = y - contacts[a].y;
+					info.hover.x = pos.x;
+					info.hover.y = pos.y;
+					info.hover.deltaX = pos.x - contacts[a].x;
+					info.hover.deltaY = pos.y - contacts[a].y;
 
 					Dispatch(info, contacts[a].pExclusiveReceiver);
 
-					float distX = x - contacts[a].downX;
-					float distY = y - contacts[a].downY;
+					float distX = pos.x - contacts[a].downX;
+					float distY = pos.y - contacts[a].downY;
 					if(MFSqrt(distX*distX + distY*distY) >= dragThreshold)
 						contacts[a].bDrag = true;
 
@@ -273,8 +275,8 @@ void InputManager::Update()
 						Dispatch(info, contacts[a].pExclusiveReceiver);
 					}
 
-					contacts[a].x = x;
-					contacts[a].y = y;
+					contacts[a].x = pos.x;
+					contacts[a].y = pos.y;
 				}
 			}
 
@@ -319,22 +321,21 @@ void InputManager::Update()
 		}
 		else
 		{
-			float x = MFInput_Read(Touch_XPos(contacts[a].buttonID), IDD_TouchPanel);
-			float y = MFInput_Read(Touch_YPos(contacts[a].buttonID), IDD_TouchPanel);
-			
-			if(x != contacts[a].x || y != contacts[a].y)
+			MFVector pos = CorrectPosition(MFInput_Read(Touch_XPos(contacts[a].buttonID), IDD_TouchPanel), MFInput_Read(Touch_YPos(contacts[a].buttonID), IDD_TouchPanel));
+
+			if(pos.x != contacts[a].x || pos.y != contacts[a].y)
 			{
 				InputInfo info;
 				InitEvent(info, IE_Hover, a);
-				info.hover.x = x;
-				info.hover.y = y;
-				info.hover.deltaX = x - contacts[a].x;
-				info.hover.deltaY = y - contacts[a].y;
+				info.hover.x = pos.x;
+				info.hover.y = pos.y;
+				info.hover.deltaX = pos.x - contacts[a].x;
+				info.hover.deltaY = pos.y - contacts[a].y;
 				
 				Dispatch(info, contacts[a].pExclusiveReceiver);
 				
-				float distX = x - contacts[a].downX;
-				float distY = y - contacts[a].downY;
+				float distX = pos.x - contacts[a].downX;
+				float distY = pos.y - contacts[a].downY;
 				if(MFSqrt(distX*distX + distY*distY) >= dragThreshold)
 					contacts[a].bDrag = true;
 				
@@ -348,8 +349,8 @@ void InputManager::Update()
 					Dispatch(info, contacts[a].pExclusiveReceiver);
 				}
 				
-				contacts[a].x = x;
-				contacts[a].y = y;
+				contacts[a].x = pos.x;
+				contacts[a].y = pos.y;
 			}
 		}
 	}

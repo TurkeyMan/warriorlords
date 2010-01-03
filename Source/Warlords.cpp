@@ -1,4 +1,5 @@
 #include "Warlords.h"
+#include "Display.h"
 #include "Game.h"
 #include "Editor.h"
 #include "Screens/MapScreen.h"
@@ -10,6 +11,7 @@
 #include "MFView.h"
 #include "MFRenderer.h"
 #include "MFSystem.h"
+#include "MFDisplay.h"
 
 /*** Global Stuff ***/
 InputManager *pInputManager = NULL;
@@ -79,8 +81,9 @@ void Game_Draw()
 	MFView_Push();
 	MFView_ConfigureProjection(MFDEGREES(60.0f), 0.1f, 1000.0f);
 
-	MFRect rect = { 0, 0, (float)gDefaults.display.displayWidth, (float)gDefaults.display.displayHeight };
-	MFView_SetOrtho(&rect);
+	MFMatrix ortho;
+	GetOrthoMatrix(&ortho, false);
+	MFView_SetCustomProjection(ortho, false);
 
 	MFRenderer_ClearScreen();
 
@@ -104,9 +107,12 @@ int GameMain(MFInitParams *pInitParams)
 {
 	MFRand_Seed((uint32)MFSystem_ReadRTC());
 
-#if 0
-	gDefaults.display.displayWidth = 480;
-	gDefaults.display.displayHeight = 320;
+#if defined(MF_IPHONE) || 0
+#if !defined(MF_IPHONE)
+	gDefaults.display.displayWidth = 320;
+	gDefaults.display.displayHeight = 480;
+#endif
+	SetDisplayOrientation(DO_90CW);
 #else
 	gDefaults.display.displayWidth = 800;
 	gDefaults.display.displayHeight = 480;
