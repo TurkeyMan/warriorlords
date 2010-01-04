@@ -24,6 +24,7 @@ struct Special
 {
 	const char *pName;
 	uint8 x, y;
+	uint8 width, height;
 	uint16 canSearch : 1;
 	uint16 flags : 15;
 };

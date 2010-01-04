@@ -150,14 +150,19 @@ void Game::BeginTurn(int player)
 
 						MapTile *pT = pMap->GetTile(tx, ty);
 
-						if(pUnitDefs->GetMovementPenalty(pDetails->movementClass, pT->GetTerrain() & 0xFF) != 0)
+						uint32 terrain = pT->GetTerrain();
+						for(int j=0; j<4; ++j)
 						{
-							if(pDetails->type == UT_Vehicle || pT->GetNumUnits() < 10)
+							if(pUnitDefs->GetMovementPenalty(pDetails->movementClass, terrain & 0xFF) != 0)
 							{
-								if(!pTile || pTile->GetType() == OT_Road)
-									pTile = pT;
-								break;
+								if(pDetails->type == UT_Vehicle || pT->GetNumUnits() < 10)
+								{
+									if(!pTile || pT->GetType() == OT_Road)
+										pTile = pT;
+									break;
+								}
 							}
+							terrain >>= 8;
 						}
 					}
 				}

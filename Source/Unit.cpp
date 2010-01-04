@@ -151,8 +151,12 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 			{
 				int s = pSpecial->GetInt(0);
 				pUnitDefs->pSpecials[s].pName = pSpecial->GetString(1);
+				pUnitDefs->pSpecials[s].x = (uint8)pSpecial->GetInt(2);
+				pUnitDefs->pSpecials[s].y = (uint8)pSpecial->GetInt(3);
+				pUnitDefs->pSpecials[s].width = (uint8)pSpecial->GetInt(4);
+				pUnitDefs->pSpecials[s].height = (uint8)pSpecial->GetInt(5);
 
-				for(int a=2; a<pSpecial->GetStringCount(); ++a)
+				for(int a=6; a<pSpecial->GetStringCount(); ++a)
 				{
 					if(pSpecial->IsString(a, "searchable"))
 						pUnitDefs->pSpecials[s].canSearch = 1;
@@ -503,8 +507,8 @@ void UnitDefinitions::GetSpecialUVs(int index, MFRect *pUVs, float texelOffset)
 	Special &s = pSpecials[index];
 	pUVs->x = s.x*xScale + halfX;
 	pUVs->y = s.y*yScale + halfY;
-	pUVs->width = xScale;
-	pUVs->height = yScale;
+	pUVs->width = xScale*(float)s.width;
+	pUVs->height = yScale*(float)s.height;
 }
 
 void Unit::Destroy()

@@ -222,8 +222,16 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget, int foreground, int backgrou
 				pUnit->Init(pTileGroup->GetForwardUnit(b));
 				pUnit->pGroup = pTileGroup;
 				pUnit->army = 1;
-				pUnit->row = 0;
-				++armies[1].numForwardUnits;
+				if(armies[1].numForwardUnits < 5)
+				{
+					pUnit->row = 0;
+					++armies[1].numForwardUnits;
+				}
+				else
+				{
+					pUnit->row = 1;
+					++armies[1].numRearUnits;
+				}
 			}
 			if(b < pTileGroup->GetNumRearUnits())
 			{
@@ -231,8 +239,16 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget, int foreground, int backgrou
 				pUnit->Init(pTileGroup->GetRearUnit(b));
 				pUnit->pGroup = pTileGroup;
 				pUnit->army = 1;
-				pUnit->row = 1;
-				++armies[1].numRearUnits;
+				if(armies[1].numRearUnits < 5)
+				{
+					pUnit->row = 1;
+					++armies[1].numRearUnits;
+				}
+				else
+				{
+					pUnit->row = 0;
+					++armies[1].numForwardUnits;
+				}
 			}
 		}
 		armies[1].numUnitsAlive = armies[1].numUnits;
@@ -359,6 +375,11 @@ int Battle::Update()
 					{
 						unit.state = US_Dead;
 						--armies[a].numUnitsAlive;
+						if(unit.row == 0)
+							--armies[a].numForwardUnits;
+						else
+							--armies[a].numRearUnits;
+
 					}
 				}
 			}
@@ -374,31 +395,36 @@ int Battle::Update()
 	{
 		if(!pUnit->bEngaged && pUnit->damageIndicatorTime == 0.f)
 		{
-			Army &opponent = armies[1 - pUnit->army];
-			bool bCanAttackBackRow = pUnit->pUnit->IsRanged() || opponent.numForwardUnits == 0;
-
-			// pick target...
 			BattleUnit *pTarget = NULL;
-			for(int a=0; a<opponent.numUnits; ++a)
+
+			bool bIsRanged = pUnit->pUnit->IsRanged();
+			if(bIsRanged || pUnit->row == 0 || armies[pUnit->army].numForwardUnits == 0)
 			{
-				BattleUnit *pT = &opponent.units[a];
-				if(!pT->bEngaged && !pT->damageIndicatorTime && pT->pUnit->GetHealth() && (pT->state == US_Cooldown || pT->state == US_Waiting) && (bCanAttackBackRow || pT->row == 0))
+				Army &opponent = armies[1 - pUnit->army];
+				bool bCanAttackBackRow = bIsRanged || opponent.numForwardUnits == 0;
+
+				// pick target...
+				for(int a=0; a<opponent.numUnits; ++a)
 				{
-					pTarget = pT;
-					break;
+					BattleUnit *pT = &opponent.units[a];
+					if(!pT->bEngaged && !pT->damageIndicatorTime && pT->pUnit->GetHealth() && (pT->state == US_Cooldown || pT->state == US_Waiting) && (bCanAttackBackRow || pT->row == 0))
+					{
+						pTarget = pT;
+						break;
+					}
 				}
-			}
 
-			if(pTarget)
-			{
-				// attack!
-				pUnit->pTarget = pTarget;
-				pTarget->bEngaged = true;
-				pUnit->state = US_Engaging;
-				pUnit->stateTime = pUnit->pUnit->GetDetails()->attackSpeed;
+				if(pTarget)
+				{
+					// attack!
+					pUnit->pTarget = pTarget;
+					pTarget->bEngaged = true;
+					pUnit->state = US_Engaging;
+					pUnit->stateTime = pUnit->pUnit->GetDetails()->attackSpeed;
 
-				// unlink
-				EndWaiting(pUnit);
+					// unlink
+					EndWaiting(pUnit);
+				}
 			}
 		}
 
