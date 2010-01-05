@@ -866,9 +866,9 @@ void Map::Draw()
 
 	float texelOffset = zoom <= 0.5f ? 0.f : texelCenter;
 	uvs.x = (xOffset - (float)(int)xOffset) * (tileWidth / targetWidth) + (texelOffset/targetWidth);
-	uvs.y = -(yOffset - (float)(int)yOffset) * (tileHeight / targetHeight) + (texelOffset/targetHeight);
+	uvs.y = (yOffset - (float)(int)yOffset) * (tileHeight / targetHeight) + (texelOffset/targetHeight);
 	uvs.width = uvs.width / targetWidth / zoom;
-	uvs.height = -uvs.height / targetHeight / zoom;
+	uvs.height = uvs.height / targetHeight / zoom;
 
 	MFMaterial_SetMaterial(pRenderTargetMaterial);
 	MFPrimitive_DrawQuad(0, 0, 1, 1, MFVector::one, uvs.x, uvs.y, uvs.x + uvs.width, uvs.y + uvs.height);
