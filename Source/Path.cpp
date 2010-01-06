@@ -48,6 +48,7 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 
 	MapTile *pTile = pGroup->GetTile();
 	int player = pGroup->GetPlayer();
+	int numUnits = pGroup->GetNumUnits();
 	int startX = pTile->GetX();
 	int startY = pTile->GetY();
 
@@ -214,9 +215,17 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 					int terrainSpeed = GetMovementPenalty(pTile, terrainPenalties, player, bRoadWalk);
 					int cornerPenalty = (tx != item.x) && (ty != item.y) ? 1 : 0;
 
-					int tg = item.gScore + (terrainSpeed*2) + cornerPenalty + (pTile->IsEnemyTile(player) ? 100 : 0);
-					bool isBetter = false;
+					int tg = item.gScore + (terrainSpeed*2) + cornerPenalty;
 
+					// avoid enemy tiles
+					if(pTile->IsEnemyTile(player))
+						tg += 50;
+
+					// avoid full squares
+					if(pTile->IsFriendlyTile(player) && pTile->GetNumUnits() + numUnits > 10)
+						tg += 100;
+
+					bool isBetter = false;
 					if(y == -1)
 					{
 						y = numItems;

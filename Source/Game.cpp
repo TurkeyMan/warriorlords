@@ -97,6 +97,10 @@ void Game::BeginTurn(int player)
 				{
 					Group *pGroup = pTile->GetGroup(a);
 
+					Unit *pVehicle = pGroup->GetVehicle();
+					if(pVehicle)
+						pVehicle->Restore();
+
 					int numUnits = pGroup->GetNumUnits();
 					for(int b=0; b<numUnits; ++b)
 					{
@@ -245,7 +249,7 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 	}
 
 	// remove units from all groups on the target tile
-	for(int a=0; a<pTarget->GetNumGroups(); ++a)
+	for(int a=0; a<pTarget->GetNumGroups();)
 	{
 		Group *pG = pTarget->GetGroup(a);
 		for(int b=0; b<pG->GetNumUnits(); ++b)
@@ -264,6 +268,8 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 			pTarget->RemoveGroup(pG);
 			pG->Destroy();
 		}
+		else
+			++a;
 	}
 
 	if(pGroup)

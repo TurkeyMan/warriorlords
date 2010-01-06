@@ -782,13 +782,20 @@ int Group::GetMovement()
 {
 	int movement = 0x7FFFFFFF;
 
-	for(int a=0; a<numForwardUnits; ++a)
+	if(pVehicle)
 	{
-		movement = MFMin(movement, pForwardUnits[a]->GetMovement());
+		return pVehicle->GetMovement();
 	}
-	for(int a=0; a<numRearUnits; ++a)
+	else
 	{
-		movement = MFMin(movement, pRearUnits[a]->GetMovement());
+		for(int a=0; a<numForwardUnits; ++a)
+		{
+			movement = MFMin(movement, pForwardUnits[a]->GetMovement());
+		}
+		for(int a=0; a<numRearUnits; ++a)
+		{
+			movement = MFMin(movement, pRearUnits[a]->GetMovement());
+		}
 	}
 
 	return movement;
@@ -796,29 +803,40 @@ int Group::GetMovement()
 
 bool Group::SubtractMovementCost(MapTile *pTile)
 {
-	for(int a=0; a<numForwardUnits; ++a)
+	if(pVehicle)
 	{
-		int penalty = pForwardUnits[a]->GetMovementPenalty(pTile);
-		if(!penalty || pForwardUnits[a]->GetMovement() < penalty)
+		int penalty = pVehicle->GetMovementPenalty(pTile);
+		if(!penalty || pVehicle->GetMovement() < penalty)
 			return false;
-	}
-	for(int a=0; a<numRearUnits; ++a)
-	{
-		int penalty = pRearUnits[a]->GetMovementPenalty(pTile);
-		if(!penalty || pRearUnits[a]->GetMovement() < penalty)
-			return false;
-	}
 
-	// all units can move, lets go!
-	for(int a=0; a<numForwardUnits; ++a)
-	{
-		int penalty = pForwardUnits[a]->GetMovementPenalty(pTile);
-		pForwardUnits[a]->Move(penalty);
+		pVehicle->Move(penalty);
 	}
-	for(int a=0; a<numRearUnits; ++a)
+	else
 	{
-		int penalty = pRearUnits[a]->GetMovementPenalty(pTile);
-		pRearUnits[a]->Move(penalty);
+		for(int a=0; a<numForwardUnits; ++a)
+		{
+			int penalty = pForwardUnits[a]->GetMovementPenalty(pTile);
+			if(!penalty || pForwardUnits[a]->GetMovement() < penalty)
+				return false;
+		}
+		for(int a=0; a<numRearUnits; ++a)
+		{
+			int penalty = pRearUnits[a]->GetMovementPenalty(pTile);
+			if(!penalty || pRearUnits[a]->GetMovement() < penalty)
+				return false;
+		}
+
+		// all units can move, lets go!
+		for(int a=0; a<numForwardUnits; ++a)
+		{
+			int penalty = pForwardUnits[a]->GetMovementPenalty(pTile);
+			pForwardUnits[a]->Move(penalty);
+		}
+		for(int a=0; a<numRearUnits; ++a)
+		{
+			int penalty = pRearUnits[a]->GetMovementPenalty(pTile);
+			pRearUnits[a]->Move(penalty);
+		}
 	}
 
 	return true;

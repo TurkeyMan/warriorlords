@@ -522,48 +522,50 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 			// find where we dropped it...
 			if(dragUnit != -1)
 			{
-				// check if we're swapping with another unit
 				bool bFound = false;
 
-				// check dropping on another unit in the same group
-				int unit = GetUnitFromPoint(info.up.x, info.up.y);
-				if(unit > -1 && units[unit].pGroup == units[dragUnit].pGroup)
+				if(units[dragUnit].rank != 2)
 				{
-					units[unit].pGroup->SwapUnits(units[unit].pUnit, units[dragUnit].pUnit);
-					bFound = true;
-				}
-
-				// check dropping in the other file
-				if(!bFound)
-				{
-					int dropped = GetFileFromPoint(info.up.x, info.up.y);
-					if(dropped > -1)
+					// check if we're swapping with another unit
+					int unit = GetUnitFromPoint(info.up.x, info.up.y);
+					if(unit > -1 && units[unit].pGroup == units[dragUnit].pGroup)
 					{
-						if(dropped != units[dragUnit].rank)
-						{
-							Unit *pUnit = units[dragUnit].pUnit;
-							Group *pGroup = units[dragUnit].pGroup;
-
-							// check there is room in the target file
-							if(dropped == 0)
-							{
-								if(numFront < 5)
-								{
-									pGroup->RemoveUnit(pUnit);
-									pGroup->AddForwardUnit(pUnit);
-								}
-							}
-							else
-							{
-								if(numRear < 5)
-								{
-									pGroup->RemoveUnit(pUnit);
-									pGroup->AddRearUnit(pUnit);
-								}
-							}
-						}
-
+						units[unit].pGroup->SwapUnits(units[unit].pUnit, units[dragUnit].pUnit);
 						bFound = true;
+					}
+
+					// check dropping in the other file
+					if(!bFound)
+					{
+						int dropped = GetFileFromPoint(info.up.x, info.up.y);
+						if(dropped > -1)
+						{
+							if(dropped != units[dragUnit].rank)
+							{
+								Unit *pUnit = units[dragUnit].pUnit;
+								Group *pGroup = units[dragUnit].pGroup;
+
+								// check there is room in the target file
+								if(dropped == 0)
+								{
+									if(numFront < 5)
+									{
+										pGroup->RemoveUnit(pUnit);
+										pGroup->AddForwardUnit(pUnit);
+									}
+								}
+								else
+								{
+									if(numRear < 5)
+									{
+										pGroup->RemoveUnit(pUnit);
+										pGroup->AddRearUnit(pUnit);
+									}
+								}
+							}
+
+							bFound = true;
+						}
 					}
 				}
 
@@ -573,16 +575,16 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 					int group = GetGroupFromPoint(info.up.x, info.up.y);
 					if(group > -1)
 					{
-						if(pExtraGroups[group]->GetNumUnits() < 10)
+						if(pExtraGroups[group]->GetNumUnits() < 10 || units[dragUnit].rank == 2)
 						{
 							Unit *pUnit = units[dragUnit].pUnit;
 							Group *pGroup = units[dragUnit].pGroup;
 
-							pGroup->RemoveUnit(pUnit);
-							pExtraGroups[group]->AddUnit(pUnit);
+							if(pExtraGroups[group]->AddUnit(pUnit))
+								pGroup->RemoveUnit(pUnit);
 
 							// check if we have just emptied the group
-							if(pGroup->GetNumUnits() == 0)
+							if(pGroup->GetNumUnits() == 0 && pGroup->GetVehicle() == NULL)
 							{
 								pTile->RemoveGroup(pGroup);
 								pGroup->Destroy();
@@ -604,11 +606,11 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 						Group *pNewGroup = Group::Create(pGroup->GetPlayer());
 						pTile->AddGroupToBack(pNewGroup);
 
-						pGroup->RemoveUnit(pUnit);
-						pNewGroup->AddUnit(pUnit);
+						if(pNewGroup->AddUnit(pUnit))
+							pGroup->RemoveUnit(pUnit);
 
 						// check if we have just emptied the group
-						if(pGroup->GetNumUnits() == 0)
+						if(pGroup->GetNumUnits() == 0 && pGroup->GetVehicle() == NULL)
 						{
 							pTile->RemoveGroup(pGroup);
 							pGroup->Destroy();
@@ -626,6 +628,14 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 				{
 					// move as many into the chosen file as possible
 					Group *pTarget = units[0].pGroup;
+
+					Unit *pVehicle = pDragGroup->GetVehicle();
+					if(pVehicle)
+					{
+						if(pTarget->AddUnit(pVehicle))
+							pDragGroup->RemoveUnit(pVehicle);
+					}
+
 					while(pDragGroup->GetNumUnits() > 0 && pTarget->GetNumUnits() < 10)
 					{
 						Unit *pUnit = pDragGroup->GetUnit(0);
@@ -650,16 +660,23 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 					if(group > -1 && pExtraGroups[group] != pDragGroup)
 					{
 						// move as many into the target group as possible
+						Unit *pVehicle = pDragGroup->GetVehicle();
+						if(pVehicle)
+						{
+							if(pExtraGroups[group]->AddUnit(pVehicle))
+								pDragGroup->RemoveUnit(pVehicle);
+						}
+
 						while(pDragGroup->GetNumUnits() > 0 && pExtraGroups[group]->GetNumUnits() < 10)
 						{
 							Unit *pUnit = pDragGroup->GetUnit(0);
-							pDragGroup->RemoveUnit(pUnit);
-							pExtraGroups[group]->AddUnit(pUnit);
+							if(pExtraGroups[group]->AddUnit(pUnit))
+								pDragGroup->RemoveUnit(pUnit);
 						}
 					}
 				}
 
-				if(pDragGroup->GetNumUnits() == 0)
+				if(pDragGroup->GetNumUnits() == 0 && pDragGroup->GetVehicle() == NULL)
 				{
 					pTile->RemoveGroup(pDragGroup);
 					pDragGroup->Destroy();
@@ -772,6 +789,15 @@ void GroupConfig::PositionUnits()
 			unit.pUnit = pG->GetRearUnit(b);
 			unit.rank = 1;
 		}
+
+		Unit *pVehicle = pG->GetVehicle();
+		if(pVehicle)
+		{
+			GroupUnit &unit = units[numUnits++];
+			unit.pGroup = pG;
+			unit.pUnit = pVehicle;
+			unit.rank = 2;
+		}
 	}
 
 	// reposition the lower groups
@@ -807,10 +833,15 @@ void GroupConfig::PositionUnits()
 				units[a].x = (int)(front.x + front.width*gPositions[numFront-1][a][0]);
 				units[a].y = (int)(front.y + front.height*gPositions[numFront-1][a][1]);
 			}
-			else
+			else if(units[a].rank == 1)
 			{
 				units[a].x = (int)(rear.x + rear.width*gPositions[numRear-1][a - numFront][0]);
 				units[a].y = (int)(rear.y + rear.height*gPositions[numRear-1][a - numFront][1]);
+			}
+			else
+			{
+				units[a].x = (int)((rear.x + rear.width + front.x)*0.5f - units[a].pUnit->GetDetails()->width*0.5f);
+				units[a].y = (int)(front.y + front.height*0.5f - units[a].pUnit->GetDetails()->height*0.5f);
 			}
 		}
 		else
