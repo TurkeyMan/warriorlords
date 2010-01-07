@@ -636,6 +636,17 @@ void Castle::Capture(int _player)
 	player = _player;
 	building = -1;
 	buildTime = 0;
+
+	for(int a=0; a<4; ++a)
+	{
+		MapTile *pCastleTile = GetTile(a);
+
+		for(int b=0; b<pCastleTile->GetNumGroups(); ++b)
+		{
+			Group *pGroup = pCastleTile->GetGroup(b);
+			pGroup->SetPlayer(_player);
+		}
+	}
 }
 
 void Castle::SetBuildUnit(int slot)
@@ -855,4 +866,21 @@ bool Group::IsInGroup(Unit *pUnit)
 			return true;
 	}
 	return false;
+}
+
+void Group::SetPlayer(int _player)
+{
+	player = _player;
+
+	if(pVehicle)
+		pVehicle->SetPlayer(_player);
+
+	for(int a=0; a<numForwardUnits; ++a)
+	{
+		pForwardUnits[a]->SetPlayer(_player);
+	}
+	for(int a=0; a<numRearUnits; ++a)
+	{
+		pRearUnits[a]->SetPlayer(_player);
+	}
 }

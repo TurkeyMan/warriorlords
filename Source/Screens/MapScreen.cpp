@@ -123,17 +123,16 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 						if(pTile->IsEnemyTile(pSelection->GetPlayer()))
 						{
 							// we have an attack command!
+							Castle *pCastle = pTile->GetCastle();
 
 							// check the castle is occuppied
-							if(pTile->GetNumGroups() == 0)
+							if(pCastle && pTile->GetNumUnits() == 0)
 							{
 								// search castle squares for units
-								Castle *pCastle = pTile->GetCastle();
-
 								for(int a=0; a<4; ++a)
 								{
 									MapTile *pCastleTile = pCastle->GetTile(a);
-									if(pCastleTile->GetNumGroups() != 0)
+									if(pCastleTile->GetNumUnits() != 0)
 									{
 										pTile = pCastleTile;
 										break;
@@ -143,21 +142,28 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 							if(pTile->GetNumUnits() == 0)
 							{
-								Castle *pCastle = pTile->GetCastle();
-
-								// if it's a merc castle, we need to fight the mercs
-								if(pCastle->player == -1)
+								if(pCastle)
 								{
-									// create merc group
-									Group *pGroup = pCastle->GetMercGroup();
-									pTile->AddGroup(pGroup);
-									pGame->BeginBattle(pSelection, pTile);
-									break;
+									// if it's a merc castle, we need to fight the mercs
+									if(pCastle->player == -1)
+									{
+										// create merc group
+										Group *pGroup = pCastle->GetMercGroup();
+										pTile->AddGroup(pGroup);
+										pGame->BeginBattle(pSelection, pTile);
+										break;
+									}
+									else
+									{
+										// the castle is empty! claim that shit!
+										pCastle->Capture(pGame->CurrentPlayer());
+									}
 								}
 								else
 								{
-									// the castle is empty! claim that shit!
-									pCastle->Capture(pGame->CurrentPlayer());
+									// there must be empty enemy vehicles on the tile, we'll capture the empty vehicles
+									for(int a=0; a<pTile->GetNumGroups(); ++a)
+										pTile->GetGroup(a)->SetPlayer(pGame->CurrentPlayer());
 								}
 							}
 							else

@@ -202,6 +202,7 @@ public:
 
 	UnitDetails *GetDetails() { return &details; }
 	int GetPlayer() { return player; }
+	void SetPlayer(int player) { this->player = player; }
 	int GetRace();
 	MFVector GetColour();
 
@@ -303,6 +304,7 @@ public:
 	bool IsInGroup(Unit *pUnit);
 
 	int GetPlayer() { return player; }
+	void SetPlayer(int player);
 
 	MapTile *GetTile() { return pTile; }
 
