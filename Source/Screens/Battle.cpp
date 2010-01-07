@@ -10,9 +10,8 @@
 #include "MFFont.h"
 #include "MFMaterial.h"
 #include "MFView.h"
-
 #include "MFRenderer.h"
-#include "MFInput.h"
+#include "MFTexture.h"
 
 // remove me!
 #include "MFIni.h"
@@ -505,11 +504,23 @@ void Battle::Draw()
 	float left = MFFloor(rect.width * 0.06f);
 	float right = rect.width - left;
 	float width = rect.width - left*2;
+	float texelOffsetW = 0.f, texelOffsetH = 0.f;
+
+	MFTexture *pTex;
+	int texWidth, texHeight;
+	int diffuse = MFMaterial_GetParameterIndexFromName(pIcons, "diffuseMap");
+	MFMaterial_GetParameter(pIcons, diffuse, 0, &pTex);
+	if(pTex)
+	{
+		MFTexture_GetTextureDimensions(pTex, &texWidth, &texHeight);
+		texelOffsetW = texelCenter / (float)texWidth;
+		texelOffsetH = texelCenter / (float)texHeight;
+	}
 
 	MFMaterial_SetMaterial(pIcons);
-	MFPrimitive_DrawQuad(left, timelineY, 32.f, 32.f, MFVector::one, 0.f, 0.f, 0.25f, 0.25f);
-	MFPrimitive_DrawQuad(left + 32, timelineY, width - 64, 32.f, MFVector::one, 0.25f, 0.f, 0.5f, 0.25f);
-	MFPrimitive_DrawQuad(right - 32.f, timelineY, 32.f, 32.f, MFVector::one, 0.5f, 0.f, 0.75f, 0.25f);
+	MFPrimitive_DrawQuad(left, timelineY, 32.f, 32.f, MFVector::one, texelOffsetW, texelOffsetH, 0.25f + texelOffsetW, 0.25f + texelOffsetH);
+	MFPrimitive_DrawQuad(left + 32, timelineY, width - 64, 32.f, MFVector::one, 0.25f + texelOffsetW, texelOffsetH, 0.5f + texelOffsetW, 0.25f + texelOffsetH);
+	MFPrimitive_DrawQuad(right - 32.f, timelineY, 32.f, 32.f, MFVector::one, 0.5f + texelOffsetW, texelOffsetH, 0.75f + texelOffsetW, 0.25f + texelOffsetH);
 
 	// plot each unit on the timeline
 	BattleUnit *pUnit = pCooldownTail;
