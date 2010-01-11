@@ -24,6 +24,8 @@ Editor::Editor(Game *pGame)
 	brushIndex[1] = 1;
 	brush = 1;
 
+	editRegion = 15;
+
 	bPaintMode = true;
 	pMap->SetMoveKey(bPaintMode);
 
@@ -128,6 +130,8 @@ Editor::Editor(Game *pGame)
 
 	// special buttons
 	int specialCount = pUnits->GetNumSpecials();
+	int numPages = 3 + (specialCount-1)/11;
+
 	for(int a=0; a<specialCount; ++a)
 	{
 		pUnits->GetSpecialUVs(a, &uvs, texelOffset);
@@ -135,12 +139,16 @@ Editor::Editor(Game *pGame)
 		brushSelect.AddButton(2 + a/11, pCastleMat, &uvs, MFVector::one, (OT_Special << 16) | a, ChooseBrush, this);
 	}
 
-	// init unit selector:
-	int numUnits = pUnits->GetNumUnitTypes();
-	for(int a=0; a<numUnits; ++a)
+	// region buttons
+	for(int a=0; a<8; ++a)
 	{
-		
+		pUnits->GetFlagUVs(a+1, &uvs, texelOffset);
+
+		brushSelect.AddButton(numPages, pCastleMat, &uvs, pGame->GetPlayerColour(a), (OT_Region << 16) | a, ChooseBrush, this);
 	}
+
+	pUnits->GetFlagUVs(0, &uvs, texelOffset);
+	brushSelect.AddButton(numPages, pCastleMat, &uvs, pGame->GetPlayerColour(-1), (OT_Region << 16) | 15, ChooseBrush, this);
 }
 
 Editor::~Editor()
@@ -241,6 +249,10 @@ bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
 							}
 							break;
 						}
+						case OT_Region:
+						{
+							pMap->SetRegion(cursorX, cursorY, brushIndex[brush]);
+						}
 					}
 
 					lastX = cursorX;
@@ -268,6 +280,17 @@ int Editor::Update()
 	if(MFInput_WasPressed(Key_S, IDD_Keyboard) && MFInput_Read(Key_LControl, IDD_Keyboard))
 		pMap->Save("Map.ini");
 
+	if(MFInput_WasPressed(Key_Grave, IDD_Keyboard))
+		editRegion = 15;
+
+	for(int a=0; a<8; ++a)
+	{
+		if(MFInput_WasPressed(Key_1 + a, IDD_Keyboard))
+			editRegion = a;
+	}
+
+	pMap->SetEditRegion(editRegion);
+
 	return 0;
 }
 
@@ -291,6 +314,12 @@ void Editor::Draw()
 
 	brushSelect.Draw();
 	castleEdit.Draw();
+
+	const char *pText = "Edit Region: X";
+	if(editRegion != 15)
+		pText = MFStr("Edit Region: %d", editRegion + 1);
+	MFFont_DrawText(MFFont_GetDebugFont(), 87.f, 27.f, 32.f, MFVector::black, pText);
+	MFFont_DrawText(MFFont_GetDebugFont(), 85.f, 25.f, 32.f, MFVector::white, pText);
 }
 
 void Editor::Deselect()
@@ -379,6 +408,16 @@ void Editor::ChooseBrush(int button, void *pUserData, int buttonID)
 			Tileset *pTiles = pThis->pMap->GetTileset();
 			pTiles->GetRoadUVs(index, &rect, texelOffset);
 			pMat = pTiles->GetRoadMaterial();
+			break;
+		}
+		case OT_Region:
+		{
+			UnitDefinitions *pUnits = pThis->pMap->GetUnitDefinitions();
+			if(index == 15)
+				index = -1;
+			pUnits->GetFlagUVs(index + 1, &rect, texelOffset);
+			colour = Game::GetCurrent()->GetPlayerColour(index);
+			pMat = pUnits->GetCastleMaterial();
 			break;
 		}
 	}

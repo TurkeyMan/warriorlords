@@ -230,7 +230,12 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 						MFDebug_Assert(pTiles->GetStringCount() == pMap->mapWidth, "Not enough tiles in row.");
 
 						for(int a=0; a<pMap->mapWidth; ++a)
-							pMap->pMap[i++].terrain = MFString_AsciiToInteger(pTiles->GetString(a), false, 16);
+						{
+							uint32 t = MFString_AsciiToInteger(pTiles->GetString(a), false, 16);
+							pMap->pMap[i].terrain = (uint8)t;
+							pMap->pMap[i].region = (uint8)(t >> 8) & 0xF;
+							++i;
+						}
 
 						pTiles = pTiles->Next();
 					}
@@ -535,7 +540,7 @@ void Map::Save(const char *pFilename)
 
 		for(int b=0; b<mapWidth; ++b)
 		{
-			offset += sprintf(&buffer[offset], "%02x", pMap[a*mapWidth + b].terrain);
+			offset += sprintf(&buffer[offset], "%03x", (uint32)pMap[a*mapWidth + b].terrain | ((uint32)pMap[a*mapWidth + b].region << 8));
 			buffer[offset++] = b < mapWidth-1 ? ',' : '\n';
 		}
 
@@ -937,6 +942,20 @@ void Map::DrawDebug()
 
 	MFEnd();
 
+	for(int y=0; y<yTiles; ++y)
+	{
+		for(int x=0; x<xTiles; ++x)
+		{
+			MapTile *pTile = GetTile(xOffsetI + x, yOffsetI + y);
+			char text[16] = "X";
+			if(pTile->region != 15)
+				sprintf(text, "%d", pTile->region + 1);
+			float w = MFFont_GetStringWidth(MFFont_GetDebugFont(), text, 0.5f);
+			MFFont_DrawText(MFFont_GetDebugFont(), MakeVector((float)x + 0.5f - w*0.5f + .02f, (float)y + 0.25f + .02f), 0.5f, MFVector::black, text);
+			MFFont_DrawText(MFFont_GetDebugFont(), MakeVector((float)x + 0.5f - w*0.5f, (float)y + 0.25f), 0.5f, MFVector::white, text);
+		}
+	}
+
 	MFView_Pop();
 
 	MFFont_DrawTextf(MFFont_GetDebugFont(), MakeVector(8, 8), 24, MFVector::yellow, "%d, %d", cursorX, cursorY);
@@ -1193,6 +1212,12 @@ bool Map::SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask)
 	}
 
 	return true;
+}
+
+void Map::SetRegion(int x, int y, int region)
+{
+	MapTile *pTile = pMap + y*mapWidth + x;
+	pTile->region = region;
 }
 
 int Map::UpdateChange(int a)

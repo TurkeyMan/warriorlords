@@ -600,7 +600,7 @@ bool Castle::IsEmpty()
 
 Group *Castle::GetMercGroup()
 {
-	static const int odds[16] = { 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4 };
+	static const int odds[16] = { 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4 };
 
 	Group *pGroup = Group::Create(-1);
 
@@ -614,7 +614,6 @@ Group *Castle::GetMercGroup()
 
 	}
 
-
 	if(numChoices == 0)
 	{
 		// OH NO! This castle doesn't seem to have a unit type!!
@@ -622,7 +621,8 @@ Group *Castle::GetMercGroup()
 		choices[numChoices++] = 25; // maceman
 	}
 
-	int numUnits = odds[MFRand() & 0xF];
+	int range = MFMin(15, 10 + Game::GetCurrent()->GetCurrentTurn());
+	int numUnits = odds[MFRand() % range];
 	for(int a=0; a<numUnits; ++a)
 	{
 		pGroup->AddUnit(pGame->GetUnitDefs()->CreateUnit(choices[MFRand()%numChoices], -1));

@@ -20,6 +20,9 @@ Game::Game(const char *_pMap, bool bEditable)
 	pMapScreen = new MapScreen(this);
 	pBattle = new Battle(this);
 
+	currentPlayer = 0;
+	currentTurn = 0;
+
 	for(int a=0; a<8; ++a)
 	{
 		players[a].race = a + 1;
@@ -78,6 +81,9 @@ void Game::BeginGame()
 
 void Game::BeginTurn(int player)
 {
+	if(player < currentPlayer)
+		++currentTurn;
+
 	currentPlayer = player;
 
 	// heal units and restore movement

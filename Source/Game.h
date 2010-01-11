@@ -34,6 +34,7 @@ public:
 	Map *GetMap() { return pMap; }
 	UnitDefinitions *GetUnitDefs() { return pUnitDefs; }
 
+	int GetCurrentTurn() { return currentTurn; }
 	int CurrentPlayer() { return currentPlayer; }
 	int GetPlayerRace(int player) { return player == -1 ? 0 : players[player].race; }
 	MFVector GetPlayerColour(int player) { return player == -1 ? pUnitDefs->GetRaceColour(0) : players[player].colour; }
@@ -55,6 +56,7 @@ protected:
 
 	// game state data
 	int currentPlayer;
+	int currentTurn;
 
 	// castles
 

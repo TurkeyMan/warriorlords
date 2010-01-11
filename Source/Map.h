@@ -19,6 +19,7 @@ enum ObjectType
 	OT_Flag,
 	OT_Special,
 	OT_Road,
+	OT_Region,
 
 	OT_Max
 };
@@ -61,10 +62,12 @@ protected:
 
 	uint16 x, y;
 
-	uint8 terrain;		// terrain tile
-	uint8 type;			// type of detail on tile
-	uint8 index;		// index of item on tile
-	uint8 castleTile;	// castle square: 0 = top left, 1 = top right, 2 = bottom left, 3 = bottom right
+	uint8 terrain;			// terrain tile
+	uint8 type;				// type of detail on tile
+	uint8 index;			// index of item on tile
+	uint8 castleTile : 2;	// castle square: 0 = top left, 1 = top right, 2 = bottom left, 3 = bottom right
+	uint8 region : 4;		// region
+	uint8 flags : 2;		// tile flags
 };
 
 class Map : public InputReceiver
@@ -112,6 +115,7 @@ public:
 	UnitDefinitions *GetUnitDefinitions() { return pUnits; }
 
 	bool SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask = 0xFFFFFFFF);
+	void SetRegion(int x, int y, int region);
 
 	bool PlaceCastle(int x, int y, int player);
 	bool PlaceFlag(int x, int y, int race = 0);
@@ -121,6 +125,7 @@ public:
 	void ClearDetail(int x, int y);
 
 	void SetMoveKey(bool bAlternate) { moveButton = bAlternate ? 1 : 0; }
+	void SetEditRegion(int region) { editRegion = region; }
 
 	int UpdateChange(int a);
 
@@ -170,6 +175,8 @@ protected:
 	int numChanges;
 
 	int moveButton;
+
+	int editRegion;
 
 	bool SetTile(int x, int y, uint32 tile, uint32 mask);
 	int ChooseTile(int *pSelectedTiles, int numVariants);

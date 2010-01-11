@@ -119,6 +119,8 @@ protected:
 	bool bRemoveRoad;
 
 	int lastX, lastY;
+
+	int editRegion;
 };
 
 #endif
