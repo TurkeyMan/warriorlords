@@ -379,6 +379,7 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 	{
 		pMap->pTouched = (uint8*)MFHeap_AllocAndZero(pMap->mapWidth * pMap->mapHeight * sizeof(*pMap->pTouched));
 		pMap->pChangeList = (MapCoord*)MFHeap_Alloc(sizeof(MapCoord)*1024);
+		pMap->pRevertList = (RevertTile*)MFHeap_Alloc(sizeof(RevertTile)*1024);
 		pMap->numChanges = 0;
 	}
 
@@ -486,6 +487,7 @@ Map *Map::CreateNew(Game *pGame, const char *pTileset, const char *pUnits)
 	// editor stuff
 	pNew->pTouched = (uint8*)MFHeap_AllocAndZero(pNew->mapWidth * pNew->mapHeight * sizeof(*pNew->pTouched));
 	pNew->pChangeList = (MapCoord*)MFHeap_Alloc(sizeof(MapCoord)*1024);
+	pNew->pRevertList = (RevertTile*)MFHeap_Alloc(sizeof(RevertTile)*1024);
 	pNew->numChanges = 0;
 
 	pNew->moveButton = 0;
@@ -887,12 +889,14 @@ void Map::DrawDebug()
 
 	MFRect screenRect;
 	GetDisplayRect(&screenRect);
+	screenRect.width /= zoom;
+	screenRect.height /= zoom;
 
 	int tileW, tileH;
 	pTiles->GetTileSize(&tileW, &tileH);
 
-	float screenWidth = (float)screenRect.width / (float)tileW;
-	float screenHeight = (float)screenRect.height / (float)tileH;
+	float screenWidth = screenRect.width / tileW;
+	float screenHeight = screenRect.height / tileH;
 
 	xOffset = (int)(xOffset*tileW) / (float)tileW;
 	yOffset = (int)(yOffset*tileH) / (float)tileH;
@@ -904,8 +908,8 @@ void Map::DrawDebug()
 	rect.height = screenHeight;
 	MFView_SetOrtho(&rect);
 
-	int xTiles = (int)MFCeil((screenRect.width / tileW) / zoom + 1.f);
-	int yTiles = (int)MFCeil((screenRect.height / tileH) / zoom + 1.f);
+	int xTiles = (int)MFCeil(screenWidth + 1.f);
+	int yTiles = (int)MFCeil(screenHeight + 1.f);
 
 	float tileWidth, tileHeight;
 	GetVisibleTileSize(&tileWidth, &tileHeight);
@@ -1112,6 +1116,14 @@ bool Map::SetTile(int x, int y, uint32 tile, uint32 mask)
 	if(tile == GetTerrainAt(x, y))
  		return true;
 
+	if(!bRevert && pMap[y*mapWidth + x].region != editRegion)
+	{
+		pRevertList[numReverts].x = x;
+		pRevertList[numReverts].y = y;
+		pRevertList[numReverts].t = pMap[y*mapWidth + x].GetTerrain();
+		++numReverts;
+	}
+
 	int tiles[8];
 	int matches = pTiles->FindBestTiles(tiles, tile, mask);
 	MFDebug_Assert(matches, MFStr("Couldn't find matching tile at (%d, %d): %d, %d, %d, %d", x, y, tile & 0xFF, (tile >> 8) & 0xFF, (tile >> 16) & 0xFF, (tile >> 24) & 0xFF));
@@ -1161,6 +1173,8 @@ bool Map::SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask)
 {
 	MFZeroMemory(pTouched, mapWidth * mapHeight);
 	numChanges = 0;
+	numReverts = 0;
+	bRevert = false;
 
 	if(!SetTile(x, y, EncodeTile(tl, tr, bl, br), mask))
 		return false;
@@ -1209,6 +1223,62 @@ bool Map::SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask)
 		}
 
 		SetTile(x, y, EncodeTile(tl, tr, bl, br), EncodeTile(tlm, trm, blm, brm));
+	}
+
+	bRevert = true;
+
+	for(int a=0; a<numReverts; ++a)
+	{
+		MFZeroMemory(pTouched, mapWidth * mapHeight);
+		numChanges = 0;
+
+		SetTile(pRevertList[a].x, pRevertList[a].y, pRevertList[a].t, 0xFFFFFFFF);
+
+		for(int a=0; a<numChanges; ++a)
+		{
+			x = pChangeList[a].x;
+			y = pChangeList[a].y;
+			DecodeTile(GetTerrainAt(x, y), &tl, &tr, &bl, &br);
+
+			// perform a bunch of logic to find a tile type suggestion...
+			int tlm = 0, trm = 0, blm = 0, brm = 0;
+
+			// update adjacent tiles
+			if(y > 0 && pTouched[(y-1)*mapWidth + x])
+			{
+				int t = GetTerrainAt(x, y-1);
+				tl = DecodeBL(t);
+				tr = DecodeBR(t);
+				tlm = 0xFF;
+				trm = 0xFF;
+			}
+			if(y < mapHeight-1 && pTouched[(y+1)*mapWidth + x])
+			{
+				int b = GetTerrainAt(x, y+1);
+				bl = DecodeTL(b);
+				br = DecodeTR(b);
+				blm = 0xFF;
+				brm = 0xFF;
+			}
+			if(x > 0 && pTouched[y*mapWidth + x - 1])
+			{
+				int l = GetTerrainAt(x-1, y);
+				tl = DecodeTR(l);
+				bl = DecodeBR(l);
+				tlm = 0xFF;
+				blm = 0xFF;
+			}
+			if(x < mapWidth-1 && pTouched[y*mapWidth + x + 1])
+			{
+				int r = GetTerrainAt(x+1, y);
+				tr = DecodeTL(r);
+				br = DecodeBL(r);
+				trm = 0xFF;
+				brm = 0xFF;
+			}
+
+			SetTile(x, y, EncodeTile(tl, tr, bl, br), EncodeTile(tlm, trm, blm, brm));
+		}
 	}
 
 	return true;
@@ -1275,6 +1345,9 @@ int Map::UpdateChange(int a)
 
 bool Map::PlaceCastle(int x, int y, int player)
 {
+	if(pMap[y*mapWidth + x].region != editRegion)
+		return false;
+
 	// check we have room on the map
 	if(x >= mapWidth - 1 || y >= mapHeight - 1)
 		return false;
@@ -1325,6 +1398,9 @@ bool Map::PlaceCastle(int x, int y, int player)
 
 bool Map::PlaceFlag(int x, int y, int race)
 {
+	if(pMap[y*mapWidth + x].region != editRegion)
+		return false;
+
 	// check for compatible terrain
 	const Tile *pT = GetTerrainTileAt(x, y);
 
@@ -1344,6 +1420,9 @@ bool Map::PlaceFlag(int x, int y, int race)
 
 bool Map::PlaceSpecial(int x, int y, int index)
 {
+	if(pMap[y*mapWidth + x].region != editRegion)
+		return false;
+
 	// check for compatible terrain
 	const Tile *pT = GetTerrainTileAt(x, y);
 
@@ -1363,6 +1442,9 @@ bool Map::PlaceSpecial(int x, int y, int index)
 
 bool Map::PlaceRoad(int x, int y)
 {
+	if(pMap[y*mapWidth + x].region != editRegion)
+		return false;
+
 	if(pMap[y*mapWidth + x].type == OT_Road)
 		return true;
 
@@ -1463,6 +1545,9 @@ int Map::GetDetail(int x, int y) const
 void Map::ClearDetail(int x, int y)
 {
 	MapTile *pTile = pMap + y*mapWidth + x;
+
+	if(pTile->region != editRegion)
+		return;
 
 	// if we removed a road, we need to correct the roads around it
 	if(pTile->type == OT_Road)

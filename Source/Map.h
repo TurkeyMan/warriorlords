@@ -168,11 +168,20 @@ protected:
 		uint16 x, y;
 	};
 
-	bool bEditable;
+	struct RevertTile
+	{
+		uint16 x, y;
+		uint32 t;
+	};
 
 	uint8 *pTouched;
 	MapCoord *pChangeList;
 	int numChanges;
+	RevertTile *pRevertList;
+	int numReverts;
+
+	bool bEditable;
+	bool bRevert;
 
 	int moveButton;
 
