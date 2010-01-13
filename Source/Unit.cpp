@@ -559,11 +559,12 @@ void Unit::Restore()
 	life = MFMin(life + (details.life + 3) / 4, details.life);
 }
 
-void Castle::Init(CastleDetails *pDetails, int _player, UnitDefinitions *_pUnitDefs)
+void Castle::Init(const CastleDetails &_details, int _player)
 {
-	pUnitDefs = _pUnitDefs;
+	pUnitDefs = NULL;
+	pTile = NULL;
 
-	details = *pDetails;
+	details = _details;
 	player = _player;
 
 	building = -1;

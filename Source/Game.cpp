@@ -14,19 +14,29 @@ Game *Game::pCurrent = NULL;
 
 Game::Game(const char *_pMap, bool bEditable)
 {
-	pMap = Map::Create(this, "Map", bEditable);
-	pUnitDefs = pMap->GetUnitDefinitions();
+	pMap = NULL;
+	pUnitDefs = NULL;
 
-	pMapScreen = new MapScreen(this);
-	pBattle = new Battle(this);
+	pMapScreen = NULL;
+	pBattle = NULL;
 
-	currentPlayer = 0;
-	currentTurn = 0;
-
-	for(int a=0; a<8; ++a)
+	if(bEditable)
 	{
-		players[a].race = a + 1;
-		players[a].colour = pUnitDefs->GetRaceColour(a + 1);
+		// create the map and screens
+		pMap = Map::Create(this, "Map", bEditable);
+		pUnitDefs = pMap->GetUnitDefinitions();
+
+		pMapScreen = new MapScreen(this);
+		pBattle = new Battle(this);
+
+		currentPlayer = 0;
+		currentTurn = 0;
+
+		for(int a=0; a<8; ++a)
+		{
+			players[a].race = a + 1;
+			players[a].colour = pUnitDefs->GetRaceColour(a + 1);
+		}
 	}
 }
 
@@ -43,15 +53,38 @@ Game::~Game()
 
 void Game::BeginGame()
 {
-	// set players
+	const int numRaces = 2;
+
+	// setup players
 	for(int a=0; a<8; ++a)
 	{
-		players[a].race = a + 1;
-		players[a].colour = pUnitDefs->GetRaceColour(players[a].race);
+		players[a].race = 1 + (MFRand() % numRaces);
 		players[a].gold = 0;
-
 		players[a].cursorX = 0;
 		players[a].cursorY = 0;
+	}
+
+	// create the map and screens
+	pMap = Map::Create(this, "Map", false);
+	pUnitDefs = pMap->GetUnitDefinitions();
+
+	pMapScreen = new MapScreen(this);
+	pBattle = new Battle(this);
+
+	currentPlayer = 0;
+	currentTurn = 0;
+
+	// select player colours
+	bool bColoursTaken[8] = { false, false, false, false, false, false, false, false };
+
+	for(int a=0; a<numRaces; ++a)
+	{
+		int colour = players[a].race;
+		while(bColoursTaken[colour-1])
+			colour = 1 + (MFRand() % numRaces);
+
+		players[a].colour = pUnitDefs->GetRaceColour(colour);
+		bColoursTaken[colour-1] = true;
 	}
 
 	// HACK
@@ -65,7 +98,7 @@ void Game::BeginGame()
 			players[pCastle->player].cursorY = pCastle->details.y;
 
 			// produce starting hero (or flag that hero wants to join on the first turn)
-			Unit *pHero = pUnitDefs->CreateUnit(pCastle->player, pCastle->player);
+			Unit *pHero = pUnitDefs->CreateUnit(players[pCastle->player].race - 1, pCastle->player);
 
 			Group *pGroup = Group::Create(pCastle->player);
 			pGroup->AddUnit(pHero);

@@ -163,11 +163,98 @@ bool MapTile::CanMove(Group *_pGroup)
 	return true;
 }
 
+int GetCastles(MFIni *pIni, Castle *pCastles)
+{
+	int numCastles = 0;
+
+	MFIniLine *pLine = pIni->GetFirstLine();
+	while(pLine)
+	{
+		if(pLine->IsSection("Map"))
+		{
+			MFIniLine *pMapLine = pLine->Sub();
+
+			while(pMapLine)
+			{
+				if(pMapLine->IsSection("Castles"))
+				{
+					MFIniLine *pCastleSection = pMapLine->Sub();
+
+					numCastles = 0;
+
+					pCastleSection = pMapLine->Sub();
+
+					while(pCastleSection)
+					{
+						if(pCastleSection->IsSection("Castle"))
+						{
+							MFIniLine *pCastle = pCastleSection->Sub();
+
+							int player = -1;
+
+							CastleDetails details;
+							MFString_Copy(details.name, "Untitled");
+							details.x = -1;
+							details.y = -1;
+							details.numBuildUnits = 0;
+							details.income = 0;
+
+							while(pCastle)
+							{
+								if(!MFString_CaseCmp(pCastle->GetString(0), "name"))
+								{
+									MFString_Copy(details.name, pCastle->GetString(1));
+								}
+								else if(!MFString_CaseCmp(pCastle->GetString(0), "position"))
+								{
+									details.x = pCastle->GetInt(1);
+									details.y = pCastle->GetInt(2);
+								}
+								else if(!MFString_CaseCmp(pCastle->GetString(0), "race"))
+								{
+									player = pCastle->GetInt(1);
+								}
+								else if(!MFString_CaseCmp(pCastle->GetString(0), "income"))
+								{
+									details.income = pCastle->GetInt(1);
+								}
+								else if(!MFString_CaseCmp(pCastle->GetString(0), "unit"))
+								{
+									int unit = pCastle->GetInt(1);
+									details.numBuildUnits = MFMax(details.numBuildUnits, unit + 1);
+									details.buildUnits[unit].unit = pCastle->GetInt(3);
+									details.buildUnits[unit].cost = pCastle->GetInt(4);
+									details.buildUnits[unit].buildTimeMod = pCastle->GetInt(5);
+								}
+
+								pCastle = pCastle->Next();
+							}
+
+							pCastles[numCastles++].Init(details, player);
+						}
+
+						pCastleSection = pCastleSection->Next();
+					}
+				}
+
+				pMapLine = pMapLine->Next();
+			}
+		}
+
+		pLine = pLine->Next();
+	}
+
+	return numCastles;
+}
+
 Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 {
 	MFIni *pIni = MFIni::Create(pMapFilename);
 	if(!pIni)
 		return NULL;
+
+	bool bRegionsPresent[16];
+	MFZeroMemory(bRegionsPresent, sizeof(bRegionsPresent));
 
 	Map *pMap = NULL;
 
@@ -179,11 +266,8 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 			pMap = (Map*)MFHeap_AllocAndZero(sizeof(Map));
 			pMap = new(pMap) Map;
 			pMap->pGame = pGame;
-			pMap->pCastles = NULL;
+			pMap->pCastles = (Castle*)MFHeap_AllocAndZero(sizeof(Castle) * 128);
 			pMap->bEditable = bEditable;
-
-			if(bEditable)
-				pMap->pCastles = (Castle*)MFHeap_AllocAndZero(sizeof(Castle) * 256);
 
 			MFIniLine *pMapLine = pLine->Sub();
 
@@ -234,6 +318,7 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 							uint32 t = MFString_AsciiToInteger(pTiles->GetString(a), false, 16);
 							pMap->pMap[i].terrain = (uint8)t;
 							pMap->pMap[i].region = (uint8)(t >> 8) & 0xF;
+							bRegionsPresent[pMap->pMap[i].region] = true;
 							++i;
 						}
 
@@ -249,118 +334,179 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 					{
 						int x = pDetails->GetInt(0);
 						int y = pDetails->GetInt(1);
-						MFDebug_Assert(!MFString_Compare(pDetails->GetString(2), "="), "Expected: '='");
 
-						MapTile &tile = pMap->pMap[y*pMap->mapWidth + x];
+						MapTile *pTile = pMap->pMap + y*pMap->mapWidth + x;
 
-						for(int a=0; a<OT_Max; ++a)
+						if(bEditable || pTile->region == 0xF)
 						{
-							if(!MFString_CaseCmp(pDetails->GetString(3), pObjectTypes[a]))
+							MFDebug_Assert(!MFString_Compare(pDetails->GetString(2), "="), "Expected: '='");
+
+							for(int a=0; a<OT_Max; ++a)
 							{
-								tile.type = a;
-								break;
+								if(!MFString_CaseCmp(pDetails->GetString(3), pObjectTypes[a]))
+								{
+									pTile->type = a;
+									break;
+								}
 							}
+
+							pTile->index = pDetails->GetInt(4);
 						}
-						tile.index = pDetails->GetInt(4);
 
 						pDetails = pDetails->Next();
 					}
 				}
-				else if(pMapLine->IsSection("Castles"))
-				{
-					MFIniLine *pCastles = pMapLine->Sub();
-
-					pMap->numCastles = 0;
-
-					while(pCastles)
-					{
-						if(pCastles->IsSection("Castle"))
-							++pMap->numCastles;
-						pCastles = pCastles->Next();
-					}
-
-					if(pMap->numCastles)
-					{
-						if(!pMap->pCastles)
-							pMap->pCastles = (Castle*)MFHeap_AllocAndZero(sizeof(Castle) * pMap->numCastles);
-						int castle = 0;
-
-						pCastles = pMapLine->Sub();
-
-						while(pCastles)
-						{
-							if(pCastles->IsSection("Castle"))
-							{
-								MFIniLine *pCastle = pCastles->Sub();
-
-								int race;
-
-								CastleDetails details;
-								details.pName = "Untitled";
-								details.x = -1;
-								details.y = -1;
-								details.numBuildUnits = 0;
-								details.income = 0;
-
-								while(pCastle)
-								{
-									if(!MFString_CaseCmp(pCastle->GetString(0), "name"))
-									{
-										if(bEditable)
-										{
-											details.pName = (const char *)MFHeap_Alloc(256);
-											MFString_Copy((char*)details.pName, pCastle->GetString(1));
-										}
-										else
-										{
-											details.pName = pCastle->GetString(1);
-										}
-									}
-									else if(!MFString_CaseCmp(pCastle->GetString(0), "position"))
-									{
-										details.x = pCastle->GetInt(1);
-										details.y = pCastle->GetInt(2);
-									}
-									else if(!MFString_CaseCmp(pCastle->GetString(0), "race"))
-									{
-										race = pCastle->GetInt(1);
-									}
-									else if(!MFString_CaseCmp(pCastle->GetString(0), "income"))
-									{
-										details.income = pCastle->GetInt(1);
-									}
-									else if(!MFString_CaseCmp(pCastle->GetString(0), "unit"))
-									{
-										int unit = pCastle->GetInt(1);
-										details.numBuildUnits = MFMax(details.numBuildUnits, unit + 1);
-										details.buildUnits[unit].unit = pCastle->GetInt(3);
-										details.buildUnits[unit].cost = pCastle->GetInt(4);
-										details.buildUnits[unit].buildTimeMod = pCastle->GetInt(5);
-									}
-
-									pCastle = pCastle->Next();
-								}
-
-								for(int a=0; a<4; ++a)
-								{
-									MapTile &tile = pMap->pMap[(details.y + (a >> 1))*pMap->mapWidth + details.x + (a & 1)];
-									tile.pObject = &pMap->pCastles[castle];
-									tile.type = OT_Castle;
-									tile.index = castle;
-									tile.castleTile = a;
-								}
-
-								Castle *pNewCastle = &pMap->pCastles[castle++];
-								pNewCastle->Init(&details, race, pMap->pUnits);
-								pNewCastle->pTile = pMap->pMap + details.y*pMap->mapWidth + details.x;
-							}
-
-							pCastles = pCastles->Next();
-						}
-					}
-				}
 
 				pMapLine = pMapLine->Next();
+			}
+
+			// get the castles and parse them
+			Castle castles[128];
+			MFZeroMemory(castles, sizeof(castles));
+
+			int numCastles = GetCastles(pIni, castles);
+
+			for(int c=0; c<numCastles; ++c)
+			{
+				Castle &castle = castles[c];
+
+				MapTile *pTile = pMap->pMap + castle.details.y*pMap->mapWidth + castle.details.x;
+
+				if(bEditable || pTile->region == 0xF)
+				{
+					castle.pTile = pTile;
+					castle.pUnitDefs = pMap->pUnits;
+					if(castle.player != -1)
+						castle.player = pTile->region;
+
+					for(int a=0; a<4; ++a)
+					{
+						MapTile &tile = pMap->pMap[(castle.details.y + (a >> 1))*pMap->mapWidth + castle.details.x + (a & 1)];
+						tile.pObject = &pMap->pCastles[pMap->numCastles];
+						tile.type = OT_Castle;
+						tile.index = pMap->numCastles;
+						tile.castleTile = a;
+					}
+
+					pMap->pCastles[pMap->numCastles++] = castle;
+				}
+			}
+
+			if(!bEditable)
+			{
+				for(int a=0; a<15; ++a)
+				{
+					if(!bRegionsPresent[a])
+						continue;
+
+					// load slices from other maps
+					const char *pRace = pMap->pUnits->GetRaceName(pGame->GetPlayerRace(a));
+					const char *pFilename = MFStr("%s-%s", pMapFilename, pRace);
+					MFIni *pSlice = MFIni::Create(pFilename);;
+					if(!pSlice)
+					{
+						MFDebug_Assert(false, MFStr("Couldn't load '%s.ini'!", pFilename));
+						continue;
+					}
+
+					MFIniLine *pLine = pSlice->GetFirstLine();
+					while(pLine)
+					{
+						if(pLine->IsSection("Map"))
+						{
+							MFIniLine *pMapLine = pLine->Sub();
+
+							while(pMapLine)
+							{
+								if(pMapLine->IsSection("Tiles"))
+								{
+									MFIniLine *pTiles = pMapLine->Sub();
+
+									int i = 0;
+									while(pTiles)
+									{
+										MFDebug_Assert(pTiles->GetStringCount() == pMap->mapWidth, "Not enough tiles in row.");
+
+										for(int t=0; t<pMap->mapWidth; ++t, ++i)
+										{
+											if(pMap->pMap[i].region == a)
+											{
+												uint32 terrain = MFString_AsciiToInteger(pTiles->GetString(t), false, 16);
+												pMap->pMap[i].terrain = (uint8)terrain;
+											}
+										}
+
+										pTiles = pTiles->Next();
+									}
+								}
+								else if(pMapLine->IsSection("Details"))
+								{
+									MFIniLine *pDetails = pMapLine->Sub();
+									while(pDetails)
+									{
+										int x = pDetails->GetInt(0);
+										int y = pDetails->GetInt(1);
+
+										MapTile *pTile = pMap->pMap + y*pMap->mapWidth + x;
+
+										if(pTile->region == a)
+										{
+											MFDebug_Assert(!MFString_Compare(pDetails->GetString(2), "="), "Expected: '='");
+
+											for(int a=0; a<OT_Max; ++a)
+											{
+												if(!MFString_CaseCmp(pDetails->GetString(3), pObjectTypes[a]))
+												{
+													pTile->type = a;
+													break;
+												}
+											}
+
+											pTile->index = pDetails->GetInt(4);
+										}
+
+										pDetails = pDetails->Next();
+									}
+								}
+
+								pMapLine = pMapLine->Next();
+							}
+						}
+
+						pLine = pLine->Next();
+					}
+
+					MFZeroMemory(castles, sizeof(castles));
+					numCastles = GetCastles(pSlice, castles);
+
+					for(int c=0; c<numCastles; ++c)
+					{
+						Castle &castle = castles[c];
+
+						MapTile *pTile = pMap->pMap + castle.details.y*pMap->mapWidth + castle.details.x;
+
+						if(pTile->region == a)
+						{
+							castle.pTile = pTile;
+							castle.pUnitDefs = pMap->pUnits;
+							if(castle.player != -1)
+								castle.player = a;
+
+							for(int t=0; t<4; ++t)
+							{
+								MapTile &tile = pMap->pMap[(castle.details.y + (t >> 1))*pMap->mapWidth + castle.details.x + (t & 1)];
+								tile.pObject = &pMap->pCastles[pMap->numCastles];
+								tile.type = OT_Castle;
+								tile.index = pMap->numCastles;
+								tile.castleTile = t;
+							}
+
+							pMap->pCastles[pMap->numCastles++] = castle;
+						}
+					}
+
+					MFIni::Destroy(pSlice);
+				}
 			}
 		}
 
@@ -501,14 +647,8 @@ void Map::Destroy()
 
 	pTiles->Destroy();
 	pUnits->Free();
+	MFHeap_Free(pCastles);
 	MFHeap_Free(pMap);
-
-	if(bEditable)
-	{
-		for(int a=0; a<numCastles; ++a)
-			MFHeap_Free((char*)pCastles[a].details.pName);
-	}
-
 	MFHeap_Free(this);
 }
 
@@ -584,7 +724,7 @@ void Map::Save(const char *pFilename)
 			if(tile.type == OT_Castle && tile.castleTile == 0)
 			{
 				Castle &castle = pCastles[tile.index];
-				int len = sprintf(buffer, "\t\t[Castle]\n\t\t{\n\t\t\tname = \"%s\"\n\t\t\tposition = %d, %d\n\t\t\tincome = %d\n\t\t\trace = %d\n", castle.details.pName, b, a, castle.details.income, castle.player);
+				int len = sprintf(buffer, "\t\t[Castle]\n\t\t{\n\t\t\tname = \"%s\"\n\t\t\tposition = %d, %d\n\t\t\tincome = %d\n\t\t\trace = %d\n", castle.details.name, b, a, castle.details.income, castle.player);
 				MFFile_Write(pFile, buffer, len);
 				for(int c=0; c<castle.details.numBuildUnits; ++c)
 				{
@@ -1389,8 +1529,7 @@ bool Map::PlaceCastle(int x, int y, int player)
 	pCastles[numCastles].player = player;
 	pCastles[numCastles].details.x = x;
 	pCastles[numCastles].details.y = y;
-	pCastles[numCastles].details.pName = (const char*)MFHeap_AllocAndZero(256);
-	MFString_Copy((char*)pCastles[numCastles].details.pName, "Unnamed");
+	MFString_Copy(pCastles[numCastles].details.name, "Unnamed");
 
 	++numCastles;
 	return true;
@@ -1611,8 +1750,6 @@ void Map::ClearDetail(int x, int y)
 		}
 
 		// destroy the castle
-		MFHeap_Free((char*)pCastles[castle].details.pName);
-
 		for(int a = castle+1; a < numCastles; ++a)
 			pCastles[a-1] = pCastles[a];
 

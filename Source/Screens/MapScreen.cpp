@@ -930,7 +930,7 @@ void CastleConfig::Draw()
 	MFPrimitive_DrawUntexturedQuad(right.x, right.y, right.width, right.height, MakeVector(0, 0, 0, .8f));
 	MFPrimitive_DrawUntexturedQuad(lower.x, lower.y, lower.width, lower.height, MakeVector(0, 0, 0, .8f));
 
-	MFFont_BlitTextf(pFont, (int)title.x, (int)title.y, MFVector::yellow, pCastle->details.pName);
+	MFFont_BlitTextf(pFont, (int)title.x, (int)title.y, MFVector::yellow, pCastle->details.name);
 
 	int building = pCastle->GetBuildUnit();
 	if(building > -1)

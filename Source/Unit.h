@@ -79,7 +79,7 @@ public:
 	Game *GetGame() { return pGame; }
 
 	inline int GetNumRaces() { return raceCount; }
-	inline const char *GetRaceName(int type) { return pRaces[type].pName; }
+	inline const char *GetRaceName(int race) { return pRaces[race].pName; }
 	MFVector GetRaceColour(int race) const;
 
 	inline int GetNumUnitTypes() { return numUnits; }
@@ -244,7 +244,7 @@ struct BuildUnit
 
 struct CastleDetails
 {
-	const char *pName;
+	char name[32];
 	int x, y;
 
 	BuildUnit buildUnits[4];
@@ -256,7 +256,7 @@ struct CastleDetails
 class Castle
 {
 public:
-	void Init(CastleDetails *pDetails, int player, UnitDefinitions *pUnitDefs);
+	void Init(const CastleDetails &details, int player);
 
 	MapTile *GetTile(int index = 0);
 	bool IsEmpty();
@@ -267,8 +267,8 @@ public:
 	void SetBuildUnit(int slot);
 	int GetBuildUnit();
 
-	const char *GetName() { return details.pName; }
-	void SetName(const char *pName) { MFString_Copy((char*)details.pName, pName); }
+	const char *GetName() { return details.name; }
+	void SetName(const char *pName) { MFString_Copy(details.name, pName); }
 
 	int GetPlayer() { return player; }
 
