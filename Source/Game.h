@@ -42,6 +42,8 @@ public:
 	static void SetCurrent(Game *pGame) { pCurrent = pGame; }
 	static Game *GetCurrent() { return pCurrent; }
 
+	bool CreateUnit(int unit, Castle *pCastle);
+
 protected:
 	// game data
 	Map *pMap;
