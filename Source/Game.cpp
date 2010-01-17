@@ -166,6 +166,10 @@ void Game::BeginTurn(int player)
 				int buildUnit = pCastle->details.buildUnits[pCastle->building].unit;
 				if(CreateUnit(buildUnit, pCastle))
 					pCastle->SetBuildUnit(pCastle->building);
+
+				// HACK: Skeletons build 2 at a time!
+				if(pCastle->details.buildUnits[pCastle->building].unit == 14)
+					CreateUnit(buildUnit, pCastle);
 			}
 		}
 	}
