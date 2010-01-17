@@ -53,7 +53,7 @@ Game::~Game()
 
 void Game::BeginGame()
 {
-	const int numRaces = 3;
+	const int numRaces = 4;
 
 	// setup players
 	for(int a=0; a<8; ++a)
