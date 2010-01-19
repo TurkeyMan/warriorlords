@@ -16,6 +16,8 @@
 // remove me!
 #include "MFIni.h"
 
+#include <stdio.h>
+
 Battle::Battle(Game *_pGame)
 {
 	pGame = _pGame;
@@ -281,6 +283,25 @@ int Battle::Update()
 
 					}
 				}
+				else if(unit.state == US_Migrating)
+				{
+					if(unit.stateTime <= 0.f)
+					{
+						// swap positions with target
+						unit.curX = unit.posX = unit.pTarget->posX;
+						unit.curY = unit.posY = unit.pTarget->posY;
+						unit.row = 0;
+						unit.pTarget = NULL;
+
+						StartCooldown(&unit);
+					}
+					else
+					{
+						float phaseTime = 1.f - unit.stateTime*0.5f;
+						unit.curX = unit.posX + (int)((unit.pTarget->posX - unit.posX)*phaseTime);
+						unit.curY = unit.posY + (int)((unit.pTarget->posY - unit.posY)*phaseTime);
+					}
+				}
 			}
 		}
 	}
@@ -294,8 +315,6 @@ int Battle::Update()
 	{
 		if(!pUnit->bEngaged && pUnit->damageIndicatorTime == 0.f)
 		{
-			BattleUnit *pTarget = NULL;
-
 			bool bIsRanged = pUnit->pUnit->IsRanged();
 			if(bIsRanged || pUnit->row == 0 || armies[pUnit->army].numForwardUnits == 0)
 			{
@@ -303,6 +322,7 @@ int Battle::Update()
 				bool bCanAttackBackRow = bIsRanged || opponent.numForwardUnits == 0;
 
 				// pick target...
+				BattleUnit *pTarget = NULL;
 				for(int a=0; a<opponent.numUnits; ++a)
 				{
 					BattleUnit *pT = &opponent.units[a];
@@ -323,6 +343,24 @@ int Battle::Update()
 
 					// unlink
 					EndWaiting(pUnit);
+				}
+			}
+			else if(!bIsRanged && pUnit->row == 1 && armies[pUnit->army].numForwardUnits < 5)
+			{
+				Army &army = armies[pUnit->army];
+				for(int a=0; a<army.numUnits; ++a)
+				{
+					if(army.units[a].state == US_Dead && army.units[a].row == 0 && !army.units[a].bEngaged)
+					{
+						// migrate!
+						pUnit->pTarget = &army.units[a];
+						pUnit->pTarget->bEngaged = true;
+						pUnit->state = US_Migrating;
+						pUnit->stateTime = 2.f;
+
+						// unlink
+						EndWaiting(pUnit);
+					}
 				}
 			}
 		}
@@ -396,6 +434,19 @@ void Battle::Draw()
 				// draw damage indicator with a little bouncey thing...
 				//...
 			}
+
+#if 1
+			if(unit.state != US_Dead)
+			{
+				char move[16];
+				sprintf(move, "%d %.2g", unit.state, unit.stateTime);
+
+				MFFont *pFont = Game::GetCurrent()->GetSmallNumbersFont();
+				float height = MFFont_GetFontHeight(pFont);
+
+				MFFont_BlitText(pFont, unit.curX + 2, unit.curY + 62 - (int)height, MFVector::white, move);
+			}
+#endif
 		}
 	}
 
