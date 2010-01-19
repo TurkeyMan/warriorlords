@@ -9,6 +9,31 @@
 
 #include "MFFont.h"
 
+class GroupConfig;
+
+class UnitConfig : public InputReceiver
+{
+public:
+	UnitConfig();
+	~UnitConfig();
+
+	bool Draw();
+
+	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
+
+	void Show(GroupConfig *pGroup);
+	void Hide();
+
+protected:
+	GroupConfig *pGroup;
+
+	MFFont *pFont;
+
+	MFRect window;
+
+	bool bVisible;
+};
+
 class GroupConfig : public InputReceiver
 {
 public:
@@ -23,6 +48,8 @@ public:
 	void Hide();
 
 protected:
+	UnitConfig battleConfig;
+
 	MapTile *pTile;
 
 	MFFont *pFont;

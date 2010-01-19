@@ -14,6 +14,10 @@ Game *Game::pCurrent = NULL;
 
 Game::Game(const char *_pMap, bool bEditable)
 {
+	pText = MFFont_Create("FranklinGothic");
+	pBattleNumbersFont = MFFont_Create("Battle");
+	pSmallNumbersFont = MFFont_Create("SmallNumbers");
+
 	pMap = NULL;
 	pUnitDefs = NULL;
 
@@ -49,6 +53,10 @@ Game::~Game()
 
 	if(pMap)
 		pMap->Destroy();
+
+	MFFont_Destroy(pText);
+	MFFont_Destroy(pBattleNumbersFont);
+	MFFont_Destroy(pSmallNumbersFont);
 }
 
 void Game::BeginGame()
@@ -164,12 +172,24 @@ void Game::BeginTurn(int player)
 			if(pCastle->building != -1 && --pCastle->buildTime <= 0)
 			{
 				int buildUnit = pCastle->details.buildUnits[pCastle->building].unit;
-				if(CreateUnit(buildUnit, pCastle))
+				Group *pGroup = CreateUnit(buildUnit, pCastle);
+				if(pGroup)
 					pCastle->SetBuildUnit(pCastle->building);
 
 				// HACK: Skeletons build 2 at a time!
-				if(pCastle->details.buildUnits[pCastle->building].unit == 14)
-					CreateUnit(buildUnit, pCastle);
+				if(buildUnit == 14)
+				{
+					if(pGroup->GetTile()->GetNumUnits() < 10)
+					{
+						// if there's space on the same tile, add the second one to the same group
+						Unit *pUnit = pUnitDefs->CreateUnit(buildUnit, pCastle->player);
+						pGroup->AddUnit(pUnit);
+					}
+					else
+					{
+						CreateUnit(buildUnit, pCastle);
+					}
+				}
 			}
 		}
 	}
@@ -271,7 +291,7 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 	Screen::SetNext(pMapScreen);
 }
 
-bool Game::CreateUnit(int unit, Castle *pCastle)
+Group *Game::CreateUnit(int unit, Castle *pCastle)
 {
 	// find space in the castle for the unit
 	MapTile *pTile = NULL;
@@ -344,8 +364,8 @@ bool Game::CreateUnit(int unit, Castle *pCastle)
 		pGroup->AddUnit(pUnit);
 		pTile->AddGroup(pGroup);
 
-		return true;
+		return pGroup;
 	}
 
-	return false;
+	return NULL;
 }

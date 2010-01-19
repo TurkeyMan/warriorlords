@@ -64,6 +64,7 @@ struct UnitDetails
 	float cooldown, attackSpeed;
 	int life;
 	int buildTime, cost;
+	int weapon;
 
 	// visible info
 	int x, y;
@@ -123,6 +124,15 @@ public:
 	inline MFMaterial *GetCastleMaterial() const { return pCastleMat; }
 
 protected:
+	struct Weapon
+	{
+		const char *pName;
+		bool bIsProjectile;
+		int x, y;
+		int width, height;
+		int impactAnim;
+	};
+
 	struct WeaponClass
 	{
 		const char *pName;
@@ -162,6 +172,9 @@ protected:
 
 	const char **ppArmourClasses;
 	int numArmourClasses;
+
+	Weapon *pWeapons;
+	int numWeapons;
 
 	WeaponClass *pWeaponClasses;
 	int numWeaponClasses;

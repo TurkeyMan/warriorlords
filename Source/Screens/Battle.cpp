@@ -73,106 +73,6 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget, int foreground, int backgrou
 	pActionHead = pActionTail = NULL;
 	cooldownCount = 0;
 
-#if 0
-	MFIni *pIni = MFIni::Create("TestBattle");
-	if(!pIni)
-		return;
-
-	int numUnits = pUnitDefs->GetNumUnitTypes();
-	groups[0].player = 0;
-	groups[1].player = 1;
-	groups[2].player = 2;
-	groups[3].player = 3;
-	groups[4].player = 4;
-	groups[5].player = 5;
-	groups[6].player = 6;
-	groups[7].player = 7;
-
-	MFIniLine *pLine = pIni->GetFirstLine();
-
-	while(pLine)
-	{
-		if(pLine->IsSection("Battle"))
-		{
-			MFIniLine *pBattle = pLine->Sub();
-
-			while(pBattle)
-			{
-				if(pBattle->IsString(0, "background"))
-				{
-					for(int a=0; a<pTileSet->GetNumTerrainTypes(); ++a)
-					{
-						if(!MFString_CaseCmp(pBattle->GetString(1), pTileSet->GetTerrainName(a)))
-						{
-							pBackground = ppBackgrounds[a];
-							break;
-						}
-					}
-				}
-				else if(pBattle->IsString(0, "foreground"))
-				{
-					for(int a=0; a<pTileSet->GetNumTerrainTypes(); ++a)
-					{
-						if(!MFString_CaseCmp(pBattle->GetString(1), pTileSet->GetTerrainName(a)))
-						{
-							pForeground = ppForegrounds[a];
-							break;
-						}
-					}
-				}
-				else if(pBattle->IsString(0, "castle"))
-				{
-					//          pCastle = MFMaterial_Create(MFStr("Battle/castle-%s", pBattle->GetString(1)));
-				}
-				else if(pBattle->IsString(0, "army1"))
-				{
-					races[0] = pBattle->GetInt(1) - 1;
-				}
-				else if(pBattle->IsString(0, "army2"))
-				{
-					races[1] = pBattle->GetInt(1) - 1;
-				}
-
-				for(int g=0; g<8; ++g)
-				{
-					if(pBattle->IsSection(MFStr("Group%d", g+1)))
-					{
-						MFIniLine *pUnits = pBattle->Sub();
-						while(pUnits)
-						{
-							const char *pName = pUnits->GetString(0);
-
-							for(int a=0; a<numUnits; ++a)
-							{
-								if(!MFString_CaseCmp(pUnitDefs->GetUnitTypeName(a), pName))
-								{
-									Unit *pU = pUnitDefs->CreateUnit(a, g+1);
-									if(!pU->IsHero() && pU->IsRanged() && groups[g].numRearUnits < 5)
-										groups[g].pRearUnits[groups[g].numRearUnits++] = pU;
-									else if(groups[g].numForwardUnits < 5)
-										groups[g].pForwardUnits[groups[g].numForwardUnits++] = pU;
-									break;
-								}
-							}
-
-							pUnits = pUnits->Next();
-						}
-					}
-				}
-
-				pBattle = pBattle->Next();
-			}
-		}
-		pLine = pLine->Next();
-	}
-
-	MFIni::Destroy(pIni);
-
-	// initialise the battle units
-	armies[0].pGroup = &groups[races[0]];
-	armies[1].pGroup = &groups[races[1]];
-#endif
-
 	// initialise the battle units
 	MFZeroMemory(armies, sizeof(armies));
 	MFZeroMemory(armies, sizeof(armies));
@@ -432,7 +332,15 @@ int Battle::Update()
 
 	return 0;
 }
-#include "MFDisplay.h"
+
+void DrawHealthBar(int x, int y, int maxHealth, float currentHealth)
+{
+	float healthSize = MFClamp(12, maxHealth, 32) * 2.f;
+	float health = currentHealth * healthSize;
+	MFPrimitive_DrawUntexturedQuad(float(x + 31 - healthSize*0.5f), float(y - 8), healthSize + 2.f, 4.f, MFVector::black);
+	MFPrimitive_DrawUntexturedQuad(float(x + 32 - healthSize*0.5f), float(y - 7), health, 2.f, MFVector::red);
+}
+
 void Battle::Draw()
 {
 	MFView_Push();
@@ -481,12 +389,7 @@ void Battle::Draw()
 			BattleUnit &unit = armies[a].units[b];
 
 			if(unit.state != US_Dying && unit.state != US_Dead)
-			{
-				float healthSize = MFClamp(12, unit.pUnit->GetDetails()->life, 32) * 2.f;
-				float health = unit.pUnit->GetHealth() * healthSize;
-				MFPrimitive_DrawUntexturedQuad(float(unit.curX + 31 - healthSize*0.5f), float(unit.curY - 8), healthSize + 2.f, 4.f, MFVector::black);
-				MFPrimitive_DrawUntexturedQuad(float(unit.curX + 32 - healthSize*0.5f), float(unit.curY - 7), health, 2.f, MFVector::red);
-			}
+				DrawHealthBar(unit.curX, unit.curY, unit.pUnit->GetDetails()->life, unit.pUnit->GetHealth());
 
 			if(unit.damageIndicatorTime)
 			{

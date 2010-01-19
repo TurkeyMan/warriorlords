@@ -13,6 +13,10 @@
 
 #include "Path.h"
 
+#include "stdio.h"
+
+void DrawHealthBar(int x, int y, int maxHealth, float currentHealth);
+
 MapScreen::MapScreen(Game *_pGame)
 {
 	pGame = _pGame;
@@ -21,7 +25,7 @@ MapScreen::MapScreen(Game *_pGame)
 	bMoving = false;
 
 	pIcons = MFMaterial_Create("Icons");
-	pFont = MFFont_Create("Charlemagne");
+	pFont = pGame->GetTextFont();
 
 	// buttons
 	Tileset *pTiles = pGame->GetMap()->GetTileset();
@@ -318,15 +322,27 @@ void MapScreen::Draw()
 
 		// draw the group info
 		int numUnits = pSelection->GetNumUnits();
-		for(int a = numUnits-1; a >= 0; --a)
+		int tx = 42 + numUnits*32;
+		int ty = 37 - (int)MFFont_GetFontHeight(pFont)/2;
+
+		if(numUnits == 0)
 		{
-			Unit *pUnit = pSelection->GetUnit(a);
-			pUnit->Draw(5.f + (float)a*32.f, 5.f);
+			Unit *pUnit = pSelection->GetVehicle();
+			UnitDetails *pDetails = pUnit->GetDetails();
+			pUnit->Draw(5.f + (pDetails->width-1)*22.f, 5.f + (pDetails->height-1)*30.f);
+			tx += (pDetails->width-1)*76;
+			ty += (pDetails->height-1)*18;
+		}
+		else
+		{
+			for(int a = numUnits-1; a >= 0; --a)
+			{
+				Unit *pUnit = pSelection->GetUnit(a);
+				pUnit->Draw(5.f + (float)a*32.f, 5.f);
+			}
 		}
 		Game::GetCurrent()->GetUnitDefs()->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset());
 
-		int tx = 42 + numUnits*32;
-		int ty = 37 - (int)MFFont_GetFontHeight(pFont)/2;
 		MFFont_BlitTextf(pFont, tx+1, ty+1, MakeVector(0,0,0,1), "Move: %g", (float)pSelection->GetMovement() * 0.5f);
 		MFFont_BlitTextf(pFont, tx, ty, MakeVector(1,1,0,1), "Move: %g", (float)pSelection->GetMovement() * 0.5f);
 	}
@@ -392,9 +408,76 @@ static float gPositions[5][5][2] =
 	{ {.16f, .25f}, {.84f, .25f}, {.5f, .5f},   {.16f, .75f}, {.84f, .75f} }
 };
 
+UnitConfig::UnitConfig()
+{
+	pFont = Game::GetCurrent()->GetTextFont();
+
+	bVisible = false;
+
+	float margin = 5.f;
+	GetDisplayRect(&window);
+	window.x = window.width*0.5f - 240.f;
+	window.y = window.height*0.5f - 160.f;
+	window.width = 480.f;
+	window.height = 320.f;
+	AdjustRect_Margin(&window, margin*2.f);
+}
+
+UnitConfig::~UnitConfig()
+{
+}
+
+bool UnitConfig::Draw()
+{
+	if(!bVisible)
+		return false;
+
+	MFPrimitive_DrawUntexturedQuad(window.x, window.y, window.width, window.height, MakeVector(0, 0, 0, 0.8f));
+
+	return true;
+}
+
+bool UnitConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
+{
+	if(info.device == IDD_Mouse && info.deviceID != 0)
+		return false;
+
+	// HACK: right click returns
+	if(info.buttonID == 1 && ev == IE_Tap)
+		Hide();
+
+	// only handle left clicks
+	if(info.buttonID != 0)
+		return true;
+
+	switch(ev)
+	{
+		case IE_Tap:
+			break;
+	}
+
+	return true;
+}
+
+void UnitConfig::Show(GroupConfig *_pGroup)
+{
+	pGroup = _pGroup;
+
+	bVisible = true;
+
+	pInputManager->PushReceiver(this);
+}
+
+void UnitConfig::Hide()
+{
+	bVisible = false;
+
+	pInputManager->PopReceiver(this);
+}
+
 GroupConfig::GroupConfig()
 {
-	pFont = MFFont_Create("Charlemagne");
+	pFont = Game::GetCurrent()->GetTextFont();
 
 	bVisible = false;
 
@@ -417,12 +500,14 @@ GroupConfig::GroupConfig()
 
 GroupConfig::~GroupConfig()
 {
-	MFFont_Destroy(pFont);
 }
 
 void GroupConfig::Draw()
 {
 	if(!bVisible)
+		return;
+
+	if(battleConfig.Draw())
 		return;
 
 	MFPrimitive_DrawUntexturedQuad(window.x, window.y, window.width, window.height, MakeVector(0, 0, 0, 0.8f));
@@ -435,18 +520,33 @@ void GroupConfig::Draw()
 	for(int a = 0; a < numExtraGroups; ++a)
 		MFPrimitive_DrawUntexturedQuad(bottom[a].x, bottom[a].y, bottom[a].width, bottom[a].height, MakeVector(0, 0, 0, .8f));
 
-	UnitDefinitions *pDefs = NULL;
+	UnitDefinitions *pDefs = units[0].pUnit->GetDefs();
 
 	for(int a = numUnits-1; a >= 0; --a)
 	{
 		GroupUnit &unit = units[a];
 		unit.pUnit->Draw(unit.x - 32.f, unit.y - 32.f);
-
-		pDefs = unit.pUnit->GetDefs();
 	}
 
 	if(pDefs)
 		pDefs->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset());
+
+	for(int a = numUnits-1; a >= 0; --a)
+	{
+		GroupUnit &unit = units[a];
+
+		if(unit.pGroup == units[0].pGroup && !unit.pUnit->IsVehicle())
+			DrawHealthBar(unit.x - 32, unit.y - 32, unit.pUnit->GetDetails()->life, unit.pUnit->GetHealth());
+
+		char move[8];
+		sprintf(move, "%g", unit.pUnit->GetMovement() * 0.5f);
+
+		MFFont *pFont = Game::GetCurrent()->GetSmallNumbersFont();
+		float height = MFFont_GetFontHeight(pFont);
+		float moveWidth = MFFont_GetStringWidth(pFont, move, height);
+
+		MFFont_BlitText(pFont, unit.x + 30 - (int)moveWidth, unit.y + 30 - (int)height, MFVector::white, move);
+	}
 }
 
 bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
@@ -470,7 +570,8 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 			int unit = GetUnitFromPoint(info.tap.x, info.tap.y);
 			if(unit > -1)
 			{
-				// select a unit, print the stats i guess..
+				if(!units[unit].pUnit->IsVehicle())
+					battleConfig.Show(this);
 			}
 
 			// see if we have selected another group
@@ -837,12 +938,12 @@ void GroupConfig::PositionUnits()
 			if(units[a].rank == 0)
 			{
 				units[a].x = (int)(front.x + front.width*gPositions[numFront-1][a][0]);
-				units[a].y = (int)(front.y + front.height*gPositions[numFront-1][a][1]);
+				units[a].y = (int)(front.y + front.height*gPositions[numFront-1][a][1]) + 4;
 			}
 			else if(units[a].rank == 1)
 			{
 				units[a].x = (int)(rear.x + rear.width*gPositions[numRear-1][a - numFront][0]);
-				units[a].y = (int)(rear.y + rear.height*gPositions[numRear-1][a - numFront][1]);
+				units[a].y = (int)(rear.y + rear.height*gPositions[numRear-1][a - numFront][1]) + 4;
 			}
 			else
 			{
@@ -879,7 +980,7 @@ void GroupConfig::Hide()
 
 CastleConfig::CastleConfig()
 {
-	pFont = MFFont_Create("Charlemagne");
+	pFont = Game::GetCurrent()->GetTextFont();
 
 	bVisible = false;
 
@@ -915,7 +1016,6 @@ CastleConfig::CastleConfig()
 
 CastleConfig::~CastleConfig()
 {
-	MFFont_Destroy(pFont);
 }
 
 void CastleConfig::Draw()

@@ -204,16 +204,44 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 				pUnit->attackClass = pUnits->GetInt(11);
 				pUnit->defenceClass = pUnits->GetInt(12);
 				pUnit->movementClass = pUnits->GetInt(13);
+				pUnit->weapon = pUnits->GetInt(14);
 
-				pUnit->cooldown = pUnits->GetFloat(14);
-				pUnit->attackSpeed = pUnits->GetFloat(15);
-				pUnit->life = pUnits->GetInt(16);
+				pUnit->cooldown = pUnits->GetFloat(15);
+				pUnit->attackSpeed = pUnits->GetFloat(16);
+				pUnit->life = pUnits->GetInt(17);
 
-				pUnit->buildTime = pUnits->GetInt(17);
-				pUnit->cost = pUnits->GetInt(18);
+				pUnit->buildTime = pUnits->GetInt(18);
+				pUnit->cost = pUnits->GetInt(19);
 
 				++pUnit;
 				pUnits = pUnits->Next();
+			}
+		}
+		else if(pLine->IsSection("Weapons"))
+		{
+			MFIniLine *pWeapon = pLine->Sub();
+			pUnitDefs->numWeapons = 0;
+			while(pWeapon)
+			{
+				++pUnitDefs->numWeapons;
+				pWeapon = pWeapon->Next();
+			}
+
+			pUnitDefs->pWeapons = (Weapon*)MFHeap_Alloc(sizeof(Weapon)*pUnitDefs->numWeapons);
+
+			pWeapon = pLine->Sub();
+			while(pWeapon)
+			{
+				Weapon &weapon = pUnitDefs->pWeapons[pWeapon->GetInt(0)];
+				weapon.pName = pWeapon->GetString(5);
+				weapon.x = pWeapon->GetInt(1);
+				weapon.y = pWeapon->GetInt(2);
+				weapon.width = pWeapon->GetInt(3);
+				weapon.height = pWeapon->GetInt(4);
+				weapon.bIsProjectile = (weapon.width != 0 && weapon.height != 0);
+				weapon.impactAnim = pWeapon->GetInt(6);
+
+				pWeapon = pWeapon->Next();
 			}
 		}
 		else if(pLine->IsSection("Classes"))

@@ -603,7 +603,7 @@ void Chooser::FlipPage(int button, void *pUserData, int buttonID)
 
 CastleEdit::CastleEdit()
 {
-	pFont = MFFont_Create("Charlemagne");
+	pFont = Game::GetCurrent()->GetTextFont();
 	pIcons = MFMaterial_Create("Icons");
 
 	bVisible = false;
@@ -661,7 +661,6 @@ CastleEdit::CastleEdit()
 
 CastleEdit::~CastleEdit()
 {
-	MFFont_Destroy(pFont);
 }
 
 void CastleEdit::Update()

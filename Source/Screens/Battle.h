@@ -31,6 +31,7 @@ protected:
 		US_Cooldown,        // unit is waiting for cooldown to expire
 		US_Waiting,         // unit is waiting for target to be available
 		US_Engaging,        // unit is engaging a unit
+		US_Migrating,		// unit is migrating to the front row
 		US_Dying,           // unit is dying
 		US_Dead				// unit is dead
 	};

@@ -4,6 +4,8 @@
 #include "Map.h"
 #include "Unit.h"
 
+struct MFFont;
+
 class MapScreen;
 class Battle;
 
@@ -42,9 +44,18 @@ public:
 	static void SetCurrent(Game *pGame) { pCurrent = pGame; }
 	static Game *GetCurrent() { return pCurrent; }
 
-	bool CreateUnit(int unit, Castle *pCastle);
+	Group *CreateUnit(int unit, Castle *pCastle);
+
+	MFFont *GetTextFont() { return pText; }
+	MFFont *GetBattleNumbersFont() { return pBattleNumbersFont; }
+	MFFont *GetSmallNumbersFont() { return pSmallNumbersFont; }
 
 protected:
+	// game resources
+	MFFont *pText;
+	MFFont *pBattleNumbersFont;
+	MFFont *pSmallNumbersFont;
+
 	// game data
 	Map *pMap;
 	UnitDefinitions *pUnitDefs;
