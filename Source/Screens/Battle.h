@@ -51,6 +51,7 @@ protected:
 		// engaging state
 		BattleUnit *pTarget;
 		bool bEngaged;
+		bool bFiring;
 		float damageIndicatorTime; // timeout for showing the damage indicator
 
 		int posX, posY;

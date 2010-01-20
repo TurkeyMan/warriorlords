@@ -106,6 +106,11 @@ public:
 	int GetMovementPenalty(int movementClass, int terrainType) { return pMovementClasses[movementClass].pMovementPenalty[terrainType] * 2; }
 	bool HasRoadWalk(int movementClass) { return pMovementClasses[movementClass].roadWalk != 0; }
 
+	int GetNumWeapons() { return numWeapons; }
+	const char *GetWeaponName(int weapon) { return pWeapons[weapon].pName; }
+	bool IsWeaponProjectile(int weapon) { return pWeapons[weapon].bIsProjectile; }
+	int GetWeaponImpactAnim(int weapon) { return pWeapons[weapon].impactAnim; }
+
 	MFMaterial *GetUnitMaterial() { return pUnitMat; }
 
 	// rendering
@@ -120,6 +125,7 @@ public:
 	void GetFlagUVs(int race, MFRect *pUVs, float texelOffset);
 	void GetUnitUVs(int unit, bool bFlip, MFRect *pUVs, float texelOffset);
 	void GetSpecialUVs(int index, MFRect *pUVs, float texelOffset);
+	void GetWeaponUVs(int weapon, MFRect *pUVs);
 
 	inline MFMaterial *GetCastleMaterial() const { return pCastleMat; }
 

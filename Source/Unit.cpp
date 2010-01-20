@@ -539,6 +539,15 @@ void UnitDefinitions::GetSpecialUVs(int index, MFRect *pUVs, float texelOffset)
 	pUVs->height = yScale*(float)s.height;
 }
 
+void UnitDefinitions::GetWeaponUVs(int weapon, MFRect *pUVs)
+{
+	Weapon &w = pWeapons[weapon];
+	pUVs->x = (float)w.x;
+	pUVs->y = (float)w.y;
+	pUVs->width = (float)w.width;
+	pUVs->height = (float)w.height;
+}
+
 void Unit::Destroy()
 {
 	pUnitDefs->DestroyUnit(this);

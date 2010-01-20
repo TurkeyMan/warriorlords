@@ -216,6 +216,7 @@ int Battle::Update()
 					{
 						unit.curX = unit.posX;
 						unit.curY = unit.posY;
+						unit.bFiring = false;
 
 						int damage = CalculateDamage(&unit, unit.pTarget);
 
@@ -238,12 +239,16 @@ int Battle::Update()
 					else
 					{
 						float speed = unit.pUnit->GetDetails()->attackSpeed;
-						float phaseFactor = speed * 0.25f;
-						int phase = (int)((speed - unit.stateTime) / phaseFactor);
-						float phaseTime = fmodf(speed - unit.stateTime, phaseFactor) / phaseFactor;
 
-						if(1) // melee
+						int weapon = unit.pUnit->GetDetails()->weapon;
+						bool bProjectile = pUnitDefs->IsWeaponProjectile(weapon);
+
+						if(!bProjectile)
 						{
+							float phaseFactor = speed * 0.25f;
+							int phase = (int)((speed - unit.stateTime) / phaseFactor);
+							float phaseTime = fmodf(speed - unit.stateTime, phaseFactor) / phaseFactor;
+
 							switch(phase)
 							{
 								case 0:
@@ -264,9 +269,24 @@ int Battle::Update()
 									break;
 							}
 						}
-						else if(0) // ranged
+						else
 						{
-							// shoot a projectile
+							float phaseFactor = speed * 0.5f;
+							int phase = (int)((speed - unit.stateTime) / phaseFactor);
+							float phaseTime = fmodf(speed - unit.stateTime, phaseFactor) / phaseFactor;
+
+							switch(phase)
+							{
+								case 0:
+									unit.curX = unit.posX;
+									unit.curY = unit.posY + (int)MFClamp(-10.f, sinf(phaseTime * 4.f * MFPI) * -10.f, 0.f);
+									break;
+								case 1:
+									unit.curX = unit.posX + (int)((unit.pTarget->posX - unit.posX)*phaseTime);
+									unit.curY = unit.posY + (int)((unit.pTarget->posY - unit.posY)*phaseTime);
+									unit.bFiring = true;
+									break;
+							}
 						}
 					}
 				}
@@ -386,6 +406,27 @@ void Battle::Draw()
 	GetOrthoMatrix(&orthoMat, true);
 	MFView_SetCustomProjection(orthoMat, false);
 
+	// calculate the offsets
+	float texelCenter = MFRenderer_GetTexelCenterOffset();
+	float texelOffsetW = 0.f, texelOffsetH = 0.f;
+
+	MFTexture *pTex;
+	int texWidth, texHeight;
+	int diffuse = MFMaterial_GetParameterIndexFromName(pIcons, "diffuseMap");
+	MFMaterial_GetParameter(pIcons, diffuse, 0, &pTex);
+	if(pTex)
+	{
+		MFTexture_GetTextureDimensions(pTex, &texWidth, &texHeight);
+		texelOffsetW = texelCenter / (float)texWidth;
+		texelOffsetH = texelCenter / (float)texHeight;
+	}
+
+	float fTexWidth = (float)texWidth;
+	float fTexHeight = (float)texHeight;
+	float xTileScale = (1.f / fTexWidth) * 32.f;
+	float yTileScale = (1.f / fTexHeight) * 32.f;
+
+	// draw background+foreground
 	MFMaterial_SetMaterial(pBackground);
 	MFPrimitive_DrawQuad(0, 0, 1, 0.5, MFVector::one, 0, 0, 1, 1);
 
@@ -404,16 +445,18 @@ void Battle::Draw()
 	GetOrthoMatrix(&orthoMat);
 	MFView_SetCustomProjection(orthoMat, false);
 
-	float texelCenter = MFRenderer_GetTexelCenterOffset();
-
 	for(int a=0; a<2; ++a)
 	{
 		for(int b=0; b<armies[a].numUnits; ++b)
 		{
 			BattleUnit &unit = armies[a].units[b];
+			int unitX = unit.bFiring ? unit.posX : unit.curX;
+			int unitY = unit.bFiring ? unit.posY : unit.curY;
 
 			if(unit.state != US_Dead)
-				unit.pUnit->Draw((float)unit.curX, (float)unit.curY, a == 1, unit.state == US_Dying ? unit.stateTime : 1.f);
+			{
+				unit.pUnit->Draw((float)unitX, (float)unitY, a == 1, unit.state == US_Dying ? unit.stateTime : 1.f);
+			}
 		}
 	}
 
@@ -425,9 +468,27 @@ void Battle::Draw()
 		for(int b=0; b<armies[a].numUnits; ++b)
 		{
 			BattleUnit &unit = armies[a].units[b];
+			int unitX = unit.bFiring ? unit.posX : unit.curX;
+			int unitY = unit.bFiring ? unit.posY : unit.curY;
+
+			if(unit.bFiring)
+			{
+				int weapon = unit.pUnit->GetDetails()->weapon;
+				bool bFlip = unit.army == 1;
+
+				MFRect uvs;
+				pUnitDefs->GetWeaponUVs(weapon, &uvs);
+				uvs.x = bFlip ? (uvs.x+uvs.width)*xTileScale - texelOffsetW : uvs.x*xTileScale + texelOffsetW;
+				uvs.y = uvs.y*yTileScale + texelOffsetH;
+				uvs.width = (bFlip ? -uvs.width : uvs.width)*xTileScale;
+				uvs.height *= yTileScale;
+
+				MFMaterial_SetMaterial(pIcons);
+				MFPrimitive_DrawQuad((float)unit.curX, (float)unit.curY, 32.f, 32.f, MFVector::one, uvs.x, uvs.y, uvs.x+uvs.width, uvs.y+uvs.height);
+			}
 
 			if(unit.state != US_Dying && unit.state != US_Dead)
-				DrawHealthBar(unit.curX, unit.curY, unit.pUnit->GetDetails()->life, unit.pUnit->GetHealth());
+				DrawHealthBar(unitX, unitY, unit.pUnit->GetDetails()->life, unit.pUnit->GetHealth());
 
 			if(unit.damageIndicatorTime)
 			{
@@ -435,7 +496,7 @@ void Battle::Draw()
 				//...
 			}
 
-#if 1
+#if 0
 			if(unit.state != US_Dead)
 			{
 				char move[16];
@@ -444,7 +505,7 @@ void Battle::Draw()
 				MFFont *pFont = Game::GetCurrent()->GetSmallNumbersFont();
 				float height = MFFont_GetFontHeight(pFont);
 
-				MFFont_BlitText(pFont, unit.curX + 2, unit.curY + 62 - (int)height, MFVector::white, move);
+				MFFont_BlitText(pFont, unitX + 2, unitY + 62 - (int)height, MFVector::white, move);
 			}
 #endif
 		}
@@ -458,18 +519,6 @@ void Battle::Draw()
 	float left = MFFloor(rect.width * 0.06f);
 	float right = rect.width - left;
 	float width = rect.width - left*2;
-	float texelOffsetW = 0.f, texelOffsetH = 0.f;
-
-	MFTexture *pTex;
-	int texWidth, texHeight;
-	int diffuse = MFMaterial_GetParameterIndexFromName(pIcons, "diffuseMap");
-	MFMaterial_GetParameter(pIcons, diffuse, 0, &pTex);
-	if(pTex)
-	{
-		MFTexture_GetTextureDimensions(pTex, &texWidth, &texHeight);
-		texelOffsetW = texelCenter / (float)texWidth;
-		texelOffsetH = texelCenter / (float)texHeight;
-	}
 
 	MFMaterial_SetMaterial(pIcons);
 	MFPrimitive_DrawQuad(left, timelineY, 32.f, 32.f, MFVector::one, texelOffsetW, texelOffsetH, 0.25f + texelOffsetW, 0.25f + texelOffsetH);
