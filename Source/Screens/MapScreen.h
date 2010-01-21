@@ -21,15 +21,15 @@ public:
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 
-	void Show(GroupConfig *pGroup);
+	void Show(Unit *pUnit);
 	void Hide();
 
 protected:
-	GroupConfig *pGroup;
+	Unit *pUnit;
 
 	MFFont *pFont;
 
-	MFRect window;
+	MFRect window, top, bottom;
 
 	bool bVisible;
 };

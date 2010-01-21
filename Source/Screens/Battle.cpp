@@ -281,6 +281,7 @@ int Battle::Update()
 									unit.curY = unit.posY + (int)MFClamp(-10.f, sinf(phaseTime * 4.f * MFPI) * -10.f, 0.f);
 									break;
 								case 1:
+									// work out the projectile angle 
 									unit.curX = unit.posX + 32 + (int)((unit.pTarget->posX - unit.posX)*phaseTime);
 									unit.curY = unit.posY + 32 + (int)((unit.pTarget->posY - unit.posY)*phaseTime);
 									unit.bFiring = true;

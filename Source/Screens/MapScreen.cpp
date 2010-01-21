@@ -421,6 +421,8 @@ UnitConfig::UnitConfig()
 	window.width = 480.f;
 	window.height = 320.f;
 	AdjustRect_Margin(&window, margin*2.f);
+
+	DivideRect_Vert(window, 128+10, margin, &top, &bottom, true);
 }
 
 UnitConfig::~UnitConfig()
@@ -433,6 +435,32 @@ bool UnitConfig::Draw()
 		return false;
 
 	MFPrimitive_DrawUntexturedQuad(window.x, window.y, window.width, window.height, MakeVector(0, 0, 0, 0.8f));
+	MFPrimitive_DrawUntexturedQuad(top.x, top.y, top.width, top.height, MakeVector(0, 0, 0, 0.8f));
+	MFPrimitive_DrawUntexturedQuad(bottom.x, bottom.y, bottom.width, bottom.height, MakeVector(0, 0, 0, 0.8f));
+
+	UnitDefinitions *pDefs = pUnit->GetDefs();
+	UnitDetails *pDetails = pUnit->GetDetails();
+
+	pUnit->Draw(top.x + 32.f, top.y + 32.f);
+	if(pDefs)
+		pDefs->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset());
+
+	// do we want to see this?
+//	DrawHealthBar((int)(unit.x + 32.f), (int)(unit.y + 32.f), pDetails->life, pUnit->GetHealth());
+
+	int height = (int)MFFont_GetFontHeight(pFont);
+	float tWidth = MFFont_GetStringWidth(pFont, pUnit->GetName(), (float)height);
+	MFFont_BlitText(pFont, (int)top.x + ((int)top.width / 2) - (int)(tWidth*0.5f), (int)top.y + 5, MFVector::yellow, pUnit->GetName());
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height, MFVector::white, "Type: %s", pDefs->GetArmourClassName(pDetails->defenceClass));
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*2, MFVector::white, "Atk: %d - %d (%s)", pDetails->attackMin, pDetails->attackMax, pDefs->GetWeaponClassName(pDetails->attackClass));
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*3, MFVector::white, "Mov: %g/%d%s", pUnit->GetMovement()*0.5f, pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pDefs->GetMovementClassName(pDetails->movementClass)) : "");
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*4, MFVector::white, "HP: %d/%d", (int)(pDetails->life * pUnit->GetHealth()), pDetails->life);
+
+	MFFont_BlitText(pFont, (int)bottom.x + 40, (int)bottom.y + 10, MFVector::white, "Attack Strongest");
+	MFFont_BlitText(pFont, (int)bottom.x + 40, (int)bottom.y + 10 + height, MFVector::white, "Attack Weakest");
+	MFFont_BlitText(pFont, (int)bottom.x + 40, (int)bottom.y + 20 + height*2, MFVector::white, "Attack Melee");
+	MFFont_BlitText(pFont, (int)bottom.x + 40, (int)bottom.y + 20 + height*3, MFVector::white, "Attack Ranged");
+	MFFont_BlitText(pFont, (int)bottom.x + 40, (int)bottom.y + 30 + height*4, MFVector::white, "Attack First Available");
 
 	return true;
 }
@@ -459,9 +487,9 @@ bool UnitConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 	return true;
 }
 
-void UnitConfig::Show(GroupConfig *_pGroup)
+void UnitConfig::Show(Unit *_pUnit)
 {
-	pGroup = _pGroup;
+	pUnit = _pUnit;
 
 	bVisible = true;
 
@@ -571,7 +599,7 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 			if(unit > -1)
 			{
 				if(!units[unit].pUnit->IsVehicle())
-					battleConfig.Show(this);
+					battleConfig.Show(units[unit].pUnit);
 			}
 
 			// see if we have selected another group
