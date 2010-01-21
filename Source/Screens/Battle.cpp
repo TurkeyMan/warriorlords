@@ -240,10 +240,9 @@ int Battle::Update()
 					{
 						float speed = unit.pUnit->GetDetails()->attackSpeed;
 
-						int weapon = unit.pUnit->GetDetails()->weapon;
-						bool bProjectile = pUnitDefs->IsWeaponProjectile(weapon);
+						Weapon *pWeapon = unit.pUnit->GetWeapon();
 
-						if(!bProjectile)
+						if(!pWeapon->bIsProjectile)
 						{
 							float phaseFactor = speed * 0.25f;
 							int phase = (int)((speed - unit.stateTime) / phaseFactor);
@@ -282,8 +281,8 @@ int Battle::Update()
 									unit.curY = unit.posY + (int)MFClamp(-10.f, sinf(phaseTime * 4.f * MFPI) * -10.f, 0.f);
 									break;
 								case 1:
-									unit.curX = unit.posX + (int)((unit.pTarget->posX - unit.posX)*phaseTime);
-									unit.curY = unit.posY + (int)((unit.pTarget->posY - unit.posY)*phaseTime);
+									unit.curX = unit.posX + 32 + (int)((unit.pTarget->posX - unit.posX)*phaseTime);
+									unit.curY = unit.posY + 32 + (int)((unit.pTarget->posY - unit.posY)*phaseTime);
 									unit.bFiring = true;
 									break;
 							}
@@ -423,8 +422,8 @@ void Battle::Draw()
 
 	float fTexWidth = (float)texWidth;
 	float fTexHeight = (float)texHeight;
-	float xTileScale = (1.f / fTexWidth) * 32.f;
-	float yTileScale = (1.f / fTexHeight) * 32.f;
+	float xTileScale = 32.f / fTexWidth;
+	float yTileScale = 32.f / fTexHeight;
 
 	// draw background+foreground
 	MFMaterial_SetMaterial(pBackground);
@@ -473,18 +472,13 @@ void Battle::Draw()
 
 			if(unit.bFiring)
 			{
-				int weapon = unit.pUnit->GetDetails()->weapon;
-				bool bFlip = unit.army == 1;
+				Weapon *pWeapon = unit.pUnit->GetWeapon();
 
 				MFRect uvs;
-				pUnitDefs->GetWeaponUVs(weapon, &uvs);
-				uvs.x = bFlip ? (uvs.x+uvs.width)*xTileScale - texelOffsetW : uvs.x*xTileScale + texelOffsetW;
-				uvs.y = uvs.y*yTileScale + texelOffsetH;
-				uvs.width = (bFlip ? -uvs.width : uvs.width)*xTileScale;
-				uvs.height *= yTileScale;
+				pWeapon->GetUVs(&uvs, fTexWidth, fTexHeight, unit.army == 1, texelOffsetW);
 
 				MFMaterial_SetMaterial(pIcons);
-				MFPrimitive_DrawQuad((float)unit.curX, (float)unit.curY, 32.f, 32.f, MFVector::one, uvs.x, uvs.y, uvs.x+uvs.width, uvs.y+uvs.height);
+				MFPrimitive_DrawQuad((float)(unit.curX - 16*pWeapon->width), (float)(unit.curY - 16*pWeapon->height), pWeapon->width*32.f, pWeapon->height*32.f, MFVector::one, uvs.x, uvs.y, uvs.x+uvs.width, uvs.y+uvs.height);
 			}
 
 			if(unit.state != US_Dying && unit.state != US_Dead)

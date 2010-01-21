@@ -29,6 +29,28 @@ struct Special
 	uint16 flags : 15;
 };
 
+struct Weapon
+{
+	const char *pName;
+	bool bIsProjectile;
+	int x, y;
+	int width, height;
+	int impactAnim;
+
+	void GetUVs(MFRect *pRect, float tWidth, float tHeight, bool bFlip, float texelOffset)
+	{
+		float xScale = gWeaponTileSize / tWidth;
+		float yScale = gWeaponTileSize / tHeight;
+
+		pRect->x = bFlip ? (x+width)*xScale - texelOffset : x*xScale + texelOffset;
+		pRect->y = y*yScale + texelOffset;
+		pRect->width = (bFlip ? -width : width)*xScale;
+		pRect->height = height*yScale;
+	}
+
+	static const int gWeaponTileSize = 32;
+};
+
 enum UnitType
 {
 	UT_Unknown = -1,
@@ -107,9 +129,7 @@ public:
 	bool HasRoadWalk(int movementClass) { return pMovementClasses[movementClass].roadWalk != 0; }
 
 	int GetNumWeapons() { return numWeapons; }
-	const char *GetWeaponName(int weapon) { return pWeapons[weapon].pName; }
-	bool IsWeaponProjectile(int weapon) { return pWeapons[weapon].bIsProjectile; }
-	int GetWeaponImpactAnim(int weapon) { return pWeapons[weapon].impactAnim; }
+	Weapon *GetWeapon(int weapon) { return &pWeapons[weapon]; }
 
 	MFMaterial *GetUnitMaterial() { return pUnitMat; }
 
@@ -125,20 +145,10 @@ public:
 	void GetFlagUVs(int race, MFRect *pUVs, float texelOffset);
 	void GetUnitUVs(int unit, bool bFlip, MFRect *pUVs, float texelOffset);
 	void GetSpecialUVs(int index, MFRect *pUVs, float texelOffset);
-	void GetWeaponUVs(int weapon, MFRect *pUVs);
 
 	inline MFMaterial *GetCastleMaterial() const { return pCastleMat; }
 
 protected:
-	struct Weapon
-	{
-		const char *pName;
-		bool bIsProjectile;
-		int x, y;
-		int width, height;
-		int impactAnim;
-	};
-
 	struct WeaponClass
 	{
 		const char *pName;
@@ -224,6 +234,8 @@ public:
 	void SetPlayer(int player) { this->player = player; }
 	int GetRace();
 	MFVector GetColour();
+
+	Weapon *GetWeapon() { return pUnitDefs->GetWeapon(details.weapon); }
 
 	float GetHealth() { return (float)life / (float)details.life; }
 	int Damage(int damage) { life -= MFMin(life, damage); return life; }
