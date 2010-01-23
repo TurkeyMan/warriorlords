@@ -52,7 +52,10 @@ protected:
 		BattleUnit *pTarget;
 		bool bEngaged;
 		bool bFiring;
+
 		float damageIndicatorTime; // timeout for showing the damage indicator
+		int damage;
+		int impactAnim;
 
 		int posX, posY;
 		int curX, curY;
@@ -83,6 +86,7 @@ protected:
 	void EndWaiting(BattleUnit *pUnit);
 
 	int CalculateDamage(BattleUnit *pUnit, BattleUnit *pTarget);
+	void HitTarget(BattleUnit *pUnit, BattleUnit *pTarget);
 
 	// members
 	Game *pGame;

@@ -423,6 +423,21 @@ UnitConfig::UnitConfig()
 	AdjustRect_Margin(&window, margin*2.f);
 
 	DivideRect_Vert(window, 128+10, margin, &top, &bottom, true);
+
+	float height = MFFont_GetFontHeight(pFont);
+	MFRect cbRect = { bottom.x + 40, bottom.y + 10, 200.f, height };
+	pStrategySelect[0] = CheckBox::Create(&cbRect, "Attack Strongest", MFVector::yellow, 1, SelectStrat, this, 0);
+	cbRect.y += height;
+	pStrategySelect[1] = CheckBox::Create(&cbRect, "Attack Weakest", MFVector::yellow, 0, SelectStrat, this, 1);
+	cbRect.y += height + 10;
+	pStrategySelect[2] = CheckBox::Create(&cbRect, "Attack First Available", MFVector::yellow, 1, SelectStrat, this, 2);
+	cbRect.x = bottom.x + 260;
+	cbRect.y = bottom.y + 15;
+	pStrategySelect[3] = CheckBox::Create(&cbRect, "Attack Any", MFVector::yellow, 1, SelectStrat, this, 3);
+	cbRect.y += height;
+	pStrategySelect[4] = CheckBox::Create(&cbRect, "Attack Melee", MFVector::yellow, 0, SelectStrat, this, 4);
+	cbRect.y += height;
+	pStrategySelect[5] = CheckBox::Create(&cbRect, "Attack Ranged", MFVector::yellow, 0, SelectStrat, this, 5);
 }
 
 UnitConfig::~UnitConfig()
@@ -456,11 +471,8 @@ bool UnitConfig::Draw()
 	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*3, MFVector::white, "Mov: %g/%d%s", pUnit->GetMovement()*0.5f, pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pDefs->GetMovementClassName(pDetails->movementClass)) : "");
 	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*4, MFVector::white, "HP: %d/%d", (int)(pDetails->life * pUnit->GetHealth()), pDetails->life);
 
-	MFFont_BlitText(pFont, (int)bottom.x + 40, (int)bottom.y + 10, MFVector::white, "Attack Strongest");
-	MFFont_BlitText(pFont, (int)bottom.x + 40, (int)bottom.y + 10 + height, MFVector::white, "Attack Weakest");
-	MFFont_BlitText(pFont, (int)bottom.x + 40, (int)bottom.y + 20 + height*2, MFVector::white, "Attack Melee");
-	MFFont_BlitText(pFont, (int)bottom.x + 40, (int)bottom.y + 20 + height*3, MFVector::white, "Attack Ranged");
-	MFFont_BlitText(pFont, (int)bottom.x + 40, (int)bottom.y + 30 + height*4, MFVector::white, "Attack First Available");
+	for(int a=0; a<6; ++a)
+		pStrategySelect[a]->Draw();
 
 	return true;
 }
@@ -494,6 +506,9 @@ void UnitConfig::Show(Unit *_pUnit)
 	bVisible = true;
 
 	pInputManager->PushReceiver(this);
+
+	for(int a=0; a<6; ++a)
+		pInputManager->PushReceiver(pStrategySelect[a]);
 }
 
 void UnitConfig::Hide()
@@ -501,6 +516,39 @@ void UnitConfig::Hide()
 	bVisible = false;
 
 	pInputManager->PopReceiver(this);
+}
+
+void UnitConfig::SelectStrat(int value, void *pUserData, int buttonID)
+{
+	UnitConfig *pThis = (UnitConfig*)pUserData;
+
+	switch(buttonID)
+	{
+		case 0:
+		case 1:
+			if(value == 0)
+				pThis->pStrategySelect[buttonID]->SetValue(1);
+			else
+				pThis->pStrategySelect[1 - buttonID]->SetValue(0);
+			break;
+		
+		case 3:
+		case 4:
+		case 5:
+			if(value == 0)
+			{
+				pThis->pStrategySelect[buttonID]->SetValue(1);
+			}
+			else
+			{
+				for(int a=3; a<6; ++a)
+				{
+					if(buttonID != a)
+						pThis->pStrategySelect[a]->SetValue(0);
+				}
+			}
+			break;
+	}
 }
 
 GroupConfig::GroupConfig()

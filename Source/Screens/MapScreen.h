@@ -31,7 +31,11 @@ protected:
 
 	MFRect window, top, bottom;
 
+	CheckBox *pStrategySelect[6];
+
 	bool bVisible;
+
+	static void SelectStrat(int value, void *pUserData, int buttonID);
 };
 
 class GroupConfig : public InputReceiver

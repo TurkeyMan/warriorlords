@@ -199,6 +199,28 @@ int Battle::CalculateDamage(BattleUnit *pUnit, BattleUnit *pTarget)
 	return (int)(damage * damageMod);
 }
 
+void Battle::HitTarget(BattleUnit *pUnit, BattleUnit *pTarget)
+{
+	int damage = CalculateDamage(pUnit, pTarget);
+
+	pTarget->damage = damage;
+	pTarget->damageIndicatorTime = 1.f;
+	pTarget->impactAnim = 0; // SET IMPACT ANIM HERE!!!
+
+	if(pTarget->pUnit->Damage(damage) == 0)
+	{
+		if(pTarget->state == US_Waiting)
+			EndWaiting(pTarget);
+		else if(pTarget->state == US_Cooldown)
+			StopCooldown(pTarget);
+
+		pTarget->state = US_Dying;
+		pTarget->stateTime = 1.f;
+	}
+
+	pTarget->bEngaged = false;
+}
+
 int Battle::Update()
 {
 	for(int a=0; a<2; ++a)
@@ -206,6 +228,11 @@ int Battle::Update()
 		for(int b=0; b<armies[a].numUnits; ++b)
 		{
 			BattleUnit &unit = armies[a].units[b];
+
+			unit.damageIndicatorTime -= MFSystem_TimeDelta();
+			if(unit.damageIndicatorTime < 0.f)
+				unit.damageIndicatorTime = 0.f;
+
 			if(unit.stateTime)
 			{
 				unit.stateTime -= MFSystem_TimeDelta();
@@ -214,24 +241,13 @@ int Battle::Update()
 				{
 					if(unit.stateTime <= 0.f)
 					{
+						if(unit.bFiring)
+							HitTarget(&unit, unit.pTarget);
+
 						unit.curX = unit.posX;
 						unit.curY = unit.posY;
 						unit.bFiring = false;
 
-						int damage = CalculateDamage(&unit, unit.pTarget);
-
-						if(unit.pTarget->pUnit->Damage(damage) == 0)
-						{
-							if(unit.pTarget->state == US_Waiting)
-								EndWaiting(unit.pTarget);
-							else if(unit.pTarget->state == US_Cooldown)
-								StopCooldown(unit.pTarget);
-
-							unit.pTarget->state = US_Dying;
-							unit.pTarget->stateTime = 1.f;
-						}
-
-						unit.pTarget->bEngaged = false;
 						unit.pTarget = NULL;
 
 						StartCooldown(&unit);
@@ -261,6 +277,9 @@ int Battle::Update()
 								case 2:
 									unit.curX = unit.pTarget->posX + (unit.army == 0 ? -64 : 64 );
 									unit.curY = unit.pTarget->posY;
+
+									if(unit.pTarget->bEngaged)
+										HitTarget(&unit, unit.pTarget);
 									break;
 								case 3:
 									unit.curX = unit.posX + (int)((unit.pTarget->posX + (unit.army == 0 ? -64 : 64 ) - unit.posX)*(1.f-phaseTime));
@@ -487,8 +506,42 @@ void Battle::Draw()
 
 			if(unit.damageIndicatorTime)
 			{
+				// TODO: Draw the impact anim...
+
 				// draw damage indicator with a little bouncey thing...
-				//...
+				char damage[8];
+				sprintf(damage, "%d", unit.damage);
+
+				float widths[4];
+				float totalWidth = 0.f;
+				int numDigits = MFString_Length(damage);
+
+				// get the width of each character
+				MFFont *pFont = Game::GetCurrent()->GetBattleNumbersFont();
+				float height = MFFont_GetFontHeight(pFont);
+
+				for(int a=0; a<numDigits; ++a)
+				{
+					widths[a] = MFFont_GetStringWidth(pFont, damage + a, height, 0.f, 1);
+					totalWidth += widths[a];
+				}
+
+				// render each character separately
+				int x = unit.curX + 32 - (int)(totalWidth*0.5f);
+
+				for(int a=0; a<numDigits; ++a)
+				{
+					// stagger appearance of the characters
+					float time = unit.damageIndicatorTime + (float)a*0.04f;
+					if(time > 1.f)
+						break;
+
+					float phase = (1.f - time)*MFPI*4;
+					float bounce = MFAbs(MFSin(phase)) * MFMax(time - 0.5f, 0.f)*50.f;
+					MFFont_BlitText(pFont, x, unit.curY - 7 - (int)height - (int)bounce, MakeVector(MFVector::red, MFMin(unit.damageIndicatorTime*5.f, 1.f)), damage + a, 1);
+
+					x += (int)widths[a];
+				}
 			}
 
 #if 0
