@@ -158,9 +158,20 @@ protected:
 	MFMaterial *pRenderTargetMaterial;
 	MFTexture *pMinimap;
 	MFMaterial *pMinimapMaterial;
+	MFMaterial *pCloud;
 
 	Castle *pCastles;
 	int numCastles;
+
+	// details
+	struct Cloud
+	{
+		float x, y;
+	};
+
+	static const int numClouds = 16;
+
+	Cloud clouds[numClouds];
 
 	// editor stuff
 	struct MapCoord

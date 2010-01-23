@@ -28,7 +28,8 @@ MapScreen::MapScreen(Game *_pGame)
 	pFont = pGame->GetTextFont();
 
 	// buttons
-	Tileset *pTiles = pGame->GetMap()->GetTileset();
+	Map *pMap = pGame->GetMap();
+	Tileset *pTiles = pMap->GetTileset();
 	UnitDefinitions *pUnits = pGame->GetUnitDefs();
 
 	MFMaterial *pTileMat = pTiles->GetTileMaterial();
@@ -57,6 +58,7 @@ MapScreen::MapScreen(Game *_pGame)
 
 MapScreen::~MapScreen()
 {
+	MFMaterial_Destroy(pIcons);
 }
 
 void MapScreen::Select()

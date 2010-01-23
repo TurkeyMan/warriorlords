@@ -549,6 +549,16 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 	pMap->pMinimap = NULL;
 	pMap->pMinimapMaterial = NULL;
 
+	// add some clouds
+	pMap->pCloud = MFMaterial_Create("Cloud");
+
+	for(int a=0; a<numClouds; ++a)
+	{
+		pMap->clouds[a].x = MFRand_Range(-64.f, (float)(pMap->mapWidth * tileWidth));
+		pMap->clouds[a].y = MFRand_Range(-64.f, (float)(pMap->mapHeight * tileHeight));
+	}
+
+
 	pMap->moveButton = 0;
 
 	return pMap;
@@ -647,6 +657,9 @@ void Map::Destroy()
 
 	pTiles->Destroy();
 	pUnits->Free();
+
+	MFMaterial_Destroy(pCloud);
+
 	MFHeap_Free(pCastles);
 	MFHeap_Free(pMap);
 	MFHeap_Free(this);
@@ -804,6 +817,19 @@ bool Map::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 void Map::Update()
 {
+	int tileWidth, tileHeight;
+	pTiles->GetTileSize(&tileWidth, &tileHeight);
+
+	for(int a=0; a<numClouds; ++a)
+	{
+		clouds[a].x -= MFSystem_TimeDelta() * 5.f;
+
+		if(clouds[a].x < -64)
+		{
+			clouds[a].x = (float)(mapWidth * tileWidth);
+			clouds[a].y = MFRand_Range(-64.f, (float)(mapHeight * tileHeight));
+		}
+	}
 }
 
 void Map::Draw()
@@ -995,6 +1021,30 @@ void Map::Draw()
 	// draw the units
 	pUnits->DrawUnits(1.f, texelCenter);
 
+	int tileWidth, tileHeight;
+	pTiles->GetTileSize(&tileWidth, &tileHeight);
+	float tileXScale = 1.f/(float)tileWidth;
+	float tileYScale = 1.f/(float)tileHeight;
+
+	// draw clouds
+	MFMaterial_SetMaterial(pCloud);
+
+	MFPrimitive(PT_QuadList);
+	MFBegin(numClouds*2);
+
+	for(int a=0; a<numClouds; ++a)
+	{
+		float x = clouds[a].x * tileXScale - (float)xStart;
+		float y = clouds[a].y * tileYScale - (float)yStart;
+
+		MFSetTexCoord1(0.f, 0.f);
+		MFSetPosition(x, y, 0);
+		MFSetTexCoord1(1.f, 1.f);
+		MFSetPosition(x + 1.f, y + 2.f, 0);
+	}
+
+	MFEnd();
+
 	// reset the render target
 	MFRenderer_SetDeviceRenderTarget();
 
@@ -1005,11 +1055,9 @@ void Map::Draw()
 
 	MFRect uvs;
 	int targetWidth, targetHeight;
-	int tileWidth, tileHeight;
 
 	GetDisplayRect(&uvs);
 	MFTexture_GetTextureDimensions(pRenderTarget, &targetWidth, &targetHeight);
-	pTiles->GetTileSize(&tileWidth, &tileHeight);
 
 	float texelOffset = zoom <= 0.5f ? 0.f : texelCenter;
 	uvs.x = (xOffset - (float)(int)xOffset) * (tileWidth / targetWidth) + (texelOffset/targetWidth);

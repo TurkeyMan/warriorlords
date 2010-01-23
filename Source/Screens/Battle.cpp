@@ -24,6 +24,7 @@ Battle::Battle(Game *_pGame)
 
 	// load lots of battle related stuff
 	pIcons = MFMaterial_Create("BattleIcons");
+	pAttack = MFMaterial_Create("Attack");
 
 	pTileSet = pGame->GetMap()->GetTileset();
 	int numTerrains = pTileSet->GetNumTerrainTypes();
@@ -205,7 +206,7 @@ void Battle::HitTarget(BattleUnit *pUnit, BattleUnit *pTarget)
 
 	pTarget->damage = damage;
 	pTarget->damageIndicatorTime = 1.f;
-	pTarget->impactAnim = 0; // SET IMPACT ANIM HERE!!!
+	pTarget->impactAnim = pUnit->pUnit->GetWeapon()->impactAnim;
 
 	if(pTarget->pUnit->Damage(damage) == 0)
 	{
@@ -504,9 +505,18 @@ void Battle::Draw()
 			if(unit.state != US_Dying && unit.state != US_Dead)
 				DrawHealthBar(unitX, unitY, unit.pUnit->GetDetails()->life, unit.pUnit->GetHealth());
 
-			if(unit.damageIndicatorTime)
+			if(unit.damageIndicatorTime > 0.f)
 			{
-				// TODO: Draw the impact anim...
+				// draw attack animation
+				float time = (1.f-unit.damageIndicatorTime) * 2.f;
+				if(time < 1.f)
+				{
+					float frame = MFFloor(time * 8.f) * (1.f/8.f) + (texelCenter*(1.f/512.f));
+					float anim = (float)unit.impactAnim * (1.f/8.f) + (texelCenter*(1.f/512.f));
+
+					MFMaterial_SetMaterial(pAttack);
+					MFPrimitive_DrawQuad((float)unit.curX, (float)unit.curY, 64.f, 64.f, MFVector::one, frame, anim, frame + (1.f/8.f), anim + (1.f/8.f));
+				}
 
 				// draw damage indicator with a little bouncey thing...
 				char damage[8];
@@ -532,7 +542,7 @@ void Battle::Draw()
 				for(int a=0; a<numDigits; ++a)
 				{
 					// stagger appearance of the characters
-					float time = unit.damageIndicatorTime + (float)a*0.04f;
+					time = unit.damageIndicatorTime + (float)a*0.04f;
 					if(time > 1.f)
 						break;
 

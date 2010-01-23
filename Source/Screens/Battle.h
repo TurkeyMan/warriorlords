@@ -101,6 +101,7 @@ protected:
 	int cooldownCount;
 
 	MFMaterial *pIcons;
+	MFMaterial *pAttack;
 
 	MFMaterial *pForeground;
 	MFMaterial *pBackground;
