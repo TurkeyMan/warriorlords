@@ -822,11 +822,12 @@ void CastleEdit::SetUnit(int button, void *pUserData, int buttonID)
 
 	// set the new unit
 	BuildUnit &unit = pThis->pCastle->details.buildUnits[selected];
+	UnitDetails *pDetails = pDefs->GetUnitDetails(buttonID);
 	unit.unit = buttonID;
-	unit.cost = pDefs->GetUnitDetails(buttonID)->cost;
-	unit.buildTimeMod = 0;
+	unit.cost = pDetails->cost;
+	unit.buildTime = pDetails->buildTime;
 
-	pThis->pCastle->buildTime = pDefs->GetUnitDetails(buttonID)->buildTime + unit.buildTimeMod;
+	pThis->pCastle->buildTime = unit.buildTime;
 
 	// update the button image
 	if(buttonID != -1)

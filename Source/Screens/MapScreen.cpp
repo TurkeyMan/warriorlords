@@ -473,6 +473,9 @@ bool UnitConfig::Draw()
 	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*3, MFVector::white, "Mov: %g/%d%s", pUnit->GetMovement()*0.5f, pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pDefs->GetMovementClassName(pDetails->movementClass)) : "");
 	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*4, MFVector::white, "HP: %d/%d", (int)(pDetails->life * pUnit->GetHealth()), pDetails->life);
 
+	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height, MFVector::white, "Kills: %d", pUnit->GetKills());
+	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height*2, MFVector::white, "Victories: %d", pUnit->GetVictories());
+
 	for(int a=0; a<6; ++a)
 		pStrategySelect[a]->Draw();
 
@@ -505,6 +508,14 @@ void UnitConfig::Show(Unit *_pUnit)
 {
 	pUnit = _pUnit;
 
+	BattlePlan *pPlan = pUnit->GetBattlePlan();
+	pStrategySelect[0]->SetValue(pPlan->strength == TS_Strongest ? 1 : 0);
+	pStrategySelect[1]->SetValue(pPlan->strength == TS_Weakest ? 1 : 0);
+	pStrategySelect[2]->SetValue(pPlan->bAttackAvailable ? 1 : 0);
+	pStrategySelect[3]->SetValue(pPlan->type == TT_Any ? 1 : 0);
+	pStrategySelect[4]->SetValue(pPlan->type == TT_Melee ? 1 : 0);
+	pStrategySelect[5]->SetValue(pPlan->type == TT_Ranged ? 1 : 0);
+
 	bVisible = true;
 
 	pInputManager->PushReceiver(this);
@@ -524,19 +535,29 @@ void UnitConfig::SelectStrat(int value, void *pUserData, int buttonID)
 {
 	UnitConfig *pThis = (UnitConfig*)pUserData;
 
+	BattlePlan *pPlan = pThis->pUnit->GetBattlePlan();
+
 	switch(buttonID)
 	{
 		case 0:
 		case 1:
+			pPlan->strength = (TargetStrength)buttonID;
+
 			if(value == 0)
 				pThis->pStrategySelect[buttonID]->SetValue(1);
 			else
 				pThis->pStrategySelect[1 - buttonID]->SetValue(0);
 			break;
-		
+
+		case 2:
+			pPlan->bAttackAvailable = !!value;
+			break;
+
 		case 3:
 		case 4:
 		case 5:
+			pPlan->type = (TargetType)(buttonID - 3);
+
 			if(value == 0)
 			{
 				pThis->pStrategySelect[buttonID]->SetValue(1);
@@ -1101,6 +1122,8 @@ void CastleConfig::Draw()
 	if(!bVisible)
 		return;
 
+	Game *pGame = Game::GetCurrent();
+
 	MFPrimitive_DrawUntexturedQuad(window.x, window.y, window.width, window.height, MakeVector(0, 0, 0, 0.8f));
 
 	MFPrimitive_DrawUntexturedQuad(title.x, title.y, title.width, title.height, MakeVector(0, 0, 0, .8f));
@@ -1108,29 +1131,38 @@ void CastleConfig::Draw()
 	MFPrimitive_DrawUntexturedQuad(right.x, right.y, right.width, right.height, MakeVector(0, 0, 0, .8f));
 	MFPrimitive_DrawUntexturedQuad(lower.x, lower.y, lower.width, lower.height, MakeVector(0, 0, 0, .8f));
 
-	MFFont_BlitTextf(pFont, (int)title.x, (int)title.y, MFVector::yellow, pCastle->details.name);
+	MFFont_BlitTextf(pFont, (int)title.x + 5, (int)title.y, MFVector::yellow, pCastle->details.name);
+
+	char gold[16];
+	sprintf(gold, "Gold: %d", pGame->GetPlayerGold(pGame->CurrentPlayer()));
+	float goldWidth = MFFont_GetStringWidth(pFont, gold, MFFont_GetFontHeight(pFont));
+	MFFont_BlitText(pFont, (int)(title.x + title.width - goldWidth - 5), (int)title.y, MFVector::yellow, gold);
 
 	int building = pCastle->GetBuildUnit();
 	if(building > -1)
 	{
-		UnitDefinitions *pUnitDefs = Game::GetCurrent()->GetUnitDefs();
+		UnitDefinitions *pUnitDefs = pGame->GetUnitDefs();
 		UnitDetails *pDetails = pUnitDefs->GetUnitDetails(building);
 
 		int height = (int)MFFont_GetFontHeight(pFont);
 		MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 5, MFVector::white, pDetails->pName);
 		if(pDetails->type == UT_Vehicle)
 		{
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height, MFVector::white, "Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : "");
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*2, MFVector::white, "Turns: %d", pCastle->buildTime);
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 9 + height, MFVector::white, "Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : "");
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 8 + height*2, MFVector::white, "Gold: %d", pCastle->details.buildUnits[pCastle->building].cost);
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 7 + height*3, MFVector::white, "Turns: %d", pCastle->buildTime);
 		}
 		else
 		{
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height, MFVector::white, "Type: %s", pUnitDefs->GetArmourClassName(pDetails->defenceClass));
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*2, MFVector::white, "Atk: %d - %d %s", pDetails->attackMin, pDetails->attackMax, pUnitDefs->GetWeaponClassName(pDetails->attackClass));
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*3, MFVector::white, "Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : "");
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*4, MFVector::white, "Turns: %d", pCastle->buildTime);
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 9 + height, MFVector::white, "Type: %s", pUnitDefs->GetArmourClassName(pDetails->defenceClass));
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 8 + height*2, MFVector::white, "Atk: %d - %d %s", pDetails->attackMin, pDetails->attackMax, pUnitDefs->GetWeaponClassName(pDetails->attackClass));
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 7 + height*3, MFVector::white, "Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : "");
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 6 + height*4, MFVector::white, "Gold: %d", pCastle->details.buildUnits[pCastle->building].cost);
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 5 + height*5, MFVector::white, "Turns: %d", pCastle->buildTime);
 		}
 	}
+
+	MFFont_BlitTextf(pFont, (int)lower.x + 5, (int)lower.y + 5, MFVector::white, "Income: %d", pCastle->details.income);
 
 	for(int a=0; a<pCastle->details.numBuildUnits; ++a)
 		pBuildUnits[a]->Draw();

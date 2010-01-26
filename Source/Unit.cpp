@@ -397,6 +397,10 @@ Unit *UnitDefinitions::CreateUnit(int unit, int player)
 	pUnit->movement = pUnit->details.movement * 2;
 	pUnit->pName = pUnit->details.pName;
 
+	pUnit->plan.type = TT_Ranged;
+	pUnit->plan.strength = TS_Weakest;
+	pUnit->plan.bAttackAvailable = true;
+
 	return pUnit;
 }
 
@@ -567,7 +571,7 @@ int Unit::GetMovementPenalty(int terrainType)
 int Unit::GetMovementPenalty(MapTile *pTile)
 {
 	ObjectType type = pTile->GetType();
-	if(type == OT_Road || (type == OT_Castle && pTile->IsFriendlyTile(player)))
+	if((type == OT_Road && HasRoadWalk()) || (type == OT_Castle && pTile->IsFriendlyTile(player)))
 		return 1;
 
 	uint32 terrain = pTile->GetTerrain();
@@ -681,10 +685,8 @@ void Castle::Capture(int _player)
 void Castle::SetBuildUnit(int slot)
 {
 	int unit = details.buildUnits[slot].unit;
-	UnitDetails *pUnit = pUnitDefs->GetUnitDetails(unit);
-
 	building = slot;
-	buildTime = pUnit->buildTime + details.buildUnits[slot].buildTimeMod;
+	buildTime = details.buildUnits[slot].buildTime;
 }
 
 int Castle::GetBuildUnit()
@@ -699,8 +701,6 @@ Group *Group::Create(int _player)
 	Group * pGroup = new Group;
 	pGroup->player = _player;
 	pGroup->numForwardUnits = pGroup->numRearUnits = 0;
-	pGroup->forwardPlan = AP_AttackFront;
-	pGroup->rearPlan = AP_AttackRear;
 	pGroup->bSelected = false;
 	pGroup->pPath = NULL;
 	pGroup->pNext = NULL;

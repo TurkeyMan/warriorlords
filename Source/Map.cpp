@@ -224,7 +224,7 @@ int GetCastles(MFIni *pIni, Castle *pCastles)
 									details.numBuildUnits = MFMax(details.numBuildUnits, unit + 1);
 									details.buildUnits[unit].unit = pCastle->GetInt(3);
 									details.buildUnits[unit].cost = pCastle->GetInt(4);
-									details.buildUnits[unit].buildTimeMod = pCastle->GetInt(5);
+									details.buildUnits[unit].buildTime = pCastle->GetInt(5);
 								}
 
 								pCastle = pCastle->Next();
@@ -379,6 +379,16 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 					if(castle.player != -1)
 						castle.player = pTile->region;
 
+					for(int a=0; a<castle.details.numBuildUnits; ++a)
+					{
+						UnitDetails *pDetails = pMap->pUnits->GetUnitDetails(castle.details.buildUnits[a].unit);
+						if(pDetails)
+						{
+							castle.details.buildUnits[a].cost += pDetails->cost;
+							castle.details.buildUnits[a].buildTime += pDetails->buildTime;
+						}
+					}
+
 					for(int a=0; a<4; ++a)
 					{
 						MapTile &tile = pMap->pMap[(castle.details.y + (a >> 1))*pMap->mapWidth + castle.details.x + (a & 1)];
@@ -491,6 +501,16 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 							castle.pUnitDefs = pMap->pUnits;
 							if(castle.player != -1)
 								castle.player = a;
+
+							for(int u=0; u<castle.details.numBuildUnits; ++u)
+							{
+								UnitDetails *pDetails = pMap->pUnits->GetUnitDetails(castle.details.buildUnits[u].unit);
+								if(pDetails)
+								{
+									castle.details.buildUnits[u].cost += pDetails->cost;
+									castle.details.buildUnits[u].buildTime += pDetails->buildTime;
+								}
+							}
 
 							for(int t=0; t<4; ++t)
 							{
@@ -741,7 +761,18 @@ void Map::Save(const char *pFilename)
 				MFFile_Write(pFile, buffer, len);
 				for(int c=0; c<castle.details.numBuildUnits; ++c)
 				{
-					int len = sprintf(buffer, "\t\t\tunit %d = %d, %d, %d\n", c, castle.details.buildUnits[c].unit, castle.details.buildUnits[c].cost, castle.details.buildUnits[c].buildTimeMod);
+					BuildUnit &unit = castle.details.buildUnits[c];
+					int cost = unit.cost;
+					int buildTime = unit.buildTime;
+
+					UnitDetails *pDetails = pUnits->GetUnitDetails(unit.unit);
+					if(pDetails)
+					{
+						cost -= pDetails->cost;
+						buildTime -= pDetails->buildTime;
+					}
+
+					int len = sprintf(buffer, "\t\t\tunit %d = %d, %d, %d\n", c, unit.unit, cost, buildTime);
 					MFFile_Write(pFile, buffer, len);
 				}
 				MFFile_Write(pFile, "\t\t}\n", MFString_Length("\t\t}\n"));

@@ -39,6 +39,7 @@ public:
 	int GetCurrentTurn() { return currentTurn; }
 	int CurrentPlayer() { return currentPlayer; }
 	int GetPlayerRace(int player) { return player == -1 ? 0 : players[player].race; }
+	int GetPlayerGold(int player) { return player == -1 ? 0 : players[player].gold; }
 	MFVector GetPlayerColour(int player) { return player == -1 ? pUnitDefs->GetRaceColour(0) : players[player].colour; }
 
 	static void SetCurrent(Game *pGame) { pCurrent = pGame; }

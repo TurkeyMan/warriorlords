@@ -68,6 +68,8 @@ Battle::~Battle()
 
 void Battle::Begin(Group *pGroup, MapTile *pTarget, int foreground, int background, int castle)
 {
+	MFDebug_Log(0, "\nBattle Begins:");
+
 	pForeground = ppForegrounds[foreground];
 	pBackground = ppBackgrounds[background];
 	pCastle = castle != -1 ? ppCastles[castle] : NULL;
@@ -208,6 +210,8 @@ void Battle::HitTarget(BattleUnit *pUnit, BattleUnit *pTarget)
 	pTarget->damageIndicatorTime = 1.f;
 	pTarget->impactAnim = pUnit->pUnit->GetWeapon()->impactAnim;
 
+	MFDebug_Log(0, MFStr("%d:%s Is Hit for %d damage by %d:%s", pTarget->army, pTarget->pUnit->GetName(), damage, pUnit->army, pUnit->pUnit->GetName()));
+
 	if(pTarget->pUnit->Damage(damage) == 0)
 	{
 		if(pTarget->state == US_Waiting)
@@ -217,8 +221,13 @@ void Battle::HitTarget(BattleUnit *pUnit, BattleUnit *pTarget)
 
 		pTarget->state = US_Dying;
 		pTarget->stateTime = 1.f;
+
+		MFDebug_Log(0, MFStr("%d:%s Is Dead", pTarget->army, pTarget->pUnit->GetName()));
+
+		pUnit->pUnit->AddKill();
 	}
 
+	pUnit->bHit = true;
 	pTarget->bEngaged = false;
 }
 
@@ -242,7 +251,7 @@ int Battle::Update()
 				{
 					if(unit.stateTime <= 0.f)
 					{
-						if(unit.bFiring)
+						if(!unit.bHit)
 							HitTarget(&unit, unit.pTarget);
 
 						unit.curX = unit.posX;
@@ -278,15 +287,15 @@ int Battle::Update()
 								case 2:
 									unit.curX = unit.pTarget->posX + (unit.army == 0 ? -64 : 64 );
 									unit.curY = unit.pTarget->posY;
-
-									if(unit.pTarget->bEngaged)
-										HitTarget(&unit, unit.pTarget);
 									break;
 								case 3:
 									unit.curX = unit.posX + (int)((unit.pTarget->posX + (unit.army == 0 ? -64 : 64 ) - unit.posX)*(1.f-phaseTime));
 									unit.curY = unit.posY + (int)((unit.pTarget->posY - unit.posY)*(1.f-phaseTime));
 									break;
 							}
+
+							if(phase >= 2 && !unit.bHit)
+								HitTarget(&unit, unit.pTarget);
 						}
 						else
 						{
@@ -362,27 +371,68 @@ int Battle::Update()
 				bool bCanAttackBackRow = bIsRanged || opponent.numForwardUnits == 0;
 
 				// pick target...
+				BattlePlan *pPlan = pUnit->pUnit->GetBattlePlan();
 				BattleUnit *pTarget = NULL;
+				int targetHP = 0;
+				bool bTargetIsRanged = false;
+
 				for(int a=0; a<opponent.numUnits; ++a)
 				{
-					BattleUnit *pT = &opponent.units[a];
-					if(!pT->bEngaged && !pT->damageIndicatorTime && pT->pUnit->GetHealth() && (pT->state == US_Cooldown || pT->state == US_Waiting) && (bCanAttackBackRow || pT->row == 0))
+					BattleUnit &t = opponent.units[a];
+
+					// check if we can attack this target
+					if(t.row == 0 || bCanAttackBackRow)
 					{
-						pTarget = pT;
-						break;
+						// check unit is a valid target
+						if((!pPlan->bAttackAvailable && !t.pUnit->IsDead()) || t.CanBeAttacked())
+						{
+							// we can attack this target
+							if(pTarget == NULL)
+							{
+								pTarget = &t;
+								targetHP = t.pUnit->GetDetails()->life;
+								bTargetIsRanged = t.pUnit->IsRanged();
+							}
+							else
+							{
+								// check for preference according to combat rules
+								bool bPreferTarget = false;
+								if((pPlan->type == TT_Melee && !bTargetIsRanged) || (pPlan->type == TT_Ranged && bTargetIsRanged))
+								{
+									if((pPlan->strength == TS_Weakest && t.pUnit->GetDetails()->life < targetHP) || (pPlan->strength == TS_Strongest && t.pUnit->GetDetails()->life > targetHP))
+										bPreferTarget = true;
+								}
+								else
+								{
+									if((pPlan->type == TT_Melee && !t.pUnit->IsRanged()) || (pPlan->type == TT_Ranged && t.pUnit->IsRanged()) || 
+										(pPlan->strength == TS_Weakest && t.pUnit->GetDetails()->life < targetHP) || (pPlan->strength == TS_Strongest && t.pUnit->GetDetails()->life > targetHP))
+										bPreferTarget = true;
+								}
+
+								if(bPreferTarget)
+								{
+									pTarget = &t;
+									targetHP = t.pUnit->GetDetails()->life;
+									bTargetIsRanged = t.pUnit->IsRanged();
+								}
+							}
+						}
 					}
 				}
 
-				if(pTarget)
+				if(pTarget && pTarget->CanBeAttacked())
 				{
 					// attack!
 					pUnit->pTarget = pTarget;
 					pTarget->bEngaged = true;
 					pUnit->state = US_Engaging;
 					pUnit->stateTime = pUnit->pUnit->GetDetails()->attackSpeed;
+					pUnit->bHit = false;
 
 					// unlink
 					EndWaiting(pUnit);
+
+					MFDebug_Log(0, MFStr("%d:%s Attacks %d:%s", pUnit->army, pUnit->pUnit->GetName(), pTarget->army, pTarget->pUnit->GetName()));
 				}
 			}
 			else if(!bIsRanged && pUnit->row == 1 && armies[pUnit->army].numForwardUnits < 5)
@@ -617,6 +667,14 @@ bool Battle::HandleInputEvent(InputEvent ev, InputInfo &info)
 	{
 		if(armies[0].numUnitsAlive == 0 || armies[1].numUnitsAlive == 0)
 		{
+			// add victories to battle units
+			int victor = armies[0].numUnitsAlive ? 0 : 1;
+			for(int a=0; a<armies[victor].numUnits; ++a)
+			{
+				if(!armies[victor].units[a].pUnit->IsDead())
+					armies[victor].units[a].pUnit->AddVictory();
+			}
+
 			// battle is finished
 			pGame->EndBattle(armies[0].units[0].pGroup, armies[1].units[0].pGroup->GetTile());
 		}

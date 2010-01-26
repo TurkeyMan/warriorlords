@@ -62,16 +62,24 @@ enum UnitType
 	UT_Max
 };
 
-enum AttackPlan
+enum TargetType
 {
-	AP_AttackStrongest,
-	AP_AttackWeakest,
-	AP_AttackStrongestAvailable,
-	AP_AttackWeakestAvailable,
-	AP_AttackFront,
-	AP_AttackRear,
+	TT_Any,
+	TT_Melee,
+	TT_Ranged
+};
 
-	AP_Max
+enum TargetStrength
+{
+	TS_Strongest,
+	TS_Weakest
+};
+
+struct BattlePlan
+{
+	TargetType type;
+	TargetStrength strength;
+	bool bAttackAvailable;
 };
 
 struct UnitDetails
@@ -235,11 +243,17 @@ public:
 	int GetRace();
 	MFVector GetColour();
 
+	BattlePlan *GetBattlePlan() { return &plan; }
 	Weapon *GetWeapon() { return pUnitDefs->GetWeapon(details.weapon); }
 
 	float GetHealth() { return (float)life / (float)details.life; }
 	int Damage(int damage) { life -= MFMin(life, damage); return life; }
 	bool IsDead() { return life == 0; }
+
+	int GetKills() { return kills; }
+	int GetVictories() { return victories; }
+	void AddKill() { ++kills; }
+	void AddVictory() { ++victories; }
 
 	bool IsRanged() { return pUnitDefs->IsRanged(details.attackClass); }
 
@@ -262,6 +276,8 @@ protected:
 	int movement;
 	int life;
 
+	BattlePlan plan;
+
 	// unit stats
 	int kills, victories;
 };
@@ -270,7 +286,7 @@ struct BuildUnit
 {
 	int unit;
 	int cost;
-	int buildTimeMod;
+	int buildTime;
 };
 
 struct CastleDetails
@@ -363,9 +379,6 @@ public:
 
 	int numForwardUnits;
 	int numRearUnits;
-
-	AttackPlan forwardPlan;
-	AttackPlan rearPlan;
 
 	bool bSelected;
 	Step *pPath;

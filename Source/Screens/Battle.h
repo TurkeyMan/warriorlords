@@ -41,6 +41,8 @@ protected:
 		void Init(Unit *pUnit);
 		void SetPos(int x, int y);
 
+		bool CanBeAttacked() { return !bEngaged && !pUnit->IsDead() && (state == US_Cooldown || state == US_Waiting); }
+
 		Group *pGroup;
 		Unit *pUnit;
 		int army, row;
@@ -52,6 +54,7 @@ protected:
 		BattleUnit *pTarget;
 		bool bEngaged;
 		bool bFiring;
+		bool bHit;
 
 		float damageIndicatorTime; // timeout for showing the damage indicator
 		int damage;

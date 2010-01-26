@@ -51,7 +51,7 @@ void Game_Init()
 
 	pInputManager = new InputManager;
 
-#if 0
+#if 1
 	pGame = new Game("Map");
 	Game::SetCurrent(pGame);
 	pGame->BeginGame();
@@ -114,8 +114,8 @@ int GameMain(MFInitParams *pInitParams)
 #endif
 	SetDisplayOrientation(DO_90CW);
 #else
-	gDefaults.display.displayWidth = 800;
-	gDefaults.display.displayHeight = 480;
+	gDefaults.display.displayWidth = 1280;
+	gDefaults.display.displayHeight = 720;
 #endif
 
 //	gDefaults.input.useDirectInputKeyboard = false;

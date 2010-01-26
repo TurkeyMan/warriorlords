@@ -171,23 +171,31 @@ void Game::BeginTurn(int player)
 
 			if(pCastle->building != -1 && --pCastle->buildTime <= 0)
 			{
-				int buildUnit = pCastle->details.buildUnits[pCastle->building].unit;
-				Group *pGroup = CreateUnit(buildUnit, pCastle);
-				if(pGroup)
-					pCastle->SetBuildUnit(pCastle->building);
+				BuildUnit &buildUnit = pCastle->details.buildUnits[pCastle->building];
 
-				// HACK: Skeletons build 2 at a time!
-				if(buildUnit == 14)
+				if(buildUnit.cost <= players[currentPlayer].gold)
 				{
-					if(pGroup->GetTile()->GetNumUnits() < 10)
+					Group *pGroup = CreateUnit(buildUnit.unit, pCastle);
+					if(pGroup)
 					{
-						// if there's space on the same tile, add the second one to the same group
-						Unit *pUnit = pUnitDefs->CreateUnit(buildUnit, pCastle->player);
-						pGroup->AddUnit(pUnit);
-					}
-					else
-					{
-						CreateUnit(buildUnit, pCastle);
+						players[currentPlayer].gold -= buildUnit.cost;
+
+						pCastle->SetBuildUnit(pCastle->building);
+
+						// HACK: Skeletons build 2 at a time!
+						if(buildUnit.unit == 14)
+						{
+							if(pGroup->GetTile()->GetNumUnits() < 10)
+							{
+								// if there's space on the same tile, add the second one to the same group
+								Unit *pUnit = pUnitDefs->CreateUnit(buildUnit.unit, pCastle->player);
+								pGroup->AddUnit(pUnit);
+							}
+							else
+							{
+								CreateUnit(buildUnit.unit, pCastle);
+							}
+						}
 					}
 				}
 			}

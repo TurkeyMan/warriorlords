@@ -88,14 +88,13 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 		}
 	}
 
-	int nonTraversible[64];
-	int numNonTraversible = 0;
+	int traversible[64];
+	int numTraversible = 0;
 	for(int a=0; a<numTerrainTypes; ++a)
 	{
-		if(terrainPenalties[a] == 0)
-			nonTraversible[numNonTraversible++] = a;
+		if(terrainPenalties[a] != 0)
+			traversible[numTraversible++] = a;
 	}
-
 
 	// check target is not the source
 	if(startX == destX && startY == destY)
@@ -159,6 +158,8 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 		MapTile *pCurTile = pMap->GetTile(item.x, item.y);
 		roadDirections = pCurTile->GetRoadDirections();
 
+		uint32 terrain = pMap->GetTerrainAt(item.x, item.y);
+
 		for(int ty = MFMax(item.y-1, 0); ty < MFMin(item.y+2, height); ++ty)
 		{
 			for(int tx = MFMax(item.x-1, 0); tx < MFMin(item.x+2, width); ++tx)
@@ -166,37 +167,44 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 				if(tx == item.x && ty == item.y)
 					continue;
 
-				if(!(((roadDirections & 8) && ty < item.y && tx == item.x) ||
+				bool bNonTraversible = true;
+
+				// check if there is a road
+				if(bRoadWalk && (((roadDirections & 8) && ty < item.y && tx == item.x) ||
 					((roadDirections & 4) && ty > item.y && tx == item.x) ||
 					((roadDirections & 2) && ty == item.y && tx < item.x) ||
 					((roadDirections & 1) && ty == item.y && tx > item.x)))
+					bNonTraversible = false;
+
+				// check if unit can cross tile
+				if(bNonTraversible)
 				{
-					bool bNonTraversible = false;
-
-					// build a tile movement mask
-					uint32 mask = 0xFFFFFFFF;
+					// mask out the irrelevant quadrants
+					uint32 mask = 0;
 					if(tx < item.x)
-						mask &= 0x00FF00FF;
+						mask |= 0xFF00FF00;
 					else if(tx > item.x)
-						mask &= 0xFF00FF00;
+						mask |= 0x00FF00FF;
 					if(ty < item.y)
-						mask &= 0x0000FFFF;
+						mask |= 0xFFFF0000;
 					else if(ty > item.y)
-						mask &= 0xFFFF0000;
+						mask |= 0x0000FFFF;
 
-					// check our neighbour does not cross unpassable terrain
-					for(int a=0; a<numNonTraversible; ++a)
+					// check if we can pass in the direction of travel
+					for(int a=0; a<numTraversible; ++a)
 					{
-						// impassable terrain on the neighbouring edge, we can't traverse
-						uint32 terrain = nonTraversible[a] | (nonTraversible[a] << 8) | (nonTraversible[a] << 16) | (nonTraversible[a] << 24);
-						if((pMap->GetTerrainAt(item.x, item.y) & mask) == (terrain & mask))
-							bNonTraversible = true;
+						if(TileContains(terrain|mask, traversible[a]))
+						{
+							bNonTraversible = false;
+							break;
+						}
 					}
 
-					// if we can't move that way
-					if(bNonTraversible)
-						continue;
 				}
+
+				// if we can't move that way
+				if(bNonTraversible)
+					continue;
 
 				int y = -1;
 				for(int a=0; a<numItems; ++a)
