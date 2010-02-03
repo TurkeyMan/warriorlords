@@ -26,6 +26,8 @@ Game::Game(const char *_pMap, bool bEditable)
 
 	if(bEditable)
 	{
+		SetCurrent(this);
+
 		// create the map and screens
 		pMap = Map::Create(this, "Map", bEditable);
 		pUnitDefs = pMap->GetUnitDefinitions();
