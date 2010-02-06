@@ -11,6 +11,32 @@
 
 class GroupConfig;
 
+class Inventory : public InputReceiver
+{
+public:
+	Inventory();
+	~Inventory();
+
+	bool Draw();
+
+	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
+
+	void Show(Unit *pUnit);
+	void Hide();
+
+protected:
+	Unit *pUnit;
+
+	MFMaterial *pItems;
+	MFFont *pFont;
+
+	MFRect window, top, bottom;
+
+	ListBox *pInventory;
+
+	bool bVisible;
+};
+
 class UnitConfig : public InputReceiver
 {
 public:
@@ -27,14 +53,17 @@ public:
 protected:
 	Unit *pUnit;
 
+	MFMaterial *pIcons;
 	MFFont *pFont;
 
 	MFRect window, top, bottom;
 
+	Button *pInventory;
 	CheckBox *pStrategySelect[6];
 
 	bool bVisible;
 
+	static void Inventory(int button, void *pUserData, int buttonID);
 	static void SelectStrat(int value, void *pUserData, int buttonID);
 };
 

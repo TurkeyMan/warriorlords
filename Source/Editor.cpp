@@ -51,13 +51,13 @@ Editor::Editor(Game *pGame)
 
 	pos.x = (float)(display.width - (16 + tileWidth));
 	pos.y = 16.f;
-	uvs.x = 0.75f + (1.f/256.f); uvs.y = 0.f + (1.f/256.f);
+	uvs.x = 0.75f + (.5f/256.f); uvs.y = 0.f + (.5f/256.f);
 	uvs.width = 0.25f; uvs.height = 0.25f;
 	pMiniMap = Button::Create(pIcons, &pos, &uvs, MFVector::one, ShowMiniMap, this, 0, true);
 
 	pos.x = 16.f;
 	pos.y = 16.f;
-	uvs.x = 0.75f + (1.f/256.f); uvs.y = 0.25f + (1.f/256.f);
+	uvs.x = 0.75f + (.5f/256.f); uvs.y = 0.25f + (.5f/256.f);
 	pModeButton = Button::Create(pIcons, &pos, &uvs, MFVector::one, ChangeMode, this, 0, true);
 
 	// brush buttons

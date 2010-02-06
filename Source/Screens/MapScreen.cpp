@@ -426,6 +426,11 @@ UnitConfig::UnitConfig()
 
 	DivideRect_Vert(window, 128+10, margin, &top, &bottom, true);
 
+	pIcons = MFMaterial_Create("Icons");
+	MFRect pos = { top.x + top.width - 64.f, top.y + top.height - 64.f, 64.f, 64.f };
+	MFRect uvs = { 0.f + (.5f/256.f), 0.5f + (.5f/256.f), 0.25f, 0.25f };
+	pInventory = Button::Create(pIcons, &pos, &uvs, MFVector::white, Inventory, this);
+
 	float height = MFFont_GetFontHeight(pFont);
 	MFRect cbRect = { bottom.x + 40, bottom.y + 10, 200.f, height };
 	pStrategySelect[0] = CheckBox::Create(&cbRect, "Attack Strongest", MFVector::yellow, 1, SelectStrat, this, 0);
@@ -473,8 +478,11 @@ bool UnitConfig::Draw()
 	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*3, MFVector::white, "Mov: %g/%d%s", pUnit->GetMovement()*0.5f, pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pDefs->GetMovementClassName(pDetails->movementClass)) : "");
 	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*4, MFVector::white, "HP: %d/%d", (int)(pDetails->life * pUnit->GetHealth()), pDetails->life);
 
-	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height, MFVector::white, "Kills: %d", pUnit->GetKills());
-	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height*2, MFVector::white, "Victories: %d", pUnit->GetVictories());
+	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height, MFVector::white, "Victories: %d", pUnit->GetVictories());
+	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height*2, MFVector::white, "Kills: %d", pUnit->GetKills());
+
+	if(pUnit->IsHero())
+		pInventory->Draw();
 
 	for(int a=0; a<6; ++a)
 		pStrategySelect[a]->Draw();
@@ -520,6 +528,9 @@ void UnitConfig::Show(Unit *_pUnit)
 
 	pInputManager->PushReceiver(this);
 
+	if(pUnit->IsHero())
+		pInputManager->PushReceiver(pInventory);
+
 	for(int a=0; a<6; ++a)
 		pInputManager->PushReceiver(pStrategySelect[a]);
 }
@@ -529,6 +540,13 @@ void UnitConfig::Hide()
 	bVisible = false;
 
 	pInputManager->PopReceiver(this);
+}
+
+void Inventory(int button, void *pUserData, int buttonID)
+{
+	UnitConfig *pThis = (UnitConfig*)pUserData;
+
+	pThis->pUnit->
 }
 
 void UnitConfig::SelectStrat(int value, void *pUserData, int buttonID)
