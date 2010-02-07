@@ -649,13 +649,16 @@ Map *Map::CreateNew(Game *pGame, const char *pTileset, const char *pUnits)
 	MFRect screen;
 	pNew->pTiles->GetTileSize(&tileWidth, &tileHeight);
 	GetDisplayRect(&screen);
-	int rtWidth = (int)screen.width*4+tileWidth*2-1;
-	int rtHeight = (int)screen.height*4+tileHeight*2-1;
+
+	const int maxZoom = 2;
+	int rtWidth = (int)screen.width*maxZoom+tileWidth*2-1;
+	int rtHeight = (int)screen.height*maxZoom+tileHeight*2-1;
 	rtWidth -= rtWidth%tileWidth;
 	rtHeight -= rtHeight%tileHeight;
 	rtWidth = MFUtil_NextPowerOf2(rtWidth);
 	rtHeight = MFUtil_NextPowerOf2(rtHeight);
 	pNew->pRenderTarget = MFTexture_CreateRenderTarget("MapSurface", rtWidth, rtHeight);
+	pNew->pRenderTargetMaterial = MFMaterial_Create("MapSurface");
 
 //	pNew->pMinimap = MFTexture_CreateRenderTarget("MiniMap", MFUtil_NextPowerOf2(pMap->mapWidth), MFUtil_NextPowerOf2(pMap->mapHeight));
 	pNew->pMinimap = NULL;
