@@ -51,6 +51,13 @@ struct Weapon
 	static const int gWeaponTileSize = 32;
 };
 
+struct Item
+{
+	const char *pName;
+	int itemType;
+	int x, y;
+};
+
 enum UnitType
 {
 	UT_Unknown = -1,
@@ -139,11 +146,14 @@ public:
 	int GetNumWeapons() { return numWeapons; }
 	Weapon *GetWeapon(int weapon) { return &pWeapons[weapon]; }
 
+	int GetNumItems() { return numItems; }
+	Item *GetItem(int item) { return &pItems[item]; }
+
 	MFMaterial *GetUnitMaterial() { return pUnitMat; }
 
 	// rendering
-	void AddRenderUnit(int unit, float x, float y, int player = -1, bool bFlip = false, float alpha = 1.f);
-	void DrawUnits(float scale, float texelOffset, bool bHead = false);
+	void AddRenderUnit(int unit, float x, float y, int player = -1, bool bFlip = false, float alpha = 1.f, int rank = 0);
+	void DrawUnits(float scale, float texelOffset, bool bHead = false, bool bRank = false);
 
 	int DrawCastle(int race);
 	int DrawFlag(int race);
@@ -153,8 +163,11 @@ public:
 	void GetFlagUVs(int race, MFRect *pUVs, float texelOffset);
 	void GetUnitUVs(int unit, bool bFlip, MFRect *pUVs, float texelOffset);
 	void GetSpecialUVs(int index, MFRect *pUVs, float texelOffset);
+	void GetItemUVs(int item, MFRect *pUVs, float texelOffset);
+	void GetBadgeUVs(int rank, MFRect *pUVs, float texelOffset);
 
 	inline MFMaterial *GetCastleMaterial() const { return pCastleMat; }
+	inline MFMaterial *GetItemMaterial() const { return pItemMat; }
 
 protected:
 	struct WeaponClass
@@ -180,10 +193,14 @@ protected:
 	MFMaterial *pUnitMat;
 	MFMaterial *pHeadMat;
 	MFMaterial *pCastleMat;
+	MFMaterial *pItemMat;
+	MFMaterial *pBattle;
 
 	int tileWidth, tileHeight;
+	int itemWidth, itemHeight;
 	int unitMapWidth, unitMapHeight;
 	int castleMapWidth, castleMapHeight;
+	int itemMapWidth, itemMapHeight;
 
 	Race *pRaces;
 	int raceCount;
@@ -207,6 +224,9 @@ protected:
 	int numMovementClasses;
 	int numTerrainTypes;
 
+	Item *pItems;
+	int numItems;
+
 	MFPtrListDL<Unit> units;
 
 	// render list
@@ -215,6 +235,7 @@ protected:
 		int unit;
 		float x, y;
 		int player;
+		int rank;
 		float alpha;
 		bool bFlip;
 	};
@@ -233,15 +254,16 @@ public:
 
 	void Draw(float x, float y, bool bFlip = false, float alpha = 1.f);
 
-	const char *GetName() { return pName; }
-	bool IsHero() { return details.type == UT_Hero; }
-	bool IsVehicle() { return details.type == UT_Vehicle; }
+	const char *GetName() const { return pName; }
+	bool IsHero() const { return details.type == UT_Hero; }
+	bool IsVehicle() const { return details.type == UT_Vehicle; }
 
 	UnitDetails *GetDetails() { return &details; }
-	int GetPlayer() { return player; }
+	int GetPlayer() const { return player; }
 	void SetPlayer(int player) { this->player = player; }
 	int GetRace();
 	MFVector GetColour();
+	int GetRank() const { return MFMin(victories / 2, 8); }
 
 	BattlePlan *GetBattlePlan() { return &plan; }
 	Weapon *GetWeapon() { return pUnitDefs->GetWeapon(details.weapon); }
@@ -264,6 +286,11 @@ public:
 	void Move(int penalty) { movement -= penalty; }
 
 	void Restore();
+	void Revive();
+
+	int GetNumItems() { return numItems; }
+	Item *GetItem(int item) { return ppItems[item]; }
+	bool AddItem(int item);
 
 protected:
 	UnitDefinitions *pUnitDefs;
@@ -275,11 +302,12 @@ protected:
 	UnitDetails details;
 	int movement;
 	int life;
+	int kills, victories;
 
 	BattlePlan plan;
 
-	// unit stats
-	int kills, victories;
+	Item **ppItems;
+	int numItems;
 };
 
 struct BuildUnit
@@ -349,6 +377,7 @@ public:
 
 	bool IsSelected() { return bSelected; }
 	bool IsInGroup(Unit *pUnit);
+	Unit *GetHero();
 
 	int GetPlayer() { return player; }
 	void SetPlayer(int player);

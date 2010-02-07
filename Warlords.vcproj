@@ -298,6 +298,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Source\ListBox.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\ListBox.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Source\Map.cpp"
 				>
 			</File>

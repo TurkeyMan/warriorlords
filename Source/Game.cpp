@@ -18,6 +18,9 @@ Game::Game(const char *_pMap, bool bEditable)
 	pBattleNumbersFont = MFFont_Create("Battle");
 	pSmallNumbersFont = MFFont_Create("SmallNumbers");
 
+	pWindow = MFMaterial_Create("Window-Pirates");
+	pHorizLine = MFMaterial_Create("Horiz-Pirates");
+
 	pMap = NULL;
 	pUnitDefs = NULL;
 
@@ -72,6 +75,7 @@ void Game::BeginGame()
 		players[a].gold = 0;
 		players[a].cursorX = 0;
 		players[a].cursorY = 0;
+		players[a].pHero = NULL;
 	}
 
 	// create the map and screens
@@ -108,7 +112,8 @@ void Game::BeginGame()
 			players[pCastle->player].cursorY = pCastle->details.y;
 
 			// produce starting hero (or flag that hero wants to join on the first turn)
-			CreateUnit(players[pCastle->player].race - 1, pCastle);
+			Group *pGroup = CreateUnit(players[pCastle->player].race - 1, pCastle);
+			players[pCastle->player].pHero = pGroup->GetUnit(0);
 
 			// pirates also start with a galleon
 			if(players[pCastle->player].race == 3)
@@ -227,11 +232,13 @@ void Game::BeginBattle(Group *pGroup, MapTile *pTarget)
 {
 	// enter the battle
 	pMapScreen->DeselectGroup();
-	pBattle->Begin(pGroup, pTarget, 0, 2, -1);
+	pBattle->Begin(pGroup, pTarget);
 }
 
 void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 {
+	pBattle->End();
+
 	// destroy dead units
 	for(int a=0; a<pGroup->GetNumUnits(); ++a)
 	{
@@ -367,7 +374,18 @@ Group *Game::CreateUnit(int unit, Castle *pCastle)
 	if(pTile)
 	{
 		// create the unit
-		Unit *pUnit = pUnitDefs->CreateUnit(unit, pCastle->player);
+		Unit *pUnit;
+		if(players[pCastle->player].pHero && pDetails->type == UT_Hero)
+		{
+			pUnit = players[pCastle->player].pHero;
+
+			pCastle->building = -1;
+			players[pCastle->player].pHero->Revive();
+		}
+		else
+		{
+			pUnit = pUnitDefs->CreateUnit(unit, pCastle->player);
+		}
 
 		// create a group for the unit, and add it to the tile
 		Group *pGroup = Group::Create(pCastle->player);
@@ -378,4 +396,20 @@ Group *Game::CreateUnit(int unit, Castle *pCastle)
 	}
 
 	return NULL;
+}
+
+void Game::DrawWindow(const MFRect &rect)
+{
+	MFMaterial_SetMaterial(pWindow);
+	MFPrimitive_DrawQuad(rect.x, rect.y, rect.width, rect.height);
+}
+
+void Game::DrawLine(float sx, float sy, float dx, float dy)
+{
+	MFMaterial_SetMaterial(pHorizLine);
+
+	if(sx == dx)
+		MFPrimitive_DrawQuad(sx-8.f, sy, 16.f, dy-sy, MFVector::one, 0.f + (1.f/16.f), 1.f, 1.f + (1.f/16.f), 0.f);
+	else if(sy == dy)
+		MFPrimitive_DrawQuad(sx, sy-8.f, dx-sx, 16.f, MFVector::one, 0.f, 0.f + (1.f/16.f), 1.f, 1.f + (1.f/16.f));
 }

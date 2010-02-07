@@ -38,6 +38,7 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 
 	pUnitDefs->numTerrainTypes = numTerrainTypes;
 
+	pUnitDefs->pBattle = MFMaterial_Create("BattleIcons");
 	pUnitDefs->numRenderUnits = 0;
 
 	MFIniLine *pLine = pIni->GetFirstLine();
@@ -87,6 +88,19 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 					MFTexture_GetTextureDimensions(pTex, &pUnitDefs->castleMapWidth, &pUnitDefs->castleMapHeight);
 			}
 		}
+		else if(pLine->IsString(0, "item_map"))
+		{
+			pUnitDefs->pItemMat = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
+
+			if(pUnitDefs->pItemMat)
+			{
+				MFTexture *pTex;
+				int diffuse = MFMaterial_GetParameterIndexFromName(pUnitDefs->pCastleMat, "diffuseMap");
+				MFMaterial_GetParameter(pUnitDefs->pItemMat, diffuse, 0, &pTex);
+				if(pTex)
+					MFTexture_GetTextureDimensions(pTex, &pUnitDefs->itemMapWidth, &pUnitDefs->itemMapHeight);
+			}
+		}
 		else if(pLine->IsString(0, "tile_width"))
 		{
 			pUnitDefs->tileWidth = pLine->GetInt(1);
@@ -94,6 +108,14 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 		else if(pLine->IsString(0, "tile_height"))
 		{
 			pUnitDefs->tileHeight = pLine->GetInt(1);
+		}
+		else if(pLine->IsString(0, "item_width"))
+		{
+			pUnitDefs->itemWidth = pLine->GetInt(1);
+		}
+		else if(pLine->IsString(0, "item_height"))
+		{
+			pUnitDefs->itemHeight = pLine->GetInt(1);
 		}
 		else if(pLine->IsSection("Races"))
 		{
@@ -244,6 +266,31 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 				pWeapon = pWeapon->Next();
 			}
 		}
+		else if(pLine->IsSection("Items"))
+		{
+			MFIniLine *pItem = pLine->Sub();
+			pUnitDefs->numItems = 0;
+			while(pItem)
+			{
+				++pUnitDefs->numItems;
+				pItem = pItem->Next();
+			}
+
+			pUnitDefs->pItems = (Item*)MFHeap_Alloc(sizeof(Item)*pUnitDefs->numItems);
+
+			pItem = pLine->Sub();
+			int i = 0;
+			while(pItem)
+			{
+				Item &item = pUnitDefs->pItems[i];
+				item.itemType = i++;
+				item.pName = pItem->GetString(3);
+				item.x = pItem->GetInt(0);
+				item.y = pItem->GetInt(1);
+
+				pItem = pItem->Next();
+			}
+		}
 		else if(pLine->IsSection("Classes"))
 		{
 			MFIniLine *pClasses = pLine->Sub();
@@ -359,6 +406,8 @@ void UnitDefinitions::Free()
 		MFMaterial_Destroy(pHeadMat);
 	if(pCastleMat)
 		MFMaterial_Destroy(pCastleMat);
+	if(pBattle)
+		MFMaterial_Destroy(pBattle);
 
 	if(pRaces)
 		MFHeap_Free(pRaces);
@@ -401,6 +450,12 @@ Unit *UnitDefinitions::CreateUnit(int unit, int player)
 	pUnit->plan.strength = TS_Weakest;
 	pUnit->plan.bAttackAvailable = true;
 
+	pUnit->ppItems = NULL;
+	pUnit->numItems = 0;
+
+	if(pUnits[unit].type == UT_Hero)
+		pUnit->ppItems = (Item**)MFHeap_Alloc(sizeof(Item*));
+
 	return pUnit;
 }
 
@@ -409,7 +464,7 @@ void UnitDefinitions::DestroyUnit(Unit *pUnits)
 	units.Destroy(pUnits);
 }
 
-void UnitDefinitions::AddRenderUnit(int unit, float x, float y, int player, bool bFlip, float alpha)
+void UnitDefinitions::AddRenderUnit(int unit, float x, float y, int player, bool bFlip, float alpha, int rank)
 {
 	renderUnits[numRenderUnits].unit = unit;
 	renderUnits[numRenderUnits].x = x;
@@ -417,13 +472,16 @@ void UnitDefinitions::AddRenderUnit(int unit, float x, float y, int player, bool
 	renderUnits[numRenderUnits].player = player;
 	renderUnits[numRenderUnits].alpha = alpha;
 	renderUnits[numRenderUnits].bFlip = bFlip;
+	renderUnits[numRenderUnits].rank = rank;
 	++numRenderUnits;
 }
 
-void UnitDefinitions::DrawUnits(float scale, float texelOffset, bool bHead)
+void UnitDefinitions::DrawUnits(float scale, float texelOffset, bool bHead, bool bRank)
 {
 	if(!numRenderUnits)
 		return;
+
+	int numRanked = 0;
 
 	MFMaterial_SetMaterial(bHead ? pHeadMat : pUnitMat);
 
@@ -434,6 +492,9 @@ void UnitDefinitions::DrawUnits(float scale, float texelOffset, bool bHead)
 	{
 		UnitRender &unit = renderUnits[u];
 		UnitDetails &def = pUnits[unit.unit];
+
+		if(unit.rank > 0)
+			++numRanked;
 
 		MFSetColour(MakeVector(pGame->GetPlayerColour(unit.player), unit.alpha));
 
@@ -460,6 +521,48 @@ void UnitDefinitions::DrawUnits(float scale, float texelOffset, bool bHead)
 	}
 
 	MFEnd();
+
+	if(bRank && numRanked != 0)
+	{
+		MFMaterial_SetMaterial(pBattle);
+
+		MFPrimitive(PT_TriList);
+		MFBegin(6*numRanked);
+
+		for(int u=0; u<numRenderUnits; ++u)
+		{
+			UnitRender &unit = renderUnits[u];
+			if(unit.rank == 0)
+				continue;
+
+			UnitDetails &def = pUnits[unit.unit];
+
+			MFSetColour(1.f, 1.f, 1.f, unit.alpha);
+
+			MFRect uvs;
+			GetBadgeUVs(unit.rank, &uvs, texelOffset);
+
+			float depth = 0.f;//bHead ? 0.f : (1000.f - unit.y) / 1000.f;
+
+			float xOffset = -(def.width - 1) / 2.f * scale + def.width*scale - 0.25f*scale;
+			float yOffset = -(def.height - 1) / 2.f * scale;
+			MFSetTexCoord1(uvs.x, uvs.y);
+			MFSetPosition(unit.x+xOffset, unit.y+yOffset, depth);
+			MFSetTexCoord1(uvs.x+uvs.width, uvs.y);
+			MFSetPosition(unit.x+xOffset+0.25f*scale, unit.y+yOffset, depth);
+			MFSetTexCoord1(uvs.x, uvs.y+uvs.height);
+			MFSetPosition(unit.x+xOffset, unit.y+yOffset+0.25f*scale, depth);
+
+			MFSetTexCoord1(uvs.x+uvs.width, uvs.y);
+			MFSetPosition(unit.x+xOffset+0.25f*scale, unit.y+yOffset, depth);
+			MFSetTexCoord1(uvs.x+uvs.width, uvs.y+uvs.height);
+			MFSetPosition(unit.x+xOffset+0.25f*scale, unit.y+yOffset+0.25f*scale, depth);
+			MFSetTexCoord1(uvs.x, uvs.y+uvs.height);
+			MFSetPosition(unit.x+xOffset, unit.y+yOffset+0.25f*scale, depth);
+		}
+
+		MFEnd();
+	}
 
 	numRenderUnits = 0;
 }
@@ -543,6 +646,49 @@ void UnitDefinitions::GetSpecialUVs(int index, MFRect *pUVs, float texelOffset)
 	pUVs->height = yScale*(float)s.height;
 }
 
+void UnitDefinitions::GetItemUVs(int item, MFRect *pUVs, float texelOffset)
+{
+	float fWidth = (float)itemMapWidth;
+	float fHeight = (float)itemMapHeight;
+	float xScale = (1.f / fWidth) * itemWidth;
+	float yScale = (1.f / fHeight) * itemHeight;
+	float halfX = texelOffset / fWidth;
+	float halfY = texelOffset / fHeight;
+
+	Item &i = pItems[item];
+	pUVs->x = i.x*xScale + halfX;
+	pUVs->y = i.y*yScale + halfY;
+	pUVs->width = xScale;
+	pUVs->height = yScale;
+}
+
+void UnitDefinitions::GetBadgeUVs(int rank, MFRect *pUVs, float texelOffset)
+{
+	if(rank == 0)
+		return;
+	--rank;
+
+	float fWidth = 128.f;
+	float fHeight = 128.f;
+	float xScale = (1.f / fWidth) * 16.f;
+	float yScale = (1.f / fHeight) * 16.f;
+	float halfX = texelOffset / fWidth;
+	float halfY = texelOffset / fHeight;
+
+	if(rank < 4)
+	{
+		pUVs->x = (6 + (rank&1))*xScale + halfX;
+		pUVs->y = (rank>>1)*yScale + halfY;
+	}
+	else
+	{
+		pUVs->x = (rank&1)*xScale + halfX;
+		pUVs->y = (2 + (rank>>1))*yScale + halfY;
+	}
+	pUVs->width = yScale;
+	pUVs->height = yScale;
+}
+
 void Unit::Destroy()
 {
 	pUnitDefs->DestroyUnit(this);
@@ -550,7 +696,7 @@ void Unit::Destroy()
 
 void Unit::Draw(float x, float y, bool bFlip, float alpha)
 {
-	pUnitDefs->AddRenderUnit(id, x, y, player, bFlip, alpha);
+	pUnitDefs->AddRenderUnit(id, x, y, player, bFlip, alpha, GetRank());
 }
 
 int Unit::GetRace()
@@ -589,6 +735,22 @@ void Unit::Restore()
 
 	// heal 25% life
 	life = MFMin(life + (details.life + 3) / 4, details.life);
+}
+
+void Unit::Revive()
+{
+	movement = details.movement * 2;
+	life = details.life;
+
+	victories = kills = 0;
+}
+
+bool Unit::AddItem(int item)
+{
+	if(numItems >= 8)
+		return false;
+	ppItems[numItems++] = pUnitDefs->GetItem(item);
+	return true;
 }
 
 void Castle::Init(const CastleDetails &_details, int _player)
@@ -895,6 +1057,21 @@ bool Group::IsInGroup(Unit *pUnit)
 			return true;
 	}
 	return false;
+}
+
+Unit *Group::GetHero()
+{
+	for(int a=0; a<numForwardUnits; ++a)
+	{
+		if(pForwardUnits[a]->IsHero())
+			return pForwardUnits[a];
+	}
+	for(int a=0; a<numRearUnits; ++a)
+	{
+		if(pRearUnits[a]->IsHero())
+			return pRearUnits[a];
+	}
+	return NULL;
 }
 
 void Group::SetPlayer(int _player)

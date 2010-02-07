@@ -156,6 +156,8 @@ bool MapTile::IsEnemyTile(int player)
 
 bool MapTile::CanMove(Group *_pGroup)
 {
+	if(type == OT_Special)
+		return false;
 	if(IsEnemyTile(_pGroup->player))
 		return false;
 	if(pGroup)
@@ -577,7 +579,6 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 		pMap->clouds[a].x = MFRand_Range(-64.f, (float)(pMap->mapWidth * tileWidth));
 		pMap->clouds[a].y = MFRand_Range(-64.f, (float)(pMap->mapHeight * tileHeight));
 	}
-
 
 	pMap->moveButton = 0;
 

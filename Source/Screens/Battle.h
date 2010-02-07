@@ -16,7 +16,8 @@ public:
 	Battle(Game *pGame);
 	virtual ~Battle();
 
-	void Begin(Group *pGroup, MapTile *pTarget, int foreground, int background, int castle = -1);
+	void Begin(Group *pGroup, MapTile *pTarget);
+	void End();
 
 	virtual int Update();
 	virtual void Draw();
@@ -92,6 +93,9 @@ protected:
 	void HitTarget(BattleUnit *pUnit, BattleUnit *pTarget);
 
 	// members
+	static const int battleScreenWidth = 800;
+	static const int battleScreenHeight = 480;
+
 	Game *pGame;
 
 	UnitDefinitions *pUnitDefs;
@@ -105,15 +109,18 @@ protected:
 
 	MFMaterial *pIcons;
 	MFMaterial *pAttack;
-
-	MFMaterial *pForeground;
 	MFMaterial *pBackground;
 	MFMaterial *pCastle;
+	MFMaterial *pCloud;
 
-	// library
-	MFMaterial **ppForegrounds;
-	MFMaterial **ppBackgrounds;
-	MFMaterial **ppCastles;
+	int fg, bg;
+
+	static const int numClouds = 4;
+	struct Cloud
+	{
+		float x, y;
+		float speed;
+	} clouds[numClouds];
 };
 
 #endif

@@ -16,6 +16,8 @@ struct Player
 	int gold;
 
 	int cursorX, cursorY;
+
+	Unit *pHero;
 };
 
 class Game
@@ -41,11 +43,15 @@ public:
 	int GetPlayerRace(int player) { return player == -1 ? 0 : players[player].race; }
 	int GetPlayerGold(int player) { return player == -1 ? 0 : players[player].gold; }
 	MFVector GetPlayerColour(int player) { return player == -1 ? pUnitDefs->GetRaceColour(0) : players[player].colour; }
+	Unit *GetPlayerHero(int player) { return players[player].pHero; }
 
 	static void SetCurrent(Game *pGame) { pCurrent = pGame; }
 	static Game *GetCurrent() { return pCurrent; }
 
 	Group *CreateUnit(int unit, Castle *pCastle);
+
+	void DrawWindow(const MFRect &rect);
+	void DrawLine(float sx, float sy, float dx, float dy);
 
 	MFFont *GetTextFont() { return pText; }
 	MFFont *GetBattleNumbersFont() { return pBattleNumbersFont; }
@@ -56,6 +62,9 @@ protected:
 	MFFont *pText;
 	MFFont *pBattleNumbersFont;
 	MFFont *pSmallNumbersFont;
+
+	MFMaterial *pWindow;
+	MFMaterial *pHorizLine;
 
 	// game data
 	Map *pMap;

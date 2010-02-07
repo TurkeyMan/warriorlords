@@ -21,59 +21,185 @@
 Battle::Battle(Game *_pGame)
 {
 	pGame = _pGame;
+	pUnitDefs = pGame->GetUnitDefs();
 
 	// load lots of battle related stuff
 	pIcons = MFMaterial_Create("BattleIcons");
 	pAttack = MFMaterial_Create("Attack");
-
-	pTileSet = pGame->GetMap()->GetTileset();
-	int numTerrains = pTileSet->GetNumTerrainTypes();
-	ppForegrounds = (MFMaterial**)MFHeap_AllocAndZero(sizeof(MFMaterial*)*numTerrains);
-	ppBackgrounds = (MFMaterial**)MFHeap_AllocAndZero(sizeof(MFMaterial*)*numTerrains);
-	for(int a=0; a<numTerrains; ++a)
-	{
-		ppForegrounds[a] = MFMaterial_Create(MFStr("fg-%s", pTileSet->GetTerrainName(a)));
-		ppBackgrounds[a] = MFMaterial_Create(MFStr("bg-%s", pTileSet->GetTerrainName(a)));
-	}
-
-	pUnitDefs = pGame->GetUnitDefs();
-	int numRaces = pUnitDefs->GetNumRaces();
-	ppCastles = (MFMaterial**)MFHeap_AllocAndZero(sizeof(MFMaterial*)*numRaces);
-	for(int a=0; a<numRaces; ++a)
-	{
-		ppCastles[a] = MFMaterial_Create(MFStr("castle-%s", pUnitDefs->GetRaceName(a)));
-	}
+	pCloud = MFMaterial_Create("Cloud");
 }
 
 Battle::~Battle()
 {
 	MFMaterial_Destroy(pIcons);
-
-	int numTerrains = pTileSet->GetNumTerrainTypes();
-	for(int a=0; a<numTerrains; ++a)
-	{
-		MFMaterial_Destroy(ppForegrounds[a]);
-		MFMaterial_Destroy(ppBackgrounds[a]);
-	}
-	MFHeap_Free(ppForegrounds);
-	MFHeap_Free(ppBackgrounds);
-
-	int numRaces = pUnitDefs->GetNumRaces();
-	for(int a=0; a<numRaces; ++a)
-	{
-		MFMaterial_Destroy(ppCastles[a]);
-	}
-	MFHeap_Free(ppCastles);
+	MFMaterial_Destroy(pAttack);
+	MFMaterial_Destroy(pCloud);
 }
 
-void Battle::Begin(Group *pGroup, MapTile *pTarget, int foreground, int background, int castle)
+void Battle::Begin(Group *pGroup, MapTile *pTarget)
 {
 	MFDebug_Log(0, "\nBattle Begins:");
 
-	pForeground = ppForegrounds[foreground];
-	pBackground = ppBackgrounds[background];
-	pCastle = castle != -1 ? ppCastles[castle] : NULL;
+	fg = bg = -1;
 
+	Unit *pBoat = pGroup->GetVehicle();
+	if(pBoat && pBoat->GetMovementPenalty(0) == 0 && pBoat->GetMovementPenalty(1) > 0)
+	{
+		pBackground = MFMaterial_Create("Battle-Ship");
+	}
+	else
+	{
+		int t0, t1 = -1;
+
+		pCastle = NULL;
+		Castle *pC = pTarget->GetCastle();
+		if(!pC)
+			pC = pGroup->GetTile()->GetCastle();
+
+		if(pC)
+		{
+			t0 = t1 = DecodeTL(pC->GetTile()->GetTerrain());
+
+			// load castle
+			int race = Game::GetCurrent()->GetPlayerRace(pC->GetPlayer());
+			pCastle = MFMaterial_Create(MFStr("Castle-%s", pUnitDefs->GetRaceName(race)));
+		}
+		else
+		{
+			// find involved terrains
+			MapTile *pT0 = pGroup->GetTile();
+			MapTile *pT1 = pTarget;
+			int x0 = pT0->GetX();
+			int y0 = pT0->GetY();
+			int x1 = pT1->GetX();
+			int y1 = pT1->GetY();
+			int terrain0 = pT0->GetTerrain();
+			int terrain1 = pT1->GetTerrain();
+
+			// swap the tiles to make it easier to search
+			if(x0 > x1 || y0 > y1)
+			{
+				MapTile *pT = pT0;
+				pT0 = pT1;
+				pT1 = pT;
+				x0 = pT0->GetX();
+				y0 = pT0->GetY();
+				x1 = pT1->GetX();
+				y1 = pT1->GetY();
+			}
+
+			// find joining edges
+			int others[4];
+			if(x0 == x1)
+			{
+				t0 = DecodeBL(terrain0);
+				int t = DecodeBR(terrain0);
+				if(t != t0)
+				{
+					if(t0 == 1) // water
+					{
+						t1 = t0;
+						t0 = t;
+					}
+					else
+						t1 = t;
+				}
+
+				others[0] = DecodeTL(terrain0);
+				others[1] = DecodeTR(terrain0);
+				others[2] = DecodeBL(terrain1);
+				others[3] = DecodeBR(terrain1);
+			}
+			else if(y0 == y1)
+			{
+				t0 = DecodeTR(terrain0);
+				int t = DecodeBR(terrain0);
+				if(t != t0)
+				{
+					if(t0 == 1) // water
+					{
+						t1 = t0;
+						t0 = t;
+					}
+					else
+						t1 = t;
+				}
+
+				others[0] = DecodeTL(terrain0);
+				others[1] = DecodeBL(terrain0);
+				others[2] = DecodeTR(terrain1);
+				others[3] = DecodeBR(terrain1);
+			}
+			else if(x0 < x1 && y0 < y1)
+			{
+				t0 = DecodeBR(terrain0);
+
+				others[0] = DecodeTR(terrain0);
+				others[1] = DecodeBL(terrain0);
+				others[2] = DecodeTR(terrain1);
+				others[3] = DecodeBL(terrain1);
+			}
+			else
+			{
+				if(x0 < x1)
+					t0 = DecodeTR(terrain0);
+				else
+					t0 = DecodeBL(terrain0);
+
+				others[0] = DecodeTL(terrain0);
+				others[1] = DecodeBR(terrain0);
+				others[2] = DecodeTL(terrain1);
+				others[3] = DecodeBR(terrain1);
+			}
+
+			// if we didn't resolve t1
+			if(t1 == -1)
+			{
+				// count occurances of other terrain
+				int t[4], cnt[4];
+				int numOthers = 0;
+				for(int a=0; a<4; ++a)
+				{
+					bool bFound = false;
+
+					for(int b=0; b<numOthers; ++b)
+					{
+						if(t[b] == others[a])
+						{
+							++cnt[b];
+							bFound = true;
+							break;
+						}
+					}
+
+					if(!bFound)
+					{
+						t[numOthers] = others[a];
+						cnt[numOthers++] = 1;
+					}
+				}
+
+				// select the one that was the most common
+				int sel = 0;
+				for(int a=1; a<numOthers; ++a)
+				{
+					if(t[sel] == t0 || cnt[a] > cnt[sel])
+						sel = a;
+				}
+
+				t1 = t[sel];
+			}
+		}
+
+		// load background
+		Tileset *pTileSet = Game::GetCurrent()->GetMap()->GetTileset();
+		pBackground = MFMaterial_Create(MFStr("Battle-%s-%s", pTileSet->GetTerrainName(t0), pTileSet->GetTerrainName(t1)));
+
+		fg = t0;
+		bg = t1;
+	}
+
+	// init stuff
 	pCooldownHead = pCooldownTail = NULL;
 	pActionHead = pActionTail = NULL;
 	cooldownCount = 0;
@@ -182,7 +308,20 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget, int foreground, int backgrou
 		}
 	}
 
+	// make some clouds
+	for(int a=0; a<numClouds; ++a)
+	{
+		clouds[a].x = MFRand_Range(-64.f, (float)battleScreenWidth);
+		clouds[a].y = MFRand_Range(60.f, 180.f);
+		clouds[a].speed = MFRand_Range(4.f, 6.f);
+	}
+
 	SetNext(this);
+}
+
+void Battle::End()
+{
+	MFMaterial_Destroy(pBackground);
 }
 
 void Battle::Select()
@@ -458,6 +597,17 @@ int Battle::Update()
 		pUnit = pUnit->pNext;
 	}
 
+	for(int a=0; a<numClouds; ++a)
+	{
+		clouds[a].x -= MFSystem_TimeDelta() * clouds[a].speed;
+
+		if(clouds[a].x < -64)
+		{
+			clouds[a].x = (float)battleScreenWidth;
+			clouds[a].y = MFRand_Range(60.f, 180.f);
+		}
+	}
+
 	return 0;
 }
 
@@ -498,22 +648,33 @@ void Battle::Draw()
 
 	// draw background+foreground
 	MFMaterial_SetMaterial(pBackground);
-	MFPrimitive_DrawQuad(0, 0, 1, 0.5, MFVector::one, 0, 0, 1, 1);
+	MFPrimitive_DrawQuad(0, 0, 1, 1, MFVector::white, 0.f + (.5f/800.f), 0.f + (0.5f/480.f), 1 + (.5f/800.f), 1 + (0.5f/480.f));
 
 	if(pCastle)
 	{
-		MFMaterial_SetMaterial(pCastle);
-		MFPrimitive_DrawQuad(0, 0, 1, 0.5, MFVector::one, 0, 0, 1, 1);
+//		MFMaterial_SetMaterial(pCastle);
+//		MFPrimitive_DrawQuad(0, 0, 1, 0.5, MFVector::one, 0, 0, 1, 1);
 	}
-
-	MFMaterial_SetMaterial(pForeground);
-	MFPrimitive_DrawQuad(0, 0, 1, 1, MFVector::one, 0, 0, 1, 1);
-
-	MFRenderer_ClearScreen(CS_ZBuffer | CS_Stencil);
 
 	// render units
 	GetOrthoMatrix(&orthoMat);
 	MFView_SetCustomProjection(orthoMat, false);
+
+	// draw clouds
+	MFMaterial_SetMaterial(pCloud);
+
+	MFPrimitive(PT_QuadList);
+	MFBegin(numClouds*2);
+
+	for(int a=0; a<numClouds; ++a)
+	{
+		MFSetTexCoord1(0.f, 0.f);
+		MFSetPosition(clouds[a].x, clouds[a].y, 0);
+		MFSetTexCoord1(1.f, 1.f);
+		MFSetPosition(clouds[a].x + 64.f, clouds[a].y + 128.f, 0);
+	}
+
+	MFEnd();
 
 	for(int a=0; a<2; ++a)
 	{
@@ -530,7 +691,7 @@ void Battle::Draw()
 		}
 	}
 
-	pUnitDefs->DrawUnits(64.f, texelCenter);
+	pUnitDefs->DrawUnits(64.f, texelCenter, false, true);
 
 	// health bars + damage indicators
 	for(int a=0; a<2; ++a)
@@ -672,7 +833,16 @@ bool Battle::HandleInputEvent(InputEvent ev, InputInfo &info)
 			for(int a=0; a<armies[victor].numUnits; ++a)
 			{
 				if(!armies[victor].units[a].pUnit->IsDead())
+				{
 					armies[victor].units[a].pUnit->AddVictory();
+					if((armies[victor].units[a].pUnit->GetVictories() & 1) == 0)
+					{
+						UnitDetails *pDetails = armies[victor].units[a].pUnit->GetDetails();
+						pDetails->attackMin += 1;
+						pDetails->attackMax += 1;
+						pDetails->life += 2;
+					}
+				}
 			}
 
 			// battle is finished

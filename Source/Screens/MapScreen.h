@@ -4,6 +4,7 @@
 #include "Screen.h"
 #include "Game.h"
 #include "Button.h"
+#include "ListBox.h"
 
 #include "Unit.h"
 
@@ -30,11 +31,16 @@ protected:
 	MFMaterial *pItems;
 	MFFont *pFont;
 
-	MFRect window, top, bottom;
+	MFRect window;
 
-	ListBox *pInventory;
+	Button *pInventory[8];
+	int numItems;
+
+	int selected;
 
 	bool bVisible;
+
+	static void SelectItem(int button, void *pUserData, int buttonID);
 };
 
 class UnitConfig : public InputReceiver
@@ -51,6 +57,8 @@ public:
 	void Hide();
 
 protected:
+	Inventory inventory;
+
 	Unit *pUnit;
 
 	MFMaterial *pIcons;
@@ -135,6 +143,7 @@ protected:
 	MFRect window, title, units, lower, right;
 
 	Button *pBuildUnits[4];
+	int numBuildUnits;
 
 	bool bVisible;
 

@@ -123,7 +123,7 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 					// first check for an attack command
 					if(!pLast->pNext && cursorX == pLast->x && cursorY == pLast->y)
 					{
-						// the path is only a single item long, it may be an attack command
+						// the path is only a single item long, it may be an attack or search command
 						MapTile *pTile = pMap->GetTile(cursorX, cursorY);
 
 						if(pTile->IsEnemyTile(pSelection->GetPlayer()))
@@ -178,6 +178,33 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 								pGame->BeginBattle(pSelection, pTile);
 								break;
 							}
+						}
+						else if(pTile->GetType() == OT_Special)
+						{
+							// search command
+							Unit *pHero = pSelection->GetHero();
+							if(pHero)
+							{
+								if(pTile->GetNumUnits() < 10 - pSelection->GetNumUnits())
+								{
+									// move to ruin
+									pSelection->GetTile()->RemoveGroup(pSelection);
+									pTile->AddGroup(pSelection);
+									pMap->ClaimFlags(pTile->GetX(), pTile->GetY(), pSelection->GetPlayer());
+
+									// strip the step from the path
+									pSelection->pPath = pMap->StripStep(pSelection->pPath);
+
+									// TODO: random encounter?
+
+									// get an item
+									int item = MFRand() % pHero->GetDefs()->GetNumItems();
+									pHero->AddItem(item);
+
+									// TODO: show dialog box mentioning what you got
+								}
+							}
+							break;
 						}
 					}
 
@@ -410,6 +437,117 @@ static float gPositions[5][5][2] =
 	{ {.16f, .25f}, {.84f, .25f}, {.5f, .5f},   {.16f, .75f}, {.84f, .75f} }
 };
 
+Inventory::Inventory()
+{
+	pFont = Game::GetCurrent()->GetTextFont();
+	pItems = MFMaterial_Create("Items");
+
+	bVisible = false;
+
+	float margin = 5.f;
+	GetDisplayRect(&window);
+	window.x = window.width*0.5f - 240.f;
+	window.y = window.height*0.5f - 160.f;
+	window.width = 480.f;
+	window.height = 320.f;
+	AdjustRect_Margin(&window, margin*2.f);
+
+	float x = window.x + window.width*0.5f - (32.f*4+8*3)*0.5f;
+	for(int a=0; a<8; ++a)
+	{
+		MFRect pos = { x + (a & 0x3)*40.f, window.y + 64.f + (a >> 2)*40.f, 32.f, 32.f };
+		pInventory[a] = Button::Create(pItems, &pos, &pos, MFVector::one, SelectItem, this, a);
+	}
+}
+
+Inventory::~Inventory()
+{
+	MFMaterial_Destroy(pItems);
+}
+
+bool Inventory::Draw()
+{
+	if(!bVisible)
+		return false;
+
+	Game::GetCurrent()->DrawWindow(window);
+	Game::GetCurrent()->DrawLine(window.x + 16, window.y + 160, window.x + window.width - 16, window.y + 160);
+
+	float width = MFFont_GetStringWidth(pFont, "Inventory", MFFont_GetFontHeight(pFont));
+	MFFont_BlitText(pFont, (int)(window.x + window.width*0.5f - width*0.5f), (int)window.y + 10, MFVector::yellow, "Inventory");
+
+	for(int a=0; a<numItems; ++a)
+		pInventory[a]->Draw();
+
+	if(selected != -1)
+	{
+		Item *pItem = pUnit->GetItem(selected);
+		width = MFFont_GetStringWidth(pFont, pItem->pName, MFFont_GetFontHeight(pFont));
+		MFFont_BlitText(pFont, (int)(window.x + window.width*0.5f - width*0.5f), (int)window.y + 180, MFVector::white, pItem->pName);
+	}
+
+	return true;
+}
+
+bool Inventory::HandleInputEvent(InputEvent ev, InputInfo &info)
+{
+	if(info.device == IDD_Mouse && info.deviceID != 0)
+		return false;
+
+	// HACK: right click returns
+	if(info.buttonID == 1 && ev == IE_Tap)
+		Hide();
+
+	// only handle left clicks
+	if(info.buttonID != 0)
+		return true;
+
+	switch(ev)
+	{
+		case IE_Tap:
+			break;
+	}
+
+	return true;
+}
+
+void Inventory::Show(Unit *_pUnit)
+{
+	pUnit = _pUnit;
+
+	bVisible = true;
+	selected = -1;
+
+	pInputManager->PushReceiver(this);
+
+	UnitDefinitions *pDefs = pUnit->GetDefs();
+	float texelCenter = MFRenderer_GetTexelCenterOffset();
+
+	numItems = pUnit->GetNumItems();
+	for(int a=0; a<numItems; ++a)
+	{
+		Item *pItem = pUnit->GetItem(a);
+
+		MFRect uvs;
+		pDefs->GetItemUVs(pItem->itemType, &uvs, texelCenter);
+		pInventory[a]->SetImage(pDefs->GetItemMaterial(), &uvs);
+		pInputManager->PushReceiver(pInventory[a]);
+	}
+}
+
+void Inventory::Hide()
+{
+	bVisible = false;
+
+	pInputManager->PopReceiver(this);
+}
+
+void Inventory::SelectItem(int button, void *pUserData, int buttonID)
+{
+	Inventory *pThis = (Inventory*)pUserData;
+	pThis->selected = buttonID;
+}
+
 UnitConfig::UnitConfig()
 {
 	pFont = Game::GetCurrent()->GetTextFont();
@@ -449,6 +587,7 @@ UnitConfig::UnitConfig()
 
 UnitConfig::~UnitConfig()
 {
+	MFMaterial_Destroy(pIcons);
 }
 
 bool UnitConfig::Draw()
@@ -456,16 +595,18 @@ bool UnitConfig::Draw()
 	if(!bVisible)
 		return false;
 
-	MFPrimitive_DrawUntexturedQuad(window.x, window.y, window.width, window.height, MakeVector(0, 0, 0, 0.8f));
-	MFPrimitive_DrawUntexturedQuad(top.x, top.y, top.width, top.height, MakeVector(0, 0, 0, 0.8f));
-	MFPrimitive_DrawUntexturedQuad(bottom.x, bottom.y, bottom.width, bottom.height, MakeVector(0, 0, 0, 0.8f));
+	if(inventory.Draw())
+		return true;
+
+	Game::GetCurrent()->DrawWindow(window);
+	Game::GetCurrent()->DrawLine(window.x + 16, bottom.y - 5, window.x + window.width - 16, bottom.y - 5);
 
 	UnitDefinitions *pDefs = pUnit->GetDefs();
 	UnitDetails *pDetails = pUnit->GetDetails();
 
 	pUnit->Draw(top.x + 32.f, top.y + 32.f);
 	if(pDefs)
-		pDefs->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset());
+		pDefs->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset(), false, true);
 
 	// do we want to see this?
 //	DrawHealthBar((int)(unit.x + 32.f), (int)(unit.y + 32.f), pDetails->life, pUnit->GetHealth());
@@ -481,7 +622,7 @@ bool UnitConfig::Draw()
 	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height, MFVector::white, "Victories: %d", pUnit->GetVictories());
 	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height*2, MFVector::white, "Kills: %d", pUnit->GetKills());
 
-	if(pUnit->IsHero())
+	if(pUnit->IsHero() && pUnit->GetNumItems() > 0)
 		pInventory->Draw();
 
 	for(int a=0; a<6; ++a)
@@ -528,7 +669,7 @@ void UnitConfig::Show(Unit *_pUnit)
 
 	pInputManager->PushReceiver(this);
 
-	if(pUnit->IsHero())
+	if(pUnit->IsHero() && pUnit->GetNumItems() > 0)
 		pInputManager->PushReceiver(pInventory);
 
 	for(int a=0; a<6; ++a)
@@ -542,11 +683,10 @@ void UnitConfig::Hide()
 	pInputManager->PopReceiver(this);
 }
 
-void Inventory(int button, void *pUserData, int buttonID)
+void UnitConfig::Inventory(int button, void *pUserData, int buttonID)
 {
 	UnitConfig *pThis = (UnitConfig*)pUserData;
-
-	pThis->pUnit->
+	pThis->inventory.Show(pThis->pUnit);
 }
 
 void UnitConfig::SelectStrat(int value, void *pUserData, int buttonID)
@@ -627,6 +767,7 @@ void GroupConfig::Draw()
 	if(battleConfig.Draw())
 		return;
 
+//	Game::GetCurrent()->DrawWindow(window);
 	MFPrimitive_DrawUntexturedQuad(window.x, window.y, window.width, window.height, MakeVector(0, 0, 0, 0.8f));
 
 	MFPrimitive_DrawUntexturedQuad(top.x, top.y, top.width, top.height, MakeVector(0, 0, 0, .8f));
@@ -646,7 +787,7 @@ void GroupConfig::Draw()
 	}
 
 	if(pDefs)
-		pDefs->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset());
+		pDefs->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset(), false, true);
 
 	for(int a = numUnits-1; a >= 0; --a)
 	{
@@ -1182,7 +1323,7 @@ void CastleConfig::Draw()
 
 	MFFont_BlitTextf(pFont, (int)lower.x + 5, (int)lower.y + 5, MFVector::white, "Income: %d", pCastle->details.income);
 
-	for(int a=0; a<pCastle->details.numBuildUnits; ++a)
+	for(int a=0; a<numBuildUnits; ++a)
 		pBuildUnits[a]->Draw();
 }
 
@@ -1211,7 +1352,10 @@ void CastleConfig::Show(Castle *pCastle)
 	MFMaterial *pUnitMat = pUnitDefs->GetUnitMaterial();
 	float texelCenter = MFRenderer_GetTexelCenterOffset();
 
-	for(int a=0; a<pCastle->details.numBuildUnits; ++a)
+	numBuildUnits = pCastle->details.numBuildUnits;
+
+	int a = 0;
+	for(; a<numBuildUnits; ++a)
 	{
 		MFRect uvs;
 		int unit = pCastle->details.buildUnits[a].unit;
@@ -1221,11 +1365,11 @@ void CastleConfig::Show(Castle *pCastle)
 		if(a == 2)
 		{
 			MFRect pos;
-			pos.x = units.x;
+			pos.x = units.x + 5.f;
 			pos.y = units.y + units.height - 64.f - 5.f;
 			pos.width = pos.height = 64.f;
 
-			if(pCastle->details.numBuildUnits == 3)
+			if(numBuildUnits == 3)
 			{
 				float ratio = uvs.width/uvs.height;
 				float width = 64.f * ratio;
@@ -1239,6 +1383,39 @@ void CastleConfig::Show(Castle *pCastle)
 		pBuildUnits[a]->SetOutline(true, pCastle->building == a ? MFVector::blue : MFVector::white);
 
 		pInputManager->PushReceiver(pBuildUnits[a]);
+	}
+
+	Unit *pHero = pGame->GetPlayerHero(pCastle->GetPlayer());
+	if(a < 4 && pHero->IsDead())
+	{
+		int unit = Game::GetCurrent()->GetPlayerRace(pCastle->GetPlayer())-1;
+		MFRect uvs;
+		pUnitDefs->GetUnitUVs(unit, false, &uvs, texelCenter);
+		pBuildUnits[a]->SetImage(pUnitMat, &uvs, pGame->GetPlayerColour(pCastle->player));
+
+		UnitDetails *pDetails = pHero->GetDetails();
+		pCastle->details.buildUnits[a].unit = unit;
+		pCastle->details.buildUnits[a].cost = pDetails->cost;
+		pCastle->details.buildUnits[a].buildTime = pDetails->buildTime;
+
+		if(a == 2)
+		{
+			float ratio = uvs.width/uvs.height;
+			float width = 64.f * ratio;
+
+			MFRect pos;
+			pos.x = MFFloor(units.x + units.width*0.5f - width*0.5f);
+			pos.y = units.y + units.height - 64.f - 5.f;
+			pos.width = pos.height = 64.f;
+
+			pBuildUnits[a]->SetPos(&pos);
+		}
+
+		pBuildUnits[a]->SetOutline(true, pCastle->building == a ? MFVector::blue : MFVector::white);
+
+		pInputManager->PushReceiver(pBuildUnits[a]);
+
+		++numBuildUnits;
 	}
 }
 
@@ -1254,7 +1431,7 @@ void CastleConfig::SelectUnit(int button, void *pUserData, int buttonID)
 	CastleConfig *pThis = (CastleConfig*)pUserData;
 	Castle *pCastle = pThis->pCastle;
 
-	for(int a=0; a<pCastle->details.numBuildUnits; ++a)
+	for(int a=0; a<pThis->numBuildUnits; ++a)
 		pThis->pBuildUnits[a]->SetOutline(true, buttonID == a ? MFVector::blue : MFVector::white);
 
 	pCastle->SetBuildUnit(buttonID);

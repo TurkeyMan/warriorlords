@@ -1,15 +1,15 @@
-f-f
-f-w
+f-f  *
+f-w  *
 f-d
 f-h
-f-fr
-w-w
+f-fr *
+w-w  *
 w-m
-w-f
-w-d
+w-f  *
+w-d  *
 d-f
-d-w
-d-d
+d-w  *
+d-d  *
 fr-f
 fr-fr
 h-f
