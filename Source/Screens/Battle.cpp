@@ -43,7 +43,7 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 	fg = bg = -1;
 
 	Unit *pBoat = pGroup->GetVehicle();
-	if(pBoat && pBoat->GetMovementPenalty(0) == 0 && pBoat->GetMovementPenalty(1) > 0)
+	if(pBoat && pBoat->GetTerrainPenalty(0) == 0 && pBoat->GetTerrainPenalty(1) > 0)
 	{
 		pBackground = MFMaterial_Create("Battle-Ship");
 	}
@@ -312,7 +312,7 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 	for(int a=0; a<numClouds; ++a)
 	{
 		clouds[a].x = MFRand_Range(-64.f, (float)battleScreenWidth);
-		clouds[a].y = MFRand_Range(60.f, 180.f);
+		clouds[a].y = MFRand_Range(40.f, 100.f);
 		clouds[a].speed = MFRand_Range(4.f, 6.f);
 	}
 

@@ -266,31 +266,6 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 				pWeapon = pWeapon->Next();
 			}
 		}
-		else if(pLine->IsSection("Items"))
-		{
-			MFIniLine *pItem = pLine->Sub();
-			pUnitDefs->numItems = 0;
-			while(pItem)
-			{
-				++pUnitDefs->numItems;
-				pItem = pItem->Next();
-			}
-
-			pUnitDefs->pItems = (Item*)MFHeap_Alloc(sizeof(Item)*pUnitDefs->numItems);
-
-			pItem = pLine->Sub();
-			int i = 0;
-			while(pItem)
-			{
-				Item &item = pUnitDefs->pItems[i];
-				item.itemType = i++;
-				item.pName = pItem->GetString(3);
-				item.x = pItem->GetInt(0);
-				item.y = pItem->GetInt(1);
-
-				pItem = pItem->Next();
-			}
-		}
 		else if(pLine->IsSection("Classes"))
 		{
 			MFIniLine *pClasses = pLine->Sub();
@@ -391,6 +366,55 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 				}
 			}
 		}
+		else if(pLine->IsSection("Items"))
+		{
+			MFIniLine *pItem = pLine->Sub();
+			pUnitDefs->numItems = 0;
+			while(pItem)
+			{
+				++pUnitDefs->numItems;
+				pItem = pItem->Next();
+			}
+
+			pUnitDefs->pItems = (Item*)MFHeap_Alloc(sizeof(Item)*pUnitDefs->numItems);
+
+			pItem = pLine->Sub();
+			int i = 0;
+			while(pItem)
+			{
+				Item &item = pUnitDefs->pItems[i++];
+				item.pName = pItem->GetString(3);
+				item.x = pItem->GetInt(0);
+				item.y = pItem->GetInt(1);
+
+				int param = 4;
+				item.user.minAtk.Parse(pItem->GetString(param++));
+				item.user.maxAtk.Parse(pItem->GetString(param++));
+				item.user.speed.Parse(pItem->GetString(param++));
+				item.user.hp.Parse(pItem->GetString(param++));
+				item.user.regen.Parse(pItem->GetString(param++));
+				for(int a=0; a<pUnitDefs->numWeaponClasses; ++a)
+					item.user.def[a].Parse(pItem->GetString(param++));
+
+				item.group.minAtk.Parse(pItem->GetString(param++));
+				item.group.maxAtk.Parse(pItem->GetString(param++));
+				item.group.speed.Parse(pItem->GetString(param++));
+				item.group.hp.Parse(pItem->GetString(param++));
+				item.group.regen.Parse(pItem->GetString(param++));
+				for(int a=0; a<pUnitDefs->numWeaponClasses; ++a)
+					item.group.def[a].Parse(pItem->GetString(param++));
+
+				item.user.movement.Parse(pItem->GetString(param++));
+
+				for(int a=0; a<numTerrainTypes; ++a)
+					item.terrain[a].Parse(pItem->GetString(param++));
+
+				for(int a=0; a<numTerrainTypes; ++a)
+					item.vehicle[a].Parse(pItem->GetString(param++));
+
+				pItem = pItem->Next();
+			}
+		}
 
 		pLine = pLine->Next();
 	}
@@ -450,11 +474,11 @@ Unit *UnitDefinitions::CreateUnit(int unit, int player)
 	pUnit->plan.strength = TS_Weakest;
 	pUnit->plan.bAttackAvailable = true;
 
-	pUnit->ppItems = NULL;
+	pUnit->pItems = NULL;
 	pUnit->numItems = 0;
 
 	if(pUnits[unit].type == UT_Hero)
-		pUnit->ppItems = (Item**)MFHeap_Alloc(sizeof(Item*));
+		pUnit->pItems = (int*)MFHeap_Alloc(sizeof(int));
 
 	return pUnit;
 }
@@ -683,7 +707,7 @@ void UnitDefinitions::GetBadgeUVs(int rank, MFRect *pUVs, float texelOffset)
 	else
 	{
 		pUVs->x = (rank&1)*xScale + halfX;
-		pUVs->y = (2 + (rank>>1))*yScale + halfY;
+		pUVs->y = (2 + ((rank>>1) & 1))*yScale + halfY;
 	}
 	pUVs->width = yScale;
 	pUVs->height = yScale;
@@ -709,27 +733,57 @@ MFVector Unit::GetColour()
 	return pGame->GetPlayerColour(player);
 }
 
-int Unit::GetMovementPenalty(int terrainType)
+int Unit::GetTerrainPenalty(int terrainType)
 {
-	return pUnitDefs->GetMovementPenalty(details.movementClass, terrainType);
+	int penalty = pUnitDefs->GetMovementPenalty(details.movementClass, terrainType);
+	float scale = 1.f;
+	float diff = 0.f;
+
+	if(IsHero())
+	{
+		for(int a=0; a<numItems; ++a)
+		{
+			Item::StatMod &mod = GetItem(a)->terrain[terrainType];
+			if(mod.bAbsolute)
+			{
+				if(mod.value)
+					penalty = MFMin(penalty, (int)mod.value);
+			}
+			else if(mod.bPercent)
+				scale *= mod.value;
+			else
+				diff += mod.value;
+		}
+	}
+	else
+	{
+		// TODO: add pGroup to units, so we can find hero in group...
+		Unit *pHero = NULL;
+	}
+
+	return penalty ? (int)(((float)penalty + diff) * scale) : 0;
 }
 
 int Unit::GetMovementPenalty(MapTile *pTile)
 {
+	// TODO: collect hero and group penalties
+
 	ObjectType type = pTile->GetType();
 	if((type == OT_Road && HasRoadWalk()) || (type == OT_Castle && pTile->IsFriendlyTile(player)))
 		return 1;
 
 	uint32 terrain = pTile->GetTerrain();
-	int penalty = pUnitDefs->GetMovementPenalty(details.movementClass, terrain & 0xFF);
-	penalty = MFMax(penalty, pUnitDefs->GetMovementPenalty(details.movementClass, (terrain >> 8) & 0xFF));
-	penalty = MFMax(penalty, pUnitDefs->GetMovementPenalty(details.movementClass, (terrain >> 16) & 0xFF));
-	penalty = MFMax(penalty, pUnitDefs->GetMovementPenalty(details.movementClass, (terrain >> 24) & 0xFF));
+	int penalty = GetTerrainPenalty(terrain & 0xFF);
+	penalty = MFMax(penalty, GetTerrainPenalty((terrain >> 8) & 0xFF));
+	penalty = MFMax(penalty, GetTerrainPenalty((terrain >> 16) & 0xFF));
+	penalty = MFMax(penalty, GetTerrainPenalty((terrain >> 24) & 0xFF));
 	return penalty;
 }
 
 void Unit::Restore()
 {
+	// TODO: collect hero and group regen
+
 	// restore movement
 	movement = details.movement * 2;
 
@@ -749,8 +803,74 @@ bool Unit::AddItem(int item)
 {
 	if(numItems >= 8)
 		return false;
-	ppItems[numItems++] = pUnitDefs->GetItem(item);
+	pItems[numItems++] = item;
 	return true;
+}
+
+int Unit::GetMinDamage()
+{
+	int minDamage = details.attackMin;
+	float scale = 1.f;
+	float diff = 0.f;
+
+	if(IsHero())
+	{
+		for(int a=0; a<numItems; ++a)
+		{
+			Item::StatMod &mod = GetItem(a)->user.minAtk;
+			if(mod.bAbsolute)
+				minDamage = (int)mod.value;
+			else if(mod.bPercent)
+				scale *= mod.value;
+			else
+				diff += mod.value;
+		}
+	}
+	else
+	{
+		// TODO: add pGroup to units, so we can find hero in group...
+		Unit *pHero = NULL;
+	}
+
+	return (int)(((float)minDamage + diff) * scale);
+}
+
+int Unit::GetMaxDamage()
+{
+	int maxDamage = details.attackMax;
+	float scale = 1.f;
+	float diff = 0.f;
+
+	if(IsHero())
+	{
+		for(int a=0; a<numItems; ++a)
+		{
+			Item::StatMod &mod = GetItem(a)->user.minAtk;
+			if(mod.bAbsolute)
+				maxDamage = (int)mod.value;
+			else if(mod.bPercent)
+				scale *= mod.value;
+			else
+				diff += mod.value;
+		}
+	}
+	else
+	{
+		// TODO: add pGroup to units, so we can find hero in group...
+		Unit *pHero = NULL;
+	}
+
+	return (int)(((float)maxDamage + diff) * scale);
+}
+
+int Unit::GetMaxMovement()
+{
+	return details.movement;
+}
+
+int Unit::GetMaxHP()
+{
+	return details.life;
 }
 
 void Castle::Init(const CastleDetails &_details, int _player)
@@ -1088,5 +1208,26 @@ void Group::SetPlayer(int _player)
 	for(int a=0; a<numRearUnits; ++a)
 	{
 		pRearUnits[a]->SetPlayer(_player);
+	}
+}
+
+void Item::StatMod::Parse(const char *pString)
+{
+	value = 0.f;
+	bAbsolute = false;
+	bPercent = false;
+
+	if(!pString)
+		return;
+
+	if(pString[0] != '+' && pString[0] != '-')
+		bAbsolute = true;
+
+	value = MFString_AsciiToFloat(pString);
+
+	if(pString[MFString_Length(pString) - 1] == '%')
+	{
+		bPercent = true;
+		value = 1 + value*0.01f;
 	}
 }

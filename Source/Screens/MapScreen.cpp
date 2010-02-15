@@ -529,7 +529,7 @@ void Inventory::Show(Unit *_pUnit)
 		Item *pItem = pUnit->GetItem(a);
 
 		MFRect uvs;
-		pDefs->GetItemUVs(pItem->itemType, &uvs, texelCenter);
+		pDefs->GetItemUVs(pUnit->GetItemID(a), &uvs, texelCenter);
 		pInventory[a]->SetImage(pDefs->GetItemMaterial(), &uvs);
 		pInputManager->PushReceiver(pInventory[a]);
 	}

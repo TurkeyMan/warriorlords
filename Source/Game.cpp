@@ -246,7 +246,8 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 		if(pUnit->IsDead())
 		{
 			pGroup->RemoveUnit(pUnit);
-			pUnit->Destroy();
+			if(!pUnit->IsHero())
+				pUnit->Destroy();
 			--a;
 		}
 	}
@@ -270,7 +271,8 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 			if(pUnit->IsDead() || pUnit->GetPlayer() == -1)
 			{
 				pG->RemoveUnit(pUnit);
-				pUnit->Destroy();
+				if(!pUnit->IsHero())
+					pUnit->Destroy();
 				--b;
 			}
 		}
@@ -378,9 +380,9 @@ Group *Game::CreateUnit(int unit, Castle *pCastle)
 		if(players[pCastle->player].pHero && pDetails->type == UT_Hero)
 		{
 			pUnit = players[pCastle->player].pHero;
+			pUnit->Revive();
 
 			pCastle->building = -1;
-			players[pCastle->player].pHero->Revive();
 		}
 		else
 		{

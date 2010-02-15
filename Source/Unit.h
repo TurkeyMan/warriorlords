@@ -53,9 +53,42 @@ struct Weapon
 
 struct Item
 {
+	struct StatMod
+	{
+		void Parse(const char *pString);
+
+		float value;
+		bool bAbsolute;
+		bool bPercent;
+	};
+
 	const char *pName;
-	int itemType;
 	int x, y;
+
+	// personal buffs
+	struct
+	{
+		StatMod minAtk, maxAtk;
+		StatMod speed;
+		StatMod hp;
+		StatMod regen;
+		StatMod def[2];
+		StatMod movement;
+	} user;
+
+	// group buffs
+	struct
+	{
+		StatMod minAtk, maxAtk;
+		StatMod speed;
+		StatMod hp;
+		StatMod regen;
+		StatMod def[2];
+	} group;
+
+	// movement
+	StatMod terrain[10];
+	StatMod vehicle[10];
 };
 
 enum UnitType
@@ -280,7 +313,7 @@ public:
 	bool IsRanged() { return pUnitDefs->IsRanged(details.attackClass); }
 
 	int GetMovement() { return movement; }
-	int GetMovementPenalty(int terrainType);
+	int GetTerrainPenalty(int terrainType);
 	int GetMovementPenalty(MapTile *pTile);
 	bool HasRoadWalk() { return pUnitDefs->HasRoadWalk(details.movementClass); }
 	void Move(int penalty) { movement -= penalty; }
@@ -289,8 +322,15 @@ public:
 	void Revive();
 
 	int GetNumItems() { return numItems; }
-	Item *GetItem(int item) { return ppItems[item]; }
+	int GetItemID(int item) { return pItems[item]; }
+	Item *GetItem(int item) { return pUnitDefs->GetItem(pItems[item]); }
 	bool AddItem(int item);
+
+	// stats
+	int GetMinDamage();
+	int GetMaxDamage();
+	int GetMaxMovement();
+	int GetMaxHP();
 
 protected:
 	UnitDefinitions *pUnitDefs;
@@ -306,7 +346,7 @@ protected:
 
 	BattlePlan plan;
 
-	Item **ppItems;
+	int *pItems;
 	int numItems;
 };
 

@@ -63,7 +63,7 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 	if(pVehicle)
 	{
 		for(int a=0; a<numTerrainTypes; ++a)
-			terrainPenalties[a] = pVehicle->GetMovementPenalty(a);
+			terrainPenalties[a] = pVehicle->GetTerrainPenalty(a);
 		bRoadWalk = pVehicle->HasRoadWalk();
 	}
 	else
@@ -78,7 +78,7 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 			{
 				if(terrainPenalties[b] != 0)
 				{
-					int penalty = pUnit->GetMovementPenalty(b);
+					int penalty = pUnit->GetTerrainPenalty(b);
 					if(penalty == 0)
 						terrainPenalties[b] = 0;
 					else
