@@ -609,15 +609,15 @@ bool UnitConfig::Draw()
 		pDefs->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset(), false, true);
 
 	// do we want to see this?
-//	DrawHealthBar((int)(unit.x + 32.f), (int)(unit.y + 32.f), pDetails->life, pUnit->GetHealth());
+//	DrawHealthBar((int)(unit.x + 32.f), (int)(unit.y + 32.f), pUnit->GetMaxHP(), pUnit->GetHealth());
 
 	int height = (int)MFFont_GetFontHeight(pFont);
 	float tWidth = MFFont_GetStringWidth(pFont, pUnit->GetName(), (float)height);
 	MFFont_BlitText(pFont, (int)top.x + ((int)top.width / 2) - (int)(tWidth*0.5f), (int)top.y + 5, MFVector::yellow, pUnit->GetName());
 	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height, MFVector::white, "Type: %s", pDefs->GetArmourClassName(pDetails->defenceClass));
-	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*2, MFVector::white, "Atk: %d - %d (%s)", pDetails->attackMin, pDetails->attackMax, pDefs->GetWeaponClassName(pDetails->attackClass));
-	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*3, MFVector::white, "Mov: %g/%d%s", pUnit->GetMovement()*0.5f, pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pDefs->GetMovementClassName(pDetails->movementClass)) : "");
-	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*4, MFVector::white, "HP: %d/%d", (int)(pDetails->life * pUnit->GetHealth()), pDetails->life);
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*2, MFVector::white, "Atk: %d - %d (%s)", (int)pUnit->GetMinDamage(), (int)pUnit->GetMaxDamage(), pDefs->GetWeaponClassName(pDetails->attackClass));
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*3, MFVector::white, "Mov: %g/%d%s", pUnit->GetMovement()*0.5f, pUnit->GetMaxMovement(), pDetails->movementClass > 0 ? MFStr(" (%s)", pDefs->GetMovementClassName(pDetails->movementClass)) : "");
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*4, MFVector::white, "HP: %d/%d", (int)(pUnit->GetMaxHP() * pUnit->GetHealth()), pUnit->GetMaxHP());
 
 	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height, MFVector::white, "Victories: %d", pUnit->GetVictories());
 	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height*2, MFVector::white, "Kills: %d", pUnit->GetKills());
@@ -794,7 +794,7 @@ void GroupConfig::Draw()
 		GroupUnit &unit = units[a];
 
 		if(unit.pGroup == units[0].pGroup && !unit.pUnit->IsVehicle())
-			DrawHealthBar(unit.x - 32, unit.y - 32, unit.pUnit->GetDetails()->life, unit.pUnit->GetHealth());
+			DrawHealthBar(unit.x - 32, unit.y - 32, unit.pUnit->GetMaxHP(), unit.pUnit->GetHealth());
 
 		char move[8];
 		sprintf(move, "%g", unit.pUnit->GetMovement() * 0.5f);

@@ -53,40 +53,73 @@ struct Weapon
 
 struct Item
 {
+	enum ModType
+	{
+		MT_User = 0,
+		MT_UserDef,
+		MT_Group,
+		MT_GroupDef,
+		MT_Terrain,
+		MT_Vehicle
+	};
+
+	enum StatMods
+	{
+		Mod_MinAtk = 0,
+		Mod_MaxAtk,
+		Mod_Speed,
+		Mod_HP,
+		Mod_Regen,
+		Mod_Movement,
+
+		Mod_UserMax,
+		Mod_GroupMax = Mod_Movement
+	};
+
 	struct StatMod
 	{
 		void Parse(const char *pString);
 
+		enum Flags
+		{
+			SMF_Absolute = 1,
+			SMF_Percent = 2,
+		};
+
 		float value;
-		bool bAbsolute;
-		bool bPercent;
+		uint32 flags;
 	};
+
+	StatMod *GetMod(int type, int index)
+	{
+		switch(type)
+		{
+			case MT_User:
+				return &user[index];
+			case MT_UserDef:
+				return &userDef[index];
+			case MT_Group:
+				return &group[index];
+			case MT_GroupDef:
+				return &groupDef[index];
+			case MT_Terrain:
+				return &terrain[index];
+			case MT_Vehicle:
+				return &vehicle[index];
+			default:
+				break;
+		}
+		return NULL;
+	}
 
 	const char *pName;
 	int x, y;
 
 	// personal buffs
-	struct
-	{
-		StatMod minAtk, maxAtk;
-		StatMod speed;
-		StatMod hp;
-		StatMod regen;
-		StatMod def[2];
-		StatMod movement;
-	} user;
-
-	// group buffs
-	struct
-	{
-		StatMod minAtk, maxAtk;
-		StatMod speed;
-		StatMod hp;
-		StatMod regen;
-		StatMod def[2];
-	} group;
-
-	// movement
+	StatMod user[Mod_UserMax];
+	StatMod userDef[2];
+	StatMod group[Mod_GroupMax];
+	StatMod groupDef[2];
 	StatMod terrain[10];
 	StatMod vehicle[10];
 };
@@ -280,12 +313,15 @@ protected:
 class Unit
 {
 	friend class UnitDefinitions;
+	friend class Group;
 public:
 	void Destroy();
 
 	UnitDefinitions *GetDefs() { return pUnitDefs; }
 
 	void Draw(float x, float y, bool bFlip = false, float alpha = 1.f);
+
+	Group *GetGroup();
 
 	const char *GetName() const { return pName; }
 	bool IsHero() const { return details.type == UT_Hero; }
@@ -301,14 +337,14 @@ public:
 	BattlePlan *GetBattlePlan() { return &plan; }
 	Weapon *GetWeapon() { return pUnitDefs->GetWeapon(details.weapon); }
 
-	float GetHealth() { return (float)life / (float)details.life; }
+	float GetHealth() { return (float)life / (float)GetMaxHP(); }
 	int Damage(int damage) { life -= MFMin(life, damage); return life; }
 	bool IsDead() { return life == 0; }
 
 	int GetKills() { return kills; }
 	int GetVictories() { return victories; }
 	void AddKill() { ++kills; }
-	void AddVictory() { ++victories; }
+	void AddVictory() { ++victories; UpdateStats(); }
 
 	bool IsRanged() { return pUnitDefs->IsRanged(details.attackClass); }
 
@@ -327,12 +363,21 @@ public:
 	bool AddItem(int item);
 
 	// stats
-	int GetMinDamage();
-	int GetMaxDamage();
-	int GetMaxMovement();
-	int GetMaxHP();
+	float GetMinDamage() { return minAtk; }
+	float GetMaxDamage() { return maxAtk; }
+	int GetMaxMovement() { return movementMax; }
+	int GetMaxHP() { return lifeMax; }
+	float GetCooldown();
+	float GetRegen();
+
+	float GetDefence(float damage, int wpnClass);
+
+	void UpdateStats();
 
 protected:
+	int ModStatInt(int stat, int statType, int modIndex);
+	float ModStatFloat(float stat, int statType, int modIndex);
+
 	UnitDefinitions *pUnitDefs;
 	int id;
 
@@ -340,14 +385,17 @@ protected:
 	int player;
 
 	UnitDetails details;
-	int movement;
-	int life;
+	int movement, movementMax;
+	int life, lifeMax;
 	int kills, victories;
+	float minAtk, maxAtk;
 
 	BattlePlan plan;
 
 	int *pItems;
 	int numItems;
+
+	Group *pGroup;
 };
 
 struct BuildUnit
@@ -415,29 +463,31 @@ public:
 	int GetMovement();
 	bool SubtractMovementCost(MapTile *pTile);
 
-	bool IsSelected() { return bSelected; }
+	bool IsSelected() const { return bSelected; }
 	bool IsInGroup(Unit *pUnit);
 	Unit *GetHero();
 
-	int GetPlayer() { return player; }
+	int GetPlayer() const { return player; }
 	void SetPlayer(int player);
 
-	MapTile *GetTile() { return pTile; }
+	MapTile *GetTile() const { return pTile; }
 
 	int GetNumUnits() const { return numForwardUnits + numRearUnits; }
 	int GetNumForwardUnits() const { return numForwardUnits; }
 	int GetNumRearUnits() const { return numRearUnits; }
 
-	Unit *GetUnit(int unit) { return (unit >= numForwardUnits) ? pRearUnits[unit - numForwardUnits] : pForwardUnits[unit]; }
-	Unit *GetForwardUnit(int forwardUnit) { return pForwardUnits[forwardUnit]; }
-	Unit *GetRearUnit(int rearUnit) { return pRearUnits[rearUnit]; }
+	Unit *GetUnit(int unit) const { return (unit >= numForwardUnits) ? pRearUnits[unit - numForwardUnits] : pForwardUnits[unit]; }
+	Unit *GetForwardUnit(int forwardUnit) const { return pForwardUnits[forwardUnit]; }
+	Unit *GetRearUnit(int rearUnit) const { return pRearUnits[rearUnit]; }
 
-	Unit *GetFeatureUnit() { return GetUnit(0); }
-	Unit *GetVehicle() { return pVehicle; }
+	Unit *GetFeatureUnit() const { return GetUnit(0); }
+	Unit *GetVehicle() const { return pVehicle; }
 
-	Step *GetPath() { return pPath; }
+	Step *GetPath() const { return pPath; }
 
 //protected:
+	void UpdateGroupStats();
+
 	int player;
 	MapTile *pTile;
 

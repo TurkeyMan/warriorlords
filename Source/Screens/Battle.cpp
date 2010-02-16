@@ -334,11 +334,17 @@ int Battle::CalculateDamage(BattleUnit *pUnit, BattleUnit *pTarget)
 {
 	UnitDetails *pDetails = pUnit->pUnit->GetDetails();
 	UnitDetails *pTargetDetails = pTarget->pUnit->GetDetails();
+
+	// get armor class multiplier
 	float damageMod = pUnitDefs->GetDamageModifier(pDetails->attackClass, pTargetDetails->defenceClass);
 
-	int damage = (MFRand() % (pDetails->attackMax - pDetails->attackMin + 1)) + pDetails->attackMin;
+	// get damage
+	float damage = MFRand_Range(pUnit->pUnit->GetMinDamage(), pUnit->pUnit->GetMaxDamage()) * damageMod;
 
-	return (int)(damage * damageMod);
+	// apply unit defence
+	damage = pTarget->pUnit->GetDefence(damage, pDetails->attackClass);
+
+	return (int)damage;
 }
 
 void Battle::HitTarget(BattleUnit *pUnit, BattleUnit *pTarget)
@@ -525,35 +531,31 @@ int Battle::Update()
 						// check unit is a valid target
 						if((!pPlan->bAttackAvailable && !t.pUnit->IsDead()) || t.CanBeAttacked())
 						{
+							int maxHP = t.pUnit->GetMaxHP();
+
 							// we can attack this target
-							if(pTarget == NULL)
-							{
-								pTarget = &t;
-								targetHP = t.pUnit->GetDetails()->life;
-								bTargetIsRanged = t.pUnit->IsRanged();
-							}
-							else
+							bool bPreferTarget = false;
+							if(pTarget)
 							{
 								// check for preference according to combat rules
-								bool bPreferTarget = false;
 								if((pPlan->type == TT_Melee && !bTargetIsRanged) || (pPlan->type == TT_Ranged && bTargetIsRanged))
 								{
-									if((pPlan->strength == TS_Weakest && t.pUnit->GetDetails()->life < targetHP) || (pPlan->strength == TS_Strongest && t.pUnit->GetDetails()->life > targetHP))
+									if((pPlan->strength == TS_Weakest && maxHP < targetHP) || (pPlan->strength == TS_Strongest && maxHP > targetHP))
 										bPreferTarget = true;
 								}
 								else
 								{
 									if((pPlan->type == TT_Melee && !t.pUnit->IsRanged()) || (pPlan->type == TT_Ranged && t.pUnit->IsRanged()) || 
-										(pPlan->strength == TS_Weakest && t.pUnit->GetDetails()->life < targetHP) || (pPlan->strength == TS_Strongest && t.pUnit->GetDetails()->life > targetHP))
+										(pPlan->strength == TS_Weakest && maxHP < targetHP) || (pPlan->strength == TS_Strongest && maxHP > targetHP))
 										bPreferTarget = true;
 								}
+							}
 
-								if(bPreferTarget)
-								{
-									pTarget = &t;
-									targetHP = t.pUnit->GetDetails()->life;
-									bTargetIsRanged = t.pUnit->IsRanged();
-								}
+							if(!pTarget || bPreferTarget)
+							{
+								pTarget = &t;
+								targetHP = maxHP;
+								bTargetIsRanged = t.pUnit->IsRanged();
 							}
 						}
 					}
@@ -714,7 +716,7 @@ void Battle::Draw()
 			}
 
 			if(unit.state != US_Dying && unit.state != US_Dead)
-				DrawHealthBar(unitX, unitY, unit.pUnit->GetDetails()->life, unit.pUnit->GetHealth());
+				DrawHealthBar(unitX, unitY, unit.pUnit->GetMaxHP(), unit.pUnit->GetHealth());
 
 			if(unit.damageIndicatorTime > 0.f)
 			{
@@ -833,16 +835,7 @@ bool Battle::HandleInputEvent(InputEvent ev, InputInfo &info)
 			for(int a=0; a<armies[victor].numUnits; ++a)
 			{
 				if(!armies[victor].units[a].pUnit->IsDead())
-				{
 					armies[victor].units[a].pUnit->AddVictory();
-					if((armies[victor].units[a].pUnit->GetVictories() & 1) == 0)
-					{
-						UnitDetails *pDetails = armies[victor].units[a].pUnit->GetDetails();
-						pDetails->attackMin += 1;
-						pDetails->attackMax += 1;
-						pDetails->life += 2;
-					}
-				}
 			}
 
 			// battle is finished
@@ -861,7 +854,7 @@ int Battle::UpdateInput()
 void Battle::StartCooldown(BattleUnit *pUnit)
 {
 	pUnit->state = US_Cooldown;
-	pUnit->stateTime = pUnit->pUnit->GetDetails()->cooldown;
+	pUnit->stateTime = pUnit->pUnit->GetCooldown();
 
 	pUnit->cooldownOffset = 0; // y offset
 
@@ -965,7 +958,7 @@ void Battle::BattleUnit::Init(Unit *_pUnit)
 	pUnit = _pUnit;
 
 	state = US_Cooldown;
-	stateTime = pUnit->GetDetails()->cooldown;
+	stateTime = pUnit->GetCooldown();
 
 	pTarget = NULL;
 	bEngaged = false;

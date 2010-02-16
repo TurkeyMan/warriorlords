@@ -388,23 +388,17 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numT
 				item.y = pItem->GetInt(1);
 
 				int param = 4;
-				item.user.minAtk.Parse(pItem->GetString(param++));
-				item.user.maxAtk.Parse(pItem->GetString(param++));
-				item.user.speed.Parse(pItem->GetString(param++));
-				item.user.hp.Parse(pItem->GetString(param++));
-				item.user.regen.Parse(pItem->GetString(param++));
+				for(int a=0; a<Item::Mod_GroupMax; ++a)
+					item.user[a].Parse(pItem->GetString(param++));
 				for(int a=0; a<pUnitDefs->numWeaponClasses; ++a)
-					item.user.def[a].Parse(pItem->GetString(param++));
+					item.userDef[a].Parse(pItem->GetString(param++));
 
-				item.group.minAtk.Parse(pItem->GetString(param++));
-				item.group.maxAtk.Parse(pItem->GetString(param++));
-				item.group.speed.Parse(pItem->GetString(param++));
-				item.group.hp.Parse(pItem->GetString(param++));
-				item.group.regen.Parse(pItem->GetString(param++));
+				for(int a=0; a<Item::Mod_GroupMax; ++a)
+					item.group[a].Parse(pItem->GetString(param++));
 				for(int a=0; a<pUnitDefs->numWeaponClasses; ++a)
-					item.group.def[a].Parse(pItem->GetString(param++));
+					item.groupDef[a].Parse(pItem->GetString(param++));
 
-				item.user.movement.Parse(pItem->GetString(param++));
+				item.user[Item::Mod_Movement].Parse(pItem->GetString(param++));
 
 				for(int a=0; a<numTerrainTypes; ++a)
 					item.terrain[a].Parse(pItem->GetString(param++));
@@ -465,20 +459,25 @@ Unit *UnitDefinitions::CreateUnit(int unit, int player)
 
 	pUnit->pUnitDefs = this;
 	pUnit->details = pUnits[unit];
-	pUnit->kills = pUnit->victories = 0;
-	pUnit->life = pUnit->details.life;
-	pUnit->movement = pUnit->details.movement * 2;
 	pUnit->pName = pUnit->details.pName;
-
-	pUnit->plan.type = TT_Ranged;
-	pUnit->plan.strength = TS_Weakest;
-	pUnit->plan.bAttackAvailable = true;
+	pUnit->pGroup = NULL;
 
 	pUnit->pItems = NULL;
 	pUnit->numItems = 0;
 
 	if(pUnits[unit].type == UT_Hero)
 		pUnit->pItems = (int*)MFHeap_Alloc(sizeof(int));
+
+	pUnit->UpdateStats();
+
+	pUnit->kills = pUnit->victories = 0;
+	pUnit->life = pUnit->GetMaxHP();
+	pUnit->movement = pUnit->GetMaxMovement() * 2;
+
+	pUnit->plan.type = TT_Ranged;
+	pUnit->plan.strength = TS_Weakest;
+	pUnit->plan.bAttackAvailable = true;
+
 
 	return pUnit;
 }
@@ -736,38 +735,11 @@ MFVector Unit::GetColour()
 int Unit::GetTerrainPenalty(int terrainType)
 {
 	int penalty = pUnitDefs->GetMovementPenalty(details.movementClass, terrainType);
-	float scale = 1.f;
-	float diff = 0.f;
-
-	if(IsHero())
-	{
-		for(int a=0; a<numItems; ++a)
-		{
-			Item::StatMod &mod = GetItem(a)->terrain[terrainType];
-			if(mod.bAbsolute)
-			{
-				if(mod.value)
-					penalty = MFMin(penalty, (int)mod.value);
-			}
-			else if(mod.bPercent)
-				scale *= mod.value;
-			else
-				diff += mod.value;
-		}
-	}
-	else
-	{
-		// TODO: add pGroup to units, so we can find hero in group...
-		Unit *pHero = NULL;
-	}
-
-	return penalty ? (int)(((float)penalty + diff) * scale) : 0;
+	return ModStatInt(penalty >> 1, Item::MT_Terrain, terrainType) << 1;
 }
 
 int Unit::GetMovementPenalty(MapTile *pTile)
 {
-	// TODO: collect hero and group penalties
-
 	ObjectType type = pTile->GetType();
 	if((type == OT_Road && HasRoadWalk()) || (type == OT_Castle && pTile->IsFriendlyTile(player)))
 		return 1;
@@ -782,19 +754,17 @@ int Unit::GetMovementPenalty(MapTile *pTile)
 
 void Unit::Restore()
 {
-	// TODO: collect hero and group regen
-
 	// restore movement
-	movement = details.movement * 2;
+	movement = GetMaxMovement() * 2;
 
-	// heal 25% life
-	life = MFMin(life + (details.life + 3) / 4, details.life);
+	// regen health
+	life = MFMin(life + (int)MFCeil((float)lifeMax * GetRegen()), lifeMax);
 }
 
 void Unit::Revive()
 {
-	movement = details.movement * 2;
-	life = details.life;
+	movement = GetMaxMovement() * 2;
+	life = GetMaxHP();
 
 	victories = kills = 0;
 }
@@ -803,13 +773,75 @@ bool Unit::AddItem(int item)
 {
 	if(numItems >= 8)
 		return false;
+
 	pItems[numItems++] = item;
+
+	if(pGroup)
+		pGroup->UpdateGroupStats();
+	else
+		UpdateStats();
+
 	return true;
 }
 
-int Unit::GetMinDamage()
+float Unit::GetCooldown()
 {
-	int minDamage = details.attackMin;
+	return ModStatFloat(details.cooldown, Item::MT_User, Item::Mod_Speed);
+}
+
+float Unit::GetRegen()
+{
+	float regenMod = ModStatFloat(1.f, Item::MT_User, Item::Mod_Regen);
+	return (IsHero() ? 0.4f : 0.25f) * regenMod;
+}
+
+float Unit::GetDefence(float damage, int wpnClass)
+{
+	damage = ModStatFloat(damage, Item::MT_UserDef, wpnClass);
+
+	if(player != -1 && pGroup && pGroup->GetTile())
+	{
+		Castle *pCastle = pGroup->GetTile()->GetCastle();
+		if(pCastle)
+			damage *= 0.8f;
+	}
+
+	return damage;
+}
+
+void Unit::UpdateStats()
+{
+	int newLifeMax = ModStatInt(details.life, Item::MT_User, Item::Mod_HP) + (victories & ~1);
+	int newMoveMax = ModStatInt(details.movement, Item::MT_User, Item::Mod_Movement);
+	maxAtk = ModStatFloat((float)details.attackMax, Item::MT_User, Item::Mod_MaxAtk) + (float)(victories / 2);
+	minAtk = MFMin(ModStatFloat((float)details.attackMin, Item::MT_User, Item::Mod_MinAtk) + (float)(victories / 2), maxAtk);
+
+	if(pGroup && pGroup->GetVehicle())
+	{
+		Unit *pVehicle = pGroup->GetVehicle();
+		if(pVehicle != this && !MFString_Compare(pVehicle->GetName(), "Galleon"))
+		{
+			// units in a galleon kick more arse
+			minAtk *= 1.3f;
+			maxAtk *= 1.3f;
+		}
+	}
+
+	// find difference from current
+	int lifeDiff = newLifeMax - lifeMax;
+	int moveDiff = newMoveMax - movementMax;
+
+	// adjust current stats
+	life = life ? MFMax(life + lifeDiff, 1) : 0;
+	movement += moveDiff;
+
+	// update current
+	lifeMax = newLifeMax;
+	movementMax = newMoveMax;
+}
+
+int Unit::ModStatInt(int stat, int statType, int modIndex)
+{
 	float scale = 1.f;
 	float diff = 0.f;
 
@@ -817,27 +849,41 @@ int Unit::GetMinDamage()
 	{
 		for(int a=0; a<numItems; ++a)
 		{
-			Item::StatMod &mod = GetItem(a)->user.minAtk;
-			if(mod.bAbsolute)
-				minDamage = (int)mod.value;
-			else if(mod.bPercent)
+			Item::StatMod &mod = *GetItem(a)->GetMod(statType, modIndex);
+			if(mod.flags & Item::StatMod::SMF_Absolute)
+			{
+				int val = (int)mod.value;
+				if(statType == Item::MT_Terrain)
+				{
+					if(stat > 0 && val > 0)
+						stat = MFMin(stat, val);
+					else
+						stat = MFMax(stat, val);
+				}
+				else
+					stat = val;
+			}
+			else if(mod.flags & Item::StatMod::SMF_Percent)
 				scale *= mod.value;
 			else
 				diff += mod.value;
 		}
 	}
-	else
+	else if(pGroup && (statType == Item::MT_User || statType == Item::MT_UserDef) && modIndex < Item::Mod_GroupMax)
 	{
-		// TODO: add pGroup to units, so we can find hero in group...
-		Unit *pHero = NULL;
+		statType += Item::MT_Group;
+
+		// find hero in group
+		Unit *pHero = pGroup->GetHero();
+		if(pHero)
+			return pHero->ModStatInt(stat, statType, modIndex);
 	}
 
-	return (int)(((float)minDamage + diff) * scale);
+	return MFMax((int)(((float)stat + diff) * scale), 0);
 }
 
-int Unit::GetMaxDamage()
+float Unit::ModStatFloat(float stat, int statType, int modIndex)
 {
-	int maxDamage = details.attackMax;
 	float scale = 1.f;
 	float diff = 0.f;
 
@@ -845,32 +891,26 @@ int Unit::GetMaxDamage()
 	{
 		for(int a=0; a<numItems; ++a)
 		{
-			Item::StatMod &mod = GetItem(a)->user.minAtk;
-			if(mod.bAbsolute)
-				maxDamage = (int)mod.value;
-			else if(mod.bPercent)
+			Item::StatMod &mod = *GetItem(a)->GetMod(statType, modIndex);
+			if(mod.flags & Item::StatMod::SMF_Absolute)
+				stat = mod.value;
+			else if(mod.flags & Item::StatMod::SMF_Percent)
 				scale *= mod.value;
 			else
 				diff += mod.value;
 		}
 	}
-	else
+	else if(pGroup && (statType == Item::MT_User || statType == Item::MT_UserDef) && modIndex < Item::Mod_GroupMax)
 	{
-		// TODO: add pGroup to units, so we can find hero in group...
-		Unit *pHero = NULL;
+		statType += Item::MT_Group;
+
+		// find hero in group
+		Unit *pHero = pGroup->GetHero();
+		if(pHero)
+			return pHero->ModStatFloat(stat, statType, modIndex);
 	}
 
-	return (int)(((float)maxDamage + diff) * scale);
-}
-
-int Unit::GetMaxMovement()
-{
-	return details.movement;
-}
-
-int Unit::GetMaxHP()
-{
-	return details.life;
+	return MFMax((stat + diff) * scale, 0.f);
 }
 
 void Castle::Init(const CastleDetails &_details, int _player)
@@ -1003,7 +1043,10 @@ bool Group::AddUnit(Unit *pUnit)
 	{
 		if(pVehicle)
 			return false;
+
 		pVehicle = pUnit;
+		pUnit->pGroup = this;
+		UpdateGroupStats(); // it could be a galleon
 		return true;
 	}
 
@@ -1027,6 +1070,12 @@ bool Group::AddUnit(Unit *pUnit)
 			pRearUnits[numRearUnits++] = pUnit;
 	}
 
+	pUnit->pGroup = this;
+	if(pUnit->IsHero())
+		UpdateGroupStats();
+	else
+		pUnit->UpdateStats();
+
 	return true;
 }
 
@@ -1036,6 +1085,12 @@ bool Group::AddForwardUnit(Unit *pUnit)
 		return false;
 
 	pForwardUnits[numForwardUnits++] = pUnit;
+
+	pUnit->pGroup = this;
+	if(pUnit->IsHero())
+		UpdateGroupStats();
+	else
+		pUnit->UpdateStats();
 
 	return true;
 }
@@ -1047,14 +1102,27 @@ bool Group::AddRearUnit(Unit *pUnit)
 
 	pRearUnits[numRearUnits++] = pUnit;
 
+	pUnit->pGroup = this;
+	if(pUnit->IsHero())
+		UpdateGroupStats();
+	else
+		pUnit->UpdateStats();
+
 	return true;
 }
 
 void Group::RemoveUnit(Unit *pUnit)
 {
+	if(pUnit->pGroup == this)
+	{
+		pUnit->pGroup = NULL;
+		pUnit->UpdateStats();
+	}
+
 	if(pUnit->IsVehicle() && pVehicle == pUnit)
 	{
 		pVehicle = NULL;
+		UpdateGroupStats(); // we may have lost a galleon
 		return;
 	}
 
@@ -1080,6 +1148,9 @@ void Group::RemoveUnit(Unit *pUnit)
 			break;
 		}
 	}
+
+	if(pUnit->IsHero())
+		UpdateGroupStats();
 }
 
 void Group::SwapUnits(Unit *pUnit1, Unit *pUnit2)
@@ -1098,6 +1169,18 @@ void Group::SwapUnits(Unit *pUnit1, Unit *pUnit2)
 		else if(pRearUnits[a] == pUnit2)
 			pRearUnits[a] = pUnit1;
 	}	
+}
+
+void Group::UpdateGroupStats()
+{
+	for(int a=0; a<numForwardUnits; ++a)
+		pForwardUnits[a]->UpdateStats();
+
+	for(int a=0; a<numRearUnits; ++a)
+		pRearUnits[a]->UpdateStats();
+
+	if(pVehicle)
+		pVehicle->UpdateStats();
 }
 
 int Group::GetMovement()
@@ -1214,20 +1297,21 @@ void Group::SetPlayer(int _player)
 void Item::StatMod::Parse(const char *pString)
 {
 	value = 0.f;
-	bAbsolute = false;
-	bPercent = false;
+	flags = 0;
 
 	if(!pString)
 		return;
 
 	if(pString[0] != '+' && pString[0] != '-')
-		bAbsolute = true;
+		flags |= SMF_Absolute;
 
 	value = MFString_AsciiToFloat(pString);
+	if(value == 0.f)
+		flags = 0;
 
 	if(pString[MFString_Length(pString) - 1] == '%')
 	{
-		bPercent = true;
+		flags |= SMF_Percent;
 		value = 1 + value*0.01f;
 	}
 }
