@@ -18,7 +18,7 @@ InputManager::InputManager()
 			mouseButtonContacts[a][b] = -1;
 	}
 
-	dragThreshold = 5.f;
+	dragThreshold = 16.f;
 	pInputStack = NULL;
 }
 

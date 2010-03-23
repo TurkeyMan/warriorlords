@@ -2,6 +2,7 @@
 #define _MAPSCREEN_H
 
 #include "Screen.h"
+#include "Window.h"
 #include "Game.h"
 #include "Button.h"
 #include "ListBox.h"
@@ -71,7 +72,7 @@ protected:
 
 	bool bVisible;
 
-	static void Inventory(int button, void *pUserData, int buttonID);
+	static void ShowInventory(int button, void *pUserData, int buttonID);
 	static void SelectStrat(int value, void *pUserData, int buttonID);
 };
 
@@ -122,18 +123,18 @@ protected:
 	int GetGroupFromPoint(float x, float y);
 };
 
-class CastleConfig : public InputReceiver
+class CastleConfig : public Window
 {
 public:
 	CastleConfig();
-	~CastleConfig();
+	virtual ~CastleConfig();
 
-	void Draw();
+	virtual bool Draw();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 
-	void Show(Castle *pCastle);
-	void Hide();
+	virtual void Show(Castle *pCastle);
+	virtual void Hide();
 
 protected:
 	Castle *pCastle;

@@ -452,10 +452,10 @@ Inventory::Inventory()
 	window.height = 320.f;
 	AdjustRect_Margin(&window, margin*2.f);
 
-	float x = window.x + window.width*0.5f - (32.f*4+8*3)*0.5f;
+	float x = window.x + window.width*0.5f - (64.f*4+8*3)*0.5f;
 	for(int a=0; a<8; ++a)
 	{
-		MFRect pos = { x + (a & 0x3)*40.f, window.y + 64.f + (a >> 2)*40.f, 32.f, 32.f };
+		MFRect pos = { x + (a & 0x3)*72.f, window.y + 40.f + (a >> 2)*72.f, 64.f, 64.f };
 		pInventory[a] = Button::Create(pItems, &pos, &pos, MFVector::one, SelectItem, this, a);
 	}
 }
@@ -471,7 +471,7 @@ bool Inventory::Draw()
 		return false;
 
 	Game::GetCurrent()->DrawWindow(window);
-	Game::GetCurrent()->DrawLine(window.x + 16, window.y + 160, window.x + window.width - 16, window.y + 160);
+	Game::GetCurrent()->DrawLine(window.x + 16, window.y + 192, window.x + window.width - 16, window.y + 192);
 
 	float width = MFFont_GetStringWidth(pFont, "Inventory", MFFont_GetFontHeight(pFont));
 	MFFont_BlitText(pFont, (int)(window.x + window.width*0.5f - width*0.5f), (int)window.y + 10, MFVector::yellow, "Inventory");
@@ -483,7 +483,7 @@ bool Inventory::Draw()
 	{
 		Item *pItem = pUnit->GetItem(selected);
 		width = MFFont_GetStringWidth(pFont, pItem->pName, MFFont_GetFontHeight(pFont));
-		MFFont_BlitText(pFont, (int)(window.x + window.width*0.5f - width*0.5f), (int)window.y + 180, MFVector::white, pItem->pName);
+		MFFont_BlitText(pFont, (int)(window.x + window.width*0.5f - width*0.5f), (int)window.y + 200, MFVector::white, pItem->pName);
 	}
 
 	return true;
@@ -567,7 +567,7 @@ UnitConfig::UnitConfig()
 	pIcons = MFMaterial_Create("Icons");
 	MFRect pos = { top.x + top.width - 64.f, top.y + top.height - 64.f, 64.f, 64.f };
 	MFRect uvs = { 0.f + (.5f/256.f), 0.5f + (.5f/256.f), 0.25f, 0.25f };
-	pInventory = Button::Create(pIcons, &pos, &uvs, MFVector::white, Inventory, this);
+	pInventory = Button::Create(pIcons, &pos, &uvs, MFVector::white, ShowInventory, this);
 
 	float height = MFFont_GetFontHeight(pFont);
 	MFRect cbRect = { bottom.x + 40, bottom.y + 10, 200.f, height };
@@ -683,7 +683,7 @@ void UnitConfig::Hide()
 	pInputManager->PopReceiver(this);
 }
 
-void UnitConfig::Inventory(int button, void *pUserData, int buttonID)
+void UnitConfig::ShowInventory(int button, void *pUserData, int buttonID)
 {
 	UnitConfig *pThis = (UnitConfig*)pUserData;
 	pThis->inventory.Show(pThis->pUnit);
@@ -1237,6 +1237,7 @@ void GroupConfig::Hide()
 }
 
 CastleConfig::CastleConfig()
+: Window(true)
 {
 	pFont = Game::GetCurrent()->GetTextFont();
 
@@ -1276,19 +1277,15 @@ CastleConfig::~CastleConfig()
 {
 }
 
-void CastleConfig::Draw()
+bool CastleConfig::Draw()
 {
-	if(!bVisible)
-		return;
+	if(!Window::Draw())
+		return false;
 
 	Game *pGame = Game::GetCurrent();
 
-	MFPrimitive_DrawUntexturedQuad(window.x, window.y, window.width, window.height, MakeVector(0, 0, 0, 0.8f));
-
-	MFPrimitive_DrawUntexturedQuad(title.x, title.y, title.width, title.height, MakeVector(0, 0, 0, .8f));
-	MFPrimitive_DrawUntexturedQuad(units.x, units.y, units.width, units.height, MakeVector(0, 0, 0, .8f));
-	MFPrimitive_DrawUntexturedQuad(right.x, right.y, right.width, right.height, MakeVector(0, 0, 0, .8f));
-	MFPrimitive_DrawUntexturedQuad(lower.x, lower.y, lower.width, lower.height, MakeVector(0, 0, 0, .8f));
+	Game::GetCurrent()->DrawLine(lower.x, lower.y-4.f, lower.x + lower.width, lower.y-4.f);
+	Game::GetCurrent()->DrawLine(right.x - 4.f, right.y, right.x - 4.f, right.y + right.height);
 
 	MFFont_BlitTextf(pFont, (int)title.x + 5, (int)title.y, MFVector::yellow, pCastle->details.name);
 
@@ -1325,6 +1322,8 @@ void CastleConfig::Draw()
 
 	for(int a=0; a<numBuildUnits; ++a)
 		pBuildUnits[a]->Draw();
+
+	return true;
 }
 
 bool CastleConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
@@ -1334,17 +1333,19 @@ bool CastleConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 	// HACK: right click returns
 	if(info.buttonID == 1 && ev == IE_Tap)
+	{
 		Hide();
+		return true;
+	}
 
-	return true;
+	return Window::HandleInputEvent(ev, info);
 }
 
 void CastleConfig::Show(Castle *pCastle)
 {
-	this->pCastle = pCastle;
-	bVisible = true;
+	Window::Show();
 
-	pInputManager->PushReceiver(this);
+	this->pCastle = pCastle;
 
 	UnitDefinitions *pUnitDefs = pCastle->pUnitDefs;
 	Game *pGame = pUnitDefs->GetGame();
@@ -1421,9 +1422,7 @@ void CastleConfig::Show(Castle *pCastle)
 
 void CastleConfig::Hide()
 {
-	pInputManager->PopReceiver(this);
-
-	bVisible = false;
+	Window::Hide();
 }
 
 void CastleConfig::SelectUnit(int button, void *pUserData, int buttonID)

@@ -803,7 +803,7 @@ float Unit::GetDefence(float damage, int wpnClass)
 	{
 		Castle *pCastle = pGroup->GetTile()->GetCastle();
 		if(pCastle)
-			damage *= 0.8f;
+			damage *= 0.90f;
 	}
 
 	return damage;

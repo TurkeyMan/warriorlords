@@ -37,6 +37,9 @@ bool Button::HandleInputEvent(InputEvent ev, InputInfo &info)
 	if(info.device == IDD_Mouse && info.deviceID != 0)
 		return false;
 
+	if(info.buttonID != 0)
+		return false;
+
 	switch(ev)
 	{
 		case IE_Down:
