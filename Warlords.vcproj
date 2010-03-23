@@ -388,6 +388,14 @@
 					RelativePath=".\Source\Screens\MapScreen.h"
 					>
 				</File>
+				<File
+					RelativePath=".\Source\Screens\Window.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\Window.h"
+					>
+				</File>
 			</Filter>
 		</Filter>
 		<File
