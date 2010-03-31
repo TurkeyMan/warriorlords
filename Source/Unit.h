@@ -409,6 +409,7 @@ struct CastleDetails
 {
 	char name[32];
 	int x, y;
+	bool bCapital;
 
 	BuildUnit buildUnits[4];
 	int numBuildUnits;

@@ -35,6 +35,8 @@ public:
 	uint32 GetTerrain() const;
 	ObjectType GetType() const { return (ObjectType)type; }
 	uint32 GetRoadDirections() const { return type == OT_Road ? index : 0; }
+	int GetRegion() const { return region; }
+	int GetRegionRace() const;
 
 	void AddGroup(Group *pGroup);
 	void AddGroupToBack(Group *pGroup);
@@ -106,7 +108,7 @@ public:
 	uint32 GetTerrainAt(int x, int y) const { return pTiles->GetTile(pMap[y*mapWidth + x].terrain)->terrain; }
 
 	int GetNumCastles() const { return numCastles; }
-	Castle *GetCastle(int id) const { return &pCastles[id]; }
+	Castle *GetCastle(int id) { return &pCastles[id]; }
 
 	ObjectType GetDetailType(int x, int y) const;
 	int GetDetail(int x, int y) const;
@@ -133,6 +135,8 @@ public:
 	Step *StripStep(Step *pPath);
 	void DestroyPath(Step *pPath);
 
+	void ConstructMap(int race = -1);
+
 protected:
 	char name[32];
 	char tileset[32];
@@ -146,10 +150,6 @@ protected:
 	int mapWidth;
 	int mapHeight;
 
-	MapTile *pMap;
-
-	Path path;
-
 	// runtime data
 	float xOffset, yOffset;
 	float zoom;
@@ -160,8 +160,11 @@ protected:
 	MFMaterial *pMinimapMaterial;
 	MFMaterial *pCloud;
 
-	Castle *pCastles;
+	MapTile *pMap;
+	Castle pCastles[256];
 	int numCastles;
+
+	Path path;
 
 	// details
 	struct Cloud
@@ -172,6 +175,25 @@ protected:
 	static const int numClouds = 16;
 
 	Cloud clouds[numClouds];
+
+	// template
+	struct MapRegionTemplate
+	{
+		struct TileDetails
+		{
+			uint8 terrain;
+			uint8 type;
+			uint8 index;
+		};
+
+		TileDetails *pMap;
+
+		CastleDetails *pCastles;
+		int numCastles;
+	};
+
+	uint8 *pMapRegions;
+	MapRegionTemplate mapTemplate[16];
 
 	// editor stuff
 	struct MapCoord

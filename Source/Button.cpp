@@ -29,7 +29,7 @@ Button *Button::Create(const MFMaterial *pImage, const MFRect *pPosition, const 
 
 void Button::Destroy()
 {
-	delete this;
+	MFHeap_Free(this);
 }
 
 bool Button::HandleInputEvent(InputEvent ev, InputInfo &info)

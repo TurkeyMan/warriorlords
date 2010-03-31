@@ -31,6 +31,7 @@ Window::Window(bool _bCloseButton)
 Window::~Window()
 {
 	pCloseButton->Destroy();
+	pCloseButton = NULL;
 
 	MFMaterial_Destroy(pIcons);
 }

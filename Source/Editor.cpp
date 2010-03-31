@@ -14,9 +14,13 @@
 Editor::Editor(Game *pGame)
 {
 	pMap = pGame->GetMap();
+	bOwnsMap = false;
 
 	if(!pMap)
+	{
 		pMap = Map::CreateNew(pGame, "TileSet", "Castles");
+		bOwnsMap = true;
+	}
 
 	brushType[0] = OT_Terrain;
 	brushType[1] = OT_Terrain;
@@ -24,6 +28,7 @@ Editor::Editor(Game *pGame)
 	brushIndex[1] = 1;
 	brush = 1;
 
+	editRace = 0;
 	editRegion = 15;
 
 	bPaintMode = true;
@@ -153,7 +158,8 @@ Editor::Editor(Game *pGame)
 
 Editor::~Editor()
 {
-	pMap->Destroy();
+	if(bOwnsMap)
+		pMap->Destroy();
 }
 
 void Editor::Select()
@@ -280,16 +286,38 @@ int Editor::Update()
 	if(MFInput_WasPressed(Key_S, IDD_Keyboard) && MFInput_Read(Key_LControl, IDD_Keyboard))
 		pMap->Save("Map.ini");
 
+	bool bChangeRace = MFInput_Read(Key_LShift, IDD_Keyboard) || MFInput_Read(Key_RShift, IDD_Keyboard);
+
 	if(MFInput_WasPressed(Key_Grave, IDD_Keyboard))
-		editRegion = 15;
+	{
+		if(bChangeRace)
+		{
+			editRace = 0;
+			pMap->ConstructMap(editRace);
+		}
+		else
+		{
+			editRegion = 15;
+			pMap->SetEditRegion(editRegion);
+		}
+	}
 
 	for(int a=0; a<8; ++a)
 	{
 		if(MFInput_WasPressed(Key_1 + a, IDD_Keyboard))
-			editRegion = a;
+		{
+			if(bChangeRace)
+			{
+				editRace = a + 1;
+				pMap->ConstructMap(editRace);
+			}
+			else
+			{
+				editRegion = a;
+				pMap->SetEditRegion(editRegion);
+			}
+		}
 	}
-
-	pMap->SetEditRegion(editRegion);
 
 	return 0;
 }
@@ -315,11 +343,17 @@ void Editor::Draw()
 	brushSelect.Draw();
 	castleEdit.Draw();
 
-	const char *pText = "Edit Region: X";
+	const char *pText = "Race: Template";
+	if(editRace > 0)
+		pText = MFStr("Race: %s", pMap->GetUnitDefinitions()->GetRaceName(editRace));
+	MFFont_DrawText(MFFont_GetDebugFont(), 87.f, 10.f, 32.f, MFVector::black, pText);
+	MFFont_DrawText(MFFont_GetDebugFont(), 85.f, 8.f, 32.f, MFVector::white, pText);
+
+	pText = "Region: X";
 	if(editRegion != 15)
-		pText = MFStr("Edit Region: %d", editRegion + 1);
-	MFFont_DrawText(MFFont_GetDebugFont(), 87.f, 27.f, 32.f, MFVector::black, pText);
-	MFFont_DrawText(MFFont_GetDebugFont(), 85.f, 25.f, 32.f, MFVector::white, pText);
+		pText = MFStr("Region: %d", editRegion + 1);
+	MFFont_DrawText(MFFont_GetDebugFont(), 87.f, 47.f, 32.f, MFVector::black, pText);
+	MFFont_DrawText(MFFont_GetDebugFont(), 85.f, 45.f, 32.f, MFVector::white, pText);
 }
 
 void Editor::Deselect()

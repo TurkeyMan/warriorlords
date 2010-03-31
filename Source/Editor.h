@@ -101,6 +101,7 @@ public:
 protected:
 	Game *pGame;
 	Map *pMap;
+	bool bOwnsMap;
 
 	MFMaterial *pIcons;
 
@@ -120,6 +121,7 @@ protected:
 
 	int lastX, lastY;
 
+	int editRace;
 	int editRegion;
 };
 
