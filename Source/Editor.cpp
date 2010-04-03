@@ -294,6 +294,7 @@ int Editor::Update()
 		{
 			editRace = 0;
 			pMap->ConstructMap(editRace);
+			pMap->SetEditRace(editRace);
 		}
 		else
 		{
@@ -310,6 +311,7 @@ int Editor::Update()
 			{
 				editRace = a + 1;
 				pMap->ConstructMap(editRace);
+				pMap->SetEditRace(editRace);
 			}
 			else
 			{

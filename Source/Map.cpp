@@ -637,6 +637,19 @@ void Map::Destroy()
 	MFHeap_Free(this);
 }
 
+int CastleSort(const void *p1, const void *p2)
+{
+	CastleDetails *pC1 = (CastleDetails*)p1;
+	CastleDetails *pC2 = (CastleDetails*)p2;
+
+	if(pC1->y == pC2->y && pC1->x == pC2->x)
+		return 0;
+
+	if(pC1->y != pC2->y)
+		return pC1->y < pC2->y ? -1 : 1;
+	return pC1->x < pC2->x ? -1 : 1;
+}
+
 void Map::Save(const char *pFilename)
 {
 	MFFile *pFile = MFFileSystem_Open(MFStr("game:%s", pFilename), MFOF_Write|MFOF_Binary);
@@ -734,35 +747,21 @@ void Map::Save(const char *pFilename)
 			"\t\t{\n";
 		MFFile_Write(pFile, pMapData5, MFString_Length(pMapData5));
 
-		for(int a=0; a<mapHeight; ++a)
+		// sort the castles in order of appearance on the map
+		qsort(mapTemplate[r].pCastles, mapTemplate[r].numCastles, sizeof(CastleDetails), CastleSort);
+
+		for(int a=0; a<mapTemplate[r].numCastles; ++a)
 		{
-			for(int b=0; b<mapWidth; ++b)
+			CastleDetails &castle = mapTemplate[r].pCastles[a];
+			int len = sprintf(buffer, "\t\t\t[Castle]\n\t\t\t{\n\t\t\t\tname = \"%s\"\n\t\t\t\tposition = %d, %d\n\t\t\t\tincome = %d\n%s", castle.name, castle.x, castle.y, castle.income, castle.bCapital ? "\t\t\t\tcapital = true\n" : "");
+			MFFile_Write(pFile, buffer, len);
+			for(int c=0; c<castle.numBuildUnits; ++c)
 			{
-				MapRegionTemplate::TileDetails &tile = mapTemplate[r].pMap[a*mapWidth + b];
-				if(tile.type == OT_Castle)
-				{
-					CastleDetails &castle = mapTemplate[r].pCastles[tile.index];
-					int len = sprintf(buffer, "\t\t\t[Castle]\n\t\t\t{\n\t\t\t\tname = \"%s\"\n\t\t\t\tposition = %d, %d\n\t\t\t\tincome = %d\n%s", castle.name, b, a, castle.income, castle.bCapital ? "\t\t\t\tcapital = true\n" : "");
-					MFFile_Write(pFile, buffer, len);
-					for(int c=0; c<castle.numBuildUnits; ++c)
-					{
-						BuildUnit &unit = castle.buildUnits[c];
-						int cost = unit.cost;
-						int buildTime = unit.buildTime;
-
-						UnitDetails *pDetails = pUnits->GetUnitDetails(unit.unit);
-						if(pDetails)
-						{
-							cost -= pDetails->cost;
-							buildTime -= pDetails->buildTime;
-						}
-
-						int len = sprintf(buffer, "\t\t\t\tunit %d = %d, %d, %d\n", c, unit.unit, cost, buildTime);
-						MFFile_Write(pFile, buffer, len);
-					}
-					MFFile_Write(pFile, "\t\t\t}\n", MFString_Length("\t\t\t}\n"));
-				}
+				BuildUnit &unit = castle.buildUnits[c];
+				int len = sprintf(buffer, "\t\t\t\tunit %d = %d, %d, %d\n", c, unit.unit, unit.cost, unit.buildTime);
+				MFFile_Write(pFile, buffer, len);
 			}
+			MFFile_Write(pFile, "\t\t\t}\n", MFString_Length("\t\t\t}\n"));
 		}
 
 		const char *pMapData6 =
@@ -1345,6 +1344,7 @@ bool Map::SetTile(int x, int y, uint32 tile, uint32 mask)
 	// TODO: use some logic to refine the selection based on quickest/valid route to target
 	int t = ChooseTile(tiles, matches);
 	pMap[y*mapWidth + x].terrain = t;
+	mapTemplate[editRace].pMap[y*mapWidth + x].terrain = t;
 
 	// mark the tile touched
 	pTouched[y*mapWidth + x] = 1;
@@ -1599,8 +1599,14 @@ bool Map::PlaceCastle(int x, int y, int player)
 	pCastles[numCastles].details.x = x;
 	pCastles[numCastles].details.y = y;
 	MFString_Copy(pCastles[numCastles].details.name, "Unnamed");
-
 	++numCastles;
+
+	CastleDetails &details = mapTemplate[editRace].pCastles[mapTemplate[editRace].numCastles++];
+	MFZeroMemory(&details, sizeof(details));
+	details.x = x;
+	details.y = y;
+	details.bCapital = player != -1;
+	MFString_Copy(details.name, "Unnamed");
 	return true;
 }
 
@@ -1623,6 +1629,9 @@ bool Map::PlaceFlag(int x, int y, int race)
 	pMap[y*mapWidth + x].type = OT_Flag;
 	pMap[y*mapWidth + x].index = race;
 
+	mapTemplate[editRace].pMap[y*mapWidth + x].type = OT_Flag;
+	mapTemplate[editRace].pMap[y*mapWidth + x].index = race;
+
 	return true;
 }
 
@@ -1644,6 +1653,9 @@ bool Map::PlaceSpecial(int x, int y, int index)
 	// terrain is compatible, place special
 	pMap[y*mapWidth + x].type = OT_Special;
 	pMap[y*mapWidth + x].index = index;
+
+	mapTemplate[editRace].pMap[y*mapWidth + x].type = OT_Special;
+	mapTemplate[editRace].pMap[y*mapWidth + x].index = index;
 
 	return true;
 }
@@ -1695,32 +1707,48 @@ bool Map::PlaceRoad(int x, int y)
 	pHere->type = OT_Road;
 	pHere->index = connections;
 
+	MapRegionTemplate::TileDetails *pTemplate = mapTemplate[editRace].pMap + y*mapWidth + x;
+	pTemplate->type = OT_Road;
+	pTemplate->index = connections;
+
 	// connect surrounding roads
 	if(connections & 8)
 	{
 		if(pUp && pUp->type == OT_Road)
+		{
 			pUp->index |= 4;
+			pTemplate[-mapWidth].index |= 4;
+		}
 		else if(pUp)
 			PlaceRoad(x, y-1);
 	}
 	if(connections & 4)
 	{
 		if(pDown && pDown->type == OT_Road)
+		{
 			pDown->index |= 8;
+			pTemplate[mapWidth].index |= 8;
+		}
 		else if(pDown)
 			PlaceRoad(x, y+1);
 	}
 	if(connections & 2)
 	{
 		if(pLeft && pLeft->type == OT_Road)
+		{
 			pLeft->index |= 1;
+			pTemplate[-1].index |= 1;
+		}
 		else if(pLeft)
 			PlaceRoad(x-1, y);
 	}
 	if(connections & 1)
 	{
 		if(pRight && pRight->type == OT_Road)
+		{
 			pRight->index |= 2;
+			pTemplate[1].index |= 2;
+		}
 		else if(pRight)
 			PlaceRoad(x+1, y);
 	}
@@ -1757,17 +1785,25 @@ void Map::ClearDetail(int x, int y)
 	if(pTile->region != editRegion)
 		return;
 
+	// get the template tile
+	MapRegionTemplate::TileDetails *pTemplate = mapTemplate[editRace].pMap + y*mapWidth + x;
+
 	// if we removed a road, we need to correct the roads around it
 	if(pTile->type == OT_Road)
 	{
-		// remove the item from the map
+		// remove the road from the map
 		pTile->type = OT_None;
 		pTile->index = 0;
+
+		// remove the road from the map template
+		pTemplate->type = OT_None;
+		pTemplate->index = 0;
 
 		// update surrounding roads to remove connection
 		if(x > 0 && pTile[-1].type == OT_Road)
 		{
 			pTile[-1].index &= 0xE;
+			pTemplate[-1].index &= 0xE;
 
 			if(pTiles->FindRoad(pTile[-1].index, pTiles->GetTile(pTile[-1].terrain)->terrain) == -1)
 				ClearDetail(x-1, y);
@@ -1775,6 +1811,7 @@ void Map::ClearDetail(int x, int y)
 		if(x < mapWidth-1 && pTile[1].type == OT_Road)
 		{
 			pTile[1].index &= 0xD;
+			pTemplate[-1].index &= 0xD;
 
 			if(pTiles->FindRoad(pTile[1].index, pTiles->GetTile(pTile[1].terrain)->terrain) == -1)
 				ClearDetail(x+1, y);
@@ -1782,6 +1819,7 @@ void Map::ClearDetail(int x, int y)
 		if(y > 0 && pTile[-mapWidth].type == OT_Road)
 		{
 			pTile[-mapWidth].index &= 0xB;
+			pTemplate[-1].index &= 0xB;
 
 			if(pTiles->FindRoad(pTile[-mapWidth].index, pTiles->GetTile(pTile[-mapWidth].terrain)->terrain) == -1)
 				ClearDetail(x, y-1);
@@ -1789,6 +1827,7 @@ void Map::ClearDetail(int x, int y)
 		if(y < mapHeight-1 && pTile[mapWidth].type == OT_Road)
 		{
 			pTile[mapWidth].index &= 0x7;
+			pTemplate[-1].index &= 0x7;
 
 			if(pTiles->FindRoad(pTile[mapWidth].index, pTiles->GetTile(pTile[mapWidth].terrain)->terrain) == -1)
 				ClearDetail(x, y+1);
@@ -1823,12 +1862,30 @@ void Map::ClearDetail(int x, int y)
 			pCastles[a-1] = pCastles[a];
 
 		--numCastles;
+
+		// destroy the castle template
+		int a = 0;
+		for(; a < mapTemplate[editRace].numCastles; ++a)
+		{
+			if(mapTemplate[editRace].pCastles[a].x == cx && mapTemplate[editRace].pCastles[a].y == cy)
+				break;
+		}
+		for(; a < mapTemplate[editRace].numCastles - 1; ++a)
+		{
+			mapTemplate[editRace].pCastles[a] = mapTemplate[editRace].pCastles[a + 1];
+		}
+
+		--mapTemplate[editRace].numCastles;
 	}
 	else
 	{
 		// remove the item from the map
 		pTile->type = OT_None;
 		pTile->index = 0;
+
+		// remove it from the map template
+		pTemplate->type = OT_None;
+		pTemplate->index = 0;
 	}
 }
 

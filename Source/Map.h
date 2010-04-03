@@ -128,6 +128,7 @@ public:
 
 	void SetMoveKey(bool bAlternate) { moveButton = bAlternate ? 1 : 0; }
 	void SetEditRegion(int region) { editRegion = region; }
+	void SetEditRace(int race) { editRace = race; }
 
 	int UpdateChange(int a);
 
@@ -219,6 +220,7 @@ protected:
 	int moveButton;
 
 	int editRegion;
+	int editRace;
 
 	bool SetTile(int x, int y, uint32 tile, uint32 mask);
 	int ChooseTile(int *pSelectedTiles, int numVariants);
