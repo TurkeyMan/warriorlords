@@ -10,10 +10,14 @@
 #include "MFView.h"
 #include "MFRenderer.h"
 
+const float Window::margin = 5.f;
+
 Window::Window(bool _bCloseButton)
 {
 	bVisible = false;
 	bCloseButton = _bCloseButton;
+
+	pFont = Game::GetCurrent()->GetTextFont();
 
 	GetDisplayRect(&window);
 	window.x = window.width*0.5f - 240.f;
@@ -26,6 +30,8 @@ Window::Window(bool _bCloseButton)
 	MFRect closeUVs = { 0.25f + (.5f/256.f), 0.5f + (.5f/256.f), 0.125f, 0.125f };
 
 	pCloseButton = Button::Create(pIcons, &closePos, &closeUVs, MFVector::white, CloseWindow, this);
+
+	AdjustRect_Margin(&window, margin*2.f);
 }
 
 Window::~Window()
@@ -41,7 +47,13 @@ bool Window::Draw()
 	if(!bVisible)
 		return false;
 
-	Game::GetCurrent()->DrawWindow(window);
+	MFRect win = window;
+	win.x -= margin;
+	win.y -= margin;
+	win.width += margin*2;
+	win.height += margin*2;
+
+	Game::GetCurrent()->DrawWindow(win);
 
 	if(bCloseButton)
 		pCloseButton->Draw();

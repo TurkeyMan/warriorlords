@@ -138,6 +138,8 @@ public:
 
 	void ConstructMap(int race = -1);
 
+	CastleDetails *GetCastleTemplate(int x, int y);
+
 protected:
 	char name[32];
 	char tileset[32];

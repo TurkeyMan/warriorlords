@@ -59,6 +59,7 @@ public:
 
 protected:
 	Castle *pCastle;
+	CastleDetails *pTemplate;
 
 	MFFont *pFont;
 	MFMaterial *pIcons;

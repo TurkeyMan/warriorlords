@@ -527,6 +527,17 @@ void Map::ConstructMap(int race)
 	}
 }
 
+CastleDetails *Map::GetCastleTemplate(int x, int y)
+{
+	for(int a=0; a<mapTemplate[editRace].numCastles; ++a)
+	{
+		if(mapTemplate[editRace].pCastles[a].x == x && mapTemplate[editRace].pCastles[a].y == y)
+			return &mapTemplate[editRace].pCastles[a];
+	}
+
+	return NULL;
+}
+
 int Map::ChooseTile(int *pSelectedTiles, int numVariants)
 {
 	if(numVariants == 1)
@@ -1811,7 +1822,7 @@ void Map::ClearDetail(int x, int y)
 		if(x < mapWidth-1 && pTile[1].type == OT_Road)
 		{
 			pTile[1].index &= 0xD;
-			pTemplate[-1].index &= 0xD;
+			pTemplate[1].index &= 0xD;
 
 			if(pTiles->FindRoad(pTile[1].index, pTiles->GetTile(pTile[1].terrain)->terrain) == -1)
 				ClearDetail(x+1, y);
@@ -1819,7 +1830,7 @@ void Map::ClearDetail(int x, int y)
 		if(y > 0 && pTile[-mapWidth].type == OT_Road)
 		{
 			pTile[-mapWidth].index &= 0xB;
-			pTemplate[-1].index &= 0xB;
+			pTemplate[-mapWidth].index &= 0xB;
 
 			if(pTiles->FindRoad(pTile[-mapWidth].index, pTiles->GetTile(pTile[-mapWidth].terrain)->terrain) == -1)
 				ClearDetail(x, y-1);
@@ -1827,7 +1838,7 @@ void Map::ClearDetail(int x, int y)
 		if(y < mapHeight-1 && pTile[mapWidth].type == OT_Road)
 		{
 			pTile[mapWidth].index &= 0x7;
-			pTemplate[-1].index &= 0x7;
+			pTemplate[mapWidth].index &= 0x7;
 
 			if(pTiles->FindRoad(pTile[mapWidth].index, pTiles->GetTile(pTile[mapWidth].terrain)->terrain) == -1)
 				ClearDetail(x, y+1);

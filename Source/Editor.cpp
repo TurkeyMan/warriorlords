@@ -768,9 +768,13 @@ bool CastleEdit::HandleInputEvent(InputEvent ev, InputInfo &info)
 	return true;
 }
 
-void CastleEdit::Show(Castle *pCastle)
+void CastleEdit::Show(Castle *_pCastle)
 {
-	this->pCastle = pCastle;
+	pCastle = _pCastle;
+
+	Map *pMap = Game::GetCurrent()->GetMap();
+	pTemplate = pMap->GetCastleTemplate(pCastle->details.x, pCastle->details.y);
+
 	bVisible = true;
 
 	pInputManager->PushReceiver(this);
@@ -826,6 +830,11 @@ void CastleEdit::Hide()
 		if(pCastle->details.buildUnits[a].unit != -1)
 			pCastle->details.buildUnits[pCastle->details.numBuildUnits++] = pCastle->details.buildUnits[a];
 	}
+
+	// update the castle template
+	pTemplate->numBuildUnits = pCastle->details.numBuildUnits;
+	for(int a=0; a<pTemplate->numBuildUnits; ++a)
+		pTemplate->buildUnits[a] = pCastle->details.buildUnits[a];
 }
 
 void CastleEdit::SelectUnit(int button, void *pUserData, int buttonID)
@@ -890,4 +899,5 @@ void CastleEdit::ChangeCallback(const char *pString, void *pUserData)
 	Castle *pCastle = pThis->pCastle;
 
 	pCastle->SetName(pString);
+	MFString_Copy(pThis->pTemplate->name, pString);
 }

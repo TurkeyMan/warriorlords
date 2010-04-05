@@ -381,11 +381,51 @@
 					>
 				</File>
 				<File
+					RelativePath=".\Source\Screens\CastleConfig.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\CastleConfig.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\GroupConfig.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\GroupConfig.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\Inventory.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\Inventory.h"
+					>
+				</File>
+				<File
 					RelativePath=".\Source\Screens\MapScreen.cpp"
 					>
 				</File>
 				<File
 					RelativePath=".\Source\Screens\MapScreen.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\RequestBox.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\RequestBox.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\UnitConfig.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\UnitConfig.h"
 					>
 				</File>
 				<File

@@ -9,6 +9,7 @@
 #include "MFPrimitive.h"
 #include "MFFont.h"
 #include "MFMaterial.h"
+#include "MFTexture.h"
 
 Game *Game::pCurrent = NULL;
 
@@ -18,8 +19,10 @@ Game::Game(const char *_pMap, bool bEditable)
 	pBattleNumbersFont = MFFont_Create("Battle");
 	pSmallNumbersFont = MFFont_Create("SmallNumbers");
 
+	MFTexture *pTemp = MFTexture_Create("Horiz-Pirates", false);
 	pWindow = MFMaterial_Create("Window-Pirates");
 	pHorizLine = MFMaterial_Create("Horiz-Pirates");
+	MFTexture_Destroy(pTemp);
 
 	pMap = NULL;
 	pUnitDefs = NULL;
@@ -411,7 +414,24 @@ void Game::DrawLine(float sx, float sy, float dx, float dy)
 	MFMaterial_SetMaterial(pHorizLine);
 
 	if(sx == dx)
-		MFPrimitive_DrawQuad(sx-8.f, sy, 16.f, dy-sy, MFVector::one, 0.f + (1.f/16.f), 1.f, 1.f + (1.f/16.f), 0.f);
+	{
+		MFPrimitive(PT_TriStrip | PT_Prelit);
+		MFBegin(4);
+
+		MFSetTexCoord1(0, 1.f+.5f/16.f);
+		MFSetPosition(sx-8.f, sy, 0);
+
+		MFSetTexCoord1(0, .5f/16.f);
+		MFSetPosition(sx+8.f, sy, 0);
+
+		MFSetTexCoord1(1, 1.f+.5f/16.f);
+		MFSetPosition(sx-8.f, dy, 0);
+
+		MFSetTexCoord1(1, .5f/16.f);
+		MFSetPosition(sx+8.f, dy, 0);
+
+		MFEnd();
+	}
 	else if(sy == dy)
-		MFPrimitive_DrawQuad(sx, sy-8.f, dx-sx, 16.f, MFVector::one, 0.f, 0.f + (1.f/16.f), 1.f, 1.f + (1.f/16.f));
+		MFPrimitive_DrawQuad(sx, sy-8.f, dx-sx, 16.f, MFVector::one, 0.f, .5f/16.f, 1.f, 1.f + (.5f/16.f));
 }

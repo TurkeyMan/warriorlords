@@ -1,7 +1,6 @@
 #if !defined(_WINDOW_H)
 #define _WINDOW_H
 
-#include "Screen.h"
 #include "Game.h"
 #include "Button.h"
 
@@ -18,10 +17,13 @@ public:
 	virtual void Show();
 	virtual void Hide();
 
+	static const float margin;
+
 protected:
 	MFRect window;
 	Button *pCloseButton;
 	MFMaterial *pIcons;
+	MFFont *pFont;
 
 	bool bVisible;
 	bool bCloseButton;
