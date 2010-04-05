@@ -6,7 +6,7 @@
 class RequestBox : public Window
 {
 public:
-	typedef void (SelectCallback)(int selection);
+	typedef void (SelectCallback)(int selection, void *pUserData);
 
 	RequestBox();
 	virtual ~RequestBox();
@@ -15,7 +15,7 @@ public:
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 
-	virtual void Show(const char *pMessage, SelectCallback *pSelectCallback);
+	virtual void Show(const char *pMessage, SelectCallback *pSelectCallback, bool bNotification, void *pUserData = NULL);
 	virtual void Hide();
 
 protected:
@@ -23,6 +23,10 @@ protected:
 
 	SelectCallback *pSelectCallback;
 	Button *pYes, *pNo;
+
+	bool bNotification;
+
+	void *pUserData;
 
 	static void Select(int button, void *pUserData, int buttonID);
 };

@@ -29,6 +29,7 @@ public:
 	virtual int UpdateInput();
 
 	static void EndTurn(int button, void *pUserData, int buttonID);
+	static void FinishTurn(int selection, void *pUserData);
 	static void ShowMiniMap(int button, void *pUserData, int buttonID);
 
 	void SelectGroup(Group *pGroup);

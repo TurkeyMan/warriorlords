@@ -284,7 +284,7 @@ int Editor::Update()
 	castleEdit.Update();
 
 	if(MFInput_WasPressed(Key_S, IDD_Keyboard) && MFInput_Read(Key_LControl, IDD_Keyboard))
-		pMap->Save("Map.ini");
+		pMap->Save();
 
 	bool bChangeRace = MFInput_Read(Key_LShift, IDD_Keyboard) || MFInput_Read(Key_RShift, IDD_Keyboard);
 

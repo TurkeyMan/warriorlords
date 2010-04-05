@@ -16,8 +16,10 @@ Window::Window(bool _bCloseButton)
 {
 	bVisible = false;
 	bCloseButton = _bCloseButton;
+	pCloseButton = NULL;
 
 	pFont = Game::GetCurrent()->GetTextFont();
+	pIcons = MFMaterial_Create("Icons");
 
 	GetDisplayRect(&window);
 	window.x = window.width*0.5f - 240.f;
@@ -25,19 +27,21 @@ Window::Window(bool _bCloseButton)
 	window.width = 480.f;
 	window.height = 320.f;
 
-	pIcons = MFMaterial_Create("Icons");
-	MFRect closePos = { window.x + window.width - 32.f, window.y, 32.f, 32.f };
-	MFRect closeUVs = { 0.25f + (.5f/256.f), 0.5f + (.5f/256.f), 0.125f, 0.125f };
+	if(bCloseButton)
+	{
+		MFRect closePos = { window.x + window.width - 32.f, window.y, 32.f, 32.f };
+		MFRect closeUVs = { 0.25f + (.5f/256.f), 0.5f + (.5f/256.f), 0.125f, 0.125f };
 
-	pCloseButton = Button::Create(pIcons, &closePos, &closeUVs, MFVector::white, CloseWindow, this);
+		pCloseButton = Button::Create(pIcons, &closePos, &closeUVs, MFVector::white, CloseWindow, this);
+	}
 
 	AdjustRect_Margin(&window, margin*2.f);
 }
 
 Window::~Window()
 {
-	pCloseButton->Destroy();
-	pCloseButton = NULL;
+	if(pCloseButton)
+		pCloseButton->Destroy();
 
 	MFMaterial_Destroy(pIcons);
 }

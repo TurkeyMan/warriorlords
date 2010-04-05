@@ -188,6 +188,7 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 		{
 			pMap = (Map*)MFHeap_AllocAndZero(sizeof(Map));
 			pMap = new(pMap) Map;
+			MFString_Copy(pMap->filename, pMapFilename);
 			pMap->pGame = pGame;
 			pMap->bEditable = bEditable;
 
@@ -324,7 +325,11 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 									pCastleSection = pCastleSection->Next();
 								}
 
-								pMap->mapTemplate[slice].pCastles = (CastleDetails*)MFHeap_AllocAndZero(pMap->mapTemplate[slice].numCastles * sizeof(CastleDetails));
+								int numCastles = pMap->mapTemplate[slice].numCastles;
+								if(bEditable)
+									numCastles = 256;
+
+								pMap->mapTemplate[slice].pCastles = (CastleDetails*)MFHeap_AllocAndZero(numCastles * sizeof(CastleDetails));
 
 								pCastleSection = pSlice->Sub();
 								int castle = 0;
@@ -395,9 +400,6 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 				pMap->pMap[a].x = a % pMap->mapWidth;
 				pMap->pMap[a].y = a / pMap->mapWidth;
 			}
-
-			// construct the map
-			pMap->ConstructMap(bEditable ? 0 : -1);
 
 			// don't look for any more maps
 			break;
@@ -661,9 +663,9 @@ int CastleSort(const void *p1, const void *p2)
 	return pC1->x < pC2->x ? -1 : 1;
 }
 
-void Map::Save(const char *pFilename)
+void Map::Save()
 {
-	MFFile *pFile = MFFileSystem_Open(MFStr("game:%s", pFilename), MFOF_Write|MFOF_Binary);
+	MFFile *pFile = MFFileSystem_Open(MFStr("game:%s.ini", filename), MFOF_Write|MFOF_Binary);
 	if(!pFile)
 		return;
 

@@ -166,7 +166,7 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 				{
 					// check if we're swapping with another unit
 					int unit = GetUnitFromPoint(info.up.x, info.up.y);
-					if(unit > -1 && units[unit].pGroup == units[dragUnit].pGroup)
+					if(unit > -1 && units[unit].pGroup == units[dragUnit].pGroup && !units[unit].pUnit->IsVehicle())
 					{
 						units[unit].pGroup->SwapUnits(units[unit].pUnit, units[dragUnit].pUnit);
 						bFound = true;
@@ -213,8 +213,21 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 					int group = GetGroupFromPoint(info.up.x, info.up.y);
 					if(group > -1)
 					{
-						if(pExtraGroups[group]->GetNumUnits() < 10 || units[dragUnit].rank == 2)
+						if(units[dragUnit].pUnit->IsVehicle() && pExtraGroups[group]->GetNumUnits() == 0)
 						{
+							// swap vehicles
+							Unit *pV1 = units[dragUnit].pGroup->GetVehicle();
+							Unit *pV2 = pExtraGroups[group]->GetVehicle();
+
+							units[dragUnit].pGroup->RemoveUnit(pV1);
+							pExtraGroups[group]->RemoveUnit(pV2);
+
+							units[dragUnit].pGroup->AddUnit(pV2);
+							pExtraGroups[group]->AddUnit(pV1);
+						}
+						else if(pExtraGroups[group]->GetNumUnits() < 10 || units[dragUnit].rank == 2)
+						{
+							// move unit into group
 							Unit *pUnit = units[dragUnit].pUnit;
 							Group *pGroup = units[dragUnit].pGroup;
 
@@ -260,56 +273,64 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 			}
 			else if(pDragGroup)
 			{
-				// check if we dropped the group in one of the top files
-				int dropped = GetFileFromPoint(info.up.x, info.up.y);
-				if(dropped > -1)
+				// check if we're swapping vehicles
+				int unit = GetUnitFromPoint(info.up.x, info.up.y);
+				if(unit > -1 && units[unit].pUnit->IsVehicle() && pDragGroup->GetNumUnits() == 0 && pDragGroup->GetVehicle())
 				{
-					// move as many into the chosen file as possible
-					Group *pTarget = units[0].pGroup;
+					// swap vehicles
+					Unit *pV1 = pDragGroup->GetVehicle();
+					Unit *pV2 = units[0].pGroup->GetVehicle();
 
-					Unit *pVehicle = pDragGroup->GetVehicle();
-					if(pVehicle)
-					{
-						if(pTarget->AddUnit(pVehicle))
-							pDragGroup->RemoveUnit(pVehicle);
-					}
+					pDragGroup->RemoveUnit(pV1);
+					units[0].pGroup->RemoveUnit(pV2);
 
-					while(pDragGroup->GetNumUnits() > 0 && pTarget->GetNumUnits() < 10)
-					{
-						Unit *pUnit = pDragGroup->GetUnit(0);
-						pDragGroup->RemoveUnit(pUnit);
-						if(dropped == 0)
-						{
-							if(!pTarget->AddForwardUnit(pUnit))
-								pTarget->AddRearUnit(pUnit);
-						}
-						else
-						{
-							if(!pTarget->AddRearUnit(pUnit))
-								pTarget->AddForwardUnit(pUnit);
-						}
-					}
+					pDragGroup->AddUnit(pV2);
+					units[0].pGroup->AddUnit(pV1);
 				}
 				else
 				{
-					// check if we dropped the group on another group
-					int group = GetGroupFromPoint(info.up.x, info.up.y);
-
-					if(group > -1 && pExtraGroups[group] != pDragGroup)
+					// check if we dropped the group in one of the top files
+					int dropped = GetFileFromPoint(info.up.x, info.up.y);
+					if(dropped > -1)
 					{
-						// move as many into the target group as possible
+						// move as many into the chosen file as possible
+						Group *pTarget = units[0].pGroup;
+
 						Unit *pVehicle = pDragGroup->GetVehicle();
 						if(pVehicle)
 						{
-							if(pExtraGroups[group]->AddUnit(pVehicle))
+							if(pTarget->AddUnit(pVehicle))
 								pDragGroup->RemoveUnit(pVehicle);
 						}
 
-						while(pDragGroup->GetNumUnits() > 0 && pExtraGroups[group]->GetNumUnits() < 10)
+						while(pDragGroup->GetNumUnits() > 0 && pTarget->GetNumUnits() < 10)
 						{
 							Unit *pUnit = pDragGroup->GetUnit(0);
-							if(pExtraGroups[group]->AddUnit(pUnit))
+							if(pTarget->AddUnit(pUnit))
 								pDragGroup->RemoveUnit(pUnit);
+						}
+					}
+					else
+					{
+						// check if we dropped the group on another group
+						int group = GetGroupFromPoint(info.up.x, info.up.y);
+
+						if(group > -1 && pExtraGroups[group] != pDragGroup)
+						{
+							// move as many into the target group as possible
+							Unit *pVehicle = pDragGroup->GetVehicle();
+							if(pVehicle)
+							{
+								if(pExtraGroups[group]->AddUnit(pVehicle))
+									pDragGroup->RemoveUnit(pVehicle);
+							}
+
+							while(pDragGroup->GetNumUnits() > 0 && pExtraGroups[group]->GetNumUnits() < 10)
+							{
+								Unit *pUnit = pDragGroup->GetUnit(0);
+								if(pExtraGroups[group]->AddUnit(pUnit))
+									pDragGroup->RemoveUnit(pUnit);
+							}
 						}
 					}
 				}

@@ -24,31 +24,31 @@ Game::Game(const char *_pMap, bool bEditable)
 	pHorizLine = MFMaterial_Create("Horiz-Pirates");
 	MFTexture_Destroy(pTemp);
 
-	pMap = NULL;
-	pUnitDefs = NULL;
+	SetCurrent(this);
 
-	pMapScreen = NULL;
-	pBattle = NULL;
+	// create the map and screens
+	pMap = Map::Create(this, _pMap, bEditable);
+	pUnitDefs = pMap->GetUnitDefinitions();
+
+	pMapScreen = new MapScreen(this);
+	pBattle = new Battle(this);
+
+	pRequestBox = new RequestBox;
+
+	currentPlayer = 0;
+	currentTurn = 0;
 
 	if(bEditable)
 	{
-		SetCurrent(this);
-
-		// create the map and screens
-		pMap = Map::Create(this, "Map", bEditable);
-		pUnitDefs = pMap->GetUnitDefinitions();
-
-		pMapScreen = new MapScreen(this);
-		pBattle = new Battle(this);
-
-		currentPlayer = 0;
-		currentTurn = 0;
-
+		// init the players
 		for(int a=0; a<8; ++a)
 		{
 			players[a].race = a + 1;
 			players[a].colour = pUnitDefs->GetRaceColour(a + 1);
 		}
+
+		// construct the map
+		pMap->ConstructMap(0);
 	}
 }
 
@@ -58,6 +58,8 @@ Game::~Game()
 		delete pBattle;
 	if(pMapScreen)
 		delete pMapScreen;
+	if(pRequestBox)
+		delete pRequestBox;
 
 	if(pMap)
 		pMap->Destroy();
@@ -81,15 +83,13 @@ void Game::BeginGame()
 		players[a].pHero = NULL;
 	}
 
-	// create the map and screens
-	pMap = Map::Create(this, "Map", false);
-	pUnitDefs = pMap->GetUnitDefinitions();
+	players[0].race = 1;
+	players[1].race = 4;
+	players[2].race = 2;
+	players[3].race = 3;
 
-	pMapScreen = new MapScreen(this);
-	pBattle = new Battle(this);
-
-	currentPlayer = 0;
-	currentTurn = 0;
+	// construct the map
+	pMap->ConstructMap();
 
 	// select player colours
 	bool bColoursTaken[8] = { false, false, false, false, false, false, false, false };
@@ -434,4 +434,14 @@ void Game::DrawLine(float sx, float sy, float dx, float dy)
 	}
 	else if(sy == dy)
 		MFPrimitive_DrawQuad(sx, sy-8.f, dx-sx, 16.f, MFVector::one, 0.f, .5f/16.f, 1.f, 1.f + (.5f/16.f));
+}
+
+void Game::ShowRequest(const char *pMessage, RequestBox::SelectCallback *pCallback, bool bNotification, void *pUserData)
+{
+	pRequestBox->Show(pMessage, pCallback, bNotification, pUserData);
+}
+
+bool Game::DrawRequest()
+{
+	return pRequestBox->Draw();
 }

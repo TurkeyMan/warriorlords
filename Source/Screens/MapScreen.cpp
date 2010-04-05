@@ -166,8 +166,16 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 							}
 							else
 							{
-								// begin the battle!
-								pGame->BeginBattle(pSelection, pTile);
+								if(pSelection->GetNumUnits() > 0)
+								{
+									// begin the battle!
+									pGame->BeginBattle(pSelection, pTile);
+								}
+								else
+								{
+									// can't attack with an empty vehicle!
+									// TODO: play sound?
+								}
 								break;
 							}
 						}
@@ -194,6 +202,9 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 									pHero->AddItem(item);
 
 									// TODO: show dialog box mentioning what you got
+									Item *pItem = Game::GetCurrent()->GetUnitDefs()->GetItem(item);
+									const char *pMessage = MFStr("You search the ruin and find\n%s", pItem->pName);
+									Game::GetCurrent()->ShowRequest(pMessage, NULL, true);
 								}
 							}
 							break;
@@ -374,6 +385,8 @@ void MapScreen::Draw()
 	// now draw any UI that might be on the screen.
 	groupConfig.Draw();
 	castleConfig.Draw();
+
+	pGame->DrawRequest();
 }
 
 void MapScreen::Deselect()
@@ -383,11 +396,17 @@ void MapScreen::Deselect()
 
 void MapScreen::EndTurn(int button, void *pUserData, int buttonID)
 {
-	MapScreen *pThis = (MapScreen*)pUserData;
+	Game::GetCurrent()->ShowRequest("End Turn?", FinishTurn, false, pUserData);
+}
 
-	pThis->DeselectGroup();
-
-	pThis->pGame->EndTurn();
+void MapScreen::FinishTurn(int selection, void *pUserData)
+{
+	if(selection == 0)
+	{
+		MapScreen *pMapScreen = (MapScreen*)pUserData;
+		pMapScreen->DeselectGroup();
+		pMapScreen->pGame->EndTurn();
+	}
 }
 
 void MapScreen::ShowMiniMap(int button, void *pUserData, int buttonID)

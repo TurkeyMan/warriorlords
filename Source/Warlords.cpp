@@ -51,12 +51,14 @@ void Game_Init()
 
 	pInputManager = new InputManager;
 
+	const char *pMapName = "Map_60x60x4";
+
 #if 1
-	pGame = new Game("Map");
+	pGame = new Game(pMapName);
 	Game::SetCurrent(pGame);
 	pGame->BeginGame();
 #else
-	pGame = new Game("Map", true);
+	pGame = new Game(pMapName, true);
 	Game::SetCurrent(pGame);
 
 	pEditor = new Editor(pGame);
@@ -114,8 +116,8 @@ int GameMain(MFInitParams *pInitParams)
 #endif
 	SetDisplayOrientation(DO_90CW);
 #else
-	gDefaults.display.displayWidth = 1280;
-	gDefaults.display.displayHeight = 720;
+	gDefaults.display.displayWidth = 800;
+	gDefaults.display.displayHeight = 480;
 #endif
 
 //	gDefaults.input.useDirectInputKeyboard = false;

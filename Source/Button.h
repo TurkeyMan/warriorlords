@@ -5,6 +5,7 @@
 #include "InputHandler.h"
 
 struct MFMaterial;
+struct MFFont;
 
 class Button : public InputReceiver
 {

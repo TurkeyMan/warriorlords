@@ -79,7 +79,7 @@ public:
 	static Map *CreateNew(Game *pGame, const char *pTileset, const char *pUnits);
 	void Destroy();
 
-	void Save(const char *pFilename);
+	void Save();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 
@@ -141,6 +141,7 @@ public:
 	CastleDetails *GetCastleTemplate(int x, int y);
 
 protected:
+	char filename[32];
 	char name[32];
 	char tileset[32];
 	char unitset[32];

@@ -3,6 +3,7 @@
 
 #include "Map.h"
 #include "Unit.h"
+#include "Screens/RequestBox.h"
 
 struct MFFont;
 
@@ -57,6 +58,9 @@ public:
 	MFFont *GetBattleNumbersFont() { return pBattleNumbersFont; }
 	MFFont *GetSmallNumbersFont() { return pSmallNumbersFont; }
 
+	void ShowRequest(const char *pMessage, RequestBox::SelectCallback *pCallback, bool bNotification, void *pUserData = NULL);
+	bool DrawRequest();
+
 protected:
 	// game resources
 	MFFont *pText;
@@ -77,13 +81,11 @@ protected:
 	MapScreen *pMapScreen;
 	Battle *pBattle;
 
+	RequestBox *pRequestBox;
+
 	// game state data
 	int currentPlayer;
 	int currentTurn;
-
-	// castles
-
-	// units
 
 	static Game *pCurrent;
 };
