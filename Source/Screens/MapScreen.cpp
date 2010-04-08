@@ -344,7 +344,7 @@ void MapScreen::Draw()
 				while(pPath)
 				{
 					if(pPath->x >= xS && pPath->y >= yS && pPath->x < xTiles && pPath->y < yTiles)
-						MFPrimitive_DrawUntexturedQuad((float)pPath->x + 0.4f, (float)pPath->y + 0.4f, 0.2f, 0.2f, MFVector::black);
+						MFPrimitive_DrawUntexturedQuad((float)pPath->x + 0.4f, (float)pPath->y + 0.4f, 0.2f, 0.2f, pPath->flags ? MFVector::black : MFVector::red);
 					pPath = pPath->pNext;
 				}
 

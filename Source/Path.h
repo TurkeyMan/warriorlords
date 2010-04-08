@@ -10,6 +10,7 @@ class MapTile;
 struct Step
 {
 	uint16 x, y;
+	uint32 flags;
 	Step *pNext;
 };
 

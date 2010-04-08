@@ -145,8 +145,50 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 
 				pStep->x = gpSearchList[x].x;
 				pStep->y = gpSearchList[x].y;
+				pStep->flags = 0;
 
 				x = gpSearchList[x].from;
+			}
+
+			// calculate the movement distance
+			struct UnitMove
+			{
+				Unit *pUnit;
+				int movement;
+			} unitMove[10];
+
+			int numUnits = pGroup->GetNumUnits();
+			unitMove[0].pUnit = pGroup->GetVehicle();
+			if(unitMove[0].pUnit)
+			{
+				unitMove[0].movement = unitMove[0].pUnit->GetMovement();
+				numUnits = 1;
+			}
+			else
+			{
+				for(int a=0; a<numUnits; ++a)
+				{
+					unitMove[a].pUnit = pGroup->GetUnit(a);
+					unitMove[a].movement = unitMove[a].pUnit->GetMovement();
+				}
+			}
+
+			Step *pT = pPath;
+			while(pT)
+			{
+				MapTile *pTile = pMap->GetTile(pT->x, pT->y);
+
+				uint32 canMove = 1;
+				for(int a=0; a<numUnits; ++a)
+				{
+					int penalty = unitMove[a].pUnit->GetMovementPenalty(pTile);
+					unitMove[a].movement -= penalty;
+					if(!penalty || unitMove[a].movement < 0)
+						canMove = 0;
+				}
+				pT->flags |= canMove;
+
+				pT = pT->pNext;
 			}
 
 			return pPath;
