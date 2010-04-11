@@ -13,6 +13,7 @@
 
 #include "CastleConfig.h"
 #include "GroupConfig.h"
+#include "MiniMap.h"
 
 class MapScreen : public Screen
 {
@@ -39,6 +40,7 @@ public:
 protected:
 	GroupConfig groupConfig;
 	CastleConfig castleConfig;
+	MiniMap miniMap;
 
 	Game *pGame;
 

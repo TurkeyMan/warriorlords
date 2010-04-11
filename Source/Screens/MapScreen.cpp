@@ -358,7 +358,7 @@ void MapScreen::Draw()
 				for(int p = 0; p < len; ++p)
 				{
 					if(pStep[p].cost > 2 && pStep[p].CanMove())
-						MFFont_DrawTextf(pSmallNumbers, pStep[p].x + 0.70f, pStep[p].y + 0.70f, 0.27f, MFVector::yellow, "%g", (float)pStep[p].cost * 0.5f);
+						MFFont_DrawTextf(pSmallNumbers, pStep[p].x + 0.61f, pStep[p].y + 0.61f, 0.27f, MFVector::yellow, "%g", (float)pStep[p].cost * 0.5f);
 				}
 
 				MFView_Pop();
@@ -398,6 +398,7 @@ void MapScreen::Draw()
 	// now draw any UI that might be on the screen.
 	groupConfig.Draw();
 	castleConfig.Draw();
+	miniMap.Draw();
 
 	pGame->DrawRequest();
 }
@@ -425,7 +426,7 @@ void MapScreen::FinishTurn(int selection, void *pUserData)
 void MapScreen::ShowMiniMap(int button, void *pUserData, int buttonID)
 {
 	MapScreen *pThis = (MapScreen*)pUserData;
-
+	pThis->miniMap.Show(Game::GetCurrent()->GetMap());
 }
 
 void MapScreen::SelectGroup(Group *pGroup)

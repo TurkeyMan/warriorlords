@@ -57,6 +57,9 @@ public:
 	bool IsFriendlyTile(int player);
 	bool IsEnemyTile(int player);
 	bool CanMove(Group *pGroup);
+	bool IsRoad();
+
+	int GetPlayer();
 
 protected:
 	Group *pGroup;
@@ -136,6 +139,8 @@ public:
 
 	void ConstructMap(int race = -1);
 
+	MFMaterial *GetMinimap(int *pMapWidth, int *pMapHeight);
+
 	CastleDetails *GetCastleTemplate(int x, int y);
 
 	static int GetMovementPenalty(MapTile *pTile, int *pTerrainPenalties, int player, bool bRoadWalk, int *pTerrainType = NULL);
@@ -160,9 +165,11 @@ protected:
 
 	MFTexture *pRenderTarget;
 	MFMaterial *pRenderTargetMaterial;
-	MFTexture *pMinimap;
-	MFMaterial *pMinimapMaterial;
 	MFMaterial *pCloud;
+
+	MFMaterial *pMinimapMaterial;
+	int minimapPixelScale;
+	uint32 *pMiniMapImage;
 
 	MapTile *pMap;
 	Castle pCastles[256];

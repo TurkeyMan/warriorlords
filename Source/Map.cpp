@@ -170,6 +170,22 @@ bool MapTile::CanMove(Group *_pGroup)
 	return true;
 }
 
+bool MapTile::IsRoad()
+{
+	return type == OT_Road;
+}
+
+int MapTile::GetPlayer()
+{
+	if(pGroup)
+		return pGroup->GetPlayer();
+	if(type == OT_Castle)
+		return ((Castle*)pObject)->GetPlayer();
+//	if(type == OT_Flag)
+//		return (int8)index;
+	return -2;
+}
+
 Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 {
 	MFIni *pIni = MFIni::Create(pMapFilename);
@@ -439,9 +455,13 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 	pMap->pRenderTarget = MFTexture_CreateRenderTarget("MapSurface", rtWidth, rtHeight, TexFmt_SelectFastest_NoAlpha);
 	pMap->pRenderTargetMaterial = MFMaterial_Create("MapSurface");
 
-//	pMap->pMinimap = MFTexture_CreateRenderTarget("MiniMap", MFUtil_NextPowerOf2(pMap->mapWidth), MFUtil_NextPowerOf2(pMap->mapHeight));
-//	pMap->pMinimapMaterial = MFMaterial_Create("MiniMap");
-	pMap->pMinimap = NULL;
+	screen.width = MFMin(screen.width, 480.f);
+	screen.height = MFMin(screen.height, 320.f);
+	pMap->minimapPixelScale = 1;
+	while(pMap->mapWidth * pMap->minimapPixelScale * 2 <= screen.width && pMap->mapHeight * pMap->minimapPixelScale * 2 <= screen.height)
+		pMap->minimapPixelScale *= 2;
+
+	pMap->pMiniMapImage = (uint32*)MFHeap_AllocAndZero(MFUtil_NextPowerOf2(pMap->mapWidth * pMap->minimapPixelScale) * MFUtil_NextPowerOf2(pMap->mapHeight * pMap->minimapPixelScale) * sizeof(uint32));
 	pMap->pMinimapMaterial = NULL;
 
 	// add some clouds
@@ -527,6 +547,70 @@ void Map::ConstructMap(int race)
 			}
 		}
 	}
+}
+
+MFMaterial *Map::GetMinimap(int *pMapWidth, int *pMapHeight)
+{
+	uint32 *pImage = pMiniMapImage;
+	int stride = MFUtil_NextPowerOf2(mapWidth * minimapPixelScale);
+	int texHeight = MFUtil_NextPowerOf2(mapHeight * minimapPixelScale);
+
+	int halfTile = minimapPixelScale / 2;
+
+	for(int y=0; y<mapHeight; ++y)
+	{
+		for(int a=0; a<minimapPixelScale; ++a)
+		{
+			uint32 *pLine = pImage;
+
+			for(int x=0; x<mapWidth; ++x)
+			{
+				MapTile *pTile = GetTile(x, y);
+				uint32 terrain = pTile->GetTerrain();
+				if(a >= halfTile)
+					terrain >>= 16;
+
+				MFVector colour = MFVector::black;
+				bool bTerrainColour = false;
+
+				int player = pTile->GetPlayer();
+				if(player > -2)
+					colour = Game::GetCurrent()->GetPlayerColour(player);
+				else if(pTile->GetType() == OT_Special)
+					colour = MFVector::white;
+				else if(pTile->IsRoad())
+					colour = MakeVector(.75f, .5f, .0f, 1.f);
+				else
+					bTerrainColour = true;
+
+				for(int b=0; b<minimapPixelScale; ++b)
+				{
+					if(bTerrainColour)
+					{
+						int t = b >= halfTile ? (terrain >> 8) & 0xFF : terrain & 0xFF;
+						colour = pTiles->GetTerrainColour(t);
+					}
+
+					pLine[b] = colour.ToPackedColour();
+				}
+
+				pLine += minimapPixelScale;
+			}
+
+			pImage += stride;
+		}
+	}
+
+	MFTexture *pTex = MFTexture_CreateFromRawData("MiniMap", pMiniMapImage, stride, texHeight, TexFmt_A8R8G8B8, 0, false);
+	pMinimapMaterial = MFMaterial_Create("MiniMap");
+	MFTexture_Destroy(pTex);
+
+	if(pMapWidth)
+		*pMapWidth = mapWidth * minimapPixelScale;
+	if(pMapHeight)
+		*pMapHeight = mapHeight * minimapPixelScale;
+
+	return pMinimapMaterial;
 }
 
 CastleDetails *Map::GetCastleTemplate(int x, int y)
@@ -675,8 +759,14 @@ Map *Map::CreateNew(Game *pGame, const char *pTileset, const char *pUnits)
 	pNew->pRenderTarget = MFTexture_CreateRenderTarget("MapSurface", rtWidth, rtHeight);
 	pNew->pRenderTargetMaterial = MFMaterial_Create("MapSurface");
 
-//	pNew->pMinimap = MFTexture_CreateRenderTarget("MiniMap", MFUtil_NextPowerOf2(pMap->mapWidth), MFUtil_NextPowerOf2(pMap->mapHeight));
-	pNew->pMinimap = NULL;
+	screen.width = MFMin(screen.width, 480.f);
+	screen.height = MFMin(screen.height, 320.f);
+	pNew->minimapPixelScale = 1;
+	if(pNew->mapWidth * pNew->minimapPixelScale * 2 <= screen.width && pNew->mapHeight * pNew->minimapPixelScale * 2 <= screen.height)
+		pNew->minimapPixelScale *= 2;
+
+	pNew->pMiniMapImage = (uint32*)MFHeap_AllocAndZero(MFUtil_NextPowerOf2(pNew->mapWidth * pNew->minimapPixelScale) * MFUtil_NextPowerOf2(pNew->mapHeight * pNew->minimapPixelScale) * sizeof(uint32));
+	pNew->pMinimapMaterial = NULL;
 
 	// editor stuff
 	pNew->pTouched = (uint8*)MFHeap_AllocAndZero(pNew->mapWidth * pNew->mapHeight * sizeof(*pNew->pTouched));
