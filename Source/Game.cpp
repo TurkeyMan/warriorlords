@@ -10,6 +10,7 @@
 #include "MFFont.h"
 #include "MFMaterial.h"
 #include "MFTexture.h"
+#include "MFRenderer.h"
 
 Game *Game::pCurrent = NULL;
 
@@ -305,7 +306,7 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 			pCurrentTile->RemoveGroup(pGroup);
 			pTarget->AddGroup(pGroup);
 			pMap->ClaimFlags(pTarget->GetX(), pTarget->GetY(), pGroup->GetPlayer());
-			pMap->DestroyPath(pGroup->pPath);
+			pGroup->pPath->Destroy();
 			pGroup->pPath = NULL;
 		}
 	}
@@ -413,27 +414,29 @@ void Game::DrawLine(float sx, float sy, float dx, float dy)
 {
 	MFMaterial_SetMaterial(pHorizLine);
 
+	float texelCenter = MFRenderer_GetTexelCenterOffset() / 16.f;
+
 	if(sx == dx)
 	{
 		MFPrimitive(PT_TriStrip | PT_Prelit);
 		MFBegin(4);
 
-		MFSetTexCoord1(0, 1.f+.5f/16.f);
+		MFSetTexCoord1(0, 1.f+texelCenter);
 		MFSetPosition(sx-8.f, sy, 0);
 
-		MFSetTexCoord1(0, .5f/16.f);
+		MFSetTexCoord1(0, texelCenter);
 		MFSetPosition(sx+8.f, sy, 0);
 
-		MFSetTexCoord1(1, 1.f+.5f/16.f);
+		MFSetTexCoord1(1, 1.f+texelCenter);
 		MFSetPosition(sx-8.f, dy, 0);
 
-		MFSetTexCoord1(1, .5f/16.f);
+		MFSetTexCoord1(1, texelCenter);
 		MFSetPosition(sx+8.f, dy, 0);
 
 		MFEnd();
 	}
 	else if(sy == dy)
-		MFPrimitive_DrawQuad(sx, sy-8.f, dx-sx, 16.f, MFVector::one, 0.f, .5f/16.f, 1.f, 1.f + (.5f/16.f));
+		MFPrimitive_DrawQuad(sx, sy-8.f, dx-sx, 16.f, MFVector::one, 0.f, texelCenter, 1.f, 1.f + (texelCenter));
 }
 
 void Game::ShowRequest(const char *pMessage, RequestBox::SelectCallback *pCallback, bool bNotification, void *pUserData)

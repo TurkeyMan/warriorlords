@@ -738,18 +738,18 @@ int Unit::GetTerrainPenalty(int terrainType)
 	return ModStatInt(penalty >> 1, Item::MT_Terrain, terrainType) << 1;
 }
 
-int Unit::GetMovementPenalty(MapTile *pTile)
+void Unit::GetTerrainPenalties(int *pTerrainPenalties)
 {
-	ObjectType type = pTile->GetType();
-	if((type == OT_Road && HasRoadWalk()) || (type == OT_Castle && pTile->IsFriendlyTile(player)))
-		return 1;
+	int numTerrainTypes = Game::GetCurrent()->GetMap()->GetTileset()->GetNumTerrainTypes();
+	for(int a=0; a<numTerrainTypes; ++a)
+		pTerrainPenalties[a] = GetTerrainPenalty(a);
+}
 
-	uint32 terrain = pTile->GetTerrain();
-	int penalty = GetTerrainPenalty(terrain & 0xFF);
-	penalty = MFMax(penalty, GetTerrainPenalty((terrain >> 8) & 0xFF));
-	penalty = MFMax(penalty, GetTerrainPenalty((terrain >> 16) & 0xFF));
-	penalty = MFMax(penalty, GetTerrainPenalty((terrain >> 24) & 0xFF));
-	return penalty;
+int Unit::GetMovementPenalty(MapTile *pTile, int *pTerrainType)
+{
+	int terrainPenalties[64];
+	GetTerrainPenalties(terrainPenalties);
+	return Map::GetMovementPenalty(pTile, terrainPenalties, player, HasRoadWalk(), pTerrainType);
 }
 
 void Unit::Restore()
@@ -1024,9 +1024,10 @@ Group *Group::Create(int _player)
 	pGroup->player = _player;
 	pGroup->numForwardUnits = pGroup->numRearUnits = 0;
 	pGroup->bSelected = false;
-	pGroup->pPath = NULL;
-	pGroup->pNext = NULL;
 	pGroup->pVehicle = NULL;
+	pGroup->pPath = NULL;
+	pGroup->pathX = pGroup->pathY = -1;
+	pGroup->pNext = NULL;
 	return pGroup;
 }
 

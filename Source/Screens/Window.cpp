@@ -29,8 +29,9 @@ Window::Window(bool _bCloseButton)
 
 	if(bCloseButton)
 	{
+		float texelCenter = MFRenderer_GetTexelCenterOffset() / 256.f;
 		MFRect closePos = { window.x + window.width - 32.f, window.y, 32.f, 32.f };
-		MFRect closeUVs = { 0.25f + (.5f/256.f), 0.5f + (.5f/256.f), 0.125f, 0.125f };
+		MFRect closeUVs = { 0.25f + texelCenter, 0.25f + texelCenter, 0.125f, 0.125f };
 
 		pCloseButton = Button::Create(pIcons, &closePos, &closeUVs, MFVector::white, CloseWindow, this);
 	}

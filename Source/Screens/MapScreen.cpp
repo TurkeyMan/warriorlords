@@ -18,6 +18,7 @@ MapScreen::MapScreen(Game *_pGame)
 
 	pIcons = MFMaterial_Create("Icons");
 	pFont = pGame->GetTextFont();
+	pSmallNumbers = pGame->GetSmallNumbersFont();
 
 	// buttons
 	Map *pMap = pGame->GetMap();
@@ -110,10 +111,10 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 				// if the selected group has a path already planned
 				if(pSelection->pPath)
 				{
-					Step *pLast = pSelection->pPath;
+					Step *pStep = pSelection->pPath->GetLast();
 
 					// first check for an attack command
-					if(!pLast->pNext && cursorX == pLast->x && cursorY == pLast->y)
+					if(pSelection->pPath->IsEnd() && pStep->CanMove() && cursorX == pStep->x && cursorY == pStep->y)
 					{
 						// the path is only a single item long, it may be an attack or search command
 						MapTile *pTile = pMap->GetTile(cursorX, cursorY);
@@ -193,7 +194,7 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 									pMap->ClaimFlags(pTile->GetX(), pTile->GetY(), pSelection->GetPlayer());
 
 									// strip the step from the path
-									pSelection->pPath = pMap->StripStep(pSelection->pPath);
+									pSelection->pPath->StripStep(pSelection->pPath->GetPath());
 
 									// TODO: random encounter?
 
@@ -211,12 +212,8 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 						}
 					}
 
-					// find the final destination
-					while(pLast->pNext)
-						pLast = pLast->pNext;
-
 					// and see if we've commanded to move there
-					if(cursorX == pLast->x && cursorY == pLast->y)
+					if(cursorX == pStep->x && cursorY == pStep->y)
 					{
 						// move to destination...
 						bMoving = true;
@@ -226,8 +223,8 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 				}
 
 				// plot a path to the new location
-				if(pSelection->pPath)
-					pMap->DestroyPath(pSelection->pPath);
+				pSelection->pathX = cursorX;
+				pSelection->pathY = cursorY;
 				pSelection->pPath = pMap->FindPath(pSelection, cursorX, cursorY);
 			}
 			else
@@ -274,8 +271,9 @@ int MapScreen::Update()
 		while(countdown <= 0.f)
 		{
 			Map *pMap = pGame->GetMap();
-			int x = pSelection->pPath->x;
-			int y = pSelection->pPath->y;
+			Step *pStep = pSelection->pPath->GetPath();
+			int x = pStep->x;
+			int y = pStep->y;
 
 			// validate we can move to the new square, and subtract movement penalty
 			MapTile *pNewTile = pMap->GetTile(x, y);
@@ -293,17 +291,18 @@ int MapScreen::Update()
 			pNewTile->AddGroup(pSelection);
 			pMap->ClaimFlags(x, y, pSelection->GetPlayer());
 
-			// strip the step from the path
-			pSelection->pPath = pMap->StripStep(pSelection->pPath);
-
 			// center the map on the guy moving
 			pMap->CenterView(x, y);
 
 			countdown += 0.15f;
 
+			// strip the step from the path
+			pStep = pSelection->pPath->StripStep(pStep);
+
 			// if we have reached our destination
-			if(!pSelection->pPath)
+			if(!pStep)
 			{
+				pSelection->pPath = NULL;
 				bMoving = false;
 				break;
 			}
@@ -324,9 +323,8 @@ void MapScreen::Draw()
 		// render the path
 		if(pSelection->GetPlayer() == pGame->CurrentPlayer())
 		{
-			Step *pPath = pSelection->GetPath();
-
-			if(pPath)
+			Path *pPath = pSelection->GetPath();
+			if(pPath && pPath->GetPathLength())
 			{
 				MFView_Push();
 
@@ -341,11 +339,26 @@ void MapScreen::Draw()
 				yTiles += yS;
 
 				// draw path
-				while(pPath)
+				MFMaterial_SetMaterial(pIcons);
+
+				int len = pPath->GetPathLength();
+				Step *pStep = pPath->GetPath();
+
+				for(int p = 0; p < len; ++p)
 				{
-					if(pPath->x >= xS && pPath->y >= yS && pPath->x < xTiles && pPath->y < yTiles)
-						MFPrimitive_DrawUntexturedQuad((float)pPath->x + 0.4f, (float)pPath->y + 0.4f, 0.2f, 0.2f, pPath->flags ? MFVector::black : MFVector::red);
-					pPath = pPath->pNext;
+					float texelCenterOffset = MFRenderer_GetTexelCenterOffset() / 256.f;
+					if(pStep[p].x >= xS && pStep[p].y >= yS && pStep[p].x < xTiles && pStep[p].y < yTiles)
+					{
+						float tx = (float)(pStep[p].icon & 7) / 8.f + texelCenterOffset;
+						float ty = (float)(4 + (pStep[p].icon >> 3)) / 8.f + texelCenterOffset;
+						MFPrimitive_DrawQuad((float)pStep[p].x + 0.25f, (float)pStep[p].y + 0.25f, 0.5f, 0.5f, MFVector::one, tx, ty, tx + 0.125f, ty+0.125f);
+					}
+				}
+
+				for(int p = 0; p < len; ++p)
+				{
+					if(pStep[p].cost > 2 && pStep[p].CanMove())
+						MFFont_DrawTextf(pSmallNumbers, pStep[p].x + 0.70f, pStep[p].y + 0.70f, 0.27f, MFVector::yellow, "%g", (float)pStep[p].cost * 0.5f);
 				}
 
 				MFView_Pop();
@@ -420,18 +433,33 @@ void MapScreen::SelectGroup(Group *pGroup)
 	if(pSelection == pGroup)
 		return;
 
-	if(pSelection)
-		pSelection->bSelected = false;
+	DeselectGroup();
 
 	pSelection = pGroup;
 	pSelection->bSelected = true;
+	pSelection->pPath = NULL;
+
+	if(pGroup->pathX != -1 && pGroup->pathY != -1)
+	{
+		Map *pMap = pGame->GetMap();
+		pSelection->pPath = pMap->FindPath(pGroup, pGroup->pathX, pGroup->pathY);
+	}
 }
 
 void MapScreen::DeselectGroup()
 {
 	if(pSelection)
+	{
 		pSelection->bSelected = false;
-	pSelection = NULL;
+
+		if(pSelection->pPath)
+		{
+			pSelection->pPath->Destroy();
+			pSelection->pPath = NULL;
+		}
+
+		pSelection = NULL;
+	}
 }
 
 Group *MapScreen::GetSelected()

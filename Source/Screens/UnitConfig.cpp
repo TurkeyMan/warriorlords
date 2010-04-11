@@ -11,8 +11,9 @@ UnitConfig::UnitConfig()
 {
 	DivideRect_Vert(window, 128+10, margin, &top, &bottom, true);
 
+	float texelCenter = MFRenderer_GetTexelCenterOffset() / 256.f;
 	MFRect pos = { top.x + top.width - 64.f, top.y + top.height - 64.f, 64.f, 64.f };
-	MFRect uvs = { 0.f + (.5f/256.f), 0.5f + (.5f/256.f), 0.25f, 0.25f };
+	MFRect uvs = { 0.f + texelCenter, 0.25f + texelCenter, 0.25f, 0.25f };
 	pInventory = Button::Create(pIcons, &pos, &uvs, MFVector::white, ShowInventory, this);
 
 	float height = MFFont_GetFontHeight(pFont);

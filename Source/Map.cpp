@@ -540,6 +540,66 @@ CastleDetails *Map::GetCastleTemplate(int x, int y)
 	return NULL;
 }
 
+int Map::GetMovementPenalty(MapTile *pTile, int *pTerrainPenalties, int player, bool bRoadWalk, int *pTerrainType)
+{
+	if(bRoadWalk)
+	{
+		ObjectType type = pTile->GetType();
+		if(type == OT_Road || (type == OT_Castle && pTile->IsFriendlyTile(player)))
+			return 1;
+	}
+
+	// find which terrain is most prominant
+	uint32 terrain = pTile->GetTerrain();
+	struct { int t, c; } t[4];
+	int numT = 0;
+	for(int a=0; a<4; ++a, terrain >>= 8)
+	{
+		int ct = terrain & 0xFF;
+		if(pTerrainPenalties[ct] == 0)
+			continue;
+
+		for(int b=0; b<numT; ++b)
+		{
+			if(ct == t[b].t)
+			{
+				++t[b].c;
+				goto added;
+			}
+		}
+
+		t[numT].t = ct;
+		t[numT++].c = 1;
+added:
+		continue;
+	}
+
+	// get the most prominant terrain penalty
+	int penalty = 0;
+	int c = 0;
+	for(int a=0; a<numT; ++a)
+	{
+		if(t[a].c > c)
+		{
+			penalty = pTerrainPenalties[t[a].t];
+			if(pTerrainType)
+				*pTerrainType = t[a].t;
+			c = t[a].c;
+		}
+		else if(t[a].c == c)
+		{
+			if(pTerrainPenalties[t[a].t] > penalty)
+			{
+				penalty = pTerrainPenalties[t[a].t];
+				if(pTerrainType)
+					*pTerrainType = t[a].t;
+			}
+		}
+	}
+
+	return penalty;
+}
+
 int Map::ChooseTile(int *pSelectedTiles, int numVariants)
 {
 	if(numVariants == 1)
@@ -1902,17 +1962,7 @@ void Map::ClearDetail(int x, int y)
 	}
 }
 
-Step *Map::FindPath(Group *pGroup, int destX, int destY)
+Path *Map::FindPath(Group *pGroup, int destX, int destY)
 {
-	return path.FindPath(pGroup, destX, destY);
-}
-
-Step *Map::StripStep(Step *pPath)
-{
-	return path.StripStep(pPath);
-}
-
-void Map::DestroyPath(Step *pPath)
-{
-	path.Destroy(pPath);
+	return path.FindPath(pGroup, destX, destY) ? &path : NULL;
 }

@@ -132,13 +132,13 @@ public:
 
 	int UpdateChange(int a);
 
-	Step *FindPath(Group *pGroup, int destX, int destY);
-	Step *StripStep(Step *pPath);
-	void DestroyPath(Step *pPath);
+	Path *FindPath(Group *pGroup, int destX, int destY);
 
 	void ConstructMap(int race = -1);
 
 	CastleDetails *GetCastleTemplate(int x, int y);
+
+	static int GetMovementPenalty(MapTile *pTile, int *pTerrainPenalties, int player, bool bRoadWalk, int *pTerrainType = NULL);
 
 protected:
 	char filename[32];

@@ -350,7 +350,8 @@ public:
 
 	int GetMovement() { return movement; }
 	int GetTerrainPenalty(int terrainType);
-	int GetMovementPenalty(MapTile *pTile);
+	void GetTerrainPenalties(int *pTerrainPenalties);
+	int GetMovementPenalty(MapTile *pTile, int *pTerrainType = NULL);
 	bool HasRoadWalk() { return pUnitDefs->HasRoadWalk(details.movementClass); }
 	void Move(int penalty) { movement -= penalty; }
 
@@ -454,7 +455,7 @@ class Group
 public:
 	static Group *Create(int player);
 	void Destroy();
-
+ 
 	bool AddUnit(Unit *pUnit);
 	bool AddForwardUnit(Unit *pUnit);
 	bool AddRearUnit(Unit *pUnit);
@@ -484,7 +485,7 @@ public:
 	Unit *GetFeatureUnit() const { return GetUnit(0); }
 	Unit *GetVehicle() const { return pVehicle; }
 
-	Step *GetPath() const { return pPath; }
+	Path *GetPath() const { return pPath; }
 
 //protected:
 	void UpdateGroupStats();
@@ -501,7 +502,8 @@ public:
 	int numRearUnits;
 
 	bool bSelected;
-	Step *pPath;
+	int pathX, pathY;
+	Path *pPath;
 
 	Group *pNext;
 };

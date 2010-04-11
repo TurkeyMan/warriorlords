@@ -20,7 +20,7 @@ struct Cell
 	}
 };
 
-Cell *gpSearchList = NULL;
+static Cell *gpSearchList = NULL;
 
 void Path::Init(Map *_pMap)
 {
@@ -30,17 +30,16 @@ void Path::Init(Map *_pMap)
 	pMap->GetMapSize(&width, &height);
 	gpSearchList = (Cell*)MFHeap_Alloc(sizeof(Cell)*width*height);
 
-	stepPool.Init("Step pool", 8*1024);
+	pathStart = MaxPath;
 }
 
 void Path::Deinit()
 {
-	stepPool.Deinit();
 	MFHeap_Free(gpSearchList);
 	gpSearchList = NULL;
 }
 
-Step *Path::FindPath(Group *pGroup, int destX, int destY)
+bool Path::FindPath(Group *pGroup, int destX, int destY)
 {
 	Game *pGame = Game::GetCurrent();
 	Map *pMap = pGame->GetMap();
@@ -135,17 +134,15 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 		if(item.x == destX && item.y == destY)
 		{
 			// found the target!
-			Step *pPath = NULL;
+			pathStart = MaxPath;
 
 			while(x != 0)
 			{
-				Step *pStep = stepPool.Create();
-				pStep->pNext = pPath;
-				pPath = pStep;
+				Step &step = path[--pathStart];
 
-				pStep->x = gpSearchList[x].x;
-				pStep->y = gpSearchList[x].y;
-				pStep->flags = 0;
+				step.x = gpSearchList[x].x;
+				step.y = gpSearchList[x].y;
+				step.flags = 0;
 
 				x = gpSearchList[x].from;
 			}
@@ -157,15 +154,16 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 				int movement;
 			} unitMove[10];
 
-			int numUnits = pGroup->GetNumUnits();
+			int numUnits = 1;
 			unitMove[0].pUnit = pGroup->GetVehicle();
 			if(unitMove[0].pUnit)
 			{
 				unitMove[0].movement = unitMove[0].pUnit->GetMovement();
-				numUnits = 1;
 			}
 			else
 			{
+				numUnits = pGroup->GetNumUnits();
+
 				for(int a=0; a<numUnits; ++a)
 				{
 					unitMove[a].pUnit = pGroup->GetUnit(a);
@@ -173,25 +171,43 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 				}
 			}
 
-			Step *pT = pPath;
-			while(pT)
+			for(int p = pathStart; p < MaxPath; ++p)
 			{
+				Step *pT = &path[p];
+
 				MapTile *pTile = pMap->GetTile(pT->x, pT->y);
+
+				pT->cost = 0;
 
 				uint32 canMove = 1;
 				for(int a=0; a<numUnits; ++a)
 				{
-					int penalty = unitMove[a].pUnit->GetMovementPenalty(pTile);
+					int terrain;
+					int penalty = unitMove[a].pUnit->GetMovementPenalty(pTile, &terrain);
 					unitMove[a].movement -= penalty;
 					if(!penalty || unitMove[a].movement < 0)
 						canMove = 0;
+
+					if(penalty > pT->cost)
+					{
+						pT->cost = penalty;
+						pT->terrain = terrain;
+						if(penalty == 1)
+							pT->flags |= 2;
+					}
 				}
 				pT->flags |= canMove;
 
-				pT = pT->pNext;
+				pT->icon = pT->terrain;
+				if(!(pT->flags & 1))
+					pT->icon = 14;
+				else if(pT->flags & 2)
+					pT->icon = 13;
+				else if(pTile->IsEnemyTile(unitMove[0].pUnit->GetPlayer()))
+					pT->icon = 15;
 			}
 
-			return pPath;
+			return true;
 		}
 
 		item.open = 2;
@@ -262,7 +278,7 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 				{
 					// calculate the path score
 					MapTile *pTile = pMap->GetTile(tx, ty);
-					int terrainSpeed = GetMovementPenalty(pTile, terrainPenalties, player, bRoadWalk);
+					int terrainSpeed = Map::GetMovementPenalty(pTile, terrainPenalties, player, bRoadWalk);
 					int cornerPenalty = (tx != item.x) && (ty != item.y) ? 1 : 0;
 
 					int tg = item.gScore + (terrainSpeed*2) + cornerPenalty;
@@ -304,38 +320,14 @@ Step *Path::FindPath(Group *pGroup, int destX, int destY)
 	return NULL;
 }
 
-int Path::GetMovementPenalty(MapTile *pTile, int *pTerrainPenalties, int player, bool bRoadWalk)
-{
-	if(bRoadWalk)
-	{
-		ObjectType type = pTile->GetType();
-		if(type == OT_Road || (type == OT_Castle && pTile->IsFriendlyTile(player)))
-			return 1;
-	}
-
-	uint32 terrain = pTile->GetTerrain();
-	int penalty = pTerrainPenalties[terrain & 0xFF];
-	penalty = MFMax(penalty, pTerrainPenalties[(terrain >> 8) & 0xFF]);
-	penalty = MFMax(penalty, pTerrainPenalties[(terrain >> 16) & 0xFF]);
-	penalty = MFMax(penalty, pTerrainPenalties[(terrain >> 24) & 0xFF]);
-	return penalty;
-}
-
 Step *Path::StripStep(Step *pPath)
 {
-	Step *pNext = pPath->pNext;
-	stepPool.Destroy(pPath);
-	return pNext;
-}
+	pathStart = (int)(++pPath - path);
 
-void Path::Destroy(Step *pPath)
-{
-	while(pPath)
-	{
-		Step *pNext = pPath->pNext;
-		stepPool.Destroy(pPath);
-		pPath = pNext;
-	}
+	if(pathStart == MaxPath)
+		return NULL;
+
+	return pPath;
 }
 
 /*

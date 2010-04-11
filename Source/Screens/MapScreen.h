@@ -44,6 +44,7 @@ protected:
 
 	MFMaterial *pIcons;
 	MFFont *pFont;
+	MFFont *pSmallNumbers;
 
 	Button *pEndTurn;
 	Button *pMiniMap;
