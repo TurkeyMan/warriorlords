@@ -194,7 +194,8 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 									pMap->ClaimFlags(pTile->GetX(), pTile->GetY(), pSelection->GetPlayer());
 
 									// strip the step from the path
-									pSelection->pPath->StripStep(pSelection->pPath->GetPath());
+									pSelection->pPath->Destroy();
+									pSelection->pPath = NULL;
 
 									// TODO: random encounter?
 

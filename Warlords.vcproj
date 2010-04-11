@@ -413,6 +413,14 @@
 					>
 				</File>
 				<File
+					RelativePath=".\Source\Screens\MiniMap.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\MiniMap.h"
+					>
+				</File>
+				<File
 					RelativePath=".\Source\Screens\RequestBox.cpp"
 					>
 				</File>
