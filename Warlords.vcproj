@@ -413,6 +413,14 @@
 					>
 				</File>
 				<File
+					RelativePath=".\Source\Screens\MenuScreen.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\MenuScreen.h"
+					>
+				</File>
+				<File
 					RelativePath=".\Source\Screens\MiniMap.cpp"
 					>
 				</File>

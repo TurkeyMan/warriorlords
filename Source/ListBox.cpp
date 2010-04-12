@@ -6,34 +6,34 @@
 #include "MFInput.h"
 #include "MFFont.h"
 
-/*
-Button *Button::Create(const MFMaterial *pImage, const MFRect *pPosition, const MFRect *pUVs, const MFVector &colour, TriggerCallback *pCallback, void *pUserData, int buttonID, bool bTriggerOnDown)
+ListBox *ListBox::Create(const MFRect *pPosition, MFFont *pFont, MFMaterial *pIcons, float iconSize)
 {
-	Button *pNew = (Button*)MFHeap_Alloc(sizeof(Button));
-	pNew = new(pNew) Button(*pPosition);
+	ListBox *pNew = (ListBox*)MFHeap_AllocAndZero(sizeof(ListBox));
+	pNew = new(pNew) ListBox(*pPosition);
 
-	pNew->pMaterial = pImage;
-	pNew->uvs = *pUVs;
-	pNew->pCallback = pCallback;
-	pNew->pUserData = pUserData;
-	pNew->isPressed = -1;
-	pNew->bTriggerOnDown = bTriggerOnDown;
-	pNew->bOutline = false;
-	pNew->colour = colour;
-	pNew->outlineColour = MFVector::white;
-	pNew->button = 0;
-	pNew->buttonID = buttonID;
-	pNew->pOverlay = NULL;
+	pNew->pFont = pFont;
+	pNew->pIcons = pIcons;
+	pNew->iconSize = iconSize;
+
+	pNew->itemHeight = MFMax(pIcons ? iconSize : 0.f, pFont ? MFFont_GetFontHeight(pFont) : 0.f);
+	pNew->textOffset = pIcons && pFont ? (pNew->itemHeight - MFFont_GetFontHeight(pFont)) * 0.5f: 0.f;
+
+	pNew->numAllocated = 64;
+	pNew->pItems = (ListItem*)MFHeap_AllocAndZero(sizeof(ListItem) * pNew->numAllocated);
+
+	pNew->selection = -1;
 
 	return pNew;
 }
 
-void Button::Destroy()
+void ListBox::Destroy()
 {
-	delete this;
+	MFHeap_Free(pItems);
+
+	MFHeap_Free(this);
 }
 
-bool Button::HandleInputEvent(InputEvent ev, InputInfo &info)
+bool ListBox::HandleInputEvent(InputEvent ev, InputInfo &info)
 {
 	if(info.device == IDD_Mouse && info.deviceID != 0)
 		return false;
@@ -41,33 +41,20 @@ bool Button::HandleInputEvent(InputEvent ev, InputInfo &info)
 	switch(ev)
 	{
 		case IE_Down:
-			if(button == -1 || info.buttonID == button)
-			{
-				if(bTriggerOnDown)
-				{
-					if(pCallback)
-						pCallback(info.buttonID, pUserData, buttonID);
-				}
-				else
-				{
-					isPressed = info.contact;
-					pInputManager->SetExclusiveContactReceiver(info.contact, this);
-				}
-			}
+			downPos = info.down.y;
+			velocity = 0.f;
 			return true;
 		case IE_Up:
-			if(button == -1 || info.buttonID == button && info.contact == isPressed)
-			{
-				isPressed = -1;
-
-				if(MFTypes_PointInRect(info.up.x, info.up.y, &rect))
-				{
-					if(pCallback)
-						pCallback(info.buttonID, pUserData, buttonID);
-				}
-			}
+			velocity = 0.f; // calculate velocity by keeping time or something?
 			return true;
 		case IE_Tap:
+			selection = (int)((info.tap.y + yOffset) / itemHeight);
+			if(selection < 0 || selection >= numItems)
+				selection = -1;
+
+			if(pSelectCallback)
+				pSelectCallback(selection, pSelectUserData);
+			return true;
 		case IE_Drag:
 			return true;
 	}
@@ -75,119 +62,52 @@ bool Button::HandleInputEvent(InputEvent ev, InputInfo &info)
 	return false;
 }
 
-void Button::Draw()
+void ListBox::Draw()
 {
-	bool bDark = false;
+	MFPrimitive_DrawUntexturedQuad(MakeVector(rect.x, rect.y, 1), MakeVector(rect.x + rect.width, rect.y + rect.height, 1), MakeVector(0, 0, 0.3f, 1.f));
 
-	if(isPressed >= 0)
+	int x = (int)(rect.x + 10.f + (pIcons ? iconSize : 0.f));
+	int y = (int)(rect.y - yOffset);
+	int to = (int)textOffset;
+
+	for(int a=0; a<numItems; ++a)
 	{
-		float x = MFInput_Read(Mouse_XPos, IDD_Mouse);
-		float y = MFInput_Read(Mouse_YPos, IDD_Mouse);
+		if(selection == a)
+			MFPrimitive_DrawUntexturedQuad(MakeVector(rect.x, (float)y, 1), MakeVector(rect.x + rect.width, (float)y + itemHeight, 1), MFVector::blue);
 
-		if(MFTypes_PointInRect(x, y, &rect))
-			bDark = true;
+		MFFont_BlitText(pFont, x, y + to, MFVector::yellow, pItems[a].text);
+
+		if(pIcons && pItems[a].icon > -1)
+		{
+//			MFMaterial_SetMaterial(pIcons);
+			//...
+		}
+
+		y += (int)itemHeight;
 	}
-
-	// outline?
-	if(bOutline)
-		MFPrimitive_DrawUntexturedQuad(rect.x - 2, rect.y - 2, rect.width + 4, rect.height + 4, outlineColour);
-
-	MFMaterial_SetMaterial(pMaterial);
-	MFPrimitive_DrawQuad(rect.x, rect.y, rect.width, rect.height, bDark ? MakeVector(0.6f, 0.6f, 0.6f, 1.f)*colour : colour, uvs.x, uvs.y, uvs.x+uvs.width, uvs.y+uvs.height);
 }
 
-void Button::SetPos(const MFRect *pPos)
+void ListBox::SetPos(const MFRect *pPos)
 {
 	UpdateRect(pPos);
 }
 
-void Button::SetImage(const MFMaterial *pImage, const MFRect *pUVs, const MFVector &_colour)
+int ListBox::AddItem(const char *pText, int icon)
 {
-	pMaterial = pImage;
-	uvs = *pUVs;
-	colour = _colour;
-}
-
-void Button::SetOutline(bool bEnable, const MFVector &colour)
-{
-	bOutline = bEnable;
-	outlineColour = colour;
-}
-
-CheckBox *CheckBox::Create(const MFRect *pPosition, const char *pText, const MFVector &colour, int value, ChangeCallback *pCallback, void *pUserData, int ButtonID)
-{
-	CheckBox *pNew = (CheckBox*)MFHeap_Alloc(sizeof(CheckBox));
-	pNew = new(pNew) CheckBox(*pPosition);
-
-	pNew->pIcons = MFMaterial_Create("Icons");
-
-	MFRect uvs = { 0.5f - 0.25f*(float)value, 0.f, 0.25f, 0.25f };
-	MFRect buttonRect;
-	buttonRect.x = pPosition->x;
-	buttonRect.y = pPosition->y;
-	buttonRect.width = buttonRect.height = pPosition->height;
-	pNew->pButton = Button::Create(pNew->pIcons, &buttonRect, &uvs, MFVector::one, ButtonCallback, pNew, 0, false);
-
-	MFString_Copy(pNew->text, pText);
-
-	pNew->pFont = Game::GetCurrent()->GetTextFont();
-	pNew->colour = colour;
-	pNew->isPressed = false;
-	pNew->value = value;
-	pNew->buttonID = ButtonID;
-	pNew->pCallback = pCallback;
-	pNew->pUserData = pUserData;
-
-	return pNew;
-}
-
-void CheckBox::Destroy()
-{
-	pButton->Destroy();
-	delete this;
-}
-
-bool CheckBox::HandleInputEvent(InputEvent ev, InputInfo &info)
-{
-	return pButton->HandleInputEvent(ev, info);
-}
-
-void CheckBox::Draw()
-{
-	pButton->Draw();
-
-	if(text[0])
+	if(numItems == numAllocated)
 	{
-		float height = MFFont_GetFontHeight(pFont);
-		MFFont_BlitText(pFont, (int)(rect.x + rect.height + 5), (int)(rect.y + (rect.height - height)*0.5f), colour, text);
+		numAllocated *= 2;
+		MFHeap_Realloc(pItems, sizeof(ListItem) * numAllocated);
 	}
+
+	MFString_Copy(pItems[numItems].text, pText);
+	pItems[numItems].icon = icon;
+	return numItems++;
 }
 
-void CheckBox::SetFont(MFFont *pFont)
+const char *ListBox::GetItemText(int item)
 {
-	pFont = pFont;
+	if(item >= 0 && item < numItems)
+		return pItems[item].text;
+	return NULL;
 }
-
-int CheckBox::SetValue(int newValue)
-{
-	int oldValue = value;
-	value = newValue;
-
-	MFRect uvs = { 0.5f - 0.25f*(float)value, 0.f, 0.25f, 0.25f };
-	pButton->SetImage(pIcons, &uvs, MFVector::white);
-
-	return oldValue;
-}
-
-void CheckBox::ButtonCallback(int button, void *pUserData, int buttonID)
-{
-	CheckBox *pCB = (CheckBox*)pUserData;
-	pCB->value = 1 - pCB->value;
-
-	MFRect uvs = { 0.5f - 0.25f*(float)pCB->value, 0.f, 0.25f, 0.25f };
-	pCB->pButton->SetImage(pCB->pIcons, &uvs, MFVector::white);
-
-	if(pCB->pCallback)
-		pCB->pCallback(pCB->value, pCB->pUserData, pCB->buttonID);
-}
-*/

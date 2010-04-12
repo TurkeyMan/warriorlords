@@ -27,7 +27,6 @@ public:
 	virtual void Deselect();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
-	virtual int UpdateInput();
 
 	static void EndTurn(int button, void *pUserData, int buttonID);
 	static void FinishTurn(int selection, void *pUserData);

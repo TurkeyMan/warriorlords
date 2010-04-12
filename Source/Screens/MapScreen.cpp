@@ -271,12 +271,6 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 	return false;
 }
 
-int MapScreen::UpdateInput()
-{
-
-	return 0;
-}
-
 int MapScreen::Update()
 {
 	pGame->GetMap()->Update();
@@ -421,7 +415,7 @@ void MapScreen::Draw()
 
 void MapScreen::Deselect()
 {
-
+	pInputManager->PopReceiver(this);
 }
 
 void MapScreen::EndTurn(int button, void *pUserData, int buttonID)

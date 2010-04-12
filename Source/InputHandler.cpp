@@ -370,6 +370,12 @@ bool InputManager::Dispatch(InputInfo &info, InputReceiver *pExplicitReceiver)
 		if(!pR->bSpacial || /*info.device != IDD_Mouse ||*/ (info.hover.x >= pR->rect.x && info.hover.x < pR->rect.x + pR->rect.width &&
 														 info.hover.y >= pR->rect.y && info.hover.y < pR->rect.y + pR->rect.height))
 		{
+			if(pR->bSpacial)
+			{
+				info.hover.x -= pR->rect.x;
+				info.hover.y -= pR->rect.y;
+			}
+
 			if(pR->HandleInputEvent(info.ev, info))
 				return true;
 		}

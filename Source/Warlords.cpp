@@ -1,9 +1,8 @@
 #include "Warlords.h"
 #include "Display.h"
+#include "Screens/MenuScreen.h"
 #include "Game.h"
 #include "Editor.h"
-#include "Screens/MapScreen.h"
-#include "Screens/Battle.h"
 
 #include "MFFileSystem.h"
 #include "FileSystem/MFFileSystemNative.h"
@@ -16,10 +15,10 @@
 /*** Global Stuff ***/
 InputManager *pInputManager = NULL;
 
-Game *pGame;
-
+Game *pGame = NULL;
 Editor *pEditor = NULL;
-Battle *pBattle = NULL;
+
+MenuScreen *pMenu = NULL;
 
 MFSystemCallbackFunction pInitFujiFS;
 
@@ -51,19 +50,8 @@ void Game_Init()
 
 	pInputManager = new InputManager;
 
-	const char *pMapName = "Map_60x60x4";
-
-#if 1
-	pGame = new Game(pMapName);
-	Game::SetCurrent(pGame);
-	pGame->BeginGame();
-#else
-	pGame = new Game(pMapName, true);
-	Game::SetCurrent(pGame);
-
-	pEditor = new Editor(pGame);
-	Screen::SetNext(pEditor);
-#endif
+	pMenu = new MenuScreen;
+	Screen::SetNext(pMenu);
 }
 
 void Game_Update()
@@ -103,6 +91,9 @@ void Game_Deinit()
 
 	if(pGame)
 		delete pGame;
+
+	if(pMenu)
+		delete pMenu;
 }
 
 int GameMain(MFInitParams *pInitParams)
@@ -116,8 +107,13 @@ int GameMain(MFInitParams *pInitParams)
 #endif
 	SetDisplayOrientation(DO_90CW);
 #else
+#if defined(_DEBUG)
+	gDefaults.display.displayWidth = 1280;
+	gDefaults.display.displayHeight = 720;
+#else
 	gDefaults.display.displayWidth = 800;
 	gDefaults.display.displayHeight = 480;
+#endif
 #endif
 
 //	gDefaults.input.useDirectInputKeyboard = false;
