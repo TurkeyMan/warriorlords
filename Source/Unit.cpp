@@ -942,7 +942,7 @@ MapTile *Castle::GetTile(int index)
 
 bool Castle::IsEmpty()
 {
-	if(pTile[0].GetNumGroups() != 0 || pTile[1].GetNumGroups() != 0)
+	if(pTile[0].GetNumUnits() != 0 || pTile[1].GetNumUnits() != 0)
 		return false;
 
 	// check the second row... very painfully mind you.
@@ -950,7 +950,7 @@ bool Castle::IsEmpty()
 	Map *pMap = pUnitDefs->GetGame()->GetMap();
 	pMap->GetMapSize(&width, NULL);
 	MapTile *pT = pTile + width;
-	return pT[0].GetNumGroups() == 0 && pTile[1].GetNumGroups() == 0;
+	return pT[0].GetNumUnits() == 0 && pT[1].GetNumUnits() == 0;
 }
 
 Group *Castle::GetMercGroup()
