@@ -311,9 +311,10 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 			pCurrentTile->RemoveGroup(pGroup);
 			pTarget->AddGroup(pGroup);
 			pMap->ClaimFlags(pTarget->GetX(), pTarget->GetY(), pGroup->GetPlayer());
-			pGroup->pPath->Destroy();
-			pGroup->pPath = NULL;
 		}
+
+		pGroup->pPath->Destroy();
+		pGroup->pPath = NULL;
 	}
 
 	Screen::SetNext(pMapScreen);
@@ -411,6 +412,15 @@ Group *Game::CreateUnit(int unit, Castle *pCastle)
 
 void Game::PushGroupPosition(Group *pGroup)
 {
+	// if the undo stack is full
+	if(undoDepth == MaxUndo)
+	{
+		for(int a=1; a<MaxUndo; ++a)
+			undoStack[a-1] = undoStack[a];
+
+		--undoDepth;
+	}
+
 	UndoStack &s = undoStack[undoDepth++];
 
 	// push group

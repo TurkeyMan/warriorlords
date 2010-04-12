@@ -28,6 +28,8 @@ class MapTile
 {
 	friend class Map;
 public:
+	static const int MaxUnitsOnTile = 20;
+
 	int GetX() { return x; }
 	int GetY() { return y; }
 
@@ -47,7 +49,7 @@ public:
 	Group *GetGroup(int group);
 
 	int GetNumUnits();
-	int GetAvailableUnitSpace() { return 10 - GetNumUnits(); }
+	int GetAvailableUnitSpace() { return MaxUnitsOnTile - GetNumUnits(); }
 
 	Group *FindUnitGroup(Unit *pUnit);
 	Unit *FindVehicle();

@@ -942,7 +942,7 @@ MapTile *Castle::GetTile(int index)
 
 bool Castle::IsEmpty()
 {
-	if(pTile->GetNumGroups() != 0 || pTile[1].GetNumGroups() != 0)
+	if(pTile[0].GetNumGroups() != 0 || pTile[1].GetNumGroups() != 0)
 		return false;
 
 	// check the second row... very painfully mind you.

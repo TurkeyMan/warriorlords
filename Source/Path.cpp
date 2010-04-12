@@ -292,7 +292,7 @@ bool Path::FindPath(Group *pGroup, int destX, int destY)
 						tg += 50;
 
 					// avoid full squares
-					if(pTile->IsFriendlyTile(player) && pTile->GetNumUnits() + numUnits > 10)
+					if(pTile->IsFriendlyTile(player) && pTile->GetNumUnits() + numUnits > MapTile::MaxUnitsOnTile)
 						tg += 100;
 
 					bool isBetter = false;

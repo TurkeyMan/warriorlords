@@ -100,7 +100,8 @@ protected:
 		int unitMove[10];
 	};
 
-	UndoStack undoStack[64];
+	static const int MaxUndo = 64;
+	UndoStack undoStack[MaxUndo];
 	int undoDepth;
 
 	static Game *pCurrent;

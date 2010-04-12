@@ -30,7 +30,7 @@ protected:
 		int rank;
 		Unit *pUnit;
 		Group *pGroup;
-	} units[20];
+	} units[MapTile::MaxUnitsOnTile * 2];
 
 	int numUnits;
 	int numFront;

@@ -196,7 +196,7 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 							Unit *pHero = pSelection->GetHero();
 							if(pHero)
 							{
-								if(pTile->GetNumUnits() < 10 - pSelection->GetNumUnits())
+								if(pSelection->GetNumUnits() <= pTile->GetAvailableUnitSpace())
 								{
 									// clear the undo stack
 									pGame->ClearUndoStack();

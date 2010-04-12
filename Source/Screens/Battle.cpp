@@ -246,7 +246,7 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 
 		for(int b=0; b<5; ++b)
 		{
-			if(b < pTileGroup->GetNumForwardUnits())
+			if(b < pTileGroup->GetNumForwardUnits() && armies[1].numUnits < 10)
 			{
 				BattleUnit *pUnit = &armies[1].units[armies[1].numUnits++];
 				pUnit->Init(pTileGroup->GetForwardUnit(b));
@@ -263,7 +263,7 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 					++armies[1].numRearUnits;
 				}
 			}
-			if(b < pTileGroup->GetNumRearUnits())
+			if(b < pTileGroup->GetNumRearUnits() && armies[1].numUnits < 10)
 			{
 				BattleUnit *pUnit = &armies[1].units[armies[1].numUnits++];
 				pUnit->Init(pTileGroup->GetRearUnit(b));
@@ -285,7 +285,7 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 		armies[1].player = pTileGroup->GetPlayer();
 	}
 
-	// unit the units
+	// position the units
 	int rowSeparation[2][2];
 	rowSeparation[0][0] = (centerLine + 64) / (armies[0].numForwardUnits + 1);
 	rowSeparation[0][1] = (centerLine + 64) / (armies[0].numRearUnits + 1);
