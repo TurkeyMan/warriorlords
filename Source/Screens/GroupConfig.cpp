@@ -266,13 +266,23 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 							pTile->RemoveGroup(pGroup);
 							pGroup->Destroy();
 						}
+
+						bFound = true;
 					}
+				}
+
+				if(bFound)
+				{
+					// clear the undo stack
+					Game::GetCurrent()->ClearUndoStack();
 				}
 
 				dragUnit = -1;
 			}
 			else if(pDragGroup)
 			{
+				bool bClearUndo = false;
+
 				// check if we're swapping vehicles
 				int unit = GetUnitFromPoint(info.up.x, info.up.y);
 				if(unit > -1 && units[unit].pUnit->IsVehicle() && pDragGroup->GetNumUnits() == 0 && pDragGroup->GetVehicle())
@@ -286,6 +296,8 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 					pDragGroup->AddUnit(pV2);
 					units[0].pGroup->AddUnit(pV1);
+
+					bClearUndo = true;
 				}
 				else
 				{
@@ -309,6 +321,8 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 							if(pTarget->AddUnit(pUnit))
 								pDragGroup->RemoveUnit(pUnit);
 						}
+
+						bClearUndo = true;
 					}
 					else
 					{
@@ -331,6 +345,8 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 								if(pExtraGroups[group]->AddUnit(pUnit))
 									pDragGroup->RemoveUnit(pUnit);
 							}
+
+							bClearUndo = true;
 						}
 					}
 				}
@@ -339,6 +355,12 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 				{
 					pTile->RemoveGroup(pDragGroup);
 					pDragGroup->Destroy();
+				}
+
+				if(bClearUndo)
+				{
+					// clear the undo stack
+					Game::GetCurrent()->ClearUndoStack();
 				}
 
 				pDragGroup = NULL;

@@ -39,6 +39,8 @@ Game::Game(const char *_pMap, bool bEditable)
 	currentPlayer = 0;
 	currentTurn = 0;
 
+	undoDepth = 0;
+
 	if(bEditable)
 	{
 		// init the players
@@ -221,6 +223,9 @@ void Game::BeginTurn(int player)
 		return;
 	}
 
+	// clear the last players undo stack
+	ClearUndoStack();
+
 	// focus map on starting castle, oooor maybe not (focus on last focused position?)
 	pMap->CenterView(players[player].cursorX, players[player].cursorY);
 }
@@ -402,6 +407,75 @@ Group *Game::CreateUnit(int unit, Castle *pCastle)
 	}
 
 	return NULL;
+}
+
+void Game::PushGroupPosition(Group *pGroup)
+{
+	UndoStack &s = undoStack[undoDepth++];
+
+	// push group
+	s.pGroup = pGroup;
+
+	// push position
+	MapTile *pTile = pGroup->GetTile();
+	s.x = pTile->GetX();
+	s.y = pTile->GetY();
+
+	// push unit movements
+	if(pGroup->pVehicle)
+	{
+		// push vehicle movement
+		s.vehicleMove = pGroup->pVehicle->GetMovement();
+	}
+	else
+	{
+		for(int a=0; a<pGroup->GetNumUnits(); ++a)
+		{
+			// push unit movement
+			Unit *pUnit = pGroup->GetUnit(a);
+			s.unitMove[a] = pUnit->GetMovement();
+		}
+	}
+}
+
+Group *Game::UndoLastMove()
+{
+	if(!undoDepth)
+		return NULL;
+
+	UndoStack &s = undoStack[--undoDepth];
+
+	// revert to old tile
+	MapTile *pTile = s.pGroup->GetTile();
+	pTile->RemoveGroup(s.pGroup);
+	MapTile *pOldTile = pMap->GetTile(s.x, s.y);
+	pOldTile->AddGroup(s.pGroup);
+
+	// restore movement
+	if(s.pGroup->pVehicle)
+	{
+		// restore vehicle movement
+		s.pGroup->pVehicle->SetMovement(s.vehicleMove);
+	}
+	else
+	{
+		for(int a=0; a<s.pGroup->GetNumUnits(); ++a)
+		{
+			// restore unit movement
+			Unit *pUnit = s.pGroup->GetUnit(a);
+			pUnit->SetMovement(s.unitMove[a]);
+		}
+	}
+
+	// set the groups path target to the position we undid
+	s.pGroup->FindPath(pTile->GetX(), pTile->GetY());
+
+	return s.pGroup;
+}
+
+void Game::ClearUndoStack()
+{
+	undoDepth = 0;
 }
 
 void Game::DrawWindow(const MFRect &rect)

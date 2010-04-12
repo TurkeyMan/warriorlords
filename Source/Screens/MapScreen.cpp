@@ -12,6 +12,7 @@
 MapScreen::MapScreen(Game *_pGame)
 {
 	pGame = _pGame;
+	pMap = pGame->GetMap();
 	pSelection = NULL;
 
 	bMoving = false;
@@ -21,7 +22,6 @@ MapScreen::MapScreen(Game *_pGame)
 	pSmallNumbers = pGame->GetSmallNumbersFont();
 
 	// buttons
-	Map *pMap = pGame->GetMap();
 	Tileset *pTiles = pMap->GetTileset();
 	UnitDefinitions *pUnits = pGame->GetUnitDefs();
 
@@ -33,20 +33,28 @@ MapScreen::MapScreen(Game *_pGame)
 	pTiles->GetTileSize(&tileWidth, &tileHeight);
 
 	MFRect uvs, pos = { 0, 0, (float)tileWidth, (float)tileHeight };
+	float texelCenterOffset = MFRenderer_GetTexelCenterOffset() / 256.f;
 
 	// end turn button
 	MFRect display;
 	GetDisplayRect(&display);
 	pos.x = display.width - (16.f + (float)tileWidth);
 	pos.y = display.height - (16.f + (float)tileHeight);
-	uvs.x = 0.25f + (1.f/256.f); uvs.y = 0.f + (1.f/256.f);
+	uvs.x = 0.25f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
 	uvs.width = 0.25f; uvs.height = 0.25f;
 	pEndTurn = Button::Create(pIcons, &pos, &uvs, MFVector::one, EndTurn, this, 0, false);
 
 	// minimap button
+	pos.x = display.width - (16.f + (float)tileWidth);
 	pos.y = 16.f;
-	uvs.x = 0.75f + (1.f/256.f); uvs.y = 0.f + (1.f/256.f);
+	uvs.x = 0.75f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
 	pMiniMap = Button::Create(pIcons, &pos, &uvs, MFVector::one, ShowMiniMap, this, 0, false);
+
+	// undo button
+	pos.x = 16.f;
+	pos.y = display.height - (16.f + (float)tileHeight);
+	uvs.x = 0.f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
+	pUndo = Button::Create(pIcons, &pos, &uvs, MFVector::one, UndoMove, this, 0, false);
 }
 
 MapScreen::~MapScreen()
@@ -61,6 +69,7 @@ void MapScreen::Select()
 	pInputManager->PushReceiver(pGame->GetMap());
 	pInputManager->PushReceiver(pEndTurn);
 	pInputManager->PushReceiver(pMiniMap);
+	pInputManager->PushReceiver(pUndo);
 }
 
 bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
@@ -83,8 +92,6 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 			// if a unit is moving, disable interaction
 			if(bMoving)
 				return true;
-
-			Map *pMap = pGame->GetMap();
 
 			// calculate the cursor position
 			int cursorX, cursorY;
@@ -139,46 +146,49 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 								}
 							}
 
-							if(pTile->GetNumUnits() == 0)
+							if(pSelection->GetNumUnits() > 0)
 							{
-								if(pCastle)
+								// clear the undo stack
+								pGame->ClearUndoStack();
+
+								if(pTile->GetNumUnits() == 0)
 								{
-									// if it's a merc castle, we need to fight the mercs
-									if(pCastle->player == -1)
+									if(pCastle)
 									{
-										// create merc group
-										Group *pGroup = pCastle->GetMercGroup();
-										pTile->AddGroup(pGroup);
-										pGame->BeginBattle(pSelection, pTile);
-										break;
+										// if it's a merc castle, we need to fight the mercs
+										if(pCastle->player == -1)
+										{
+											// create merc group
+											Group *pGroup = pCastle->GetMercGroup();
+											pTile->AddGroup(pGroup);
+											pGame->BeginBattle(pSelection, pTile);
+											break;
+										}
+										else
+										{
+											// the castle is empty! claim that shit!
+											pCastle->Capture(pGame->CurrentPlayer());
+										}
 									}
 									else
 									{
-										// the castle is empty! claim that shit!
-										pCastle->Capture(pGame->CurrentPlayer());
+										// there must be empty enemy vehicles on the tile, we'll capture the empty vehicles
+										for(int a=0; a<pTile->GetNumGroups(); ++a)
+											pTile->GetGroup(a)->SetPlayer(pGame->CurrentPlayer());
 									}
 								}
 								else
-								{
-									// there must be empty enemy vehicles on the tile, we'll capture the empty vehicles
-									for(int a=0; a<pTile->GetNumGroups(); ++a)
-										pTile->GetGroup(a)->SetPlayer(pGame->CurrentPlayer());
-								}
-							}
-							else
-							{
-								if(pSelection->GetNumUnits() > 0)
 								{
 									// begin the battle!
 									pGame->BeginBattle(pSelection, pTile);
 								}
-								else
-								{
-									// can't attack with an empty vehicle!
-									// TODO: play sound?
-								}
-								break;
 							}
+							else
+							{
+								// can't attack with an empty vehicle!
+								// TODO: play sound?
+							}
+							break;
 						}
 						else if(pTile->GetType() == OT_Special)
 						{
@@ -188,6 +198,9 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 							{
 								if(pTile->GetNumUnits() < 10 - pSelection->GetNumUnits())
 								{
+									// clear the undo stack
+									pGame->ClearUndoStack();
+
 									// move to ruin
 									pSelection->GetTile()->RemoveGroup(pSelection);
 									pTile->AddGroup(pSelection);
@@ -219,6 +232,9 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 						// move to destination...
 						bMoving = true;
 						countdown = 0.f;
+
+						// push the move to the undo stack
+						pGame->PushGroupPosition(pSelection);
 						break;
 					}
 				}
@@ -271,7 +287,6 @@ int MapScreen::Update()
 
 		while(countdown <= 0.f)
 		{
-			Map *pMap = pGame->GetMap();
 			Step *pStep = pSelection->pPath->GetPath();
 			int x = pStep->x;
 			int y = pStep->y;
@@ -315,8 +330,6 @@ int MapScreen::Update()
 
 void MapScreen::Draw()
 {
-	Map *pMap = pGame->GetMap();
-
 	pMap->Draw();
 
 	if(pSelection)
@@ -395,6 +408,8 @@ void MapScreen::Draw()
 
 	pEndTurn->Draw();
 	pMiniMap->Draw();
+	if(pGame->GetUndoDepth())
+		pUndo->Draw();
 
 	// now draw any UI that might be on the screen.
 	groupConfig.Draw();
@@ -430,6 +445,20 @@ void MapScreen::ShowMiniMap(int button, void *pUserData, int buttonID)
 	pThis->miniMap.Show(Game::GetCurrent()->GetMap());
 }
 
+void MapScreen::UndoMove(int button, void *pUserData, int buttonID)
+{
+	MapScreen *pThis = (MapScreen*)pUserData;
+
+	Group *pGroup = pThis->pGame->UndoLastMove();
+	if(pGroup)
+	{
+		MapTile *pTile = pGroup->GetTile();
+		pThis->pMap->CenterView(pTile->GetX(), pTile->GetY());
+
+		pThis->SelectGroup(pGroup);
+	}
+}
+
 void MapScreen::SelectGroup(Group *pGroup)
 {
 	if(pSelection == pGroup)
@@ -443,7 +472,6 @@ void MapScreen::SelectGroup(Group *pGroup)
 
 	if(pGroup->pathX != -1 && pGroup->pathY != -1)
 	{
-		Map *pMap = pGame->GetMap();
 		pSelection->pPath = pMap->FindPath(pGroup, pGroup->pathX, pGroup->pathY);
 	}
 }

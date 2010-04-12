@@ -1295,6 +1295,15 @@ void Group::SetPlayer(int _player)
 	}
 }
 
+void Group::FindPath(int x, int y)
+{
+	pathX = x;
+	pathY = y;
+
+	if(bSelected)
+		pPath = Game::GetCurrent()->GetMap()->FindPath(this, x, y);
+}
+
 void Item::StatMod::Parse(const char *pString)
 {
 	value = 0.f;

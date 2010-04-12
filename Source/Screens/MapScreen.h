@@ -32,6 +32,7 @@ public:
 	static void EndTurn(int button, void *pUserData, int buttonID);
 	static void FinishTurn(int selection, void *pUserData);
 	static void ShowMiniMap(int button, void *pUserData, int buttonID);
+	static void UndoMove(int button, void *pUserData, int buttonID);
 
 	void SelectGroup(Group *pGroup);
 	void DeselectGroup();
@@ -43,6 +44,7 @@ protected:
 	MiniMap miniMap;
 
 	Game *pGame;
+	Map *pMap;
 
 	MFMaterial *pIcons;
 	MFFont *pFont;
@@ -50,6 +52,7 @@ protected:
 
 	Button *pEndTurn;
 	Button *pMiniMap;
+	Button *pUndo;
 
 	Group *pSelection;
 

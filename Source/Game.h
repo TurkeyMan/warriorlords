@@ -51,6 +51,11 @@ public:
 
 	Group *CreateUnit(int unit, Castle *pCastle);
 
+	void PushGroupPosition(Group *pGroup);
+	Group *UndoLastMove();
+	int GetUndoDepth() { return undoDepth; }
+	void ClearUndoStack();
+
 	void DrawWindow(const MFRect &rect);
 	void DrawLine(float sx, float sy, float dx, float dy);
 
@@ -86,6 +91,17 @@ protected:
 	// game state data
 	int currentPlayer;
 	int currentTurn;
+
+	struct UndoStack
+	{
+		Group *pGroup;
+		int x, y;
+		int vehicleMove;
+		int unitMove[10];
+	};
+
+	UndoStack undoStack[64];
+	int undoDepth;
 
 	static Game *pCurrent;
 };

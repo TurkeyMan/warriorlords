@@ -348,6 +348,7 @@ public:
 
 	bool IsRanged() { return pUnitDefs->IsRanged(details.attackClass); }
 
+	void SetMovement(int _movement) { movement = _movement; }
 	int GetMovement() { return movement; }
 	int GetTerrainPenalty(int terrainType);
 	void GetTerrainPenalties(int *pTerrainPenalties);
@@ -485,6 +486,7 @@ public:
 	Unit *GetFeatureUnit() const { return GetUnit(0); }
 	Unit *GetVehicle() const { return pVehicle; }
 
+	void FindPath(int x, int y);
 	Path *GetPath() const { return pPath; }
 
 //protected:
