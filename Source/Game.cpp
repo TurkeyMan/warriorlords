@@ -75,6 +75,7 @@ Game::~Game()
 void Game::BeginGame()
 {
 	const int numRaces = 4;
+	const int numColours = 8;//numRaces;
 
 	// setup players
 	for(int a=0; a<8; ++a)
@@ -86,11 +87,6 @@ void Game::BeginGame()
 		players[a].pHero = NULL;
 	}
 
-	players[0].race = 1;
-	players[1].race = 2;
-	players[2].race = 1;
-	players[3].race = 3;
-
 	// construct the map
 	pMap->ConstructMap();
 
@@ -99,9 +95,9 @@ void Game::BeginGame()
 
 	for(int a=0; a<numRaces; ++a)
 	{
-		int colour = players[a].race;
-		while(bColoursTaken[colour-1])
-			colour = 1 + (MFRand() % numRaces);
+		int colour;
+		do colour = 1 + (MFRand() % numColours);
+		while(bColoursTaken[colour-1]);
 
 		players[a].colour = pUnitDefs->GetRaceColour(colour);
 		bColoursTaken[colour-1] = true;
