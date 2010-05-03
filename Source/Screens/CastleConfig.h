@@ -9,7 +9,7 @@ public:
 	CastleConfig();
 	virtual ~CastleConfig();
 
-	virtual bool Draw();
+	virtual bool DrawContent();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 

@@ -15,11 +15,8 @@ MiniMap::~MiniMap()
 {
 }
 
-bool MiniMap::Draw()
+bool MiniMap::DrawContent()
 {
-	if(!Window::Draw())
-		return false;
-
 	// draw map
 	MFMaterial_SetMaterial(pMiniMap);
 
@@ -30,7 +27,7 @@ bool MiniMap::Draw()
 	float texelCenterX = texelCenter / tx;
 	float texelCenterY = texelCenter / ty;
 
-	MFPrimitive_DrawQuad(window.x + 16.f, window.y + 16.f, tx, ty, MFVector::one, texelCenterX, texelCenterY, 1.f+texelCenterX, 1.f+texelCenterY);
+	MFPrimitive_DrawQuad(window.x, window.y, tx, ty, MFVector::one, texelCenterX, texelCenterY, 1.f+texelCenterX, 1.f+texelCenterY);
 
 	return true;
 }
@@ -59,10 +56,11 @@ bool MiniMap::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 void MiniMap::Show(Map *_pMap)
 {
-	Window::Show();
-
 	pMap = _pMap;
 	pMiniMap = pMap->GetMinimap(&width, &height);
+
+	SetWindowSize((float)width, (float)height);
+	Window::Show();
 }
 
 void MiniMap::Hide()

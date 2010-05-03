@@ -116,6 +116,7 @@ protected:
 	ObjectType brushType[2];
 	int brushIndex[2];
 	int brush;
+	int brushSize;
 
 	bool bPaintMode;
 	bool bRemoveRoad;

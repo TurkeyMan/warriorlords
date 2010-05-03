@@ -11,7 +11,7 @@ public:
 	RequestBox();
 	virtual ~RequestBox();
 
-	virtual bool Draw();
+	virtual bool DrawContent();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 

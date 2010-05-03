@@ -9,7 +9,7 @@ public:
 	MiniMap();
 	virtual ~MiniMap();
 
-	virtual bool Draw();
+	virtual bool DrawContent();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 

@@ -27,6 +27,7 @@ Editor::Editor(Game *pGame)
 	brushIndex[0] = 0;
 	brushIndex[1] = 1;
 	brush = 1;
+	brushSize = 2;
 
 	editRace = 0;
 	editRegion = 15;
@@ -182,13 +183,16 @@ bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 	if(bPaintMode)
 	{
+		int cursorX, cursorY;
+		float  cx, cy;
+		pMap->GetCursor(info.hover.x, info.hover.y, &cx, &cy);
+		cursorX = brushType[brush] == OT_Terrain ? (int)(cx * 2.f) : (int)cx;
+		cursorY = brushType[brush] == OT_Terrain ? (int)(cy * 2.f) : (int)cy;
+
 		switch(ev)
 		{
 			case IE_Down:
 			{
-				int cursorX, cursorY;
-				pMap->GetCursor(info.down.x, info.down.y, &cursorX, &cursorY);
-
 				ObjectType detail = pMap->GetDetailType(cursorX, cursorY);
 
 				if(brushType[brush] == OT_Road)
@@ -224,9 +228,6 @@ bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
 			}
 			case IE_Drag:
 			{
-				int cursorX, cursorY;
-				pMap->GetCursor(info.drag.x, info.drag.y, &cursorX, &cursorY);
-
 				if(cursorX != lastX || cursorY != lastY)
 				{
 					switch(brushType[brush])
@@ -238,8 +239,51 @@ bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
 						}
 						case OT_Terrain:
 						{
-							int terrain = brushIndex[brush];
-							pMap->SetTerrain(cursorX, cursorY, terrain, terrain, terrain, terrain);
+							if(brushSize == 1)
+							{
+								int terrain = brushIndex[brush];
+
+								uint32 t = pMap->GetTerrainAt(cursorX >> 1, cursorY >> 1);
+								int tl = DecodeTL(t);
+								int tr = DecodeTR(t);
+								int bl = DecodeBL(t);
+								int br = DecodeBR(t);
+								uint32 mask;
+
+								if(cursorX & 1)
+								{
+									if(cursorY & 1)
+									{
+										br = terrain;
+										mask = 0xFF000000;
+									}
+									else
+									{
+										tr = terrain;
+										mask = 0xFF0000;
+									}
+								}
+								else
+								{
+									if(cursorY & 1)
+									{
+										bl = terrain;
+										mask = 0xFF00;
+									}
+									else
+									{
+										tl = terrain;
+										mask = 0xFF;
+									}
+								}
+
+								pMap->SetTerrain(cursorX >> 1, cursorY >> 1, tl, tr, bl, br, mask);
+							}
+							else
+							{
+								int terrain = brushIndex[brush];
+								pMap->SetTerrain(cursorX >> 1, cursorY >> 1, terrain, terrain, terrain, terrain);
+							}
 							break;
 						}
 						case OT_Road:
@@ -332,6 +376,8 @@ void Editor::Draw()
 	static bool bDrawDebug = false;
 	if(MFInput_WasPressed(Key_F1, IDD_Keyboard))
 		bDrawDebug = !bDrawDebug;
+	if(MFInput_WasPressed(Key_F2, IDD_Keyboard))
+		brushSize = brushSize == 1 ? 2 : 1;
 
 	if(bDrawDebug)
 		pMap->DrawDebug();
@@ -834,7 +880,13 @@ void CastleEdit::Hide()
 	// update the castle template
 	pTemplate->numBuildUnits = pCastle->details.numBuildUnits;
 	for(int a=0; a<pTemplate->numBuildUnits; ++a)
+	{
 		pTemplate->buildUnits[a] = pCastle->details.buildUnits[a];
+
+		UnitDetails *pDetails = pCastle->pUnitDefs->GetUnitDetails(pTemplate->buildUnits[a].unit);
+		pTemplate->buildUnits[a].buildTime -= pDetails->buildTime;
+		pTemplate->buildUnits[a].cost -= pDetails->cost;
+	}
 }
 
 void CastleEdit::SelectUnit(int button, void *pUserData, int buttonID)
@@ -869,10 +921,10 @@ void CastleEdit::SetUnit(int button, void *pUserData, int buttonID)
 	BuildUnit &unit = pThis->pCastle->details.buildUnits[selected];
 	UnitDetails *pDetails = pDefs->GetUnitDetails(buttonID);
 	unit.unit = buttonID;
-	unit.cost = pDetails->cost;
-	unit.buildTime = pDetails->buildTime;
+	unit.cost = buttonID >= 0 ? pDetails->cost : 0;
+	unit.buildTime = buttonID >= 0 ? pDetails->buildTime : 0;
 
-	pThis->pCastle->buildTime = unit.buildTime;
+	pThis->pCastle->buildTime = buttonID >= 0 ? unit.buildTime : 0;
 
 	// update the button image
 	if(buttonID != -1)

@@ -86,6 +86,11 @@ void Game::BeginGame()
 		players[a].pHero = NULL;
 	}
 
+	players[0].race = 1;
+	players[1].race = 2;
+	players[2].race = 1;
+	players[3].race = 3;
+
 	// construct the map
 	pMap->ConstructMap();
 

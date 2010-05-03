@@ -21,22 +21,16 @@ Window::Window(bool _bCloseButton)
 	pFont = Game::GetCurrent()->GetTextFont();
 	pIcons = MFMaterial_Create("Icons");
 
-	GetDisplayRect(&window);
-	window.x = window.width*0.5f - 240.f;
-	window.y = window.height*0.5f - 160.f;
-	window.width = 480.f;
-	window.height = 320.f;
-
 	if(bCloseButton)
 	{
 		float texelCenter = MFRenderer_GetTexelCenterOffset() / 256.f;
-		MFRect closePos = { window.x + window.width - 32.f, window.y, 32.f, 32.f };
+		MFRect closePos = { 0.f, 0.f, 32.f, 32.f };
 		MFRect closeUVs = { 0.25f + texelCenter, 0.25f + texelCenter, 0.125f, 0.125f };
 
 		pCloseButton = Button::Create(pIcons, &closePos, &closeUVs, MFVector::white, CloseWindow, this);
 	}
 
-	AdjustRect_Margin(&window, margin*2.f);
+	SetWindowSize(480.f - margin*2.f, 320.f - margin*2.f);
 }
 
 Window::~Window()
@@ -60,10 +54,18 @@ bool Window::Draw()
 
 	Game::GetCurrent()->DrawWindow(win);
 
+//	MFPrimitive_DrawUntexturedQuad(win.x, win.y, win.width, win.height, MakeVector(0,0,1,0.3f));
+//	MFPrimitive_DrawUntexturedQuad(window.x, window.y, window.width, window.height, MakeVector(0,0,1,0.3f));
+
+	// setup ortho rect to target window?
+	//...
+
+	bool bDidDraw = DrawContent();
+
 	if(bCloseButton)
 		pCloseButton->Draw();
 
-	return true;
+	return bDidDraw;
 }
 
 bool Window::HandleInputEvent(InputEvent ev, InputInfo &info)
@@ -98,4 +100,19 @@ void Window::CloseWindow(int button, void *pUserData, int buttonID)
 {
 	Window *pWindow = (Window*)pUserData;
 	pWindow->Hide();
+}
+
+void Window::SetWindowSize(float width, float height)
+{
+	GetDisplayRect(&window);
+	window.x = window.width*0.5f - width*0.5f;
+	window.y = window.height*0.5f - height*0.5f;
+	window.width = width;
+	window.height = height;
+
+	if(bCloseButton)
+	{
+		MFRect closePos = { window.x + window.width + margin - 32.f, window.y - margin, 32.f, 32.f };
+		pCloseButton->SetPos(&closePos);
+	}
 }

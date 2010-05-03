@@ -95,7 +95,10 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 			// calculate the cursor position
 			int cursorX, cursorY;
-			pMap->GetCursor(info.tap.x, info.tap.y, &cursorX, &cursorY);
+			float cx, cy;
+			pMap->GetCursor(info.tap.x, info.tap.y, &cx, &cy);
+			cursorX = (int)cx;
+			cursorY = (int)cy;
 
 			// get the tile
 			MapTile *pTile = pMap->GetTile(cursorX, cursorY);

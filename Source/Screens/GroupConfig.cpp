@@ -32,16 +32,13 @@ GroupConfig::~GroupConfig()
 {
 }
 
-bool GroupConfig::Draw()
+bool GroupConfig::DrawContent()
 {
 	if(!bVisible)
 		return false;
 
 	if(battleConfig.Draw())
 		return true;
-
-	if(!Window::Draw())
-		return false;
 
 	Game *pGame = Game::GetCurrent();
 	pGame->DrawLine(rear.x + 5.f, rear.y+rear.height, front.x + front.width - 5.f, rear.y+rear.height);

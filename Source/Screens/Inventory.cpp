@@ -23,11 +23,8 @@ Inventory::~Inventory()
 	MFMaterial_Destroy(pItems);
 }
 
-bool Inventory::Draw()
+bool Inventory::DrawContent()
 {
-	if(!Window::Draw())
-		return false;
-
 	Game::GetCurrent()->DrawLine(window.x + 16, window.y + 192, window.x + window.width - 16, window.y + 192);
 
 	float width = MFFont_GetStringWidth(pFont, "Inventory", MFFont_GetFontHeight(pFont));

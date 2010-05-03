@@ -94,7 +94,7 @@ public:
 	void DrawDebug();
 
 	void GetMapSize(int *pWidth, int *pHeight) { if(pWidth) *pWidth = mapWidth; if(pHeight) *pHeight = mapHeight; }
-	void GetCursor(float x, float y, int *pX, int *pY);
+	void GetCursor(float x, float y, float *pX, float *pY);
 	void GetVisibleTileSize(float *pWidth, float *pHeight);
 
 	void SetOffset(float x, float y);

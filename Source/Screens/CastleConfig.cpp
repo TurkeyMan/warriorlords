@@ -35,11 +35,8 @@ CastleConfig::~CastleConfig()
 {
 }
 
-bool CastleConfig::Draw()
+bool CastleConfig::DrawContent()
 {
-	if(!Window::Draw())
-		return false;
-
 	Game *pGame = Game::GetCurrent();
 	pGame->DrawLine(lower.x + 5.f, lower.y-4.f, lower.x + lower.width - 5.f, lower.y-4.f);
 	pGame->DrawLine(right.x - 4.f, right.y + 5.f, right.x - 4.f, right.y + right.height - 5.f);

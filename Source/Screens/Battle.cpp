@@ -390,7 +390,10 @@ int Battle::Update()
 
 			if(unit.stateTime)
 			{
-				unit.stateTime -= MFSystem_TimeDelta();
+				// this will pause the attacking player until their damage indicator disappears
+				// remove this and let units attack while showing damage???
+				if(unit.state != US_Engaging || unit.damageIndicatorTime == 0.f)
+					unit.stateTime -= MFSystem_TimeDelta();
 
 				if(unit.state == US_Engaging)
 				{
@@ -507,7 +510,7 @@ int Battle::Update()
 	pUnit = pActionHead;
 	while(pUnit)
 	{
-		if(!pUnit->bEngaged && pUnit->damageIndicatorTime == 0.f)
+		if(!pUnit->bEngaged)
 		{
 			bool bIsRanged = pUnit->pUnit->IsRanged();
 			if(bIsRanged || pUnit->row == 0 || armies[pUnit->army].numForwardUnits == 0)

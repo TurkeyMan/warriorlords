@@ -27,11 +27,8 @@ RequestBox::~RequestBox()
 	pNo->Destroy();
 }
 
-bool RequestBox::Draw()
+bool RequestBox::DrawContent()
 {
-	if(!Window::Draw())
-		return false;
-
 	MFFont_DrawTextJustified(pFont, message, MakeVector(window.x + 16.f, window.y + 32.f), window.width - 32.f, window.height - 128.f, MFFontJustify_Top_Center, MFFont_GetFontHeight(pFont) * 1.5f, MFVector::white);
 
 	pYes->Draw();

@@ -10,7 +10,7 @@ public:
 	GroupConfig();
 	virtual ~GroupConfig();
 
-	virtual bool Draw();
+	virtual bool DrawContent();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 

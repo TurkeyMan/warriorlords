@@ -11,11 +11,14 @@ public:
 	virtual ~Window();
 
 	virtual bool Draw();
+	virtual bool DrawContent() { return true; }
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 
 	virtual void Show();
 	virtual void Hide();
+
+	void SetWindowSize(float width, float height);
 
 	static const float margin;
 

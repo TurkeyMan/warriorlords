@@ -36,16 +36,13 @@ UnitConfig::~UnitConfig()
 {
 }
 
-bool UnitConfig::Draw()
+bool UnitConfig::DrawContent()
 {
 	if(!bVisible)
 		return false;
 
 	if(inventory.Draw())
 		return true;
-
-	if(!Window::Draw())
-		return false;
 
 	Game::GetCurrent()->DrawLine(window.x + 16, bottom.y - 5, window.x + window.width - 16, bottom.y - 5);
 

@@ -951,15 +951,15 @@ void Map::GetVisibleTileSize(float *pWidth, float *pHeight)
 		*pHeight = tileHeight*zoom;
 }
 
-void Map::GetCursor(float x, float y, int *pX, int *pY)
+void Map::GetCursor(float x, float y, float *pX, float *pY)
 {
 	float tileWidth, tileHeight;
 	GetVisibleTileSize(&tileWidth, &tileHeight);
 
 	if(pX)
-		*pX = (int)(xOffset + x / tileWidth);
+		*pX = xOffset + x / tileWidth;
 	if(pY)
-		*pY = (int)(yOffset + y / tileHeight);
+		*pY = yOffset + y / tileHeight;
 }
 
 bool Map::HandleInputEvent(InputEvent ev, InputInfo &info)
@@ -1761,6 +1761,7 @@ bool Map::PlaceCastle(int x, int y, int player)
 	pCastles[numCastles].player = player;
 	pCastles[numCastles].details.x = x;
 	pCastles[numCastles].details.y = y;
+	pCastles[numCastles].details.income = 50;
 	MFString_Copy(pCastles[numCastles].details.name, "Unnamed");
 	++numCastles;
 
@@ -1769,6 +1770,7 @@ bool Map::PlaceCastle(int x, int y, int player)
 	details.x = x;
 	details.y = y;
 	details.bCapital = player != -1;
+	details.income = 50;
 	MFString_Copy(details.name, "Unnamed");
 	return true;
 }
