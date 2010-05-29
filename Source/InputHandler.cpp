@@ -228,6 +228,14 @@ void InputManager::Update()
 		}
 	}
 
+	// track moved contacts
+	struct Moved
+	{
+		int contact;
+		float x, y;
+	} moved[16];
+	int numMoved = 0;
+
 	for(int a=0; a<MAX_CONTACTS; ++a)
 	{
 		if(!bCurrentContacts[a])
@@ -331,26 +339,69 @@ void InputManager::Update()
 				info.hover.y = pos.y;
 				info.hover.deltaX = pos.x - contacts[a].x;
 				info.hover.deltaY = pos.y - contacts[a].y;
-				
+
 				Dispatch(info, contacts[a].pExclusiveReceiver);
-				
+
 				float distX = pos.x - contacts[a].downX;
 				float distY = pos.y - contacts[a].downY;
 				if(MFSqrt(distX*distX + distY*distY) >= dragThreshold)
 					contacts[a].bDrag = true;
-				
+
 				if(contacts[a].bDrag && contacts[a].bState)
 				{
 					// send the drag event
 					info.ev = IE_Drag;
 					info.drag.startX = contacts[a].downX;
 					info.drag.startY = contacts[a].downY;
-					
+
 					Dispatch(info, contacts[a].pExclusiveReceiver);
 				}
-				
+
+				// store the old pos for further processing
+				moved[numMoved].x = contacts[a].x;
+				moved[numMoved].y = contacts[a].y;
+				moved[numMoved++].contact = a;
+
 				contacts[a].x = pos.x;
 				contacts[a].y = pos.y;
+			}
+		}
+	}
+
+	if(numMoved > 1)
+	{
+		// calculate rotation and zoom for each pair of contacts
+		for(int a=0; a<numMoved; ++a)
+		{
+			for(int b=a+1; b<numMoved; ++b)
+			{
+				MFVector center;
+				MFVector newa = MakeVector(contacts[moved[a].contact].x, contacts[moved[a].contact].y);
+				MFVector newDiff = MakeVector(contacts[moved[b].contact].x, contacts[moved[b].contact].y) - newa;
+				MFVector oldDiff = MakeVector(moved[b].x - moved[a].x, moved[b].y - moved[a].y);
+				center.Mad2(newDiff, 0.5f, newa);
+
+				float oldLen = oldDiff.Magnitude2();
+				float newLen = newDiff.Magnitude2();
+				float scale = newLen / oldLen;
+
+				InputInfo info;
+				InitEvent(info, IE_Pinch, moved[a].contact);
+				info.pinch.contact2 = moved[b].contact;
+				info.pinch.centerX = center.x;
+				info.pinch.centerY = center.y;
+				info.pinch.deltaScale = scale;
+
+				Dispatch(info, contacts[a].pExclusiveReceiver);
+
+				oldDiff.Mul2(oldDiff, 1.f/oldLen);
+				newDiff.Mul2(newDiff, 1.f/newLen);
+				float angle = oldDiff.GetAngle(newDiff);
+
+				info.ev = IE_Spin;
+				info.spin.deltaAngle = angle;
+
+				Dispatch(info, contacts[a].pExclusiveReceiver);
 			}
 		}
 	}
