@@ -975,14 +975,20 @@ bool Map::HandleInputEvent(InputEvent ev, InputInfo &info)
 			if(info.buttonID == moveButton)
 			{
 				pInputManager->SetExclusiveContactReceiver(info.contact, this);
+				xVelocity = yVelocity = 0.f;
 				return true;
 			}
+			break;
+		case IE_Up:
+			if(info.buttonID == moveButton)
+				isDragging = false;
 			break;
 		case IE_Drag:
 			if(info.buttonID == moveButton)
 			{
 				GetVisibleTileSize(&tileWidth, &tileHeight);
 				SetOffset(xOffset + -info.drag.deltaX/tileWidth, yOffset + -info.drag.deltaY/tileHeight);
+				isDragging = true;
 				return true;
 			}
 			break;
@@ -1013,6 +1019,31 @@ void Map::Update()
 			clouds[a].y = MFRand_Range(-64.f, (float)(mapHeight * tileHeight));
 		}
 	}
+
+#if defined(MF_IPHONE)
+	if(isDragging)
+	{
+		// track drag velocity
+		xVelocity = xVelocity*0.5f + ((xOffset - lastX) / MFSystem_TimeDelta())*0.5f;
+		yVelocity = yVelocity*0.5f + ((yOffset - lastY) / MFSystem_TimeDelta())*0.5f;
+		lastX = xOffset;
+		lastY = yOffset;
+
+		if(MakeVector(xVelocity, yVelocity).Magnitude2() < 5.f)
+			xVelocity = yVelocity = 0.f;
+	}
+	else
+	{
+		// apply release velocity
+		SetOffset(xOffset + xVelocity*MFSystem_TimeDelta(), yOffset + yVelocity*MFSystem_TimeDelta());
+		float deceleration = 1.f - 2.0f*MFSystem_TimeDelta();
+		xVelocity *= deceleration;
+		yVelocity *= deceleration;
+
+		if(MakeVector(xVelocity, yVelocity).Magnitude2() < 0.2f)
+			xVelocity = yVelocity = 0.f;
+	}
+#endif
 }
 
 void Map::Draw()
@@ -1464,7 +1495,7 @@ void Map::SetZoom(float _zoom, float pointX, float pointY)
 	if(pointY < 0.f)
 		pointY = display.height / tileHeight * 0.5f;
 
-	float newZoom = MFClamp(0.5f, _zoom, 2.f);
+	float newZoom = MFClamp(0.5f, _zoom, 1.f);
 	float zoomDiff = zoom / newZoom;
 	zoom = newZoom;
 

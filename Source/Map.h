@@ -165,6 +165,11 @@ protected:
 	float xOffset, yOffset;
 	float zoom;
 
+	int dragContact;
+	float lastX, lastY;
+	float xVelocity, yVelocity;
+	bool isDragging;
+
 	MFTexture *pRenderTarget;
 	MFMaterial *pRenderTargetMaterial;
 	MFMaterial *pCloud;
