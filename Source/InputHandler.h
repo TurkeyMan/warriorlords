@@ -105,6 +105,7 @@ public:
 
 	float SetDragThreshold(float threshold);
 
+	InputReceiver *SetExclusiveReceiver(InputReceiver *pReceiver);
 	InputReceiver *SetExclusiveContactReceiver(int contact, InputReceiver *pReceiver);
 
 protected:
@@ -139,6 +140,7 @@ protected:
 	float dragThreshold;
 
 	InputReceiver *pInputStack;
+	InputReceiver *pExclusiveReceiver;
 
 	void InitEvent(InputInfo &info, InputEvent ev, int contact);
 };

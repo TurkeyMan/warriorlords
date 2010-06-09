@@ -17,9 +17,13 @@ StringBox::StringBox(MFRect &rect, StringEntryLogic::StringType type)
 	pFont = NULL;
 	pCallback = NULL;
 	pUserData = NULL;
+	pTab = NULL;
+	pTabData = NULL;
 
 	bVisible = true;
 	bEnabled = false;
+
+	bFirstFrame = true;
 }
 
 StringBox::~StringBox()
@@ -46,6 +50,12 @@ void StringBox::Destroy()
 	delete this;
 }
 
+void StringBox::RegisterTabCallback(ChangeCallback *pCallback, void *pUserData)
+{
+	pTab = pCallback;
+	pTabData = pUserData;
+}
+
 bool StringBox::HandleInputEvent(InputEvent ev, InputInfo &info)
 {
 	if(info.device == IDD_Mouse && info.deviceID != 0)
@@ -54,12 +64,19 @@ bool StringBox::HandleInputEvent(InputEvent ev, InputInfo &info)
 	switch(ev)
 	{
 		case IE_Down:
-			Enable(true);
-
-			pInputManager->SetExclusiveContactReceiver(info.contact, this);
-
-			// set cursor pos
-			return true;
+		{
+			MFRect client = { 0, 0, rect.width, rect.height };
+			if(MFTypes_PointInRect(info.down.x, info.down.y, &client))
+			{
+				Enable(true);
+				return true;
+			}
+			else
+			{
+				Enable(false);
+				return false;
+			}
+		}
 
 		case IE_Drag:
 			// drag text selection
@@ -72,7 +89,24 @@ bool StringBox::HandleInputEvent(InputEvent ev, InputInfo &info)
 void StringBox::Update()
 {
 	if(bEnabled)
-		stringLogic.Update();
+	{
+		if(MFInput_WasPressed(Key_Tab, IDD_Keyboard))
+		{
+			if(!bFirstFrame)
+			{
+				Enable(false);
+
+				if(pTab)
+					pTab(stringLogic.GetString(), pTabData);
+			}
+		}
+		else
+		{
+			stringLogic.Update();
+		}
+	}
+
+	bFirstFrame = false;
 }
 
 void StringBox::Draw()
@@ -121,6 +155,16 @@ void StringBox::Draw()
 			MFPrimitive_DrawUntexturedQuad(rect.x+cursorX, rect.y, 2, height, MFVector::white);
 		}
 	}
+}
+
+void StringBox::Enable(bool bEnable)
+{
+	bEnabled = bEnable;
+
+	bFirstFrame = bEnable;
+	gBlinkTime = 0.4f;
+
+	pInputManager->SetExclusiveReceiver(bEnable ? this : NULL);
 }
 
 void StringBox::StringChangeCallback(const char *pString, void *pUserData)

@@ -1,5 +1,7 @@
 #include "Warlords.h"
 #include "Display.h"
+#include "Screens/LoginScreen.h"
+#include "Screens/HomeScreen.h"
 #include "Screens/MenuScreen.h"
 #include "Game.h"
 #include "Editor.h"
@@ -12,12 +14,16 @@
 #include "MFSystem.h"
 #include "MFDisplay.h"
 
+#define TEST_ONLINE
+
 /*** Global Stuff ***/
 InputManager *pInputManager = NULL;
 
 Game *pGame = NULL;
 Editor *pEditor = NULL;
 
+LoginScreen *pLogin = NULL;
+HomeScreen *pHome = NULL;
 MenuScreen *pMenu = NULL;
 
 MFSystemCallbackFunction pInitFujiFS;
@@ -50,8 +56,15 @@ void Game_Init()
 
 	pInputManager = new InputManager;
 
+	pLogin = new LoginScreen;
+	pHome = new HomeScreen;
 	pMenu = new MenuScreen;
+
+#if defined(TEST_ONLINE)
+	Screen::SetNext(pLogin);
+#else
 	Screen::SetNext(pMenu);
+#endif
 }
 
 void Game_Update()
@@ -94,6 +107,9 @@ void Game_Deinit()
 
 	if(pMenu)
 		delete pMenu;
+
+	if(pLogin)
+		delete pLogin;
 }
 
 int GameMain(MFInitParams *pInitParams)

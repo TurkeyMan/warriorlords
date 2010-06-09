@@ -20,6 +20,7 @@ InputManager::InputManager()
 
 	dragThreshold = 16.f;
 	pInputStack = NULL;
+	pExclusiveReceiver = NULL;
 }
 
 InputManager::~InputManager()
@@ -415,6 +416,12 @@ bool InputManager::Dispatch(InputInfo &info, InputReceiver *pExplicitReceiver)
 			return true;
 	}
 
+	if(pExclusiveReceiver)
+	{
+		if(pExclusiveReceiver->HandleInputEvent(info.ev, info))
+			return true;
+	}
+
 	InputReceiver *pR = pInputStack;
 	while(pR)
 	{
@@ -435,6 +442,13 @@ bool InputManager::Dispatch(InputInfo &info, InputReceiver *pExplicitReceiver)
 	}
 
 	return false;
+}
+
+InputReceiver *InputManager::SetExclusiveReceiver(InputReceiver *pReceiver)
+{
+	InputReceiver *pOld = pExclusiveReceiver;
+	pExclusiveReceiver = pReceiver;
+	return pOld;
 }
 
 InputReceiver *InputManager::SetExclusiveContactReceiver(int contact, InputReceiver *pReceiver)

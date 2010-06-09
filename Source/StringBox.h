@@ -14,8 +14,10 @@ public:
 	StringBox(MFRect &rect, StringEntryLogic::StringType type);
 	virtual ~StringBox();
 
-	static StringBox *Create(MFFont *pFont, MFRect *pPos, ChangeCallback *pCallback, void *pUserData, StringEntryLogic::StringType type = StringEntryLogic::ST_Regular, const char *pDefaultString = NULL);
+	static StringBox *Create(MFFont *pFont, MFRect *pPos, ChangeCallback *pCallback = NULL, void *pUserData = NULL, StringEntryLogic::StringType type = StringEntryLogic::ST_Regular, const char *pDefaultString = NULL);
 	void Destroy();
+
+	void RegisterTabCallback(ChangeCallback *pCallback, void *pUserData = NULL);
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 
@@ -25,7 +27,7 @@ public:
 	void Show() { bVisible = true; }
 	void Hide() { bVisible = false; }
 
-	void Enable(bool bEnable) { bEnabled = bEnable; }
+	void Enable(bool bEnable);
 
 	void SetString(const char *pString) { return stringLogic.SetString(pString); }
 	const char *GetString() { return stringLogic.GetString(); }
@@ -36,11 +38,15 @@ protected:
 	StringEntryLogic stringLogic;
 	ChangeCallback *pCallback;
 	void *pUserData;
+	ChangeCallback *pTab;
+	void *pTabData;
 
 	MFFont *pFont;
 
 	bool bVisible;
 	bool bEnabled;
+
+	bool bFirstFrame;
 };
 
 #endif

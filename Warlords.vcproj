@@ -290,6 +290,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Source\HTTP.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\HTTP.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Source\InputHandler.cpp"
 				>
 			</File>
@@ -327,6 +335,14 @@
 			</File>
 			<File
 				RelativePath=".\Source\Screen.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\ServerRequest.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\ServerRequest.h"
 				>
 			</File>
 			<File
@@ -397,11 +413,27 @@
 					>
 				</File>
 				<File
+					RelativePath=".\Source\Screens\HomeScreen.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\HomeScreen.h"
+					>
+				</File>
+				<File
 					RelativePath=".\Source\Screens\Inventory.cpp"
 					>
 				</File>
 				<File
 					RelativePath=".\Source\Screens\Inventory.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\LoginScreen.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\LoginScreen.h"
 					>
 				</File>
 				<File
