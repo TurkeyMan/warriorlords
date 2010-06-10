@@ -27,16 +27,20 @@ protected:
 
 	StringBox *pUsername;
 	StringBox *pPassword;
+	StringBox *pEmail;
 
-	Button *pLogin, *pOffline;
+	Button *pLogin, *pOffline, *pNew, *pCreate, *pReturn;
 
+	const char *pPrompt;
 	const char *pMessage;
 
-	static void Login(int button, void *pUserData, int buttonID);
-	static void Offline(int button, void *pUserData, int buttonID);
+	int state;
+
+	static void Click(int button, void *pUserData, int buttonID);
 
 	static void TabUser(const char *pString, void *pUserData);
 	static void TabPass(const char *pString, void *pUserData);
+	static void TabEmail(const char *pString, void *pUserData);
 };
 
 #endif

@@ -5,6 +5,7 @@
 #include "MFHeap.h"
 
 #include "Game.h"
+#include "Session.h"
 
 void DivideRect_Horiz(const MFRect &rect, float split, float margin, MFRect *pLeft, MFRect *pRight, bool bSplitPixels);
 void DivideRect_Vert(const MFRect &rect, float split, float margin, MFRect *pTop, MFRect *pBottom, bool bSplitPixels);

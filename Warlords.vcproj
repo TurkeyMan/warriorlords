@@ -346,6 +346,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Source\Session.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\Session.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Source\StringBox.cpp"
 				>
 			</File>
