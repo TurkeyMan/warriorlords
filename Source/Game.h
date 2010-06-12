@@ -21,10 +21,22 @@ struct Player
 	Unit *pHero;
 };
 
+struct GameParams
+{
+	const char *pMap;
+
+	int numPlayers;
+	int playerRaces[16];
+	uint32 playerColours[16];
+
+	bool bOnline;
+	bool bEditMap;
+};
+
 class Game
 {
 public:
-	Game(const char *pMap, bool bEditable = false);
+	Game(GameParams *pParams);
 	~Game();
 
 	MapScreen *GetMapScreen() { return pMapScreen; }

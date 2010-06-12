@@ -1,27 +1,28 @@
 #include "Warlords.h"
 #include "Display.h"
 #include "HomeScreen.h"
-#include "Game.h"
-#include "Editor.h"
+#include "MenuScreen.h"
 
 #include "MFPrimitive.h"
 #include "MFMaterial.h"
 #include "MFRenderer.h"
 #include "MFFileSystem.h"
 
-extern Game *pGame;
-extern Editor *pEditor;
+extern MenuScreen *pMenu;
 
 HomeScreen::HomeScreen()
 {
 	pIcons = MFMaterial_Create("Icons");
 	pFont = MFFont_Create("FranklinGothic");
 
+	pSession = NULL;
+	bOffline = true;
+
 	// populate map list
-	MFRect rect = { 16.f, 16.f, 256.f, 128.f };
+	MFRect rect = { 10.f, 64.f, 240.f, 200.f };
 	pMyTurn = ListBox::Create(&rect, pFont);
 
-	rect.y += 128.f;
+	rect.x += 260.f;
 	pMyGames = ListBox::Create(&rect, pFont);
 
 	// start buttons
@@ -40,22 +41,22 @@ HomeScreen::HomeScreen()
 	// join game button
 	pos.x = 32.f + 64.f;
 	uvs.x = 0.5f + texelCenterOffset; uvs.y = 0.75f + texelCenterOffset;
-	pFind = Button::Create(pIcons, &pos, &uvs, MFVector::one, FindGame, this, 1, false);
+	pJoin = Button::Create(pIcons, &pos, &uvs, MFVector::one, FindGame, this, 2, false);
 
 	// find game button
 	pos.x = 48.f + 128.f;
 	uvs.x = 0.75f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
-	pFind = Button::Create(pIcons, &pos, &uvs, MFVector::one, FindGame, this, 1, false);
+	pFind = Button::Create(pIcons, &pos, &uvs, MFVector::one, FindGame, this, 3, false);
 
 	// offline game button
 	pos.x = 64.f + 192.f;
 	uvs.x = 0.f + texelCenterOffset; uvs.y = 0.75f + texelCenterOffset;
-	pOffline = Button::Create(pIcons, &pos, &uvs, MFVector::one, OfflineGame, this, 1, false);
+	pOffline = Button::Create(pIcons, &pos, &uvs, MFVector::one, CreateGame, this, 1, false);
 
 	// continue game button
 	pos.x = 80.f + 256.f;
 	uvs.x = 0.25f + texelCenterOffset; uvs.y = 0.75f + texelCenterOffset;
-	pContinue = Button::Create(pIcons, &pos, &uvs, MFVector::one, ContinueGame, this, 1, false);
+	pContinue = Button::Create(pIcons, &pos, &uvs, MFVector::one, ContinueGame, this, 4, false);
 }
 
 HomeScreen::~HomeScreen()
@@ -66,14 +67,26 @@ HomeScreen::~HomeScreen()
 
 void HomeScreen::Select()
 {
+	pSession = Session::GetCurrent();
+	bOffline = pSession == NULL || pSession->IsOffline();
+
 	pInputManager->ClearReceivers();
 	pInputManager->PushReceiver(this);
 	pInputManager->PushReceiver(pMyTurn);
 	pInputManager->PushReceiver(pMyGames);
+	pInputManager->PushReceiver(pCreate);
 	pInputManager->PushReceiver(pJoin);
 	pInputManager->PushReceiver(pFind);
 	pInputManager->PushReceiver(pOffline);
 	pInputManager->PushReceiver(pContinue);
+
+	pCreate->Enable(!bOffline);
+	pJoin->Enable(!bOffline);
+	pFind->Enable(!bOffline);
+
+	pMyTurn->SetSelection(-1);
+	pMyGames->SetSelection(-1);
+	pContinue->Enable(false);
 }
 
 bool HomeScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
@@ -100,6 +113,11 @@ int HomeScreen::Update()
 
 void HomeScreen::Draw()
 {
+	if(bOffline)
+		MFFont_DrawText(pFont, MakeVector(16, 16), 32.f, MFVector::yellow, "Offline");
+	else
+		MFFont_DrawTextf(pFont, MakeVector(16, 16), 32.f, MFVector::yellow, "Welcome %s!", pSession->GetUsername());
+
 	pMyTurn->Draw();
 	pMyGames->Draw();
 	pCreate->Draw();
@@ -118,6 +136,10 @@ void HomeScreen::CreateGame(int button, void *pUserData, int buttonID)
 {
 	HomeScreen *pScreen = (HomeScreen*)pUserData;
 
+	pMenu->SetGameType(buttonID);
+
+	// go to game create screen
+	Screen::SetNext(pMenu);
 }
 
 void HomeScreen::JoinGame(int button, void *pUserData, int buttonID)
@@ -127,12 +149,6 @@ void HomeScreen::JoinGame(int button, void *pUserData, int buttonID)
 }
 
 void HomeScreen::FindGame(int button, void *pUserData, int buttonID)
-{
-	HomeScreen *pScreen = (HomeScreen*)pUserData;
-
-}
-
-void HomeScreen::OfflineGame(int button, void *pUserData, int buttonID)
 {
 	HomeScreen *pScreen = (HomeScreen*)pUserData;
 

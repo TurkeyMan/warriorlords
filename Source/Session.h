@@ -15,14 +15,20 @@ public:
 	void LoadSession(uint32 user);
 	void SaveSession();
 
-	bool IsActive();
-	bool IsOffline();
+	bool IsActive() { return bLoggedIn || bOffline; }
+	bool IsOffline() { return bOffline; }
+
+	uint32 GetUserID() { return user.id; }
+	const char *GetUsername() { return user.userName; }
 
 	static Session *SetCurrent(Session *pNew) { Session *pOld = pCurrent; pCurrent = pNew; return pOld; }
 	static Session *GetCurrent() { return pCurrent; }
 
 protected:
 	UserDetails user;
+
+	bool bLoggedIn;
+	bool bOffline;
 
 	uint32 currentGames[64];
 	int numCurrentGames;
@@ -31,8 +37,9 @@ protected:
 	uint32 pendingGames[32];
 	int numPendingGames;
 
-	bool bLoggedIn;
-	bool bOffline;
+	// manage these locally
+	uint32 localGames[64];
+	int numLocalGames;
 
 	static Session *pCurrent;
 };

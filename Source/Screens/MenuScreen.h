@@ -21,16 +21,29 @@ public:
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 
+	void SetGameType(int type) { gameType = type; }
+
 protected:
+	struct MapData
+	{
+		char name[64];
+		MapDetails details;
+		bool bDetailsLoaded;
+		MapData * pNext;
+	};
+
 	MFMaterial *pIcons;
 	MFFont *pFont;
 
-	ListBox *pListBox;
+	ListBox *pMapList;
+	MapData *pMaps;
 
-	Button *pStart, *pEdit;
+	Button *pStart, *pEdit, *pReturn;
 
-	static void StartGame(int button, void *pUserData, int buttonID);
-	static void EditMap(int button, void *pUserData, int buttonID);
+	int gameType;
+
+	static void Click(int button, void *pUserData, int buttonID);
+	static void SelectMap(int item, void *pUserData);
 };
 
 #endif

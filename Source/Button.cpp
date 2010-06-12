@@ -23,6 +23,7 @@ Button *Button::Create(const MFMaterial *pImage, const MFRect *pPosition, const 
 	pNew->button = 0;
 	pNew->buttonID = buttonID;
 	pNew->pOverlay = NULL;
+	pNew->bEnabled = true;
 
 	return pNew;
 }
@@ -34,6 +35,9 @@ void Button::Destroy()
 
 bool Button::HandleInputEvent(InputEvent ev, InputInfo &info)
 {
+	if(!bEnabled)
+		return false;
+
 	if(info.device == IDD_Mouse && info.deviceID != 0)
 		return false;
 
@@ -79,9 +83,9 @@ bool Button::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 void Button::Draw()
 {
-	bool bDark = false;
+	bool bDark = !bEnabled;
 
-	if(isPressed >= 0)
+	if(bEnabled && isPressed >= 0)
 	{
 		float x = MFInput_Read(Mouse_XPos, IDD_Mouse);
 		float y = MFInput_Read(Mouse_YPos, IDD_Mouse);

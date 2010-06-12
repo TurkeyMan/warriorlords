@@ -36,6 +36,10 @@ protected:
 
 	int state;
 
+	bool bAutoLogin;
+
+	void AutoLogin();
+
 	static void Click(int button, void *pUserData, int buttonID);
 
 	static void TabUser(const char *pString, void *pUserData);

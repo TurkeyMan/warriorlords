@@ -92,7 +92,7 @@ void ListBox::SetPos(const MFRect *pPos)
 	UpdateRect(pPos);
 }
 
-int ListBox::AddItem(const char *pText, int icon)
+int ListBox::AddItem(const char *pText, int icon, void *pUserData)
 {
 	if(numItems == numAllocated)
 	{
@@ -102,6 +102,7 @@ int ListBox::AddItem(const char *pText, int icon)
 
 	MFString_Copy(pItems[numItems].text, pText);
 	pItems[numItems].icon = icon;
+	pItems[numItems].pUserData = pUserData;
 	return numItems++;
 }
 
@@ -109,5 +110,12 @@ const char *ListBox::GetItemText(int item)
 {
 	if(item >= 0 && item < numItems)
 		return pItems[item].text;
+	return NULL;
+}
+
+const void *ListBox::GetItemData(int item)
+{
+	if(item >= 0 && item < numItems)
+		return pItems[item].pUserData;
 	return NULL;
 }

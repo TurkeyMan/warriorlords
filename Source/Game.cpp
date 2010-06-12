@@ -14,7 +14,7 @@
 
 Game *Game::pCurrent = NULL;
 
-Game::Game(const char *_pMap, bool bEditable)
+Game::Game(GameParams *pParams)
 {
 	pText = MFFont_Create("FranklinGothic");
 	pBattleNumbersFont = MFFont_Create("Battle");
@@ -28,7 +28,7 @@ Game::Game(const char *_pMap, bool bEditable)
 	SetCurrent(this);
 
 	// create the map and screens
-	pMap = Map::Create(this, _pMap, bEditable);
+	pMap = Map::Create(this, pParams->pMap, pParams->bEditMap);
 	pUnitDefs = pMap->GetUnitDefinitions();
 
 	pMapScreen = new MapScreen(this);
@@ -41,7 +41,7 @@ Game::Game(const char *_pMap, bool bEditable)
 
 	undoDepth = 0;
 
-	if(bEditable)
+	if(pParams->bEditMap)
 	{
 		// init the players
 		for(int a=0; a<8; ++a)
@@ -52,6 +52,22 @@ Game::Game(const char *_pMap, bool bEditable)
 
 		// construct the map
 		pMap->ConstructMap(0);
+	}
+	else
+	{
+		// setup players
+		for(int a=0; a<pParams->numPlayers; ++a)
+		{
+			players[a].race = pParams->playerRaces[a];
+			players[a].colour = pUnitDefs->GetRaceColour(pParams->playerColours[a]);
+			players[a].gold = 0;
+			players[a].cursorX = 0;
+			players[a].cursorY = 0;
+			players[a].pHero = NULL;
+		}
+
+		// construct the map
+		pMap->ConstructMap();
 	}
 }
 
@@ -74,35 +90,6 @@ Game::~Game()
 
 void Game::BeginGame()
 {
-	const int numRaces = 4;
-	const int numColours = 8;//numRaces;
-
-	// setup players
-	for(int a=0; a<8; ++a)
-	{
-		players[a].race = 1 + (MFRand() % numRaces);
-		players[a].gold = 0;
-		players[a].cursorX = 0;
-		players[a].cursorY = 0;
-		players[a].pHero = NULL;
-	}
-
-	// construct the map
-	pMap->ConstructMap();
-
-	// select player colours
-	bool bColoursTaken[8] = { false, false, false, false, false, false, false, false };
-
-	for(int a=0; a<numRaces; ++a)
-	{
-		int colour;
-		do colour = 1 + (MFRand() % numColours);
-		while(bColoursTaken[colour-1]);
-
-		players[a].colour = pUnitDefs->GetRaceColour(colour);
-		bColoursTaken[colour-1] = true;
-	}
-
 	// HACK
 	for(int a=0; a<pMap->GetNumCastles(); ++a)
 	{
@@ -223,7 +210,7 @@ void Game::BeginTurn(int player)
 	ClearUndoStack();
 
 	// focus map on starting castle, oooor maybe not (focus on last focused position?)
-	pMap->CenterView(players[player].cursorX, players[player].cursorY);
+	pMap->CenterView((float)players[player].cursorX, (float)players[player].cursorY);
 }
 
 void Game::EndTurn()

@@ -1,13 +1,12 @@
 #include "Warlords.h"
 #include "Display.h"
 #include "LoginScreen.h"
-#include "MenuScreen.h"
-#include "ServerRequest.h"
+#include "HomeScreen.h"
 
 #include "MFMaterial.h"
 #include "MFRenderer.h"
 
-extern MenuScreen *pMenu;
+extern HomeScreen *pHome;
 
 LoginScreen::LoginScreen()
 {
@@ -15,6 +14,12 @@ LoginScreen::LoginScreen()
 	pFont = MFFont_Create("FranklinGothic");
 
 	state = 0;
+
+#if defined(_DEBUG)
+	bAutoLogin = true;
+#else
+	bAutoLogin = false;
+#endif
 
 	pPrompt = "Login:";
 	pMessage = NULL;
@@ -78,6 +83,8 @@ LoginScreen::~LoginScreen()
 
 void LoginScreen::Select()
 {
+	state = 0;
+
 	pInputManager->ClearReceivers();
 	pInputManager->PushReceiver(this);
 	pInputManager->PushReceiver(pUsername);
@@ -105,6 +112,12 @@ bool LoginScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 int LoginScreen::Update()
 {
+	if(bAutoLogin)
+	{
+		AutoLogin();
+		bAutoLogin = false;
+	}
+
 	pUsername->Update();
 	pPassword->Update();
 	if(state == 1)
@@ -181,14 +194,16 @@ void LoginScreen::Click(int button, void *pUserData, int buttonID)
 				return;
 			}
 
-			pScreen->pMessage = NULL;
+			if(pSession->IsActive())
+			{
+				pScreen->pMessage = NULL;
 
-			// set the current session
-			Session::SetCurrent(pSession);
+				// set the current session
+				Session::SetCurrent(pSession);
 
-			// and continue
-			Screen::SetNext(pMenu);
-
+				// and continue
+				Screen::SetNext(pHome);
+			}
 			break;
 		}
 
@@ -199,8 +214,7 @@ void LoginScreen::Click(int button, void *pUserData, int buttonID)
 			Session::SetCurrent(pSession);
 
 			// begin offline
-			Screen::SetNext(pMenu);
-
+			Screen::SetNext(pHome);
 			break;
 		}
 
@@ -255,14 +269,16 @@ void LoginScreen::Click(int button, void *pUserData, int buttonID)
 				return;
 			}
 
-			pScreen->pMessage = NULL;
+			if(pSession->IsActive())
+			{
+				pScreen->pMessage = NULL;
 
-			// set the current session
-			Session::SetCurrent(pSession);
+				// set the current session
+				Session::SetCurrent(pSession);
 
-			// and continue
-			Screen::SetNext(pMenu);
-
+				// and continue
+				Screen::SetNext(pHome);
+			}
 			break;
 		}
 
@@ -302,4 +318,41 @@ void LoginScreen::TabEmail(const char *pString, void *pUserData)
 {
 	LoginScreen *pThis = (LoginScreen*)pUserData;
 	pThis->pUsername->Enable(true);
+}
+
+void LoginScreen::AutoLogin()
+{
+	Session *pSession = new Session();
+
+	// try and login...
+	ServerError err = pSession->Login("TurkeyMan", "terceS");
+	if(err != SE_NO_ERROR)
+	{
+		delete pSession;
+
+		switch(err)
+		{
+			case SE_CONNECTION_FAILED:
+				pMessage = "Couldn't connect to server!";
+				break;
+			case SE_INVALID_LOGIN:
+				pMessage = "Invalid login!";
+				break;
+			default:
+				pMessage = "Unknown Error!";
+				break;
+		}
+		return;
+	}
+
+	if(pSession->IsActive())
+	{
+		pMessage = NULL;
+
+		// set the current session
+		Session::SetCurrent(pSession);
+
+		// and continue
+		Screen::SetNext(pHome);
+	}
 }

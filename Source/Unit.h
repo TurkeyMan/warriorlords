@@ -155,6 +155,14 @@ struct BattlePlan
 	bool bAttackAvailable;
 };
 
+struct UnitSetDetails
+{
+	char unitSetName[64];
+	int numRaces;
+	char races[16][64];
+	uint32 colours[16];
+};
+
 struct UnitDetails
 {
 	const char *pName;
@@ -177,7 +185,9 @@ struct UnitDetails
 class UnitDefinitions
 {
 public:
-	static UnitDefinitions *Load(Game *pGame, const char *pUnits, int numTerrainTypes);
+	static bool GetDetails(const char *pUnitSetName, UnitSetDetails *pDetails);
+
+	static UnitDefinitions *Load(Game *pGame, const char *pUnitSetName, int numTerrainTypes);
 	void Free();
 
 	Game *GetGame() { return pGame; }

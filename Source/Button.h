@@ -23,6 +23,8 @@ public:
 
 	void SetOutline(bool bEnable, const MFVector &colour);
 
+	void Enable(bool enabled) { bEnabled = enabled; }
+
 protected:
 	Button(const MFRect &rect) : InputReceiver(rect) { }
 
@@ -31,6 +33,7 @@ protected:
 	MFRect uvs;
 	const MFMaterial *pMaterial, *pOverlay;
 	bool bOutline;
+	bool bEnabled;
 
 	bool bTriggerOnDown;
 	int isPressed;

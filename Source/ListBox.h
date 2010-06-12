@@ -45,9 +45,11 @@ public:
 
 	void SetSelectCallback(ListCallback *pCallback, void *pUserData) { pSelectCallback = pCallback; pSelectUserData = pUserData; }
 
-	int AddItem(const char *pText, int icon = -1);
+	int AddItem(const char *pText, int icon = -1, void *pUserData = NULL);
 	const char *GetItemText(int item);
+	const void *GetItemData(int item);
 
+	void SetSelection(int item) { selection = MFMin(item, numItems-1); }
 	int GetSelection() { return selection; }
 
 protected:
@@ -64,6 +66,7 @@ protected:
 	{
 		char text[28];
 		int icon;
+		void *pUserData;
 	};
 
 	ListItem *pItems;

@@ -24,6 +24,23 @@ enum ObjectType
 	OT_Max
 };
 
+struct MapDetails
+{
+	char mapName[64];
+	char tileSet[64];
+	char unitSet[64];
+
+	//TileSetDetails tileSetDetails;
+	UnitSetDetails unitSetDetails;
+
+	int width, height;
+
+	int numPlayers;
+	bool bPlayerPresent[16];
+
+	bool bRacePresent[16];
+};
+
 class MapTile
 {
 	friend class Map;
@@ -80,6 +97,8 @@ protected:
 class Map : public InputReceiver
 {
 public:
+	static bool GetMapDetails(const char *pMapFilename, MapDetails *pDetails);
+
 	static Map *Create(Game *pGame, const char *pMapFilename, bool bEditable = false);
 	static Map *CreateNew(Game *pGame, const char *pTileset, const char *pUnits);
 	void Destroy();
@@ -100,7 +119,7 @@ public:
 	void SetOffset(float x, float y);
 	void GetOffset(float *pX, float *pY);
 	void SetZoom(float zoom, float centerX = -1.f, float centerY = -1.f);
-	void CenterView(int x, int y);
+	void CenterView(float x, float y);
 
 	void ClaimFlags(int x, int y, int player);
 

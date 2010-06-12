@@ -42,6 +42,7 @@ ServerError Session::Login(const char *pUsername, const char *pPassword)
 
 	// we're logged in!
 	bLoggedIn = true;
+	bOffline = false;
 
 	return SE_NO_ERROR;
 }

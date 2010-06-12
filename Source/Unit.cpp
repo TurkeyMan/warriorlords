@@ -9,9 +9,60 @@
 
 extern Game *pGame;
 
-UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnits, int numTerrainTypes)
+bool UnitDefinitions::GetDetails(const char *pUnitSetName, UnitSetDetails *pDetails)
 {
-	MFIni *pIni = MFIni::Create("Units");
+	if(!pDetails)
+		return false;
+
+	MFZeroMemory(pDetails, sizeof(UnitSetDetails));
+
+	MFIni *pIni = MFIni::Create(pUnitSetName);
+	if(!pIni)
+		return NULL;
+
+	MFIniLine *pLine = pIni->GetFirstLine();
+	while(pLine)
+	{
+		if(pLine->IsSection("UnitDefinitions"))
+		{
+			pLine = pLine->Sub();
+			break;
+		}
+		pLine = pLine->Next();
+	}
+
+	while(pLine)
+	{
+		if(pLine->IsString(0, "name"))
+		{
+			MFString_Copy(pDetails->unitSetName, pLine->GetString(1));
+		}
+		else if(pLine->IsSection("Races"))
+		{
+			MFIniLine *pRace = pLine->Sub();
+			while(pRace)
+			{
+				int r = pRace->GetInt(0);
+				pDetails->numRaces = MFMax(pDetails->numRaces, r + 1);
+
+				MFString_Copy(pDetails->races[r], pRace->GetString(1));
+				pDetails->colours[r] = MFString_AsciiToInteger(pRace->GetString(2), true) | 0xFF000000;
+
+				pRace = pRace->Next();
+			}
+		}
+
+		pLine = pLine->Next();
+	}
+
+	MFIni::Destroy(pIni);
+
+	return true;
+}
+
+UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, int numTerrainTypes)
+{
+	MFIni *pIni = MFIni::Create(pUnitSetName);
 	if(!pIni)
 		return NULL;
 

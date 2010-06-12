@@ -305,7 +305,7 @@ int MapScreen::Update()
 			pMap->ClaimFlags(x, y, pSelection->GetPlayer());
 
 			// center the map on the guy moving
-			pMap->CenterView(x, y);
+			pMap->CenterView((float)x, (float)y);
 
 			countdown += 0.15f;
 
@@ -450,7 +450,7 @@ void MapScreen::UndoMove(int button, void *pUserData, int buttonID)
 	if(pGroup)
 	{
 		MapTile *pTile = pGroup->GetTile();
-		pThis->pMap->CenterView(pTile->GetX(), pTile->GetY());
+		pThis->pMap->CenterView((float)pTile->GetX(), (float)pTile->GetY());
 
 		pThis->SelectGroup(pGroup);
 	}

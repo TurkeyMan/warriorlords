@@ -30,10 +30,12 @@ protected:
 
 	Button *pCreate, *pJoin, *pFind, *pOffline, *pContinue;
 
+	bool bOffline;
+	Session *pSession;
+
 	static void CreateGame(int button, void *pUserData, int buttonID);
 	static void JoinGame(int button, void *pUserData, int buttonID);
 	static void FindGame(int button, void *pUserData, int buttonID);
-	static void OfflineGame(int button, void *pUserData, int buttonID);
 	static void ContinueGame(int button, void *pUserData, int buttonID);
 };
 

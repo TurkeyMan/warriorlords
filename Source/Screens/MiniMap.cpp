@@ -9,6 +9,7 @@
 MiniMap::MiniMap()
 : Window(true)
 {
+	bDragging = false;
 }
 
 MiniMap::~MiniMap()
@@ -47,7 +48,22 @@ bool MiniMap::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 	switch(ev)
 	{
-		case IE_Tap:
+		case IE_Down:
+			bDragging = true;
+		case IE_Hover:
+			if(bDragging)
+			{
+				int mapWidth, mapHeight;
+				pMap->GetMapSize(&mapWidth, &mapHeight);
+
+				float x = (info.down.x - window.x) / width * (float)mapWidth;
+				float y = (info.down.y - window.y) / height * (float)mapHeight;
+
+				pMap->CenterView(x, y);
+			}
+			break;
+		case IE_Up:
+			bDragging = false;
 			break;
 	}
 

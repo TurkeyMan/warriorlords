@@ -21,6 +21,7 @@ protected:
 	MFMaterial *pMiniMap;
 
 	int width, height;
+	bool bDragging;
 };
 
 #endif

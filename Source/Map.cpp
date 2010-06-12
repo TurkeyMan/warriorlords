@@ -186,6 +186,108 @@ int MapTile::GetPlayer()
 	return -2;
 }
 
+bool Map::GetMapDetails(const char *pMapFilename, MapDetails *pDetails)
+{
+	if(!pDetails)
+		return false;
+
+	MFZeroMemory(pDetails, sizeof(MapDetails));
+
+	MFIni *pIni = MFIni::Create(pMapFilename);
+	if(!pIni)
+		return false;
+
+	MFIniLine *pLine = pIni->GetFirstLine();
+	while(pLine)
+	{
+		if(pLine->IsSection("Map"))
+		{
+			MFIniLine *pMapLine = pLine->Sub();
+
+			while(pMapLine)
+			{
+				if(pMapLine->IsString(0, "name"))
+				{
+					MFString_Copy(pDetails->mapName, pMapLine->GetString(1));
+				}
+				else if(pMapLine->IsString(0, "tileset"))
+				{
+					MFString_Copy(pDetails->tileSet, pMapLine->GetString(1));
+				}
+				else if(pMapLine->IsString(0, "units"))
+				{
+					MFString_Copy(pDetails->unitSet, pMapLine->GetString(1));
+					if(!UnitDefinitions::GetDetails(pDetails->unitSet, &pDetails->unitSetDetails))
+					{
+						MFDebug_Assert(false, "Couldn't load unit definitions!");
+					}
+				}
+				else if(pMapLine->IsString(0, "map_width"))
+				{
+					pDetails->width = pMapLine->GetInt(1);
+				}
+				else if(pMapLine->IsString(0, "map_height"))
+				{
+					pDetails->height = pMapLine->GetInt(1);
+				}
+				else if(pMapLine->IsSection("Regions"))
+				{
+					MFDebug_Assert(pDetails->width && pDetails->height, "Invalid map dimensions");
+
+					int i = 0;
+					MFIniLine *pRegions = pMapLine->Sub();
+					while(pRegions)
+					{
+						MFDebug_Assert(pRegions->GetStringCount() == pDetails->width, "Not enough tiles in row.");
+
+						for(int a=0; a<pDetails->width; ++a)
+						{
+							uint32 t = MFString_AsciiToInteger(pRegions->GetString(a), false, 16);
+							if(t < 15)
+							{
+								if(!pDetails->bPlayerPresent[t])
+								{
+									pDetails->bPlayerPresent[t] = true;
+									++pDetails->numPlayers;
+								}
+							}
+							++i;
+						}
+
+						pRegions = pRegions->Next();
+					}
+
+					MFDebug_Assert(i == pDetails->width * pDetails->height, "Not enough rows.");
+				}
+				else if(pMapLine->GetStringCount() >= 2 && !MFString_CaseCmp(pMapLine->GetString(0), "section"))
+				{
+					if(!MFString_CaseCmp(pMapLine->GetString(1), "Template"))
+					{
+						pDetails->bRacePresent[0] = true;
+					}
+					else
+					{
+						for(int slice = 1; slice < pDetails->unitSetDetails.numRaces; ++slice)
+						{
+							if(!MFString_CaseCmp(pMapLine->GetString(1), pDetails->unitSetDetails.races[slice]))
+								pDetails->bRacePresent[slice] = true;
+						}
+					}
+				}
+
+				pMapLine = pMapLine->Next();
+			}
+			break;
+		}
+
+		pLine = pLine->Next();
+	}
+
+	MFIni::Destroy(pIni);
+
+	return true;
+}
+
 Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 {
 	MFIni *pIni = MFIni::Create(pMapFilename);
@@ -457,11 +559,12 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 
 	screen.width = MFMin(screen.width, 480.f);
 	screen.height = MFMin(screen.height, 320.f);
-	pMap->minimapPixelScale = 1;
-	while(pMap->mapWidth * pMap->minimapPixelScale * 2 <= screen.width && pMap->mapHeight * pMap->minimapPixelScale * 2 <= screen.height)
-		pMap->minimapPixelScale *= 2;
 
-	pMap->pMiniMapImage = (uint32*)MFHeap_AllocAndZero(MFUtil_NextPowerOf2(pMap->mapWidth * pMap->minimapPixelScale) * MFUtil_NextPowerOf2(pMap->mapHeight * pMap->minimapPixelScale) * sizeof(uint32));
+	int sx = (int)screen.width / (pMap->mapWidth*2);
+	int sy = (int)screen.height / (pMap->mapHeight*2);
+	pMap->minimapPixelScale = MFClamp(1, MFMin(sx, sy), 4);
+
+	pMap->pMiniMapImage = (uint32*)MFHeap_AllocAndZero((pMap->mapWidth*2) * (pMap->mapHeight*2) * sizeof(uint32));
 	pMap->pMinimapMaterial = NULL;
 
 	// add some clouds
@@ -552,14 +655,12 @@ void Map::ConstructMap(int race)
 MFMaterial *Map::GetMinimap(int *pMapWidth, int *pMapHeight)
 {
 	uint32 *pImage = pMiniMapImage;
-	int stride = MFUtil_NextPowerOf2(mapWidth * minimapPixelScale);
-	int texHeight = MFUtil_NextPowerOf2(mapHeight * minimapPixelScale);
-
-	int halfTile = minimapPixelScale / 2;
+	int texWidth = mapWidth*2;
+	int texHeight = mapHeight*2;
 
 	for(int y=0; y<mapHeight; ++y)
 	{
-		for(int a=0; a<minimapPixelScale; ++a)
+		for(int a=0; a<2; ++a)
 		{
 			uint32 *pLine = pImage;
 
@@ -567,7 +668,7 @@ MFMaterial *Map::GetMinimap(int *pMapWidth, int *pMapHeight)
 			{
 				MapTile *pTile = GetTile(x, y);
 				uint32 terrain = pTile->GetTerrain();
-				if(a >= halfTile)
+				if(a & 1)
 					terrain >>= 16;
 
 				MFVector colour = MFVector::black;
@@ -583,32 +684,33 @@ MFMaterial *Map::GetMinimap(int *pMapWidth, int *pMapHeight)
 				else
 					bTerrainColour = true;
 
-				for(int b=0; b<minimapPixelScale; ++b)
+				for(int b=0; b<2; ++b)
 				{
 					if(bTerrainColour)
 					{
-						int t = b >= halfTile ? (terrain >> 8) & 0xFF : terrain & 0xFF;
+						int t = (b & 1) ? (terrain >> 8) & 0xFF : terrain & 0xFF;
 						colour = pTiles->GetTerrainColour(t);
 					}
 
 					pLine[b] = colour.ToPackedColour();
 				}
 
-				pLine += minimapPixelScale;
+				pLine += 2;
 			}
 
-			pImage += stride;
+			pImage += texWidth;
 		}
 	}
 
-	MFTexture *pTex = MFTexture_CreateFromRawData("MiniMap", pMiniMapImage, stride, texHeight, TexFmt_A8R8G8B8, 0, false);
+	MFTexture *pTex = MFTexture_ScaleFromRawData("MiniMap", pMiniMapImage, texWidth, texHeight, texWidth * minimapPixelScale, texHeight * minimapPixelScale, TexFmt_A8R8G8B8, minimapPixelScale > 1 ? SA_AdvMAME : SA_None);
+
 	pMinimapMaterial = MFMaterial_Create("MiniMap");
 	MFTexture_Destroy(pTex);
 
 	if(pMapWidth)
-		*pMapWidth = mapWidth * minimapPixelScale;
+		*pMapWidth = texWidth * minimapPixelScale;
 	if(pMapHeight)
-		*pMapHeight = mapHeight * minimapPixelScale;
+		*pMapHeight = texHeight * minimapPixelScale;
 
 	return pMinimapMaterial;
 }
@@ -761,11 +863,12 @@ Map *Map::CreateNew(Game *pGame, const char *pTileset, const char *pUnits)
 
 	screen.width = MFMin(screen.width, 480.f);
 	screen.height = MFMin(screen.height, 320.f);
-	pNew->minimapPixelScale = 1;
-	if(pNew->mapWidth * pNew->minimapPixelScale * 2 <= screen.width && pNew->mapHeight * pNew->minimapPixelScale * 2 <= screen.height)
-		pNew->minimapPixelScale *= 2;
 
-	pNew->pMiniMapImage = (uint32*)MFHeap_AllocAndZero(MFUtil_NextPowerOf2(pNew->mapWidth * pNew->minimapPixelScale) * MFUtil_NextPowerOf2(pNew->mapHeight * pNew->minimapPixelScale) * sizeof(uint32));
+	int sx = (int)screen.width / (pNew->mapWidth*2);
+	int sy = (int)screen.height / (pNew->mapHeight*2);
+	pNew->minimapPixelScale = MFClamp(1, MFMin(sx, sy), 4);
+
+	pNew->pMiniMapImage = (uint32*)MFHeap_AllocAndZero((pNew->mapWidth*2) * (pNew->mapHeight*2) * sizeof(uint32));
 	pNew->pMinimapMaterial = NULL;
 
 	// editor stuff
@@ -1447,7 +1550,7 @@ void Map::GetOffset(float *pX, float *pY)
 		*pY = yOffset;
 }
 
-void Map::CenterView(int x, int y)
+void Map::CenterView(float x, float y)
 {
 	float tileWidth, tileHeight;
 	GetVisibleTileSize(&tileWidth, &tileHeight);
@@ -1457,8 +1560,8 @@ void Map::CenterView(int x, int y)
 	float screenWidth = display.width / tileWidth;
 	float screenHeight = display.height / tileHeight;
 
-	xOffset = (float)x + 0.5f - screenWidth*0.5f;
-	yOffset = (float)y + 0.5f - screenHeight*0.5f;
+	xOffset = x + 0.5f - screenWidth*0.5f;
+	yOffset = y + 0.5f - screenHeight*0.5f;
 
 	xOffset = MFClamp(0.f, xOffset, mapWidth - screenWidth);
 	yOffset = MFClamp(0.f, yOffset, mapHeight - screenHeight);
