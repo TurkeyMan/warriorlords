@@ -1,7 +1,6 @@
 #if !defined(_BUTTON_H)
 #define _BUTTON_H
 
-#include "Tileset.h"
 #include "InputHandler.h"
 
 struct MFMaterial;
@@ -40,9 +39,9 @@ protected:
 
 	TriggerCallback *pCallback;
 	void *pUserData;
+	int buttonID;
 
 	int button;
-	int buttonID;
 };
 
 class CheckBox : public InputReceiver

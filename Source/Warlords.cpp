@@ -3,6 +3,8 @@
 #include "Screens/LoginScreen.h"
 #include "Screens/HomeScreen.h"
 #include "Screens/MenuScreen.h"
+#include "Screens/LobbyScreen.h"
+#include "Screens/JoinGameScreen.h"
 #include "Game.h"
 #include "Editor.h"
 
@@ -25,6 +27,8 @@ Editor *pEditor = NULL;
 LoginScreen *pLogin = NULL;
 HomeScreen *pHome = NULL;
 MenuScreen *pMenu = NULL;
+LobbyScreen *pLobby = NULL;
+JoinGameScreen *pJoinGame = NULL;
 
 MFSystemCallbackFunction pInitFujiFS;
 
@@ -59,6 +63,8 @@ void Game_Init()
 	pLogin = new LoginScreen;
 	pHome = new HomeScreen;
 	pMenu = new MenuScreen;
+	pLobby = new LobbyScreen;
+	pJoinGame = new JoinGameScreen;
 
 #if defined(TEST_ONLINE)
 	Screen::SetNext(pLogin);

@@ -325,7 +325,7 @@ void LoginScreen::AutoLogin()
 	Session *pSession = new Session();
 
 	// try and login...
-	ServerError err = pSession->Login("TurkeyMan", "terceS");
+	ServerError err = pSession->Login("Manu", "fred");
 	if(err != SE_NO_ERROR)
 	{
 		delete pSession;

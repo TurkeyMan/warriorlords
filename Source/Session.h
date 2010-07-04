@@ -9,6 +9,8 @@ public:
 	Session();
 	~Session();
 
+	ServerError UpdateState();
+
 	ServerError Login(const char *pUsername, const char *pPassword);
 	void BeginOffline();
 
@@ -24,18 +26,28 @@ public:
 	static Session *SetCurrent(Session *pNew) { Session *pOld = pCurrent; pCurrent = pNew; return pOld; }
 	static Session *GetCurrent() { return pCurrent; }
 
+	int GetNumCurrentGames() { return numCurrentGames; }
+	int GetNumPendingGames() { return numPendingGames; }
+	int GetNumPastGames() { return numPastGames; }
+
+	GameDetails *GetCurrentGame(int game) { return &pCurrentGames[game]; }
+	GameDetails *GetPendingGame(int game) { return &pPendingGames[game]; }
+	GameDetails *GetPastGame(int game) { return &pPastGames[game]; }
+
 protected:
 	UserDetails user;
 
 	bool bLoggedIn;
 	bool bOffline;
 
-	uint32 currentGames[64];
+	GameDetails *pCurrentGames;
 	int numCurrentGames;
-	uint32 pastGames[1024];
-	int numPastGames;
-	uint32 pendingGames[32];
+	GameDetails *pPendingGames;
 	int numPendingGames;
+
+	uint32 pastGames[1024];
+	GameDetails *pPastGames;
+	int numPastGames;
 
 	// manage these locally
 	uint32 localGames[64];

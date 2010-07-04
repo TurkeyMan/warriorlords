@@ -197,6 +197,8 @@ bool Map::GetMapDetails(const char *pMapFilename, MapDetails *pDetails)
 	if(!pIni)
 		return false;
 
+	MFString_Copy(pDetails->filename, pMapFilename);
+
 	MFIniLine *pLine = pIni->GetFirstLine();
 	while(pLine)
 	{

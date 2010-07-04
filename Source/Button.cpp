@@ -66,7 +66,8 @@ bool Button::HandleInputEvent(InputEvent ev, InputInfo &info)
 			{
 				isPressed = -1;
 
-				if(MFTypes_PointInRect(info.up.x, info.up.y, &rect))
+				MFRect client = { 0, 0, rect.width, rect.height };
+				if(MFTypes_PointInRect(info.up.x, info.up.y, &client))
 				{
 					if(pCallback)
 						pCallback(info.buttonID, pUserData, buttonID);

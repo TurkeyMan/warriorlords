@@ -1,7 +1,6 @@
 #if !defined(_LISTBOX_H)
 #define _LISTBOX_H
 
-#include "Tileset.h"
 #include "InputHandler.h"
 
 struct MFMaterial;
@@ -42,15 +41,26 @@ public:
 	void Draw();
 
 	void SetPos(const MFRect *pPos);
+	void SetBackColour(const MFVector &colour) { backColour = colour; }
+
+	void HighlightCursor(bool bEnable) { bHighlightCursor = bEnable; }
 
 	void SetSelectCallback(ListCallback *pCallback, void *pUserData) { pSelectCallback = pCallback; pSelectUserData = pUserData; }
+	void SetDblClickCallback(ListCallback *pCallback, void *pUserData) { pDblClickCallback = pCallback; pDblClickUserData = pUserData; }
 
-	int AddItem(const char *pText, int icon = -1, void *pUserData = NULL);
+	void Clear();
+
+	int AddItem(const char *pText, int icon = -1, void *pUserData = NULL, const MFVector &colour = MFVector::white);
+	inline int GetNumItems() { return numItems; }
 	const char *GetItemText(int item);
 	const void *GetItemData(int item);
+	const MFVector &GetItemColour(int item);
+	int GetItemIcon(int item);
 
 	void SetSelection(int item) { selection = MFMin(item, numItems-1); }
 	int GetSelection() { return selection; }
+
+	float GetItemHeight();
 
 protected:
 	ListBox(const MFRect &rect) : InputReceiver(rect) { }
@@ -59,11 +69,16 @@ protected:
 	MFMaterial *pIcons;
 	float iconSize;
 
+	MFVector backColour;
+
+	bool bHighlightCursor;
+
 	float itemHeight;
 	float textOffset;
 
 	struct ListItem
 	{
+		MFVector colour;
 		char text[28];
 		int icon;
 		void *pUserData;
@@ -79,9 +94,12 @@ protected:
 	float velocity;
 
 	float downPos;
+	bool bSelecting;
 
 	ListCallback *pSelectCallback;
 	void *pSelectUserData;
+	ListCallback *pDblClickCallback;
+	void *pDblClickUserData;
 };
 
 #endif

@@ -338,6 +338,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Source\SelectBox.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\SelectBox.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Source\ServerRequest.cpp"
 				>
 			</File>
@@ -434,6 +442,22 @@
 				</File>
 				<File
 					RelativePath=".\Source\Screens\Inventory.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\JoinGameScreen.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\JoinGameScreen.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\LobbyScreen.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\Screens\LobbyScreen.h"
 					>
 				</File>
 				<File

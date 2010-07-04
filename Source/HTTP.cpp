@@ -78,9 +78,10 @@ const char *HTTP_Post(const char *pServer, int port, const char *pResourcePath, 
 		}
 
 		MFSockets_Send(s, buffer, len, 0);
-		MFSockets_Recv(s, gResponseBuffer, sizeof(gResponseBuffer)-1, 0);
+		int bytes = MFSockets_Recv(s, gResponseBuffer, sizeof(gResponseBuffer)-1, 0);
 		MFSockets_CloseSocket(s);
 
+		gResponseBuffer[bytes] = 0;
 		gResponseBuffer[sizeof(gResponseBuffer)-1] = 0;
 		return gResponseBuffer;
 	}

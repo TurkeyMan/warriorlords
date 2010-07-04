@@ -14,7 +14,7 @@
 
 ServerError WLServ_CreateAccount(const char *pUsername, const char *pPassword, const char *pEmail, uint32 *pUserID)
 {
-	ServerError err = SE_NO_ERROR;
+	ServerError err = SE_INVALID_RESPONSE;
 
 	MFFileHTTPRequestArg args[4];
 	args[0].SetString("request", "CREATEACCOUNT");
@@ -30,7 +30,11 @@ ServerError WLServ_CreateAccount(const char *pUsername, const char *pPassword, c
 	char *pLine = strtok((char*)pResponse, "\n");
 	while(pLine)
 	{
-		if(pUserID && !MFString_CaseCmpN(pLine, "USERID", 6) && pLine[6] == '=')
+		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		{
+			err = SE_NO_ERROR;
+		}
+		else if(pUserID && !MFString_CaseCmpN(pLine, "USERID", 6) && pLine[6] == '=')
 		{
 			*pUserID = MFString_AsciiToInteger(pLine + 7);
 		}
@@ -47,7 +51,7 @@ ServerError WLServ_CreateAccount(const char *pUsername, const char *pPassword, c
 
 ServerError WLServ_Login(const char *pUsername, const char *pPassword, uint32 *pUserID)
 {
-	ServerError err = SE_NO_ERROR;
+	ServerError err = SE_INVALID_RESPONSE;
 
 	MFFileHTTPRequestArg args[3];
 	args[0].SetString("request", "LOGIN");
@@ -62,7 +66,11 @@ ServerError WLServ_Login(const char *pUsername, const char *pPassword, uint32 *p
 	char *pLine = strtok((char*)pResponse, "\n");
 	while(pLine)
 	{
-		if(pUserID && !MFString_CaseCmpN(pLine, "USERID", 6) && pLine[6] == '=')
+		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		{
+			err = SE_NO_ERROR;
+		}
+		else if(pUserID && !MFString_CaseCmpN(pLine, "USERID", 6) && pLine[6] == '=')
 		{
 			*pUserID = MFString_AsciiToInteger(pLine + 7);
 		}
@@ -79,7 +87,7 @@ ServerError WLServ_Login(const char *pUsername, const char *pPassword, uint32 *p
 
 static ServerError WLServ_GetUser(MFFileHTTPRequestArg *pArgs, UserDetails *pUser)
 {
-	ServerError err = SE_NO_ERROR;
+	ServerError err = SE_INVALID_RESPONSE;
 
 	const char *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", pArgs, 2);
 
@@ -89,7 +97,11 @@ static ServerError WLServ_GetUser(MFFileHTTPRequestArg *pArgs, UserDetails *pUse
 	char *pLine = strtok((char*)pResponse, "\n");
 	while(pLine)
 	{
-		if(!MFString_CaseCmpN(pLine, "ID", 2) && pLine[2] == '=')
+		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		{
+			err = SE_NO_ERROR;
+		}
+		else if(!MFString_CaseCmpN(pLine, "ID", 2) && pLine[2] == '=')
 		{
 			pUser->id = MFString_AsciiToInteger(pLine + 3);
 		}
@@ -144,7 +156,7 @@ ServerError WLServ_GetUserByName(const char *pUsername, UserDetails *pUser)
 
 static ServerError WLServ_GetGames(const char *pRequest, uint32 user, uint32 *pGames, int *pNumGames)
 {
-	ServerError err = SE_NO_ERROR;
+	ServerError err = SE_INVALID_RESPONSE;
 
 	MFFileHTTPRequestArg args[2];
 	args[0].SetString("request", pRequest);
@@ -161,14 +173,18 @@ static ServerError WLServ_GetGames(const char *pRequest, uint32 user, uint32 *pG
 	char *pLine = strtok((char*)pResponse, "\n");
 	while(pLine)
 	{
-		if(!MFString_CaseCmpN(pLine, "GAME", 4))
+		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		{
+			err = SE_NO_ERROR;
+		}
+		else if(!MFString_CaseCmpN(pLine, "GAME", 4))
 		{
 			int index = MFString_AsciiToInteger(pLine + 4);
 			const char *pGame = MFString_Chr(pLine + 5, '=');
 			if(pGame && index < maxGames)
 			{
-				pGames[index] = MFString_AsciiToInteger(pGame);
-				*pNumGames = pGames[index] + 1;
+				pGames[index] = MFString_AsciiToInteger(pGame + 1);
+				*pNumGames = index + 1;
 			}
 		}
 		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
@@ -199,7 +215,7 @@ ServerError WLServ_GetPendingGames(uint32 user, uint32 *pGames, int *pNumGames)
 
 ServerError WLServ_CreateGame(uint32 user, GameCreateDetails *pDetails, uint32 *pGame)
 {
-	ServerError err = SE_NO_ERROR;
+	ServerError err = SE_INVALID_RESPONSE;
 
 	MFFileHTTPRequestArg args[6];
 	args[0].SetString("request", "CREATEGAME");
@@ -207,7 +223,7 @@ ServerError WLServ_CreateGame(uint32 user, GameCreateDetails *pDetails, uint32 *
 	args[2].SetString("map", pDetails->pMap);
 	args[3].SetInt("players", pDetails->numPlayers);
 	args[4].SetInt("creator", user);
-	args[5].SetInt("turnTime", pDetails->turnTime);
+	args[5].SetInt("turntime", pDetails->turnTime);
 
 	const char *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 
@@ -217,7 +233,11 @@ ServerError WLServ_CreateGame(uint32 user, GameCreateDetails *pDetails, uint32 *
 	char *pLine = strtok((char*)pResponse, "\n");
 	while(pLine)
 	{
-		if(pGame && !MFString_CaseCmpN(pLine, "GAMEID", 6) && pLine[6] == '=')
+		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		{
+			err = SE_NO_ERROR;
+		}
+		else if(pGame && !MFString_CaseCmpN(pLine, "GAMEID", 6) && pLine[6] == '=')
 		{
 			*pGame = MFString_AsciiToInteger(pLine + 7);
 		}
@@ -234,7 +254,9 @@ ServerError WLServ_CreateGame(uint32 user, GameCreateDetails *pDetails, uint32 *
 
 static ServerError WLServ_GetGame(MFFileHTTPRequestArg *pArgs, GameDetails *pGame)
 {
-	ServerError err = SE_NO_ERROR;
+	MFZeroMemory(pGame, sizeof(GameDetails));
+
+	ServerError err = SE_INVALID_RESPONSE;
 
 	const char *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", pArgs, 2);
 
@@ -244,7 +266,11 @@ static ServerError WLServ_GetGame(MFFileHTTPRequestArg *pArgs, GameDetails *pGam
 	char *pLine = strtok((char*)pResponse, "\n");
 	while(pLine)
 	{
-		if(!MFString_CaseCmpN(pLine, "ID", 2) && pLine[2] == '=')
+		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		{
+			err = SE_NO_ERROR;
+		}
+		else if(!MFString_CaseCmpN(pLine, "ID", 2) && pLine[2] == '=')
 		{
 			pGame->id = MFString_AsciiToInteger(pLine + 3);
 		}
@@ -277,14 +303,31 @@ static ServerError WLServ_GetGame(MFFileHTTPRequestArg *pArgs, GameDetails *pGam
 			int index = MFString_AsciiToInteger(pLine + 6);
 			const char *pPlayer = MFString_Chr(pLine + 7, '=');
 			if(pPlayer && index < pGame->numPlayers)
-				pGame->players[index].id = MFString_AsciiToInteger(pPlayer);
+				pGame->players[index].id = MFString_AsciiToInteger(pPlayer + 1);
 		}
 		else if(!MFString_CaseCmpN(pLine, "RACE", 4))
 		{
 			int index = MFString_AsciiToInteger(pLine + 4);
 			const char *pRace = MFString_Chr(pLine + 5, '=');
 			if(pRace && index < pGame->numPlayers)
-				pGame->players[index].race = MFString_AsciiToInteger(pRace);
+				pGame->players[index].race = MFString_AsciiToInteger(pRace + 1);
+		}
+		else if(!MFString_CaseCmpN(pLine, "COLOUR", 6))
+		{
+			int index = MFString_AsciiToInteger(pLine + 6);
+			const char *pColour = MFString_Chr(pLine + 7, '=');
+			if(pColour && index < pGame->numPlayers)
+				pGame->players[index].colour = MFString_AsciiToInteger(pColour + 1);
+		}
+		else if(!MFString_CaseCmpN(pLine, "USERNAME", 8))
+		{
+			int index = MFString_AsciiToInteger(pLine + 8);
+			const char *pName = MFString_Chr(pLine + 9, '=');
+			if(pName && index < pGame->numPlayers)
+			{
+				MFString_CopyN(pGame->players[index].name, pName + 1, sizeof(pGame->players[index].name));
+				pGame->players[index].name[sizeof(pGame->players[index].name) - 1] = 0;
+			}
 		}
 		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
 		{
@@ -317,7 +360,7 @@ ServerError WLServ_GetGameByName(const char *pName, GameDetails *pGame)
 
 ServerError WLServ_JoinGame(uint32 user, uint32 game)
 {
-	ServerError err = SE_NO_ERROR;
+	ServerError err = SE_INVALID_RESPONSE;
 
 	MFFileHTTPRequestArg args[3];
 	args[0].SetString("request", "JOINGAME");
@@ -332,7 +375,11 @@ ServerError WLServ_JoinGame(uint32 user, uint32 game)
 	char *pLine = strtok((char*)pResponse, "\n");
 	while(pLine)
 	{
-		if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
+		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		{
+			err = SE_NO_ERROR;
+		}
+		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
 		{
 			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
 		}
@@ -345,7 +392,7 @@ ServerError WLServ_JoinGame(uint32 user, uint32 game)
 
 ServerError WLServ_FindRandomGame(uint32 user, uint32 *pGame)
 {
-	ServerError err = SE_NO_ERROR;
+	ServerError err = SE_INVALID_RESPONSE;
 
 	MFFileHTTPRequestArg args[2];
 	args[0].SetString("request", "FINDGAME");
@@ -359,7 +406,11 @@ ServerError WLServ_FindRandomGame(uint32 user, uint32 *pGame)
 	char *pLine = strtok((char*)pResponse, "\n");
 	while(pLine)
 	{
-		if(pGame && !MFString_CaseCmpN(pLine, "GAMEID", 6) && pLine[6] == '=')
+		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		{
+			err = SE_NO_ERROR;
+		}
+		else if(pGame && !MFString_CaseCmpN(pLine, "GAMEID", 6) && pLine[6] == '=')
 		{
 			*pGame = MFString_AsciiToInteger(pLine + 7);
 		}
@@ -376,7 +427,7 @@ ServerError WLServ_FindRandomGame(uint32 user, uint32 *pGame)
 
 ServerError WLServ_LeaveGame(uint32 user, uint32 game)
 {
-	ServerError err = SE_NO_ERROR;
+	ServerError err = SE_INVALID_RESPONSE;
 
 	MFFileHTTPRequestArg args[3];
 	args[0].SetString("request", "LEAVEGAME");
@@ -391,7 +442,11 @@ ServerError WLServ_LeaveGame(uint32 user, uint32 game)
 	char *pLine = strtok((char*)pResponse, "\n");
 	while(pLine)
 	{
-		if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
+		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		{
+			err = SE_NO_ERROR;
+		}
+		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
 		{
 			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
 		}
@@ -404,7 +459,7 @@ ServerError WLServ_LeaveGame(uint32 user, uint32 game)
 
 ServerError WLServ_SetRace(uint32 game, uint32 user, int race)
 {
-	ServerError err = SE_NO_ERROR;
+	ServerError err = SE_INVALID_RESPONSE;
 
 	MFFileHTTPRequestArg args[4];
 	args[0].SetString("request", "SETRACE");
@@ -420,7 +475,44 @@ ServerError WLServ_SetRace(uint32 game, uint32 user, int race)
 	char *pLine = strtok((char*)pResponse, "\n");
 	while(pLine)
 	{
-		if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
+		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		{
+			err = SE_NO_ERROR;
+		}
+		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
+		{
+			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
+		}
+
+		pLine = strtok(NULL, "\n");
+	}
+
+	return err;
+}
+
+ServerError WLServ_SetColour(uint32 game, uint32 user, int colour)
+{
+	ServerError err = SE_INVALID_RESPONSE;
+
+	MFFileHTTPRequestArg args[4];
+	args[0].SetString("request", "SETCOLOUR");
+	args[1].SetInt("gameid", game);
+	args[2].SetInt("playerid", user);
+	args[3].SetInt("colour", colour);
+
+	const char *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+
+	if(!pResponse)
+		return SE_CONNECTION_FAILED;
+
+	char *pLine = strtok((char*)pResponse, "\n");
+	while(pLine)
+	{
+		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		{
+			err = SE_NO_ERROR;
+		}
+		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
 		{
 			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
 		}
@@ -433,7 +525,7 @@ ServerError WLServ_SetRace(uint32 game, uint32 user, int race)
 
 ServerError WLServ_BeginGame(uint32 game, uint32 *pGame)
 {
-	ServerError err = SE_NO_ERROR;
+	ServerError err = SE_INVALID_RESPONSE;
 
 	MFFileHTTPRequestArg args[2];
 	args[0].SetString("request", "BEGINGAME");
@@ -447,7 +539,11 @@ ServerError WLServ_BeginGame(uint32 game, uint32 *pGame)
 	char *pLine = strtok((char*)pResponse, "\n");
 	while(pLine)
 	{
-		if(pGame && !MFString_CaseCmpN(pLine, "GAMEID", 6) && pLine[6] == '=')
+		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		{
+			err = SE_NO_ERROR;
+		}
+		else if(pGame && !MFString_CaseCmpN(pLine, "GAMEID", 6) && pLine[6] == '=')
 		{
 			*pGame = MFString_AsciiToInteger(pLine + 7);
 		}
@@ -464,7 +560,7 @@ ServerError WLServ_BeginGame(uint32 game, uint32 *pGame)
 
 ServerError WLServ_GameState(uint32 game, GameState *pState)
 {
-	ServerError err = SE_NO_ERROR;
+	ServerError err = SE_INVALID_RESPONSE;
 
 	MFFileHTTPRequestArg args[2];
 	args[0].SetString("request", "GETGAMEDETAILS");
@@ -478,7 +574,11 @@ ServerError WLServ_GameState(uint32 game, GameState *pState)
 	char *pLine = strtok((char*)pResponse, "\n");
 	while(pLine)
 	{
-		if(!MFString_CaseCmpN(pLine, "ID", 2) && pLine[2] == '=')
+		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		{
+			err = SE_NO_ERROR;
+		}
+		else if(!MFString_CaseCmpN(pLine, "ID", 2) && pLine[2] == '=')
 		{
 			pState->id = MFString_AsciiToInteger(pLine + 3);
 		}
@@ -527,21 +627,21 @@ ServerError WLServ_GameState(uint32 game, GameState *pState)
 			int index = MFString_AsciiToInteger(pLine + 6);
 			const char *pPlayer = MFString_Chr(pLine + 7, '=');
 			if(pPlayer && index < pState->numPlayers)
-				pState->players[index].id = MFString_AsciiToInteger(pPlayer);
+				pState->players[index].id = MFString_AsciiToInteger(pPlayer + 1);
 		}
 		else if(!MFString_CaseCmpN(pLine, "TEAM", 4))
 		{
 			int index = MFString_AsciiToInteger(pLine + 4);
 			const char *pTeam = MFString_Chr(pLine + 5, '=');
 			if(pTeam && index < pState->numPlayers)
-				pState->players[index].team = MFString_AsciiToInteger(pTeam);
+				pState->players[index].team = MFString_AsciiToInteger(pTeam + 1);
 		}
 		else if(!MFString_CaseCmpN(pLine, "RACE", 4))
 		{
 			int index = MFString_AsciiToInteger(pLine + 4);
 			const char *pRace = MFString_Chr(pLine + 5, '=');
 			if(pRace && index < pState->numPlayers)
-				pState->players[index].race = MFString_AsciiToInteger(pRace);
+				pState->players[index].race = MFString_AsciiToInteger(pRace + 1);
 		}
 		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
 		{

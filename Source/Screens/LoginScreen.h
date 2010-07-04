@@ -2,7 +2,6 @@
 #define _LOGINSCREEN_H
 
 #include "Screen.h"
-#include "Game.h"
 #include "Button.h"
 #include "StringBox.h"
 

@@ -52,6 +52,9 @@ void InputManager::PushReceiver(InputReceiver *pReceiver)
 
 void InputManager::PopReceiver(InputReceiver *pReceiver)
 {
+	if(pExclusiveReceiver == pReceiver)
+		pExclusiveReceiver = NULL;
+
 	pReceiver = pReceiver->pNext;
 	while(pInputStack != pReceiver)
 	{
@@ -65,6 +68,9 @@ void InputManager::RemoveReceiver(InputReceiver *pReceiver)
 {
 	if(!pInputStack)
 		return;
+
+	if(pExclusiveReceiver == pReceiver)
+		pExclusiveReceiver = NULL;
 
 	if(pInputStack == pReceiver)
 	{
@@ -410,14 +416,32 @@ void InputManager::Update()
 
 bool InputManager::Dispatch(InputInfo &info, InputReceiver *pExplicitReceiver)
 {
+	float x = info.hover.x;
+	float y = info.hover.y;
+
 	if(pExplicitReceiver)
 	{
+		if(pExplicitReceiver->bSpacial)
+		{
+			info.hover.x -= pExplicitReceiver->rect.x;
+			info.hover.y -= pExplicitReceiver->rect.y;
+		}
+
 		if(pExplicitReceiver->HandleInputEvent(info.ev, info))
 			return true;
 	}
 
 	if(pExclusiveReceiver)
 	{
+		info.hover.x = x;
+		info.hover.y = y;
+
+		if(pExclusiveReceiver->bSpacial)
+		{
+			info.hover.x -= pExclusiveReceiver->rect.x;
+			info.hover.y -= pExclusiveReceiver->rect.y;
+		}
+
 		if(pExclusiveReceiver->HandleInputEvent(info.ev, info))
 			return true;
 	}
@@ -428,6 +452,9 @@ bool InputManager::Dispatch(InputInfo &info, InputReceiver *pExplicitReceiver)
 		if(!pR->bSpacial || /*info.device != IDD_Mouse ||*/ (info.hover.x >= pR->rect.x && info.hover.x < pR->rect.x + pR->rect.width &&
 														 info.hover.y >= pR->rect.y && info.hover.y < pR->rect.y + pR->rect.height))
 		{
+			info.hover.x = x;
+			info.hover.y = y;
+
 			if(pR->bSpacial)
 			{
 				info.hover.x -= pR->rect.x;

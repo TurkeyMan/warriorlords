@@ -2,6 +2,7 @@
 #include "Display.h"
 #include "MenuScreen.h"
 #include "HomeScreen.h"
+#include "LobbyScreen.h"
 #include "Game.h"
 #include "Editor.h"
 
@@ -11,6 +12,7 @@
 #include "MFFileSystem.h"
 
 extern HomeScreen *pHome;
+extern LobbyScreen *pLobby;
 
 extern Game *pGame;
 extern Editor *pEditor;
@@ -22,6 +24,7 @@ MenuScreen::MenuScreen()
 
 	gameType = 0;
 	pMaps = NULL;
+	pMessage = NULL;
 
 	// populate map list
 	MFRect rect = { 10.f, 64.f, 240.f, 200.f };
@@ -55,6 +58,10 @@ MenuScreen::MenuScreen()
 			pFind = NULL;
 		}
 	}
+
+	// create the game name textbox
+	MFRect stringPos = { 340, 70, 160, MFFont_GetFontHeight(pFont) };
+	pGameName = StringBox::Create(pFont, &stringPos, NULL, NULL);
 
 	// start buttons
 	MFRect uvs, pos = { 0, 0, 64.f, 64.f };
@@ -101,16 +108,19 @@ void MenuScreen::Select()
 	pInputManager->PushReceiver(pStart);
 	pInputManager->PushReceiver(pReturn);
 
+	pMapList->SetSelection(-1);
+	pStart->Enable(false);
+
 	if(gameType == 0)
 	{
-		// we can't start internet games yet :(
-		pStart->Enable(false);
+		pInputManager->PushReceiver(pGameName);
 	}
 	else
 	{
-		pStart->Enable(true);
 		pInputManager->PushReceiver(pEdit);
 	}
+
+	pMessage = NULL;
 }
 
 bool MenuScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
@@ -131,6 +141,8 @@ bool MenuScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 int MenuScreen::Update()
 {
+	if(gameType == 0)
+		pGameName->Update();
 
 	return 0;
 }
@@ -142,7 +154,16 @@ void MenuScreen::Draw()
 	else
 		MFFont_DrawText(pFont, MakeVector(16, 16), 32.f, MFVector::yellow, "New Offline Game");
 
+	if(pMessage)
+		MFFont_DrawText(pFont, MakeVector(270, 16), 32.f, MFVector::red, pMessage);
+
 	pMapList->Draw();
+
+	if(gameType == 0)
+	{
+		MFFont_DrawText(pFont, MakeVector(270, 66), 30.f, MFVector::white, "Game:");
+		pGameName->Draw();
+	}
 
 	pStart->Draw();
 	pReturn->Draw();
@@ -155,9 +176,13 @@ void MenuScreen::Draw()
 	{
 		MapData *pMap = (MapData*)pMapList->GetItemData(selection);
 
-		MFFont_DrawText(pFont, MakeVector(270, 70), 30.f, MFVector::white, pMap->details.mapName);
-		MFFont_DrawTextf(pFont, MakeVector(280, 100), 25.f, MFVector::white, "Players: %d", pMap->details.numPlayers);
-		MFFont_DrawTextf(pFont, MakeVector(280, 125), 25.f, MFVector::white, "Size: %d, %d", pMap->details.width, pMap->details.height);
+		float offset = 0.f;
+		if(gameType == 0)
+			offset += 32;
+
+		MFFont_DrawText(pFont, MakeVector(270, 70 + offset), 30.f, MFVector::white, pMap->details.mapName);
+		MFFont_DrawTextf(pFont, MakeVector(280, 100 + offset), 25.f, MFVector::white, "Players: %d", pMap->details.numPlayers);
+		MFFont_DrawTextf(pFont, MakeVector(280, 125 + offset), 25.f, MFVector::white, "Size: %d, %d", pMap->details.width, pMap->details.height);
 	}
 }
 
@@ -181,47 +206,70 @@ void MenuScreen::Click(int button, void *pUserData, int buttonID)
 
 			MapData *pMap = (MapData*)pMenu->pMapList->GetItemData(selection);
 
-			// setup game parameters
-			GameParams params;
-			MFZeroMemory(&params, sizeof(params));
-			params.pMap = pMap->name;
-			params.bOnline = buttonID == 0;
-
-			// set up the races...
-			bool bColoursTaken[16];
-			MFZeroMemory(bColoursTaken, sizeof(bColoursTaken));
-			int numColours = pMap->details.unitSetDetails.numRaces - 1;
-
-			params.numPlayers = pMap->details.numPlayers;
-			for(int a=0; a<params.numPlayers; ++a)
-			{
-				// choose random race
-				params.playerRaces[a] = 1 + (MFRand() % pMap->details.unitSetDetails.numRaces);
-				while(!pMap->details.bRacePresent[params.playerRaces[a]])
-					params.playerRaces[a] = 1 + (MFRand() % pMap->details.unitSetDetails.numRaces);
-
-				// choose random colour
-				int colour;
-				do colour = 1 + (MFRand() % numColours);
-				while(bColoursTaken[colour-1]);
-				bColoursTaken[colour-1] = true;
-
-				params.playerColours[a] = colour;
-			}
-
 			// create game
 			if(buttonID == 0)
 			{
-				// start game
-				pGame = new Game(&params);
-				Game::SetCurrent(pGame);
-				pGame->BeginGame();
+				if(pMenu->gameType == 0)
+				{
+					Session *pSession = Session::GetCurrent();
+					if(!pSession)
+					{
+						pMenu->pMessage = "Not logged in!";
+						break;
+					}
+
+					const char *pGameName = pMenu->pGameName->GetString();
+
+					if(pGameName[0] == 0)
+					{
+						pMenu->pMessage = "Enter a game name!";
+						break;
+					}
+
+
+					GameCreateDetails details;
+					details.pName = pGameName;
+					details.pMap = pMap->name;
+					details.turnTime = 60*60;
+					details.numPlayers = pMap->details.numPlayers;
+
+					uint32 lobby;
+					ServerError err = WLServ_CreateGame(pSession->GetUserID(), &details, &lobby);
+
+					if(err != SE_NO_ERROR)
+					{
+						switch(err)
+						{
+							case SE_CONNECTION_FAILED:
+								pMenu->pMessage = "Couldn't connect to server!";
+								break;
+							case SE_INVALID_GAME:
+								pMenu->pMessage = "Invalid game!";
+								break;
+							default:
+								pMenu->pMessage = "Unknown Error!";
+								break;
+						}
+					}
+					else
+					{
+						pLobby->ShowOnline(lobby);
+					}
+				}
+				else
+				{
+					pLobby->ShowOffline(&pMap->details);
+				}
 			}
 			else
 			{
+				// edit map
+				GameParams params;
+				MFZeroMemory(&params, sizeof(params));
+				params.pMap = pMap->name;
+				params.bOnline = false;
 				params.bEditMap = true;
 
-				// edit map
 				pGame = new Game(&params);
 				Game::SetCurrent(pGame);
 
@@ -240,10 +288,12 @@ void MenuScreen::Click(int button, void *pUserData, int buttonID)
 
 void MenuScreen::SelectMap(int item, void *pUserData)
 {
+	MenuScreen *pScreen = (MenuScreen*)pUserData;
+
+	pScreen->pStart->Enable(item >= 0);
+
 	if(item < 0)
 		return;
-
-	MenuScreen *pScreen = (MenuScreen*)pUserData;
 
 	MapData *pMap = (MapData*)pScreen->pMapList->GetItemData(item);
 	if(!pMap->bDetailsLoaded)

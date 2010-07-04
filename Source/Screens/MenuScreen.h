@@ -2,9 +2,9 @@
 #define _MENUSCREEN_H
 
 #include "Screen.h"
-#include "Game.h"
 #include "Button.h"
 #include "ListBox.h"
+#include "StringBox.h"
 
 #include "MFFont.h"
 
@@ -29,18 +29,21 @@ protected:
 		char name[64];
 		MapDetails details;
 		bool bDetailsLoaded;
-		MapData * pNext;
+		MapData *pNext;
 	};
 
 	MFMaterial *pIcons;
 	MFFont *pFont;
 
 	ListBox *pMapList;
+	StringBox *pGameName;
 	MapData *pMaps;
 
 	Button *pStart, *pEdit, *pReturn;
 
 	int gameType;
+
+	const char *pMessage;
 
 	static void Click(int button, void *pUserData, int buttonID);
 	static void SelectMap(int item, void *pUserData);

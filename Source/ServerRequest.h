@@ -3,9 +3,10 @@
 
 enum ServerError
 {
-	SE_CONNECTION_REFUSED = -3,
-	SE_CANT_FIND_HOST = -2,
-	SE_CONNECTION_FAILED = -1,
+	SE_CONNECTION_REFUSED = -4,
+	SE_CANT_FIND_HOST = -3,
+	SE_CONNECTION_FAILED = -2,
+	SE_INVALID_RESPONSE = -1,
 
 	SE_NO_ERROR = 0,
 
@@ -41,7 +42,9 @@ struct GameDetails
 	struct Player
 	{
 		uint32 id;
+		char name[52];
 		int race;
+		int colour;
 	};
 
 	uint32 id;
@@ -52,7 +55,7 @@ struct GameDetails
 	int maxPlayers;
 
 	int numPlayers;
-	Player players[8];
+	Player players[16];
 };
 
 struct GameState
@@ -79,7 +82,7 @@ struct GameState
 	int winner;
 
 	int numPlayers;
-	Player players[8];
+	Player players[16];
 };
 
 ServerError WLServ_CreateAccount(const char *pUsername, const char *pPassword, const char *pEmail, uint32 *pUserID);
@@ -102,6 +105,7 @@ ServerError WLServ_FindRandomGame(uint32 user, uint32 *pGame);
 ServerError WLServ_LeaveGame(uint32 user, uint32 game);
 
 ServerError WLServ_SetRace(uint32 game, uint32 user, int race);
+ServerError WLServ_SetColour(uint32 game, uint32 user, int colour);
 
 ServerError WLServ_BeginGame(uint32 game, uint32 *pGame);
 

@@ -26,6 +26,7 @@ enum ObjectType
 
 struct MapDetails
 {
+	char filename[64];
 	char mapName[64];
 	char tileSet[64];
 	char unitSet[64];
