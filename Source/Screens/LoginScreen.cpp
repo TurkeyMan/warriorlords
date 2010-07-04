@@ -72,13 +72,18 @@ LoginScreen::LoginScreen()
 
 LoginScreen::~LoginScreen()
 {
-	MFMaterial_Destroy(pIcons);
-	MFFont_Destroy(pFont);
-
 	pUsername->Destroy();
 	pPassword->Destroy();
+	pEmail->Destroy();
+
 	pLogin->Destroy();
 	pOffline->Destroy();
+	pNew->Destroy();
+	pCreate->Destroy();
+	pReturn->Destroy();
+
+	MFMaterial_Destroy(pIcons);
+	MFFont_Destroy(pFont);
 }
 
 void LoginScreen::Select()

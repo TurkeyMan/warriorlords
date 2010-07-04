@@ -92,9 +92,17 @@ MenuScreen::~MenuScreen()
 	while(pMaps)
 	{
 		MapData *pNext = pMaps->pNext;
-		MFHeap_Free(pNext);
+		MFHeap_Free(pMaps);
 		pMaps = pNext;
 	}
+
+	pMapList->Destroy();
+
+	pGameName->Destroy();
+
+	pStart->Destroy();
+	pEdit->Destroy();
+	pReturn->Destroy();
 
 	MFMaterial_Destroy(pIcons);
 	MFFont_Destroy(pFont);

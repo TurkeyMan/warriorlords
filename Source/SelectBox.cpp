@@ -39,6 +39,9 @@ SelectBox *SelectBox::Create(const MFRect *pPosition, MFFont *pFont, MFMaterial 
 
 void SelectBox::Destroy()
 {
+	pList->Destroy();
+
+	SelectBox::~SelectBox();
 	MFHeap_Free(this);
 }
 

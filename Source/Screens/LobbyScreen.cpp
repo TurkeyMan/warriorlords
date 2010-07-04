@@ -61,12 +61,18 @@ LobbyScreen::LobbyScreen()
 
 LobbyScreen::~LobbyScreen()
 {
-	MFMaterial_Destroy(pIcons);
-	MFFont_Destroy(pFont);
-
 	pBegin->Destroy();
 	pLeave->Destroy();
 	pReturn->Destroy();
+
+	for(int a=0; a<8; ++a)
+	{
+		pRaces[a]->Destroy();
+		pColours[a]->Destroy();
+	}
+
+	MFMaterial_Destroy(pIcons);
+	MFFont_Destroy(pFont);
 }
 
 void LobbyScreen::Select()
@@ -249,6 +255,8 @@ void LobbyScreen::Click(int button, void *pUserData, int buttonID)
 			// create the game
 			if(!pScreen->bOffline)
 			{
+				return;
+
 				uint32 gameID;
 				ServerError err = WLServ_BeginGame(pScreen->details.id, &gameID);
 

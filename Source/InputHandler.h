@@ -77,7 +77,7 @@ class InputReceiver
 public:
 	InputReceiver() { pNext = NULL; bSpacial = false; }
 	InputReceiver(const MFRect &rect) { pNext = NULL; bSpacial = true; this->rect = rect; }
-	~InputReceiver() { }
+	virtual ~InputReceiver() { }
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info) = 0;
 

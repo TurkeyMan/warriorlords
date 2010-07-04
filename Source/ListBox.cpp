@@ -34,6 +34,7 @@ void ListBox::Destroy()
 {
 	MFHeap_Free(pItems);
 
+	ListBox::~ListBox();
 	MFHeap_Free(this);
 }
 

@@ -69,6 +69,15 @@ HomeScreen::HomeScreen()
 
 HomeScreen::~HomeScreen()
 {
+	pWaiting->Destroy();
+	pMyGames->Destroy();
+
+	pCreate->Destroy();
+	pJoin->Destroy();
+	pFind->Destroy();
+	pOffline->Destroy();
+	pContinue->Destroy();
+
 	MFMaterial_Destroy(pIcons);
 	MFFont_Destroy(pFont);
 }

@@ -47,7 +47,8 @@ StringBox *StringBox::Create(MFFont *pFont, MFRect *pPos, ChangeCallback *pCallb
 
 void StringBox::Destroy()
 {
-	delete this;
+	StringBox::~StringBox();
+	MFHeap_Free(this);
 }
 
 void StringBox::RegisterTabCallback(ChangeCallback *pCallback, void *pUserData)

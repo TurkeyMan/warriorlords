@@ -41,12 +41,12 @@ JoinGameScreen::JoinGameScreen()
 
 JoinGameScreen::~JoinGameScreen()
 {
-	MFMaterial_Destroy(pIcons);
-	MFFont_Destroy(pFont);
-
 	pGame->Destroy();
 	pJoin->Destroy();
 	pReturn->Destroy();
+
+	MFMaterial_Destroy(pIcons);
+	MFFont_Destroy(pFont);
 }
 
 void JoinGameScreen::Select()

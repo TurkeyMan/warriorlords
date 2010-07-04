@@ -30,6 +30,7 @@ Button *Button::Create(const MFMaterial *pImage, const MFRect *pPosition, const 
 
 void Button::Destroy()
 {
+	Button::~Button();
 	MFHeap_Free(this);
 }
 
@@ -151,7 +152,9 @@ CheckBox *CheckBox::Create(const MFRect *pPosition, const char *pText, const MFV
 void CheckBox::Destroy()
 {
 	pButton->Destroy();
-	delete this;
+
+	CheckBox::~CheckBox();
+	MFHeap_Free(this);
 }
 
 bool CheckBox::HandleInputEvent(InputEvent ev, InputInfo &info)
