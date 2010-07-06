@@ -14,7 +14,7 @@ const char *HTTP_Get(const char *pServer, int port, const char *pResourcePath)
 		char buffer[1024];
 		int len = sprintf(buffer, "GET %s HTTP/1.1\nHost: %s:%d\nUser-Agent: WarriorLords Client/1.0\nContent-Type: application/x-www-form-urlencoded\n\n\n", pResourcePath, pServer, port);
 
-		MFSocket s = MFSockets_CreateSocket(MFAF_Inet, MFSockType_Stream, MFProtocol_TCP);
+		MFSocket s = MFSockets_CreateSocket(pAddrInfo->pAddress->family, MFSockType_Stream, MFProtocol_TCP);
 
 		int r = MFSockets_Connect(s, *pAddrInfo->pAddress);
 		if(r != 0)
@@ -68,7 +68,7 @@ const char *HTTP_Post(const char *pServer, int port, const char *pResourcePath, 
 		char buffer[2048];
 		int len = sprintf_s(buffer, sizeof(buffer), "POST %s HTTP/1.1\nHost: %s:%d\nUser-Agent: WarriorLords Client/1.0\nContent-Type: application/x-www-form-urlencoded\nContent-Length: %d\n\n%s", pResourcePath, pServer, port, MFString_Length(pArgString), pArgString);
 
-		MFSocket s = MFSockets_CreateSocket(MFAF_Inet, MFSockType_Stream, MFProtocol_TCP);
+		MFSocket s = MFSockets_CreateSocket(pAddrInfo->pAddress->family, MFSockType_Stream, MFProtocol_TCP);
 
 		int r = MFSockets_Connect(s, *pAddrInfo->pAddress);
 		if(r != 0)
