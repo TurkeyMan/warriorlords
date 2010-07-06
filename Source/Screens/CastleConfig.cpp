@@ -41,12 +41,9 @@ bool CastleConfig::DrawContent()
 	pGame->DrawLine(lower.x + 5.f, lower.y-4.f, lower.x + lower.width - 5.f, lower.y-4.f);
 	pGame->DrawLine(right.x - 4.f, right.y + 5.f, right.x - 4.f, right.y + right.height - 5.f);
 
-	MFFont_BlitTextf(pFont, (int)title.x + 5, (int)title.y, MFVector::yellow, pCastle->details.name);
+	int height = (int)MFFont_GetFontHeight(pFont);
 
-	char gold[16];
-	sprintf(gold, "Gold: %d", pGame->GetPlayerGold(pGame->CurrentPlayer()));
-	float goldWidth = MFFont_GetStringWidth(pFont, gold, MFFont_GetFontHeight(pFont));
-	MFFont_BlitText(pFont, (int)(title.x + title.width - goldWidth - 5), (int)title.y, MFVector::yellow, gold);
+	MFFont_BlitTextf(pFont, (int)title.x + 5, (int)title.y, MFVector::yellow, pCastle->details.name);
 
 	int building = pCastle->GetBuildUnit();
 	if(building > -1)
@@ -54,7 +51,6 @@ bool CastleConfig::DrawContent()
 		UnitDefinitions *pUnitDefs = pGame->GetUnitDefs();
 		UnitDetails *pDetails = pUnitDefs->GetUnitDetails(building);
 
-		int height = (int)MFFont_GetFontHeight(pFont);
 		MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 5, MFVector::white, pDetails->pName);
 		if(pDetails->type == UT_Vehicle)
 		{
@@ -72,7 +68,38 @@ bool CastleConfig::DrawContent()
 		}
 	}
 
-	MFFont_BlitTextf(pFont, (int)lower.x + 5, (int)lower.y + 5, MFVector::white, "Income: %d", pCastle->details.income);
+	// calculate total income and expense
+	int player = pGame->CurrentPlayer();
+	Map *pMap = pGame->GetMap();
+	int numCastles = pMap->GetNumCastles();
+
+	int income = 0, expense = 0;
+	for(int a=0; a<numCastles; ++a)
+	{
+		Castle *pCastle = pMap->GetCastle(a);
+		if(pCastle->GetPlayer() == player)
+		{
+			income += pCastle->details.income;
+
+			int building = pCastle->GetBuildUnit();
+			if(building > -1 && pCastle->buildTime <= 1)
+			{
+				UnitDetails *pDetails = pMap->GetUnitDefinitions()->GetUnitDetails(building);
+				expense += pDetails->cost;
+			}
+		}
+	}
+
+	int gold = pGame->GetPlayerGold(pGame->CurrentPlayer());
+
+	char incomeString[16];
+	sprintf(incomeString, "Income: %d", pCastle->details.income);
+	float incomeWidth = MFFont_GetStringWidth(pFont, incomeString, MFFont_GetFontHeight(pFont));
+	MFFont_BlitText(pFont, (int)(title.x + title.width - 32 - incomeWidth - 5), (int)title.y, MFVector::white, incomeString);
+
+	MFFont_BlitTextf(pFont, (int)lower.x + 5, (int)lower.y + 5, MFVector::white, "Treasury: %d", gold);
+	MFFont_BlitTextf(pFont, (int)lower.x + 5, (int)lower.y + 15 + height, MFVector::yellow, "Income - Expense: %d - %d", income, expense);
+	MFFont_BlitTextf(pFont, (int)lower.x + 5, (int)lower.y + 15 + height*2, expense > gold + income ? MFVector::red : MFVector::white, "Cash Flow: %+d", income - expense);
 
 	for(int a=0; a<numBuildUnits; ++a)
 		pBuildUnits[a]->Draw();
