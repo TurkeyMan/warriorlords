@@ -67,9 +67,8 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 		return NULL;
 
 	UnitDefinitions *pUnitDefs = new UnitDefinitions;
-	pUnitDefs->units.Init("Unit List", 4096);
-	pUnitDefs->pGame = pGame;
 
+	pUnitDefs->pGame = pGame;
 	pUnitDefs->pUnitDefs = pIni;
 
 	pUnitDefs->pUnits = NULL;
@@ -490,8 +489,6 @@ void UnitDefinitions::Free()
 	if(pUnitDefs)
 		MFIni::Destroy(pUnitDefs);
 
-	units.Deinit();
-
 	delete this;
 }
 
@@ -503,9 +500,9 @@ MFVector UnitDefinitions::GetRaceColour(int race) const
 
 Unit *UnitDefinitions::CreateUnit(int unit, int player)
 {
-	Unit *pUnit = units.Create();
+	Unit *pUnit = pGame->AllocUnit();
 
-	pUnit->id = unit;
+	pUnit->type = unit;
 	pUnit->player = player;
 
 	pUnit->pUnitDefs = this;
@@ -529,13 +526,12 @@ Unit *UnitDefinitions::CreateUnit(int unit, int player)
 	pUnit->plan.strength = TS_Weakest;
 	pUnit->plan.bAttackAvailable = true;
 
-
 	return pUnit;
 }
 
-void UnitDefinitions::DestroyUnit(Unit *pUnits)
+void UnitDefinitions::DestroyUnit(Unit *pUnit)
 {
-	units.Destroy(pUnits);
+	pGame->DestroyUnit(pUnit);
 }
 
 void UnitDefinitions::AddRenderUnit(int unit, float x, float y, int player, bool bFlip, float alpha, int rank)
@@ -770,7 +766,7 @@ void Unit::Destroy()
 
 void Unit::Draw(float x, float y, bool bFlip, float alpha)
 {
-	pUnitDefs->AddRenderUnit(id, x, y, player, bFlip, alpha, GetRank());
+	pUnitDefs->AddRenderUnit(type, x, y, player, bFlip, alpha, GetRank());
 }
 
 int Unit::GetRace()
@@ -964,16 +960,18 @@ float Unit::ModStatFloat(float stat, int statType, int modIndex)
 	return MFMax((stat + diff) * scale, 0.f);
 }
 
-void Castle::Init(const CastleDetails &_details, int _player)
+void Castle::Init(int _id, const CastleDetails &_details, int _player)
 {
 	pUnitDefs = NULL;
 	pTile = NULL;
 
+	id = _id;
 	details = _details;
 	player = _player;
 
 	building = -1;
 	buildTime = 0;
+	nextBuild = -1;
 }
 
 MapTile *Castle::GetTile(int index)
@@ -1057,16 +1055,37 @@ void Castle::Capture(int _player)
 
 void Castle::SetBuildUnit(int slot)
 {
-	int unit = details.buildUnits[slot].unit;
-	building = slot;
-	buildTime = details.buildUnits[slot].buildTime;
+	nextBuild = slot;
 }
 
 int Castle::GetBuildUnit()
 {
-	if(building == -1)
+	if(nextBuild == -1)
 		return -1;
-	return details.buildUnits[building].unit;
+	return details.buildUnits[nextBuild].unit;
+}
+
+int Castle::GetBuildTime()
+{
+	if(nextBuild == -1)
+		return 0;
+
+	if(nextBuild == building)
+		return buildTime;
+
+	return details.buildUnits[nextBuild].buildTime;
+}
+
+void Ruin::InitRuin(int _id, int specialID, int _item)
+{
+	pUnitDefs = NULL;
+	pSpecial = NULL;
+	pTile = NULL;
+
+	id = _id;
+	type = specialID;
+	item = _item;
+	bHasSearched = false;
 }
 
 Group *Group::Create(int _player)
@@ -1077,15 +1096,15 @@ Group *Group::Create(int _player)
 	pGroup->bSelected = false;
 	pGroup->pVehicle = NULL;
 	pGroup->pPath = NULL;
+	pGroup->x = pGroup->y = -1;
 	pGroup->pathX = pGroup->pathY = -1;
+	pGroup->pLastAction = NULL;
 	pGroup->pNext = NULL;
 	return pGroup;
 }
 
 void Group::Destroy()
 {
-	if(pVehicle)
-		pVehicle->Destroy();
 	delete this;
 }
 

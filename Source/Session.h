@@ -30,7 +30,7 @@ public:
 	int GetNumPendingGames() { return numPendingGames; }
 	int GetNumPastGames() { return numPastGames; }
 
-	GameDetails *GetCurrentGame(int game) { return &pCurrentGames[game]; }
+	GameState *GetCurrentGame(int game) { return &pCurrentGames[game]; }
 	GameDetails *GetPendingGame(int game) { return &pPendingGames[game]; }
 	GameDetails *GetPastGame(int game) { return &pPastGames[game]; }
 
@@ -40,7 +40,7 @@ protected:
 	bool bLoggedIn;
 	bool bOffline;
 
-	GameDetails *pCurrentGames;
+	GameState *pCurrentGames;
 	int numCurrentGames;
 	GameDetails *pPendingGames;
 	int numPendingGames;

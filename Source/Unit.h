@@ -2,7 +2,7 @@
 #define _UNIT_H
 
 #include "Path.h"
-#include "MFPtrList.h"
+#include "MFPoolHeap.h"
 
 class MFIni;
 struct MFMaterial;
@@ -11,6 +11,7 @@ class CastleSet;
 class Game;
 class MapTile;
 class Group;
+struct Action;
 
 struct Race
 {
@@ -201,10 +202,11 @@ public:
 
 	UnitDetails *GetUnitDetails(int unit) { return &pUnits[unit]; }
 	class Unit *CreateUnit(int unit, int player);
-	void DestroyUnit(Unit *pUnits);
+	void DestroyUnit(Unit *pUnit);
 
 	inline int GetNumSpecials() { return specialCount; }
 	inline const char *GetSpecialName(int type) { return pSpecials[type].pName; }
+	inline const Special *GetSpecial(int type) { return &pSpecials[type]; }
 
 	int GetNumArmourClasses() { return numArmourClasses; }
 	const char *GetArmourClassName(int armourClass) { return ppArmourClasses[armourClass]; }
@@ -303,8 +305,6 @@ protected:
 	Item *pItems;
 	int numItems;
 
-	MFPtrListDL<Unit> units;
-
 	// render list
 	struct UnitRender
 	{
@@ -331,16 +331,22 @@ public:
 
 	void Draw(float x, float y, bool bFlip = false, float alpha = 1.f);
 
-	Group *GetGroup();
+	Group *GetGroup() { return pGroup; }
 
 	const char *GetName() const { return pName; }
 	bool IsHero() const { return details.type == UT_Hero; }
 	bool IsVehicle() const { return details.type == UT_Vehicle; }
 
+	uint32 GetID() { return id; }
+	void SetID(uint32 _id) { id = _id; }
+
+	void SetGroup(Group *_pGroup) { pGroup = _pGroup; }
+
 	UnitDetails *GetDetails() { return &details; }
 	int GetPlayer() const { return player; }
 	void SetPlayer(int player) { this->player = player; }
 	int GetRace();
+	int GetType() { return type; }
 	MFVector GetColour();
 	int GetRank() const { return MFMin(victories / 2, 8); }
 
@@ -391,9 +397,11 @@ protected:
 	float ModStatFloat(float stat, int statType, int modIndex);
 
 	UnitDefinitions *pUnitDefs;
-	int id;
+
+	uint32 id;
 
 	const char *pName;
+	int type;
 	int player;
 
 	UnitDetails details;
@@ -432,7 +440,7 @@ struct CastleDetails
 class Castle
 {
 public:
-	void Init(const CastleDetails &details, int player);
+	void Init(int id, const CastleDetails &details, int player);
 
 	MapTile *GetTile(int index = 0);
 	bool IsEmpty();
@@ -442,6 +450,7 @@ public:
 
 	void SetBuildUnit(int slot);
 	int GetBuildUnit();
+	int GetBuildTime();
 
 	const char *GetName() { return details.name; }
 	void SetName(const char *pName) { MFString_Copy(details.name, pName); }
@@ -449,16 +458,36 @@ public:
 	int GetPlayer() { return player; }
 
 //protected:
-public:
 	UnitDefinitions *pUnitDefs;
 	MapTile *pTile;
 //	Group *pMercGroup;
 
 	CastleDetails details;
+
+	int id;
 	int player;
 
 	int building;   // the current unit being built
 	int buildTime;  // how many turns this unit has been in production
+	int nextBuild;
+};
+
+class Ruin
+{
+public:
+	void InitRuin(int id, int specialID, int item);
+
+//protected:
+	UnitDefinitions *pUnitDefs;
+	const Special *pSpecial;
+
+	MapTile *pTile;
+
+	int id;
+	int type;
+
+	int item;
+	bool bHasSearched;
 };
 
 class Group
@@ -467,6 +496,9 @@ public:
 	static Group *Create(int player);
 	void Destroy();
  
+	uint32 GetID() { return id; }
+	void SetID(uint32 _id) { id = _id; }
+
 	bool AddUnit(Unit *pUnit);
 	bool AddForwardUnit(Unit *pUnit);
 	bool AddRearUnit(Unit *pUnit);
@@ -499,16 +531,27 @@ public:
 	void FindPath(int x, int y);
 	Path *GetPath() const { return pPath; }
 
+	Action *GetLastAction() { return pLastAction; }
+
 //protected:
 	void UpdateGroupStats();
 
+	int id;
+
 	int player;
 	MapTile *pTile;
+	int x, y;
 
-	Unit *pVehicle;
-
-	Unit *pForwardUnits[5];
-	Unit *pRearUnits[5];
+	union
+	{
+		Unit *pUnits[11];
+		struct
+		{
+			Unit *pForwardUnits[5];
+			Unit *pRearUnits[5];
+			Unit *pVehicle;
+		};
+	};
 
 	int numForwardUnits;
 	int numRearUnits;
@@ -516,6 +559,8 @@ public:
 	bool bSelected;
 	int pathX, pathY;
 	Path *pPath;
+
+	Action *pLastAction;
 
 	Group *pNext;
 };

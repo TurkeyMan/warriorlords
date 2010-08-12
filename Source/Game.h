@@ -5,8 +5,13 @@
 #include "Unit.h"
 #include "Screens/RequestBox.h"
 
+#include "ServerRequest.h"
+
+#include "MFPoolHeap.h"
+
 struct MFFont;
 
+struct GameState;
 class MapScreen;
 class Battle;
 
@@ -29,14 +34,62 @@ struct GameParams
 	int playerRaces[16];
 	uint32 playerColours[16];
 
+	uint32 gameID;
 	bool bOnline;
+
 	bool bEditMap;
+};
+
+struct Action
+{
+	enum ActionType
+	{
+		AT_Move,
+		AT_Rearrange,
+		AT_Regroup,
+		AT_Search
+	};
+
+	ActionType type;
+	Group *pGroup;
+	union
+	{
+		struct Move
+		{
+			int startX, startY;
+			int startMove[11];
+			int destX, destY;
+			int destMove[11];
+		} move;
+		struct Rearrange
+		{
+			Unit *pBefore[10];
+			int beforeForward, beforeRear;
+			Unit *pAfter[10];
+			int afterForward, afterRear;
+		} rearrange;
+		struct Regroup
+		{
+			Group *pBefore[MapTile::MaxUnitsOnTile * 2];
+			int numBefore;
+		} regroup;
+		struct Search
+		{
+			Unit *pUnit;
+			Ruin *pRuin;
+		} search;
+	};
+
+	Action *pParent;
+	Action **ppChildren;
+	int numChildren;
 };
 
 class Game
 {
 public:
 	Game(GameParams *pParams);
+	Game(GameState *pState);
 	~Game();
 
 	MapScreen *GetMapScreen() { return pMapScreen; }
@@ -61,12 +114,22 @@ public:
 	static void SetCurrent(Game *pGame) { pCurrent = pGame; }
 	static Game *GetCurrent() { return pCurrent; }
 
+	Unit *AllocUnit();
+	void DestroyUnit(Unit *pUnit);
+	Group *AllocGroup();
+	void DestroyGroup(Group *pGroup);
+
 	Group *CreateUnit(int unit, Castle *pCastle);
 
-	void PushGroupPosition(Group *pGroup);
-	Group *UndoLastMove();
-	int GetUndoDepth() { return undoDepth; }
-	void ClearUndoStack();
+	void PushMoveAction(Group *pGroup);
+	void UpdateMoveAction(Group *pGroup);
+	void PushRearrange(Group *pGroup, Unit **ppNewOrder);
+	void PushRegroup(Group **ppBefore, int numBefore, Group *pAfter);
+	void PushSearch(Group *pGroup, Ruin *pRuin);
+	Group *RevertAction(Group *pGroup);
+	void CommitActions(Group *pGroup);
+	void CommitAllActions();
+	void DestroyAction(Action *pAction);
 
 	void DrawWindow(const MFRect &rect);
 	void DrawLine(float sx, float sy, float dx, float dy);
@@ -78,7 +141,29 @@ public:
 	void ShowRequest(const char *pMessage, RequestBox::SelectCallback *pCallback, bool bNotification, void *pUserData = NULL);
 	bool DrawRequest();
 
+	void PushAction(GameActions action);
+	void PushActionArg(int arg);
+	void PushActionArgs(int *pArgs, int numArgs);
+
+	ServerError ApplyActions();
+
+	void AddUnit(Unit *pUnit);
+	void AddGroup(Group *pGroup);
+
 protected:
+	void Init(const char *pMap, bool bEdit);
+
+	void AddActions(Action *pAction, Action *pParent);
+	void CommitAction(Action *pAction);
+	Action *FindFirstDependency(Action *pAction);
+
+	void UpdateGameState();
+
+	MFPoolHeapExpanding units;
+	MFPoolHeapExpanding groups;
+	MFPoolHeapExpanding actionCache;
+	MFPoolHeapCollection actionList;
+
 	// game resources
 	MFFont *pText;
 	MFFont *pBattleNumbersFont;
@@ -94,6 +179,14 @@ protected:
 	Player players[8];
 	int numPlayers;
 
+	Unit **ppUnits;
+	uint32 numUnits;
+	uint32 numUnitsAllocated;
+
+	Group **ppGroups;
+	uint32 numGroups;
+	uint32 numGroupsAllocated;
+
 	// screens
 	MapScreen *pMapScreen;
 	Battle *pBattle;
@@ -101,20 +194,20 @@ protected:
 	RequestBox *pRequestBox;
 
 	// game state data
+	bool bOnline;
+	bool bUpdating;
+	uint32 gameID;
+
+	int lastAction;
 	int currentPlayer;
 	int currentTurn;
 
-	struct UndoStack
-	{
-		Group *pGroup;
-		int x, y;
-		int vehicleMove;
-		int unitMove[10];
-	};
+	GameAction pendingActions[256];
+	int actionArgs[2048];
+	int numActions, numArgs;
 
-	static const int MaxUndo = 64;
-	UndoStack undoStack[MaxUndo];
-	int undoDepth;
+	Action **ppActionHistory;
+	int numTopActions;
 
 	static Game *pCurrent;
 };

@@ -40,38 +40,53 @@ bool GroupConfig::DrawContent()
 	if(battleConfig.Draw())
 		return true;
 
+	// draw separators
 	Game *pGame = Game::GetCurrent();
 	pGame->DrawLine(rear.x + 5.f, rear.y+rear.height, front.x + front.width - 5.f, rear.y+rear.height);
 
-	for(int a = 0; a < numExtraGroups; ++a)
-		pGame->DrawLine(bottom[a].x + bottom[a].width, bottom[a].y + 5.f, bottom[a].x + bottom[a].width, bottom[a].y + bottom[a].height - 5.f);
-
-	UnitDefinitions *pDefs = units[0].pUnit->GetDefs();
-
-	for(int a = numUnits-1; a >= 0; --a)
+	for(int a = 1; a < numGroups; ++a)
 	{
-		GroupUnit &unit = units[a];
-		unit.pUnit->Draw(unit.x - 32.f, unit.y - 32.f);
+		MFRect rect;
+		GetBottomPanel(a, &rect);
+		pGame->DrawLine(rect.x + rect.width, rect.y + 5.f, rect.x + rect.width, rect.y + rect.height - 5.f);
 	}
 
-	if(pDefs)
-		pDefs->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset(), false, true);
-
-	for(int a = numUnits-1; a >= 0; --a)
+	// draw units
+	for(int g = 0; g < numGroups; ++g)
 	{
-		GroupUnit &unit = units[a];
+		for(int a=10; a>=0; --a)
+		{
+			MFRect rect;
+			if(GetUnitPos(g, a, &rect))
+				pGroups[g]->pUnits[a]->Draw(rect.x, rect.y);
+		}
+	}
 
-		if(unit.pGroup == units[0].pGroup && !unit.pUnit->IsVehicle())
-			DrawHealthBar(unit.x - 32, unit.y - 32, unit.pUnit->GetMaxHP(), unit.pUnit->GetHealth());
+	pDefs->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset(), false, true);
 
-		char move[8];
-		sprintf(move, "%g", unit.pUnit->GetMovement() * 0.5f);
+	for(int g = 0; g < numGroups; ++g)
+	{
+		for(int a = 10; a >= 0; --a)
+		{
+			Unit *pUnit = pGroups[g]->pForward[a];
+			if(!pUnit)
+				continue;
 
-		MFFont *pFont = Game::GetCurrent()->GetSmallNumbersFont();
-		float height = MFFont_GetFontHeight(pFont);
-		float moveWidth = MFFont_GetStringWidth(pFont, move, height);
+			MFRect rect;
+			GetUnitPos(g, a, &rect);
 
-		MFFont_BlitText(pFont, unit.x + 30 - (int)moveWidth, unit.y + 30 - (int)height, MFVector::white, move);
+			if(g == 0 && a < 10)
+				DrawHealthBar((int)rect.x, (int)rect.y, pUnit->GetMaxHP(), pUnit->GetHealth());
+
+			char move[8];
+			sprintf(move, "%g", pUnit->GetMovement() * 0.5f);
+
+			MFFont *pFont = Game::GetCurrent()->GetSmallNumbersFont();
+			float height = MFFont_GetFontHeight(pFont);
+			float moveWidth = MFFont_GetStringWidth(pFont, move, height);
+
+			MFFont_BlitText(pFont, (int)rect.x + 62 - (int)moveWidth, (int)rect.y + 62 - (int)height, MFVector::white, move);
+		}
 	}
 
 	return true;
@@ -98,57 +113,41 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 			int unit = GetUnitFromPoint(info.tap.x, info.tap.y);
 			if(unit > -1)
 			{
-				if(!units[unit].pUnit->IsVehicle())
-					battleConfig.Show(units[unit].pUnit);
+				if(unit < 10)
+					battleConfig.Show(pGroups[0]->pUnits[unit]);
 			}
-
-			// see if we have selected another group
-			int group = GetGroupFromPoint(info.tap.x, info.tap.y);
-			if(group > -1)
+			else
 			{
-				pTile->BringGroupToFront(pExtraGroups[group]);
-				PositionUnits();
+				// see if we have selected another group
+				int group = GetGroupFromPoint(info.tap.x, info.tap.y);
+				if(group > 0 && group < numGroups)
+				{
+					UnitGroup *pT = pGroups[group];
+					for(int a=group; a>0; --a)
+						pGroups[a] = pGroups[a-1];
+					pGroups[0] = pT;
+				}
 			}
 			break;
 		}
 		case IE_Drag:
 		{
-			if(dragUnit == -1 && pDragGroup == NULL)
+			dragX = (int)info.drag.x;
+			dragY = (int)info.drag.y;
+
+			if(dragUnit == -1 && dragGroup == -1)
 			{
 				// check for unit drag
-				int unit = GetUnitFromPoint(info.drag.startX, info.drag.startY);
-				if(unit > -1)
-				{
-					dragUnit = unit;
+				dragUnit = GetUnitFromPoint(info.drag.startX, info.drag.startY);
+				if(dragUnit > -1)
 					break;
-				}
 
 				// check for group drag
-				int group = GetGroupFromPoint(info.drag.startX, info.drag.startY);
-				if(group > -1)
-				{
-					pDragGroup = pExtraGroups[group];
+				dragGroup = GetGroupFromPoint(info.drag.startX, info.drag.startY);
+				if(dragGroup >= numGroups)
+					dragGroup = -1;
+				if(dragGroup > 0)
 					break;
-				}
-			}
-			else
-			{
-				if(dragUnit > -1)
-				{
-					units[dragUnit].x = (int)info.drag.x;
-					units[dragUnit].y = (int)info.drag.y;
-				}
-				else if(pDragGroup)
-				{
-					for(int a=0; a<numUnits; ++a)
-					{
-						if(units[a].pGroup == pDragGroup)
-						{
-							units[a].x += (int)info.drag.deltaX;
-							units[a].y += (int)info.drag.deltaY;
-						}
-					}
-				}
 			}
 			break;
 		}
@@ -157,45 +156,46 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 			// find where we dropped it...
 			if(dragUnit != -1)
 			{
+				UnitGroup *pActiveGroup = pGroups[0];
+				Unit *pDragUnit = pActiveGroup->pUnits[dragUnit];
 				bool bFound = false;
 
-				if(units[dragUnit].rank != 2)
+				if(dragUnit < 10)
 				{
 					// check if we're swapping with another unit
 					int unit = GetUnitFromPoint(info.up.x, info.up.y);
-					if(unit > -1 && units[unit].pGroup == units[dragUnit].pGroup && !units[unit].pUnit->IsVehicle())
+					if(unit > -1 && unit < 10)
 					{
-						units[unit].pGroup->SwapUnits(units[unit].pUnit, units[dragUnit].pUnit);
+						pActiveGroup->pUnits[dragUnit] = pActiveGroup->pUnits[unit];
+						pActiveGroup->pUnits[unit] = pDragUnit;
 						bFound = true;
 					}
-
-					// check dropping in the other file
-					if(!bFound)
+					else
 					{
+						// check dropping in the other file
 						int dropped = GetFileFromPoint(info.up.x, info.up.y);
 						if(dropped > -1)
 						{
-							if(dropped != units[dragUnit].rank)
+							if(dropped == 0 && dragUnit >= 5)
 							{
-								Unit *pUnit = units[dragUnit].pUnit;
-								Group *pGroup = units[dragUnit].pGroup;
+								if(pActiveGroup->numForward < 5)
+								{
+									pActiveGroup->pForward[pActiveGroup->numForward++] = pDragUnit;
 
-								// check there is room in the target file
-								if(dropped == 0)
-								{
-									if(numFront < 5)
-									{
-										pGroup->RemoveUnit(pUnit);
-										pGroup->AddForwardUnit(pUnit);
-									}
+									for(int a=dragUnit-5; a<pActiveGroup->numRear; ++a)
+										pActiveGroup->pRear[a] = pActiveGroup->pRear[a + 1];
+									--pActiveGroup->numRear;
 								}
-								else
+							}
+							else if(dropped == 1 && dragUnit < 5)
+							{
+								if(pActiveGroup->numRear < 5)
 								{
-									if(numRear < 5)
-									{
-										pGroup->RemoveUnit(pUnit);
-										pGroup->AddRearUnit(pUnit);
-									}
+									pActiveGroup->pRear[pActiveGroup->numRear++] = pDragUnit;
+
+									for(int a=dragUnit; a<pActiveGroup->numForward; ++a)
+										pActiveGroup->pForward[a] = pActiveGroup->pForward[a + 1];
+									--pActiveGroup->numForward;
 								}
 							}
 
@@ -208,34 +208,70 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 				if(!bFound)
 				{
 					int group = GetGroupFromPoint(info.up.x, info.up.y);
+
 					if(group > -1)
 					{
-						if(units[dragUnit].pUnit->IsVehicle() && pExtraGroups[group]->GetNumUnits() == 0)
+						UnitGroup *pGroup = pGroups[group];
+
+						// if we've created a new group
+						if(group == numGroups)
+						{
+							MFZeroMemory(pGroup, sizeof(*pGroup));
+							++numGroups;
+						}
+
+						if(dragUnit == 10 && pGroup->pVehicle && pGroup->totalUnits == 1)
 						{
 							// swap vehicles
-							Unit *pV1 = units[dragUnit].pGroup->GetVehicle();
-							Unit *pV2 = pExtraGroups[group]->GetVehicle();
-
-							units[dragUnit].pGroup->RemoveUnit(pV1);
-							pExtraGroups[group]->RemoveUnit(pV2);
-
-							units[dragUnit].pGroup->AddUnit(pV2);
-							pExtraGroups[group]->AddUnit(pV1);
+							pActiveGroup->pVehicle = pGroup->pVehicle;
+							pGroup->pVehicle = pDragUnit;
 						}
-						else if(pExtraGroups[group]->GetNumUnits() < 10 || units[dragUnit].rank == 2)
+						else
 						{
 							// move unit into group
-							Unit *pUnit = units[dragUnit].pUnit;
-							Group *pGroup = units[dragUnit].pGroup;
-
-							if(pExtraGroups[group]->AddUnit(pUnit))
-								pGroup->RemoveUnit(pUnit);
-
-							// check if we have just emptied the group
-							if(pGroup->GetNumUnits() == 0 && pGroup->GetVehicle() == NULL)
+							if(dragUnit == 10)
 							{
-								pTile->RemoveGroup(pGroup);
-								pGroup->Destroy();
+								if(!pGroup->pVehicle)
+								{
+									pGroup->pVehicle = pDragUnit;
+									++pGroup->totalUnits;
+
+									pActiveGroup->pVehicle = NULL;
+									--pActiveGroup->totalUnits;
+								}
+							}
+							else if(pGroup->numForward < 5 || pGroup->numRear < 5)
+							{
+								if(pDragUnit->IsRanged())
+								{
+									if(pGroup->numRear < 5)
+										pGroup->pRear[pGroup->numRear++] = pDragUnit;
+									else
+										pGroup->pForward[pGroup->numForward++] = pDragUnit;
+								}
+								else
+								{
+									if(pGroup->numForward < 5)
+										pGroup->pForward[pGroup->numForward++] = pDragUnit;
+									else
+										pGroup->pRear[pGroup->numRear++] = pDragUnit;
+								}
+
+								if(dragUnit < 5)
+								{
+									for(int a=dragUnit; a<pActiveGroup->numForward; ++a)
+										pActiveGroup->pForward[a] = pActiveGroup->pForward[a + 1];
+									--pActiveGroup->numForward;
+								}
+								else
+								{
+									for(int a=dragUnit-5; a<pActiveGroup->numRear; ++a)
+										pActiveGroup->pRear[a] = pActiveGroup->pRear[a + 1];
+									--pActiveGroup->numRear;
+								}
+
+								++pGroup->totalUnits;
+								--pActiveGroup->totalUnits;
 							}
 						}
 
@@ -243,127 +279,120 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 					}
 				}
 
-				// check for dropping into the 'new' group
-				if(!bFound)
+				// check if we have just emptied the group
+				if(pActiveGroup->totalUnits == 0)
 				{
-					if(MFTypes_PointInRect(info.up.x, info.up.y, &empty))
-					{
-						Unit *pUnit = units[dragUnit].pUnit;
-						Group *pGroup = units[dragUnit].pGroup;
-
-						Group *pNewGroup = Group::Create(pGroup->GetPlayer());
-						pTile->AddGroupToBack(pNewGroup);
-
-						if(pNewGroup->AddUnit(pUnit))
-							pGroup->RemoveUnit(pUnit);
-
-						// check if we have just emptied the group
-						if(pGroup->GetNumUnits() == 0 && pGroup->GetVehicle() == NULL)
-						{
-							pTile->RemoveGroup(pGroup);
-							pGroup->Destroy();
-						}
-
-						bFound = true;
-					}
-				}
-
-				if(bFound)
-				{
-					// clear the undo stack
-					Game::GetCurrent()->ClearUndoStack();
+					--numGroups;
+					for(int a=0; a<numGroups; ++a)
+						pGroups[a] = pGroups[a + 1];
+					pGroups[numGroups] = pActiveGroup;
 				}
 
 				dragUnit = -1;
 			}
-			else if(pDragGroup)
+			else if(dragGroup != -1)
 			{
-				bool bClearUndo = false;
+				UnitGroup *pDragGroup = pGroups[dragGroup];
 
 				// check if we're swapping vehicles
 				int unit = GetUnitFromPoint(info.up.x, info.up.y);
-				if(unit > -1 && units[unit].pUnit->IsVehicle() && pDragGroup->GetNumUnits() == 0 && pDragGroup->GetVehicle())
+				if(unit == 10 -1 && pDragGroup->pVehicle && pDragGroup->totalUnits == 1)
 				{
 					// swap vehicles
-					Unit *pV1 = pDragGroup->GetVehicle();
-					Unit *pV2 = units[0].pGroup->GetVehicle();
-
-					pDragGroup->RemoveUnit(pV1);
-					units[0].pGroup->RemoveUnit(pV2);
-
-					pDragGroup->AddUnit(pV2);
-					units[0].pGroup->AddUnit(pV1);
-
-					bClearUndo = true;
+					Unit *pSwap = pGroups[0]->pVehicle;
+					pGroups[0]->pVehicle = pDragGroup->pVehicle;
+					pDragGroup->pVehicle = pSwap;
 				}
 				else
 				{
-					// check if we dropped the group in one of the top files
-					int dropped = GetFileFromPoint(info.up.x, info.up.y);
-					if(dropped > -1)
+					// check if we dropped the group on another group
+					int group = GetGroupFromPoint(info.up.x, info.up.y);
+
+					if(group == numGroups || group == dragGroup)
 					{
-						// move as many into the chosen file as possible
-						Group *pTarget = units[0].pGroup;
-
-						Unit *pVehicle = pDragGroup->GetVehicle();
-						if(pVehicle)
-						{
-							if(pTarget->AddUnit(pVehicle))
-								pDragGroup->RemoveUnit(pVehicle);
-						}
-
-						while(pDragGroup->GetNumUnits() > 0 && pTarget->GetNumUnits() < 10)
-						{
-							Unit *pUnit = pDragGroup->GetUnit(0);
-							if(pTarget->AddUnit(pUnit))
-								pDragGroup->RemoveUnit(pUnit);
-						}
-
-						bClearUndo = true;
+						group = -1;
 					}
-					else
+					else if(group == -1)
 					{
-						// check if we dropped the group on another group
-						int group = GetGroupFromPoint(info.up.x, info.up.y);
+						// check if we dropped the group in one of the top files
+						int file = GetFileFromPoint(info.up.x, info.up.y);
+						if(file > -1)
+							group = 0;
+					}
 
-						if(group > -1 && pExtraGroups[group] != pDragGroup)
+					if(group > -1)
+					{
+						UnitGroup *pTargetGroup = pGroups[group];
+
+						// move vehicle
+						if(pDragGroup->pVehicle && !pTargetGroup->pVehicle)
 						{
-							// move as many into the target group as possible
-							Unit *pVehicle = pDragGroup->GetVehicle();
-							if(pVehicle)
+							pTargetGroup->pVehicle = pDragGroup->pVehicle;
+							pDragGroup->pVehicle = NULL;
+							++pTargetGroup->totalUnits;
+							--pDragGroup->totalUnits;
+						}
+
+						// attempt to move each unit into their preferred file
+						for(int unit=0; unit<10; ++unit)
+						{
+							Unit *pUnit = pDragGroup->pUnits[unit];
+							if(!pUnit)
+								continue;
+
+							if(pTargetGroup->numForward >= 5 && pTargetGroup->numRear >= 5)
+								break;
+
+							// add to active group
+							if(pUnit->IsRanged())
 							{
-								if(pExtraGroups[group]->AddUnit(pVehicle))
-									pDragGroup->RemoveUnit(pVehicle);
+								if(pTargetGroup->numRear < 5)
+									pTargetGroup->pRear[pTargetGroup->numRear++] = pUnit;
+								else
+									pTargetGroup->pForward[pTargetGroup->numForward++] = pUnit;
+							}
+							else
+							{
+								if(pTargetGroup->numForward < 5)
+									pTargetGroup->pForward[pTargetGroup->numForward++] = pUnit;
+								else
+									pTargetGroup->pRear[pTargetGroup->numRear++] = pUnit;
 							}
 
-							while(pDragGroup->GetNumUnits() > 0 && pExtraGroups[group]->GetNumUnits() < 10)
+							// remove from drag group
+							if(unit < 5)
 							{
-								Unit *pUnit = pDragGroup->GetUnit(0);
-								if(pExtraGroups[group]->AddUnit(pUnit))
-									pDragGroup->RemoveUnit(pUnit);
+								for(int a=unit; a<pDragGroup->numForward; ++a)
+									pDragGroup->pForward[a] = pDragGroup->pForward[a + 1];
+								--pDragGroup->numForward;
+							}
+							else
+							{
+								for(int a=unit-5; a<pDragGroup->numRear; ++a)
+									pDragGroup->pRear[a] = pDragGroup->pRear[a + 1];
+								--pDragGroup->numRear;
 							}
 
-							bClearUndo = true;
+							++pTargetGroup->totalUnits;
+							--pDragGroup->totalUnits;
+
+							// since we removed the unit, we need to re-test the same index
+							--unit;
 						}
 					}
 				}
 
-				if(pDragGroup->GetNumUnits() == 0 && pDragGroup->GetVehicle() == NULL)
+				// check if we have just emptied the group
+				if(pDragGroup->totalUnits == 0)
 				{
-					pTile->RemoveGroup(pDragGroup);
-					pDragGroup->Destroy();
+					--numGroups;
+					for(int a=dragGroup; a<numGroups; ++a)
+						pGroups[a] = pGroups[a + 1];
+					pGroups[numGroups] = pDragGroup;
 				}
 
-				if(bClearUndo)
-				{
-					// clear the undo stack
-					Game::GetCurrent()->ClearUndoStack();
-				}
-
-				pDragGroup = NULL;
+				dragGroup = -1;
 			}
-
-			PositionUnits();
 			break;
 		}
 	}
@@ -373,51 +402,161 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 int GroupConfig::GetUnitFromPoint(float x, float y)
 {
-	int unit = -1;
+	MFRect rect;
 
-	Group *pFirstGroup = units[0].pGroup;
-	for(int a=0; a<numUnits && units[a].pGroup == pFirstGroup; ++a)
+	int numForward = pGroups[0]->numForward;
+	for(int a=0; a<numForward; ++a)
 	{
-		if(x >= units[a].x - 32 && x < units[a].x + 32 &&
-			y >= units[a].y - 32 && y < units[a].y + 32)
+		GetUnitPos(0, a, &rect);
+		if(MFTypes_PointInRect(x, y, &rect))
 		{
 			if(a != dragUnit)
-			{
-				unit = a;
-				break;
-			}
+				return a;
 		}
 	}
 
-	return unit;
+	int numRear = pGroups[0]->numRear;
+	for(int a=0; a<numRear; ++a)
+	{
+		GetUnitPos(0, a + 5, &rect);
+		if(MFTypes_PointInRect(x, y, &rect))
+		{
+			if(a + 5 != dragUnit)
+				return a + 5;
+		}
+	}
+
+	if(pGroups[0]->pVehicle)
+	{
+		GetUnitPos(0, 10, &rect);
+		if(MFTypes_PointInRect(x, y, &rect))
+		{
+			if(10 != dragUnit)
+				return 10;
+		}
+
+	}
+
+	return -1;
 }
 
 int GroupConfig::GetFileFromPoint(float x, float y)
 {
-	int file = -1;
-
 	if(MFTypes_PointInRect(x, y, &front))
-		file = 0;
+		return 0;
 	else if(MFTypes_PointInRect(x, y, &rear))
-		file = 1;
-
-	return file;
+		return 1;
+	return -1;
 }
 
 int GroupConfig::GetGroupFromPoint(float x, float y)
 {
-	int group = -1;
+	float bottomUsed = 0.f;
+	const float margin = 5.f;
 
-	for(int a=0; a<numExtraGroups; ++a)
+	for(int a=1; a<numGroups; ++a)
 	{
-		if(MFTypes_PointInRect(x, y, &bottom[a]))
-		{
-			group = a;
-			break;
-		}
+		MFRect rect;
+		rect.x = lower.x + bottomUsed + margin*2.f;
+		rect.y = lower.y;
+		rect.width = 32.f + (float)pGroups[a]->totalUnits*32.f;
+		rect.height = lower.height;
+		bottomUsed += rect.width + margin;
+
+		if(MFTypes_PointInRect(x, y, &rect))
+			return a;
 	}
 
-	return group;
+	if(bottomUsed < lower.x + lower.width - margin*4.f)
+	{
+		MFRect rect;
+		rect.x = lower.x + bottomUsed + margin*2.f;
+		rect.y = lower.y;
+		rect.width = lower.x + lower.width - bottomUsed - margin*4.f;
+		rect.height = lower.height;
+
+		if(MFTypes_PointInRect(x, y, &rect))
+			return numGroups;
+	}
+
+	return -1;
+}
+
+bool GroupConfig::GetUnitPos(int group, int unit, MFRect *pRect)
+{
+	if(!pGroups[group]->pUnits[unit])
+		return false;
+
+	if(group == 0)
+	{
+		if(unit == 10)
+		{
+			UnitDetails *pDetails = pGroups[0]->pVehicle->GetDetails();
+			pRect->width = (float)pDetails->width * 64.f;
+			pRect->height = (float)pDetails->height * 64.f;
+			pRect->x = MFFloor((rear.x + rear.width + front.x)*0.5f - pRect->width*.5f);
+			pRect->y = MFFloor(front.y + front.height*0.5f - pRect->height*.5f);
+			return true;
+		}
+		else if(unit >= 5)
+		{
+			int numRear = pGroups[0]->numRear;
+			UnitDetails *pDetails = pGroups[0]->pUnits[unit]->GetDetails();
+			pRect->width = (float)pDetails->width * 64.f;
+			pRect->height = (float)pDetails->height * 64.f;
+			pRect->x = MFFloor(rear.x + gPositions[numRear-1][unit-5][0]*rear.width - pRect->width*.5f);
+			pRect->y = MFFloor(rear.y + gPositions[numRear-1][unit-5][1]*rear.height - pRect->height*.5f);
+			return true;
+		}
+		else
+		{
+			int numForward = pGroups[0]->numForward;
+			UnitDetails *pDetails = pGroups[0]->pUnits[unit]->GetDetails();
+			pRect->width = (float)pDetails->width * 64.f;
+			pRect->height = (float)pDetails->height * 64.f;
+			pRect->x = MFFloor(front.x + gPositions[numForward-1][unit][0]*front.width - pRect->width*.5f);
+			pRect->y = MFFloor(front.y + gPositions[numForward-1][unit][1]*front.height - pRect->height*.5f);
+			return true;
+		}
+	}
+	else
+	{
+		float bottomUsed = 0.f;
+		const float margin = 5.f;
+
+		for(int a=1; a<group; ++a)
+			bottomUsed += 32.f + (float)pGroups[a]->totalUnits*32.f + margin;
+
+		int visUnit = 0;
+		for(int a=0; a<unit; ++a)
+		{
+			if(pGroups[group]->pUnits[a])
+				++visUnit;
+		}
+
+		pRect->x = lower.x + bottomUsed + margin*2.f + (float)visUnit*32.f;
+		pRect->y = lower.y + margin;
+		pRect->width = 64.f;
+		pRect->height = 64.f;
+		return true;
+	}
+
+	return false;
+}
+
+void GroupConfig::GetBottomPanel(int i, MFRect *pRect)
+{
+	float bottomUsed = 0.f;
+	const float margin = 5.f;
+
+	for(int a=1; a<numGroups; ++a)
+	{
+		pRect->x = lower.x + bottomUsed + margin*2.f;
+		pRect->y = lower.y;
+		pRect->width = 32.f + (float)pGroups[a]->totalUnits*32.f;
+		pRect->height = lower.height;
+		bottomUsed += pRect->width;
+	}
 }
 
 void GroupConfig::Show(MapTile *_pTile)
@@ -425,120 +564,146 @@ void GroupConfig::Show(MapTile *_pTile)
 	Window::Show();
 
 	pTile = _pTile;
+	pDefs = NULL;
 
 	dragUnit = -1;
-	pDragGroup = NULL;
+	dragGroup = -1;
 
-	PositionUnits();
-}
+	MFZeroMemory(groups, sizeof(groups));
 
-void GroupConfig::PositionUnits()
-{
-	int numGroups = MFMin(pTile->GetNumGroups(), 5);
-	numUnits = 0;
-	numFront = numRear = -1;
+	for(int a=0; a<MapTile::MaxUnitsOnTile * 2; ++a)
+		pGroups[a] = &groups[a];
 
-	for(int a=0; a<numGroups; ++a)
+	numGroups = pTile->GetNumGroups();
+	for(int g=0; g<numGroups; ++g)
 	{
-		Group *pG = pTile->GetGroup(a);
+		Group *pGroup = pTile->GetGroup(g);
 
-		int front = pG->GetNumForwardUnits();
-		int rear = pG->GetNumRearUnits();
+		groups[g].numForward = pGroup->GetNumForwardUnits();
+		for(int a=0; a<groups[g].numForward; ++a)
+			groups[g].pForward[a] = pGroup->GetForwardUnit(a);
 
-		if(numFront == -1)
-		{
-			numFront = front;
-			numRear = rear;
-		}
+		groups[g].numRear = pGroup->GetNumRearUnits();
+		for(int a=0; a<groups[g].numRear; ++a)
+			groups[g].pRear[a] = pGroup->GetRearUnit(a);
 
-		for(int b=0; b<front; ++b)
-		{
-			GroupUnit &unit = units[numUnits++];
-			unit.pGroup = pG;
-			unit.pUnit = pG->GetForwardUnit(b);
-			unit.rank = 0;
-		}
+		groups[g].pVehicle = pGroup->GetVehicle();
 
-		for(int b=0; b<rear; ++b)
-		{
-			GroupUnit &unit = units[numUnits++];
-			unit.pGroup = pG;
-			unit.pUnit = pG->GetRearUnit(b);
-			unit.rank = 1;
-		}
-
-		Unit *pVehicle = pG->GetVehicle();
-		if(pVehicle)
-		{
-			GroupUnit &unit = units[numUnits++];
-			unit.pGroup = pG;
-			unit.pUnit = pVehicle;
-			unit.rank = 2;
-		}
+		groups[g].totalUnits = groups[g].numForward + groups[g].numRear + (groups[g].pVehicle ? 1 : 0);
 	}
 
-	// reposition the lower groups
-	float bottomUsed = 0.f;
-	const float margin = 5.f;
-
-	numExtraGroups = -1;
-	Group *pCurrentGroup = units[0].pGroup;
-
-	for(int a=0; a<numUnits; ++a)
+	for(int a=0; a<11; ++a)
 	{
-		if(units[a].pGroup != pCurrentGroup)
+		if(groups[0].pUnits[a])
 		{
-			++numExtraGroups;
-			pCurrentGroup = units[a].pGroup;
-
-			pExtraGroups[numExtraGroups] = pCurrentGroup;
-
-			bottom[numExtraGroups].x = lower.x + bottomUsed;
-			bottom[numExtraGroups].y = lower.y;
-			bottom[numExtraGroups].width = 32.f + margin*4.f;
-			bottom[numExtraGroups].height = lower.height;
-			bottomUsed += bottom[numExtraGroups].width;
-		}
-
-		if(numExtraGroups < 0)
-		{
-			// place the units
-			if(units[a].rank == 0)
-			{
-				units[a].x = (int)(front.x + front.width*gPositions[numFront-1][a][0]);
-				units[a].y = (int)(front.y + front.height*gPositions[numFront-1][a][1]) + 4;
-			}
-			else if(units[a].rank == 1)
-			{
-				units[a].x = (int)(rear.x + rear.width*gPositions[numRear-1][a - numFront][0]);
-				units[a].y = (int)(rear.y + rear.height*gPositions[numRear-1][a - numFront][1]) + 4;
-			}
-			else
-			{
-				units[a].x = (int)((rear.x + rear.width + front.x)*0.5f - units[a].pUnit->GetDetails()->width*0.5f);
-				units[a].y = (int)(front.y + front.height*0.5f - units[a].pUnit->GetDetails()->height*0.5f);
-			}
-		}
-		else
-		{
-			bottom[numExtraGroups].width += 32.f;
-			bottomUsed += 32.f;
-			units[a].x = (int)bottom[numExtraGroups].x + (int)bottom[numExtraGroups].width - 32 - (int)margin*2;
-			units[a].y = (int)bottom[numExtraGroups].y + 32 + (int)margin*2;
+			pDefs = groups[0].pUnits[a]->GetDefs();
+			break;
 		}
 	}
-
-	++numExtraGroups;
-
-	empty.x = lower.x + bottomUsed;
-	empty.y = lower.y;
-	empty.width = lower.width - bottomUsed;
-	empty.height = lower.height;
 }
 
 void GroupConfig::Hide()
 {
 	Window::Hide();
 
-	Game::GetCurrent()->GetMapScreen()->SelectGroup(pTile->GetGroup(0));
+	Game *pGame = Game::GetCurrent();
+
+	int numSourceGroups[MapTile::MaxUnitsOnTile * 2] = { 0 };
+	Group *pSourceGroups[MapTile::MaxUnitsOnTile * 2][MapTile::MaxUnitsOnTile * 2];
+
+	// find source groups for each group
+	for(int a=0; a<numGroups; ++a)
+	{
+		UnitGroup *pGroup = pGroups[a];
+
+		for(int u=0; u<11; ++u)
+		{
+			Unit *pUnit = pGroup->pUnits[u];
+			if(pUnit)
+			{
+				bool bFound = false;
+				for(int b=0; b<numSourceGroups[a]; ++b)
+				{
+					if(pUnit->GetGroup() == pSourceGroups[a][b])
+					{
+						bFound = true;
+						break;
+					}
+				}
+
+				if(!bFound)
+					pSourceGroups[a][numSourceGroups[a]++] = pUnit->GetGroup();
+			}
+		}
+	}
+
+	// rearrange the groups
+	for(int a=numGroups-1; a>=0; --a)
+	{
+		UnitGroup *pGroup = pGroups[a];
+
+		// check if the group is only rearranged
+		if(numSourceGroups[a] == 1 && pGroup->totalUnits == pSourceGroups[a][0]->GetNumUnits() + (pSourceGroups[a][0]->pVehicle ? 1 : 0))
+		{
+			Group *pSource = pSourceGroups[a][0];
+
+			// check that a rearrange actually ocurred
+			bool bWasRearranged = false;
+			int i = 0;
+			for(int b=0; b<10; ++b)
+			{
+				if(pGroup->pUnits[b] && pGroup->pUnits[b] != pSource->GetUnit(i++))
+				{
+					bWasRearranged = true;
+					break;
+				}
+			}
+
+			if(bWasRearranged)
+			{
+				// create rearrange action
+				pGame->PushRearrange(pSource, pGroup->pUnits);
+
+				// rearrange the group
+				for(int b=0; b<10; ++b)
+					pSource->pForwardUnits[b] = pGroup->pUnits[b];
+				pSource->numForwardUnits = pGroup->numForward;
+				pSource->numRearUnits = pGroup->numRear;				
+			}
+
+			// put the group on top
+			pTile->BringGroupToFront(pSource);
+		}
+		else
+		{
+			// remove old groups from tile
+			for(int b=0; b<numSourceGroups[a]; ++b)
+				pTile->RemoveGroup(pSourceGroups[a][b]);
+
+			// create new group
+			Group *pNewGroup = Group::Create(pSourceGroups[a][0]->GetPlayer());
+			for(int b=0; b<10; ++b)
+			{
+				if(pGroup->pUnits[b])
+				{
+					if(b < 5)
+						pNewGroup->AddForwardUnit(pGroup->pUnits[b]);
+					else
+						pNewGroup->AddRearUnit(pGroup->pUnits[b]);
+				}
+			}
+
+			pNewGroup->pVehicle = pGroup->pVehicle;
+			if(pNewGroup->pVehicle)
+				pNewGroup->pVehicle->SetGroup(pNewGroup);
+
+			// and add the group to the map
+			pTile->AddGroup(pNewGroup);
+
+			// create regroup action
+			pGame->PushRegroup(pSourceGroups[a], numSourceGroups[a], pNewGroup);
+		}
+	}
+
+	pGame->GetMapScreen()->SelectGroup(pTile->GetGroup(0));
 }

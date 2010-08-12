@@ -67,12 +67,14 @@ public:
 	Group *GetGroup(int group);
 
 	int GetNumUnits();
+	Unit *GetUnit(int unit);
 	int GetAvailableUnitSpace() { return MaxUnitsOnTile - GetNumUnits(); }
 
 	Group *FindUnitGroup(Unit *pUnit);
 	Unit *FindVehicle();
 
 	Castle *GetCastle() { if(type == OT_Castle) return (Castle*)pObject; return NULL; }
+	Ruin *GetRuin() { if(type == OT_Special) return (Ruin*)pObject; return NULL; }
 
 	bool IsFriendlyTile(int player);
 	bool IsEnemyTile(int player);
@@ -134,6 +136,9 @@ public:
 
 	int GetNumCastles() const { return numCastles; }
 	Castle *GetCastle(int id) { return &pCastles[id]; }
+
+	int GetNumRuins() const { return numRuins; }
+	Ruin *GetRuin(int id) { return &pRuins[id]; }
 
 	ObjectType GetDetailType(int x, int y) const;
 	int GetDetail(int x, int y) const;
@@ -201,6 +206,8 @@ protected:
 	MapTile *pMap;
 	Castle pCastles[256];
 	int numCastles;
+	Ruin pRuins[256];
+	int numRuins;
 
 	Path path;
 

@@ -55,16 +55,16 @@ bool CastleConfig::DrawContent()
 		if(pDetails->type == UT_Vehicle)
 		{
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 9 + height, MFVector::white, "Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : "");
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 8 + height*2, MFVector::white, "Gold: %d", pCastle->details.buildUnits[pCastle->building].cost);
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 7 + height*3, MFVector::white, "Turns: %d", pCastle->buildTime);
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 8 + height*2, MFVector::white, "Gold: %d", pCastle->details.buildUnits[pCastle->nextBuild].cost);
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 7 + height*3, MFVector::white, "Turns: %d", pCastle->GetBuildTime());
 		}
 		else
 		{
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 9 + height, MFVector::white, "Type: %s", pUnitDefs->GetArmourClassName(pDetails->defenceClass));
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 8 + height*2, MFVector::white, "Atk: %d - %d %s", pDetails->attackMin, pDetails->attackMax, pUnitDefs->GetWeaponClassName(pDetails->attackClass));
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 7 + height*3, MFVector::white, "Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : "");
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 6 + height*4, MFVector::white, "Gold: %d", pCastle->details.buildUnits[pCastle->building].cost);
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 5 + height*5, MFVector::white, "Turns: %d", pCastle->buildTime);
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 6 + height*4, MFVector::white, "Gold: %d", pCastle->details.buildUnits[pCastle->nextBuild].cost);
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 5 + height*5, MFVector::white, "Turns: %d", pCastle->GetBuildTime());
 		}
 	}
 
@@ -162,7 +162,7 @@ void CastleConfig::Show(Castle *pCastle)
 			pBuildUnits[a]->SetPos(&pos);
 		}
 
-		pBuildUnits[a]->SetOutline(true, pCastle->building == a ? MFVector::blue : MFVector::white);
+		pBuildUnits[a]->SetOutline(true, pCastle->nextBuild == a ? MFVector::blue : MFVector::white);
 
 		pInputManager->PushReceiver(pBuildUnits[a]);
 	}
@@ -193,7 +193,7 @@ void CastleConfig::Show(Castle *pCastle)
 			pBuildUnits[a]->SetPos(&pos);
 		}
 
-		pBuildUnits[a]->SetOutline(true, pCastle->building == a ? MFVector::blue : MFVector::white);
+		pBuildUnits[a]->SetOutline(true, pCastle->nextBuild == a ? MFVector::blue : MFVector::white);
 
 		pInputManager->PushReceiver(pBuildUnits[a]);
 

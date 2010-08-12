@@ -21,30 +21,42 @@ protected:
 	UnitConfig battleConfig;
 
 	MapTile *pTile;
+	UnitDefinitions *pDefs;
 
 	MFRect top, rear, front, lower, bottom[4], empty;
 
-	struct GroupUnit
+	struct UnitGroup
 	{
-		int x, y;
-		int rank;
-		Unit *pUnit;
-		Group *pGroup;
-	} units[MapTile::MaxUnitsOnTile * 2];
+		union
+		{
+			Unit *pUnits[11];
+			struct
+			{
+				Unit *pForward[5];
+				Unit *pRear[5];
+				Unit *pVehicle;
+			};
+		};
+		int numForward;
+		int numRear;
+		int totalUnits;
+	} groups[MapTile::MaxUnitsOnTile * 2];
 
-	int numUnits;
-	int numFront;
-	int numRear;
-	int numExtraGroups;
-	Group *pExtraGroups[4];
+	UnitGroup *pGroups[MapTile::MaxUnitsOnTile * 2];
+	int numGroups;
 
 	int dragUnit;
-	Group *pDragGroup;
+	int dragGroup;
 
-	void PositionUnits();
+	int dragX, dragY;
+
+//	void PositionUnits();
 	int GetUnitFromPoint(float x, float y);
 	int GetFileFromPoint(float x, float y);
 	int GetGroupFromPoint(float x, float y);
+
+	bool GetUnitPos(int group, int unit, MFRect *pRect);
+	void GetBottomPanel(int i, MFRect *pRect);
 };
 
 #endif

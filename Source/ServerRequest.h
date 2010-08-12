@@ -10,7 +10,9 @@ enum ServerError
 
 	SE_NO_ERROR = 0,
 
+	SE_SERVER_ERROR,
 	SE_INVALID_REQUEST,
+	SE_EXPECTED_ARGUMENTS,
 	SE_INVALID_ARGUMENTS,
 	SE_INVALID_USER,
 	SE_INVALID_GAME,
@@ -18,7 +20,30 @@ enum ServerError
 	SE_GAME_FULL,
 	SE_ALREADY_PRESENT,
 	SE_NOT_IN_GAME,
-	SE_UNABLE_TO_START_GAME
+	SE_UNABLE_TO_START_GAME,
+	SE_INVALID_ACTION
+};
+
+enum GameActions
+{
+	GA_UNKNOWN_ACTION = 0,
+
+	GA_ADDCASTLES,
+	GA_ADDRUINS,
+	GA_CREATEUNIT,
+	GA_CREATEGROUP,
+	GA_DESTROYGROUP,
+	GA_MOVEGROUP,
+	GA_REARRANGEGROUP,
+	GA_CLAIMCASTLE,
+	GA_SETBUILDING,
+	GA_SETBATTLEPLAN,
+	GA_SEARCH,
+	GA_BATTLE,
+	GA_ENDTURN,
+	GA_VICTORY,
+
+	GA_MAX
 };
 
 struct UserDetails
@@ -63,8 +88,11 @@ struct GameState
 	struct Player
 	{
 		uint32 id;
+		char name[52];
 		int team;
 		int race;
+		int colour;
+		int lastAction;
 	};
 
 	uint32 id;
@@ -76,6 +104,7 @@ struct GameState
 	uint32 endDate;
 
 	int state;
+	int currentTurn;
 	int currentPlayer;
 	int timeRemaining;
 
@@ -83,6 +112,13 @@ struct GameState
 
 	int numPlayers;
 	Player players[16];
+};
+
+struct GameAction
+{
+	GameActions action;
+	int *pArgs;
+	int numArgs;
 };
 
 ServerError WLServ_CreateAccount(const char *pUsername, const char *pPassword, const char *pEmail, uint32 *pUserID);
@@ -111,5 +147,7 @@ ServerError WLServ_BeginGame(uint32 game, uint32 *pGame);
 
 ServerError WLServ_GameState(uint32 game, GameState *pState);
 
+ServerError WLServ_ApplyActions(uint32 game, GameAction *pActions, int numActions);
+ServerError WLServ_UpdateState(uint32 game, int lastAction, GameAction **ppActions, int *pNumActions, int *pActionCount);
 
 #endif

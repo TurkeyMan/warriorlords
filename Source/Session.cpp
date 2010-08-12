@@ -8,7 +8,9 @@ Session::Session()
 	bLoggedIn = false;
 	bOffline = false;
 
-	pCurrentGames = pPendingGames = pPastGames = NULL;
+	pCurrentGames = NULL;
+	pPendingGames = NULL;
+	pPastGames = NULL;
 }
 
 Session::~Session()
@@ -46,9 +48,9 @@ ServerError Session::UpdateState()
 
 	if(numCurrentGames)
 	{
-		pCurrentGames = (GameDetails*)MFHeap_AllocAndZero(sizeof(GameDetails) * numCurrentGames);
+		pCurrentGames = (GameState*)MFHeap_AllocAndZero(sizeof(GameState) * numCurrentGames);
 		for(int a=0; a<numCurrentGames; ++a)
-			WLServ_GetGameByID(games[a], &pCurrentGames[a]);
+			WLServ_GameState(games[a], &pCurrentGames[a]);
 	}
 
 	// get pending games

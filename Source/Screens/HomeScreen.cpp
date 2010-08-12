@@ -14,6 +14,8 @@ extern MenuScreen *pMenu;
 extern LobbyScreen *pLobby;
 extern JoinGameScreen *pJoinGame;
 
+extern Game *pGame;
+
 HomeScreen::HomeScreen()
 {
 	pIcons = MFMaterial_Create("Icons");
@@ -102,7 +104,7 @@ void HomeScreen::Select()
 
 		for(int a=0; a<pSession->GetNumCurrentGames(); ++a)
 		{
-			GameDetails *pGame = pSession->GetCurrentGame(a);
+			GameState *pGame = pSession->GetCurrentGame(a);
 			pMyGames->AddItem(pGame->name, -1, pGame);
 		}
 	}
@@ -178,7 +180,8 @@ void HomeScreen::ResumeGame(uint32 game)
 	if(err == SE_NO_ERROR)
 	{
 		// resume game
-		//...
+		pGame = new Game(&state);
+		Game::SetCurrent(pGame);
 		return;
 	}
 

@@ -14,8 +14,10 @@ MapScreen::MapScreen(Game *_pGame)
 	pGame = _pGame;
 	pMap = pGame->GetMap();
 	pSelection = NULL;
+	pShowCastle = NULL;
 
 	bMoving = false;
+	bUndoVisible = false;
 
 	pIcons = MFMaterial_Create("Icons");
 	pFont = pGame->GetTextFont();
@@ -69,7 +71,15 @@ void MapScreen::Select()
 	pInputManager->PushReceiver(pGame->GetMap());
 	pInputManager->PushReceiver(pEndTurn);
 	pInputManager->PushReceiver(pMiniMap);
-	pInputManager->PushReceiver(pUndo);
+
+	pCurrent = this;
+	ShowUndoButton();
+
+	if(pShowCastle)
+	{
+		castleConfig.Show(pShowCastle);
+		pShowCastle = NULL;
+	}
 }
 
 bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
@@ -81,7 +91,7 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 	if(info.buttonID != 0)
 	{
 		if(info.buttonID == 1 && ev == IE_Tap && !bMoving)
-			DeselectGroup();
+			SelectGroup(NULL);
 		return false;
 	}
 
@@ -108,7 +118,7 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 				// if we've already selected a group on this tile
 				if(pTile == pSelection->pTile)
 				{
-					DeselectGroup();
+					SelectGroup(NULL);
 
 					// show group config screen
 					groupConfig.Show(pTile);
@@ -152,7 +162,8 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 							if(pSelection->GetNumUnits() > 0)
 							{
 								// clear the undo stack
-								pGame->ClearUndoStack();
+								pGame->CommitActions(pSelection);
+								ShowUndoButton();
 
 								if(pTile->GetNumUnits() == 0)
 								{
@@ -201,12 +212,12 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 							{
 								if(pSelection->GetNumUnits() <= pTile->GetAvailableUnitSpace())
 								{
-									// clear the undo stack
-									pGame->ClearUndoStack();
-
 									// move to ruin
+									pGame->PushMoveAction(pSelection);
 									pSelection->GetTile()->RemoveGroup(pSelection);
 									pTile->AddGroup(pSelection);
+									pGame->UpdateMoveAction(pSelection);
+
 									pMap->ClaimFlags(pTile->GetX(), pTile->GetY(), pSelection->GetPlayer());
 
 									// strip the step from the path
@@ -216,13 +227,27 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 									// TODO: random encounter?
 
 									// get an item
-									int item = MFRand() % pHero->GetDefs()->GetNumItems();
-									pHero->AddItem(item);
+									Ruin *pRuin = pTile->GetRuin();
+									if(!pRuin->bHasSearched)
+									{
+										pHero->AddItem(pRuin->item);
+										pRuin->bHasSearched = true;
 
-									// TODO: show dialog box mentioning what you got
-									Item *pItem = Game::GetCurrent()->GetUnitDefs()->GetItem(item);
-									const char *pMessage = MFStr("You search the ruin and find\n%s", pItem->pName);
-									Game::GetCurrent()->ShowRequest(pMessage, NULL, true);
+										pGame->PushSearch(pSelection, pRuin);
+
+										Item *pItem = Game::GetCurrent()->GetUnitDefs()->GetItem(pRuin->item);
+										const char *pMessage = MFStr("You search the ruin and find\n%s", pItem->pName);
+										Game::GetCurrent()->ShowRequest(pMessage, NULL, true);
+									}
+									else
+									{
+										const char *pMessage = "You search the ruin,\nbut it is empty!";
+										Game::GetCurrent()->ShowRequest(pMessage, NULL, true);
+									}
+
+									// commit the actions
+									pGame->CommitActions(pSelection);
+									ShowUndoButton();
 								}
 							}
 							break;
@@ -236,8 +261,11 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 						bMoving = true;
 						countdown = 0.f;
 
-						// push the move to the undo stack
-						pGame->PushGroupPosition(pSelection);
+						// push the move to the action list
+						pGame->PushMoveAction(pSelection);
+
+						// if the undo wasn't previously visible, push it now.
+						ShowUndoButton();
 						break;
 					}
 				}
@@ -303,6 +331,9 @@ int MapScreen::Update()
 			// add the group to the new tile
 			pNewTile->AddGroup(pSelection);
 			pMap->ClaimFlags(x, y, pSelection->GetPlayer());
+
+			// update the move action
+			pGame->UpdateMoveAction(pSelection);
 
 			// center the map on the guy moving
 			pMap->CenterView((float)x, (float)y);
@@ -401,12 +432,13 @@ void MapScreen::Draw()
 
 		MFFont_BlitTextf(pFont, tx+1, ty+1, MakeVector(0,0,0,1), "Move: %g", (float)pSelection->GetMovement() * 0.5f);
 		MFFont_BlitTextf(pFont, tx, ty, MakeVector(1,1,0,1), "Move: %g", (float)pSelection->GetMovement() * 0.5f);
+
+		if(bUndoVisible)
+			pUndo->Draw();
 	}
 
 	pEndTurn->Draw();
 	pMiniMap->Draw();
-	if(pGame->GetUndoDepth())
-		pUndo->Draw();
 
 	// now draw any UI that might be on the screen.
 	groupConfig.Draw();
@@ -419,6 +451,7 @@ void MapScreen::Draw()
 void MapScreen::Deselect()
 {
 	pInputManager->PopReceiver(this);
+	bUndoVisible = false;
 }
 
 void MapScreen::EndTurn(int button, void *pUserData, int buttonID)
@@ -431,7 +464,7 @@ void MapScreen::FinishTurn(int selection, void *pUserData)
 	if(selection == 0)
 	{
 		MapScreen *pMapScreen = (MapScreen*)pUserData;
-		pMapScreen->DeselectGroup();
+		pMapScreen->SelectGroup(NULL);
 		pMapScreen->pGame->EndTurn();
 	}
 }
@@ -446,7 +479,7 @@ void MapScreen::UndoMove(int button, void *pUserData, int buttonID)
 {
 	MapScreen *pThis = (MapScreen*)pUserData;
 
-	Group *pGroup = pThis->pGame->UndoLastMove();
+	Group *pGroup = pThis->pGame->RevertAction(pThis->pSelection);
 	if(pGroup)
 	{
 		MapTile *pTile = pGroup->GetTile();
@@ -461,21 +494,16 @@ void MapScreen::SelectGroup(Group *pGroup)
 	if(pSelection == pGroup)
 		return;
 
-	DeselectGroup();
-
-	pSelection = pGroup;
-	pSelection->bSelected = true;
-	pSelection->pPath = NULL;
-
-	if(pGroup->pathX != -1 && pGroup->pathY != -1)
+	if(pGroup)
 	{
-		pSelection->pPath = pMap->FindPath(pGroup, pGroup->pathX, pGroup->pathY);
-	}
-}
+		pSelection = pGroup;
+		pSelection->bSelected = true;
+		pSelection->pPath = NULL;
 
-void MapScreen::DeselectGroup()
-{
-	if(pSelection)
+		if(pGroup->pathX != -1 && pGroup->pathY != -1)
+			pSelection->pPath = pMap->FindPath(pGroup, pGroup->pathX, pGroup->pathY);
+	}
+	else
 	{
 		pSelection->bSelected = false;
 
@@ -487,9 +515,34 @@ void MapScreen::DeselectGroup()
 
 		pSelection = NULL;
 	}
+
+	ShowUndoButton();
 }
 
 Group *MapScreen::GetSelected()
 {
 	return pSelection;
+}
+
+void MapScreen::ShowUndoButton()
+{
+	if(Screen::GetCurrent() != this)
+		return;
+
+	if(pSelection && pSelection->GetLastAction())
+	{
+		if(!bUndoVisible)
+		{
+			pInputManager->PushReceiver(pUndo);
+			bUndoVisible = true;
+		}
+	}
+	else
+	{
+		if(bUndoVisible)
+		{
+			pInputManager->PopReceiver(pUndo);
+			bUndoVisible = false;
+		}
+	}
 }

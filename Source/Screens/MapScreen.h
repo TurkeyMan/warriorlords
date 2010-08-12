@@ -34,8 +34,11 @@ public:
 	static void UndoMove(int button, void *pUserData, int buttonID);
 
 	void SelectGroup(Group *pGroup);
-	void DeselectGroup();
 	Group *GetSelected();
+
+	void ShowCastleConfig(Castle *pCastle) { pShowCastle = pCastle; }
+
+	void ShowUndoButton();
 
 protected:
 	GroupConfig groupConfig;
@@ -53,10 +56,14 @@ protected:
 	Button *pMiniMap;
 	Button *pUndo;
 
+	bool bUndoVisible;
+
 	Group *pSelection;
 
 	bool bMoving;
 	float countdown;
+
+	Castle *pShowCastle;
 };
 
 #endif

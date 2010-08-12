@@ -245,20 +245,26 @@ void LobbyScreen::Click(int button, void *pUserData, int buttonID)
 			params.bOnline = !pScreen->bOffline;
 
 			// set up the players
+			bool bAssigned[16];
+			MFZeroMemory(bAssigned, sizeof(bAssigned));
 			params.numPlayers = pScreen->details.numPlayers;
 			for(int a=0; a<params.numPlayers; ++a)
 			{
-				params.playerRaces[a] = pScreen->details.players[a].race;
-				params.playerColours[a] = pScreen->details.players[a].colour;
+				// select a random starting position for the player
+				int p = MFRand() % params.numPlayers;
+				while(bAssigned[p])
+					p = MFRand() % params.numPlayers;
+				bAssigned[p] = true;
+
+				// assign the player details
+				params.playerRaces[p] = pScreen->details.players[a].race;
+				params.playerColours[p] = pScreen->details.players[a].colour;
 			}
 
 			// create the game
 			if(!pScreen->bOffline)
 			{
-				return;
-
-				uint32 gameID;
-				ServerError err = WLServ_BeginGame(pScreen->details.id, &gameID);
+				ServerError err = WLServ_BeginGame(pScreen->details.id, &params.gameID);
 
 				if(err != SE_NO_ERROR)
 				{

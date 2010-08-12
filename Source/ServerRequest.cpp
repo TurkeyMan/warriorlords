@@ -3,6 +3,7 @@
 #include "ServerRequest.h"
 
 #include "string.h"
+#include "stdio.h"
 
 #if defined(_DEBUG)
 	const char *pHostname = "localhost";
@@ -11,6 +12,26 @@
 	const char *pHostname = "warriorlordsserv.appspot.com";
 	const int port = 80;
 #endif
+
+static const char *gpActions[] = 
+{
+	"UNKNOWN_ACTION",
+
+	"ADDCASTLES",
+	"ADDRUINS",
+	"CREATEUNIT",
+	"CREATEGROUP",
+	"DESTROYGROUP",
+	"MOVEGROUP",
+	"REARRANGEGROUP",
+	"CLAIMCASTLE",
+	"SETBUILDING",
+	"SETBATTLEPLAN",
+	"SEARCH",
+	"BATTLE",
+	"ENDTURN",
+	"VICTORY"
+};
 
 ServerError WLServ_CreateAccount(const char *pUsername, const char *pPassword, const char *pEmail, uint32 *pUserID)
 {
@@ -529,7 +550,7 @@ ServerError WLServ_BeginGame(uint32 game, uint32 *pGame)
 
 	MFFileHTTPRequestArg args[2];
 	args[0].SetString("request", "BEGINGAME");
-	args[2].SetInt("game", game);
+	args[1].SetInt("game", game);
 
 	const char *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 
@@ -610,6 +631,10 @@ ServerError WLServ_GameState(uint32 game, GameState *pState)
 		{
 			pState->currentPlayer = MFString_AsciiToInteger(pLine + 14);
 		}
+		else if(!MFString_CaseCmpN(pLine, "CURRENTTURN", 11) && pLine[11] == '=')
+		{
+			pState->currentTurn = MFString_AsciiToInteger(pLine + 12);
+		}
 		else if(!MFString_CaseCmpN(pLine, "TIMEREMAINING", 13) && pLine[13] == '=')
 		{
 			pState->timeRemaining = MFString_AsciiToInteger(pLine + 14);
@@ -643,6 +668,23 @@ ServerError WLServ_GameState(uint32 game, GameState *pState)
 			if(pRace && index < pState->numPlayers)
 				pState->players[index].race = MFString_AsciiToInteger(pRace + 1);
 		}
+		else if(!MFString_CaseCmpN(pLine, "COLOUR", 6))
+		{
+			int index = MFString_AsciiToInteger(pLine + 6);
+			const char *pColour = MFString_Chr(pLine + 7, '=');
+			if(pColour && index < pState->numPlayers)
+				pState->players[index].colour = MFString_AsciiToInteger(pColour + 1);
+		}
+		else if(!MFString_CaseCmpN(pLine, "USERNAME", 8))
+		{
+			int index = MFString_AsciiToInteger(pLine + 8);
+			const char *pName = MFString_Chr(pLine + 9, '=');
+			if(pName && index < pState->numPlayers)
+			{
+				MFString_CopyN(pState->players[index].name, pName + 1, sizeof(pState->players[index].name));
+				pState->players[index].name[sizeof(pState->players[index].name) - 1] = 0;
+			}
+		}
 		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
 		{
 			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
@@ -650,6 +692,150 @@ ServerError WLServ_GameState(uint32 game, GameState *pState)
 
 		pLine = strtok(NULL, "\n");
 	}
+
+	return err;
+}
+
+ServerError WLServ_ApplyActions(uint32 game, GameAction *pActions, int numActions)
+{
+	ServerError err = SE_INVALID_RESPONSE;
+
+	GameAction *pRemainingActions = NULL;
+	int remainingActions = 0;
+
+	MFFileHTTPRequestArg args[3];
+	args[0].SetString("request", "APPLYACTIONS");
+	args[1].SetInt("game", game);
+
+	// build the actions list
+	char actionList[1024] = "";
+	int len = 0;
+	for(int a=0; a<numActions; ++a)
+	{
+		if(len > sizeof(actionList)-128)
+		{
+			pRemainingActions = pActions + a;
+			remainingActions = numActions - a;
+			break;
+		}
+
+		if(len > 0)
+			len += sprintf_s(actionList + len, sizeof(actionList) - len, "\n");
+
+		GameAction &action = pActions[a];
+		len += sprintf_s(actionList + len, sizeof(actionList) - len, gpActions[action.action]);
+
+		for(int b=0; b<action.numArgs; ++b)
+			len += sprintf_s(actionList + len, sizeof(actionList) - len, "%s%d", b == 0 ? ":" : ",", action.pArgs[b]);
+	}
+
+	args[2].SetString("actions", actionList);
+
+	// send the request
+	const char *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+
+	if(!pResponse)
+		return SE_CONNECTION_FAILED;
+
+	char *pLine = strtok((char*)pResponse, "\n");
+	while(pLine)
+	{
+		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		{
+			err = SE_NO_ERROR;
+		}
+		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
+		{
+			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
+		}
+
+		pLine = strtok(NULL, "\n");
+	}
+
+	// if we couldn't fit them all in this packet, we'll send another...
+	if(remainingActions)
+		return WLServ_ApplyActions(game, pRemainingActions, remainingActions);
+	return err;
+}
+
+ServerError WLServ_UpdateState(uint32 game, int lastAction, GameAction **ppActions, int *pNumActions, int *pActionCount)
+{
+	ServerError err = SE_INVALID_RESPONSE;
+
+	MFFileHTTPRequestArg args[3];
+	args[0].SetString("request", "UPDATE");
+	args[1].SetInt("game", game);
+	args[2].SetInt("firstaction", lastAction);
+
+	const int maxActions = 256;
+	static GameAction actions[maxActions];
+	static int actionArgs[maxActions*10];
+
+	int numActions = 0;
+	int numArgs = 0;
+
+	*ppActions = actions;
+
+	// send the request
+	const char *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+
+	if(!pResponse)
+		return SE_CONNECTION_FAILED;
+
+	char *pLine = strtok((char*)pResponse, "\n");
+	while(pLine)
+	{
+		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		{
+			err = SE_NO_ERROR;
+		}
+		else if(!MFString_CaseCmpN(pLine, "COUNT", 5) && pLine[5] == '=')
+		{
+			*pActionCount = MFString_AsciiToInteger(pLine + 6);
+		}
+		else if(!MFString_CaseCmpN(pLine, "ACTION", 6) && pLine[6] == '=')
+		{
+			if(numActions < maxActions && numArgs < maxActions*10 - 20)
+			{
+				actions[numActions].action = GA_UNKNOWN_ACTION;
+				actions[numActions].numArgs = 0;
+				actions[numActions].pArgs = &actionArgs[numArgs];
+
+				char *pArgs = MFString_Chr(pLine + 7, ':');
+				if(pArgs)
+					*pArgs++ = 0;
+				for(int a=0; a<GA_MAX; ++a)
+				{
+					if(!MFString_Compare(pLine + 7, gpActions[a]))
+					{
+						actions[numActions].action = (GameActions)a;
+						break;
+					}
+				}
+
+				if(actions[numActions].action != GA_UNKNOWN_ACTION)
+				{
+					while(pArgs)
+					{
+						actions[numActions].pArgs[actions[numActions].numArgs++] = MFString_AsciiToInteger(pArgs);
+						pArgs = MFString_Chr(pArgs, ',');
+						pArgs = pArgs ? pArgs + 1 : NULL;
+					}
+
+					numArgs += actions[numActions].numArgs;
+					++numActions;
+				}
+			}
+		}
+		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
+		{
+			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
+		}
+
+		pLine = strtok(NULL, "\n");
+	}
+
+	*pNumActions = numActions;
 
 	return err;
 }

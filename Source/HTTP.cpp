@@ -4,7 +4,7 @@
 #include "MFSockets.h"
 #include "stdio.h"
 
-static char gResponseBuffer[4096];
+static char gResponseBuffer[256 * 1024];
 
 const char *HTTP_Get(const char *pServer, int port, const char *pResourcePath)
 {

@@ -40,6 +40,8 @@ int MapTile::GetRegionRace() const
 void MapTile::AddGroup(Group *_pGroup)
 {
 	_pGroup->pTile = this;
+	_pGroup->x = x;
+	_pGroup->y = y;
 	_pGroup->pNext = pGroup;
 	pGroup = _pGroup;
 }
@@ -47,6 +49,8 @@ void MapTile::AddGroup(Group *_pGroup)
 void MapTile::AddGroupToBack(Group *_pGroup)
 {
 	_pGroup->pTile = this;
+	_pGroup->x = x;
+	_pGroup->y = y;
 	_pGroup->pNext = NULL;
 
 	if(!pGroup)
@@ -74,7 +78,7 @@ void MapTile::RemoveGroup(Group *_pGroup)
 	else
 	{
 		Group *pG = pGroup;
-		while(pG->pNext != _pGroup)
+		while(pG->pNext && pG->pNext != _pGroup)
 			pG = pG->pNext;
 		if(pG->pNext)
 			pG->pNext = pG->pNext->pNext;
@@ -137,6 +141,18 @@ int MapTile::GetNumUnits()
 	for(Group *pG = pGroup; pG; pG = pG->pNext)
 		units += pG->GetNumUnits();
 	return units;
+}
+
+Unit *MapTile::GetUnit(int unit)
+{
+	for(Group *pG = pGroup; pG; pG = pG->pNext)
+	{
+		int numUnits = pG->GetNumUnits();
+		if(unit < numUnits)
+			return pG->GetUnit(unit);
+		unit -= numUnits;
+	}
+	return NULL;
 }
 
 bool MapTile::IsFriendlyTile(int player)
@@ -591,6 +607,7 @@ void Map::ConstructMap(int race)
 
 	// copy the map data
 	int numTiles = mapWidth * mapHeight;
+	numRuins = 0;
 	for(int a=0; a<numTiles; ++a)
 	{
 		pMap[a].region = pMapRegions[a];
@@ -602,6 +619,22 @@ void Map::ConstructMap(int race)
 		pMap[a].terrain = mapTemplate[slice].pMap[a].terrain;
 		pMap[a].type = mapTemplate[slice].pMap[a].type;
 		pMap[a].index = mapTemplate[slice].pMap[a].index;
+
+		if(pMap[a].type == OT_Special)
+		{
+			Ruin &ruin = pRuins[numRuins];
+
+			int item = MFRand() % pUnits->GetNumItems();
+
+			ruin.InitRuin(numRuins, pMap[a].index, item);
+
+			ruin.pUnitDefs = pUnits;
+			ruin.pTile = &pMap[a];
+			ruin.pSpecial = pUnits->GetSpecial(pMap[a].index);
+
+			pMap[a].pObject = &ruin;
+			pMap[a].index = numRuins++;
+		}
 	}
 
 	// build the castle list
@@ -624,7 +657,7 @@ void Map::ConstructMap(int race)
 				{
 					Castle &castle = pCastles[numCastles];
 
-					castle.Init(mapTemplate[a].pCastles[c], mapTemplate[a].pCastles[c].bCapital ? pTile->GetRegion() : -1);
+					castle.Init(numCastles, mapTemplate[a].pCastles[c], mapTemplate[a].pCastles[c].bCapital ? pTile->GetRegion() : -1);
 					castle.pUnitDefs = pUnits;
 					castle.pTile = pTile;
 
@@ -1248,7 +1281,7 @@ void Map::Draw()
 					break;
 
 				case OT_Special:
-					drawTile.i = (int8)pTile->index;
+					drawTile.i = (int8)pRuins[pTile->index].type;
 					drawTile.flags = 2;
 					++numCastleTiles;
 					break;
