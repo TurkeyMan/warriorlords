@@ -845,14 +845,14 @@ void CastleEdit::Show(Castle *_pCastle)
 		{
 			pUnitDefs->GetUnitUVs(pCastle->details.buildUnits[a].unit, false, &uvs, texelOffset);
 			pBuildUnits[a]->SetImage(pUnitMat, &uvs, pGame->GetPlayerColour(pCastle->player));
-			pBuildUnits[a]->SetOutline(true, pCastle->building == a ? MFVector::blue : MFVector::white);
+			pBuildUnits[a]->SetOutline(true, pCastle->nextBuild == a ? MFVector::blue : MFVector::white);
 		}
 		else
 		{
 			uvs.x = 0.5f; uvs.y = 0.f;
 			uvs.width = uvs.height = 0.25f;
 			pBuildUnits[a]->SetImage(pIcons, &uvs);
-			pBuildUnits[a]->SetOutline(true, pCastle->building == a ? MFVector::blue : MFVector::white);
+			pBuildUnits[a]->SetOutline(true, pCastle->nextBuild == a ? MFVector::blue : MFVector::white);
 		}
 
 		pInputManager->PushReceiver(pBuildUnits[a]);
@@ -894,7 +894,7 @@ void CastleEdit::SelectUnit(int button, void *pUserData, int buttonID)
 	CastleEdit *pThis = (CastleEdit*)pUserData;
 	Castle *pCastle = pThis->pCastle;
 
-	if(pCastle->building != buttonID)
+	if(pCastle->nextBuild != buttonID)
 	{
 		for(int a=0; a<pCastle->details.numBuildUnits; ++a)
 			pThis->pBuildUnits[a]->SetOutline(true, buttonID == a ? MFVector::blue : MFVector::white);
@@ -915,7 +915,7 @@ void CastleEdit::SetUnit(int button, void *pUserData, int buttonID)
 	UnitDefinitions *pDefs = Game::GetCurrent()->GetUnitDefs();
 	Castle *pCastle = pThis->pCastle;
 
-	int selected = pThis->pCastle->building;
+	int selected = pThis->pCastle->nextBuild;
 
 	// set the new unit
 	BuildUnit &unit = pThis->pCastle->details.buildUnits[selected];
