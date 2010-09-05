@@ -47,7 +47,9 @@ struct Action
 		AT_Move,
 		AT_Rearrange,
 		AT_Regroup,
-		AT_Search
+		AT_Search,
+		AT_CaptureCastle,
+		AT_CaptureUnits
 	};
 
 	ActionType type;
@@ -78,6 +80,14 @@ struct Action
 			Unit *pUnit;
 			Ruin *pRuin;
 		} search;
+		struct CaptureCastle
+		{
+			Castle *pCastle;
+		} captureCastle;
+		struct CaptureUnits
+		{
+			Group *pUnits;
+		} captureUnits;
 	};
 
 	Action *pParent;
@@ -121,11 +131,16 @@ public:
 
 	Group *CreateUnit(int unit, Castle *pCastle);
 
+	bool MoveGroupToTile(Group *pGroup, MapTile *pTile);
+
 	void PushMoveAction(Group *pGroup);
 	void UpdateMoveAction(Group *pGroup);
 	void PushRearrange(Group *pGroup, Unit **ppNewOrder);
 	void PushRegroup(Group **ppBefore, int numBefore, Group *pAfter);
 	void PushSearch(Group *pGroup, Ruin *pRuin);
+	void PushCaptureCastle(Group *pGroup, Castle *pCastle);
+	void PushCaptureUnits(Group *pGroup, Group *pUnits);
+
 	Group *RevertAction(Group *pGroup);
 	void CommitActions(Group *pGroup);
 	void CommitAllActions();

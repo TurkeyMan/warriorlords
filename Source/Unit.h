@@ -353,6 +353,8 @@ public:
 	BattlePlan *GetBattlePlan() { return &plan; }
 	Weapon *GetWeapon() { return pUnitDefs->GetWeapon(details.weapon); }
 
+	int GetHP() { return life; }
+	void SetHP(int hp) { life = hp; }
 	float GetHealth() { return (float)life / (float)GetMaxHP(); }
 	int Damage(int damage) { life -= MFMin(life, damage); return life; }
 	bool IsDead() { return life == 0; }
@@ -361,6 +363,7 @@ public:
 	int GetVictories() { return victories; }
 	void AddKill() { ++kills; }
 	void AddVictory() { ++victories; UpdateStats(); }
+	void SetKills(int numKills) { kills = numKills; }
 
 	bool IsRanged() { return pUnitDefs->IsRanged(details.attackClass); }
 

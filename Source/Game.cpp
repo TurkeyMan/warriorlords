@@ -261,12 +261,17 @@ void Game::BeginTurn(int player)
 
 	// get money + add new units
 	int numCastles = 0;
+	int numOpponentCastles = 0;
 
 	for(int a = 0; a < pMap->GetNumCastles(); ++a)
 	{
 		Castle *pCastle = pMap->GetCastle(a);
 		if(pCastle->player == currentPlayer)
 		{
+			// show the starting castle build screen
+			if(currentTurn == 0)
+				pMapScreen->ShowCastleConfig(pCastle);
+
 			++numCastles;
 			players[currentPlayer].gold += pCastle->details.income;
 
@@ -286,6 +291,10 @@ void Game::BeginTurn(int player)
 				}
 			}
 		}
+		else if(pCastle->player != -1)
+		{
+			++numOpponentCastles;
+		}
 	}
 
 	// if the player has no castles left, go to next player
@@ -294,6 +303,19 @@ void Game::BeginTurn(int player)
 		int numPlayers = 6;
 		BeginTurn((currentPlayer + 1) % numPlayers);
 		return;
+	}
+	else if(numOpponentCastles == 0)
+	{
+		if(bOnline)
+		{
+			// victory!!
+			PushAction(GA_VICTORY);
+			PushActionArg(currentPlayer);
+			ApplyActions();
+		}
+
+		// show victory prompt
+		//...
 	}
 
 	// focus map on starting castle, oooor maybe not (focus on last focused position?)
@@ -332,12 +354,15 @@ void Game::EndTurn()
 	if(bOnline)
 	{
 		PushAction(GA_ENDTURN);
+		PushActionArg(currentPlayer);
 		ApplyActions();
 	}
 }
 
 void Game::BeginBattle(Group *pGroup, MapTile *pTarget)
 {
+	CommitActions(pGroup);
+
 	// enter the battle
 	pMapScreen->SelectGroup(NULL);
 	pBattle->Begin(pGroup, pTarget);
@@ -348,9 +373,22 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 	pBattle->End();
 
 	// destroy dead units
+	if(bOnline)
+	{
+		PushAction(GA_BATTLE);
+		PushActionArg(pGroup->GetID());
+	}
+
 	for(int a=0; a<pGroup->GetNumUnits(); ++a)
 	{
 		Unit *pUnit = pGroup->GetUnit(a);
+
+		if(bOnline)
+		{
+			PushActionArg(pUnit->GetHP());
+			PushActionArg(pUnit->GetKills());
+		}
+
 		if(pUnit->IsDead())
 		{
 			pGroup->RemoveUnit(pUnit);
@@ -373,10 +411,25 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 	for(int a=0; a<pTarget->GetNumGroups();)
 	{
 		Group *pG = pTarget->GetGroup(a);
+		bool bIsMercGroup = pG->GetPlayer() == -1;
+
+		if(bOnline && !bIsMercGroup)
+		{
+			PushAction(GA_BATTLE);
+			PushActionArg(pG->GetID());
+		}
+
 		for(int b=0; b<pG->GetNumUnits(); ++b)
 		{
 			Unit *pUnit = pG->GetUnit(b);
-			if(pUnit->IsDead() || pUnit->GetPlayer() == -1)
+
+			if(bOnline && !bIsMercGroup)
+			{
+				PushActionArg(pUnit->GetHP());
+				PushActionArg(pUnit->GetKills());
+			}
+
+			if(pUnit->IsDead() || bIsMercGroup)
 			{
 				pG->RemoveUnit(pUnit);
 				if(!pUnit->IsHero())
@@ -404,19 +457,25 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 		if(pCastle && pCastle->IsEmpty())
 		{
 			pCastle->Capture(pGroup->GetPlayer());
+			PushCaptureCastle(pGroup, pCastle);
+
 			pMapScreen->ShowCastleConfig(pCastle);
 		}
 
 		// check if the target is clear, and move there
 		if(pTarget->CanMove(pGroup))
-		{
-			pCurrentTile->RemoveGroup(pGroup);
-			pTarget->AddGroup(pGroup);
-			pMap->ClaimFlags(pTarget->GetX(), pTarget->GetY(), pGroup->GetPlayer());
-		}
+			MoveGroupToTile(pGroup, pTarget);
 
 		pGroup->pPath->Destroy();
 		pGroup->pPath = NULL;
+
+		// commit all battle actions
+		CommitActions(pGroup);
+	}
+	else
+	{
+		// since the group is dead, explicitly apply the battle actions
+		ApplyActions();
 	}
 
 	Screen::SetNext(pMapScreen);
@@ -568,6 +627,33 @@ Group *Game::CreateUnit(int unit, Castle *pCastle)
 	}
 
 	return NULL;
+}
+
+bool Game::MoveGroupToTile(Group *pGroup, MapTile *pTile)
+{
+	// check movement costs
+//	if(not enough movement)
+//		return false;
+
+	// Check there is room on the target square
+	if(pGroup->GetNumUnits() > pTile->GetAvailableUnitSpace())
+		return false;
+
+	PushMoveAction(pGroup);
+	MapTile *pCurrent = pGroup->GetTile();
+	if(pCurrent)
+		pCurrent->RemoveGroup(pGroup);
+	pTile->AddGroup(pGroup);
+
+	// subtract movement costs?
+	//...
+
+	UpdateMoveAction(pGroup);
+
+	// claim nearby flags
+	pMap->ClaimFlags(pTile->GetX(), pTile->GetY(), pGroup->GetPlayer());
+
+	return true;
 }
 
 void Game::AddUnit(Unit *pUnit)
@@ -771,6 +857,32 @@ void Game::PushSearch(Group *pGroup, Ruin *pRuin)
 	pGroup->pLastAction = pAction;
 }
 
+void Game::PushCaptureCastle(Group *pGroup, Castle *pCastle)
+{
+	Action *pAction = (Action*)actionCache.Alloc();
+	MFZeroMemory(pAction, sizeof(Action));
+
+	pAction->type = Action::AT_CaptureCastle;
+	pAction->pGroup = pGroup;
+	pAction->captureCastle.pCastle = pCastle;
+
+	AddActions(pAction, pGroup->pLastAction);
+	pGroup->pLastAction = pAction;
+}
+
+void Game::PushCaptureUnits(Group *pGroup, Group *pUnits)
+{
+	Action *pAction = (Action*)actionCache.Alloc();
+	MFZeroMemory(pAction, sizeof(Action));
+
+	pAction->type = Action::AT_CaptureUnits;
+	pAction->pGroup = pGroup;
+	pAction->captureUnits.pUnits = pUnits;
+
+	AddActions(pAction, pGroup->pLastAction);
+	pGroup->pLastAction = pAction;
+}
+
 void Game::UpdateMoveAction(Group *pGroup)
 {
 	MapTile *pTile = pGroup->GetTile();
@@ -816,6 +928,8 @@ void Game::CommitActions(Group *pGroup)
 	pGroup->pLastAction = NULL;
 
 	ApplyActions();
+
+	pMapScreen->ShowUndoButton();
 }
 
 void Game::CommitAction(Action *pAction)
@@ -894,6 +1008,16 @@ void Game::CommitAction(Action *pAction)
 				PushAction(GA_SEARCH);
 				PushActionArg(pAction->search.pUnit->GetID());
 				PushActionArg(pAction->search.pRuin->id);
+				break;
+			case Action::AT_CaptureCastle:
+				PushAction(GA_CLAIMCASTLE);
+				PushActionArg(pAction->captureCastle.pCastle->id);
+				PushActionArg(pAction->pGroup->GetPlayer());
+				break;
+			case Action::AT_CaptureUnits:
+				PushAction(GA_CAPTUREUNITS);
+				PushActionArg(pAction->captureUnits.pUnits->GetID());
+				PushActionArg(pAction->pGroup->GetPlayer());
 				break;
 		}
 	}
@@ -1131,6 +1255,8 @@ void Game::PushAction(GameActions action)
 
 void Game::PushActionArg(int arg)
 {
+	MFDebug_Assert(arg >= -1, "!");
+
 	actionArgs[numArgs++] = arg;
 	++pendingActions[numActions-1].numArgs;
 }
@@ -1256,8 +1382,17 @@ void Game::UpdateGameState()
 					break;
 				}
 				case GA_CLAIMCASTLE:
-					//...
+				{
+					Castle *pCastle = pMap->GetCastle(pActions[a].pArgs[0]);
+					pCastle->player = pActions[a].pArgs[1];
 					break;
+				}
+				case GA_CAPTUREUNITS:
+				{
+					Group *pGroup = ppGroups[pActions[a].pArgs[0]];
+					pGroup->SetPlayer(pActions[a].pArgs[1]);
+					break;
+				}
 				case GA_SETBUILDING:
 				{
 					Castle *pCastle = pMap->GetCastle(pActions[a].pArgs[0]);
@@ -1277,8 +1412,32 @@ void Game::UpdateGameState()
 					break;
 				}
 				case GA_BATTLE:
-					//...
+				{
+					Group *pGroup = ppGroups[pActions[a].pArgs[0]];
+					for(int a=0; a<pGroup->GetNumUnits(); ++a)
+					{
+						Unit *pUnit = pGroup->GetUnit(a);
+						pUnit->SetHP(pActions[a].pArgs[1 + a*2]);
+						pUnit->SetKills(pActions[a].pArgs[2 + a*2]);
+
+						if(pUnit->IsDead())
+						{
+							pGroup->RemoveUnit(pUnit);
+							if(!pUnit->IsHero())
+								pUnit->Destroy();
+							--a;
+						}
+					}
+
+					MapTile *pTile = pGroup->GetTile();
+					if(pGroup->GetNumUnits() == 0)
+					{
+						pTile->RemoveGroup(pGroup);
+						pGroup->Destroy();
+						pGroup = NULL;
+					}
 					break;
+				}
 				case GA_ENDTURN:
 					EndTurn();
 					break;

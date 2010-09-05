@@ -487,13 +487,21 @@ bool GroupConfig::GetUnitPos(int group, int unit, MFRect *pRect)
 	if(!pGroups[group]->pUnits[unit])
 		return false;
 
+	UnitDetails *pDetails = pGroups[group]->pUnits[unit]->GetDetails();
+	pRect->width = (float)pDetails->width * 64.f;
+	pRect->height = (float)pDetails->height * 64.f;
+
 	if(group == 0)
 	{
+		if(unit == dragUnit)
+		{
+			pRect->x = MFFloor(dragX - pRect->width*.5f);
+			pRect->y = MFFloor(dragY - pRect->height*.5f);
+			return true;
+		}
+
 		if(unit == 10)
 		{
-			UnitDetails *pDetails = pGroups[0]->pVehicle->GetDetails();
-			pRect->width = (float)pDetails->width * 64.f;
-			pRect->height = (float)pDetails->height * 64.f;
 			pRect->x = MFFloor((rear.x + rear.width + front.x)*0.5f - pRect->width*.5f);
 			pRect->y = MFFloor(front.y + front.height*0.5f - pRect->height*.5f);
 			return true;
@@ -501,9 +509,6 @@ bool GroupConfig::GetUnitPos(int group, int unit, MFRect *pRect)
 		else if(unit >= 5)
 		{
 			int numRear = pGroups[0]->numRear;
-			UnitDetails *pDetails = pGroups[0]->pUnits[unit]->GetDetails();
-			pRect->width = (float)pDetails->width * 64.f;
-			pRect->height = (float)pDetails->height * 64.f;
 			pRect->x = MFFloor(rear.x + gPositions[numRear-1][unit-5][0]*rear.width - pRect->width*.5f);
 			pRect->y = MFFloor(rear.y + gPositions[numRear-1][unit-5][1]*rear.height - pRect->height*.5f);
 			return true;
@@ -511,9 +516,6 @@ bool GroupConfig::GetUnitPos(int group, int unit, MFRect *pRect)
 		else
 		{
 			int numForward = pGroups[0]->numForward;
-			UnitDetails *pDetails = pGroups[0]->pUnits[unit]->GetDetails();
-			pRect->width = (float)pDetails->width * 64.f;
-			pRect->height = (float)pDetails->height * 64.f;
 			pRect->x = MFFloor(front.x + gPositions[numForward-1][unit][0]*front.width - pRect->width*.5f);
 			pRect->y = MFFloor(front.y + gPositions[numForward-1][unit][1]*front.height - pRect->height*.5f);
 			return true;
@@ -534,10 +536,17 @@ bool GroupConfig::GetUnitPos(int group, int unit, MFRect *pRect)
 				++visUnit;
 		}
 
-		pRect->x = lower.x + bottomUsed + margin*2.f + (float)visUnit*32.f;
-		pRect->y = lower.y + margin;
-		pRect->width = 64.f;
-		pRect->height = 64.f;
+		if(group == dragGroup)
+		{
+			float groupWidth = ((float)pGroups[group]->totalUnits - 1.f)*32.f;
+			pRect->x = dragX - (pRect->width + groupWidth)*0.5f + (float)visUnit*32.f;
+			pRect->y = dragY - pRect->height*0.5f;
+		}
+		else
+		{
+			pRect->x = lower.x + bottomUsed + margin*2.f + (float)visUnit*32.f;
+			pRect->y = lower.y + margin;
+		}
 		return true;
 	}
 

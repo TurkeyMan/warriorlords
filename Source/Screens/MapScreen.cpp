@@ -74,12 +74,6 @@ void MapScreen::Select()
 
 	pCurrent = this;
 	ShowUndoButton();
-
-	if(pShowCastle)
-	{
-		castleConfig.Show(pShowCastle);
-		pShowCastle = NULL;
-	}
 }
 
 bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
@@ -134,139 +128,133 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 					Step *pStep = pSelection->pPath->GetLast();
 
 					// first check for an attack command
-					if(pSelection->pPath->IsEnd() && pStep->CanMove() && cursorX == pStep->x && cursorY == pStep->y)
+					if(cursorX == pStep->x && cursorY == pStep->y)
 					{
-						// the path is only a single item long, it may be an attack or search command
-						MapTile *pTile = pMap->GetTile(cursorX, cursorY);
-
-						if(pTile->IsEnemyTile(pSelection->GetPlayer()))
+						if(pSelection->pPath->IsEnd() && pStep->CanMove())
 						{
-							// we have an attack command!
-							Castle *pCastle = pTile->GetCastle();
+							// the path is only a single item long, it may be an attack or search command
+							MapTile *pTile = pMap->GetTile(cursorX, cursorY);
 
-							// check the castle is occuppied
-							if(pCastle && pTile->GetNumUnits() == 0)
+							if(pTile->IsEnemyTile(pSelection->GetPlayer()))
 							{
-								// search castle squares for units
-								for(int a=0; a<4; ++a)
+								// we have an attack command!
+								Castle *pCastle = pTile->GetCastle();
+
+								// check the castle is occuppied
+								if(pCastle && pTile->GetNumUnits() == 0)
 								{
-									MapTile *pCastleTile = pCastle->GetTile(a);
-									if(pCastleTile->GetNumUnits() != 0)
+									// search castle squares for units
+									for(int a=0; a<4; ++a)
 									{
-										pTile = pCastleTile;
-										break;
+										MapTile *pCastleTile = pCastle->GetTile(a);
+										if(pCastleTile->GetNumUnits() != 0)
+										{
+											pTile = pCastleTile;
+											break;
+										}
 									}
 								}
-							}
 
-							if(pSelection->GetNumUnits() > 0)
-							{
-								// clear the undo stack
-								pGame->CommitActions(pSelection);
-								ShowUndoButton();
-
-								if(pTile->GetNumUnits() == 0)
+								if(pSelection->GetNumUnits() > 0)
 								{
-									if(pCastle)
+									if(pTile->GetNumUnits() == 0)
 									{
-										// if it's a merc castle, we need to fight the mercs
-										if(pCastle->player == -1)
+										if(pCastle)
 										{
-											// create merc group
-											Group *pGroup = pCastle->GetMercGroup();
-											pTile->AddGroup(pGroup);
-											pGame->BeginBattle(pSelection, pTile);
-											break;
+											// if it's a merc castle, we need to fight the mercs
+											if(pCastle->player == -1)
+											{
+												// create merc group
+												Group *pGroup = pCastle->GetMercGroup();
+												pTile->AddGroup(pGroup);
+												pGame->BeginBattle(pSelection, pTile);
+												break;
+											}
+											else
+											{
+												// the castle is empty! claim that shit!
+												pCastle->Capture(pGame->CurrentPlayer());
+												pGame->PushCaptureCastle(pSelection, pCastle);
+											}
 										}
 										else
 										{
-											// the castle is empty! claim that shit!
-											pCastle->Capture(pGame->CurrentPlayer());
+											// there must be empty enemy vehicles on the tile, we'll capture the empty vehicles
+											for(int a=0; a<pTile->GetNumGroups(); ++a)
+											{
+												Group *pUnits = pTile->GetGroup(a);
+												pGame->PushCaptureUnits(pSelection, pUnits);
+												pUnits->SetPlayer(pSelection->GetPlayer());
+											}
 										}
 									}
 									else
 									{
-										// there must be empty enemy vehicles on the tile, we'll capture the empty vehicles
-										for(int a=0; a<pTile->GetNumGroups(); ++a)
-											pTile->GetGroup(a)->SetPlayer(pGame->CurrentPlayer());
+										// begin the battle!
+										pGame->BeginBattle(pSelection, pTile);
+										break;
 									}
 								}
 								else
 								{
-									// begin the battle!
-									pGame->BeginBattle(pSelection, pTile);
+									// can't attack with an empty vehicle!
+									// TODO: play sound?
+									break;
 								}
 							}
-							else
+							else if(pTile->GetType() == OT_Special)
 							{
-								// can't attack with an empty vehicle!
-								// TODO: play sound?
-							}
-							break;
-						}
-						else if(pTile->GetType() == OT_Special)
-						{
-							// search command
-							Unit *pHero = pSelection->GetHero();
-							if(pHero)
-							{
-								if(pSelection->GetNumUnits() <= pTile->GetAvailableUnitSpace())
+								// search command
+								Unit *pHero = pSelection->GetHero();
+								if(!pHero)
+									break;
+
+								// TODO: random encounter?
+
+								// get an item
+								Ruin *pRuin = pTile->GetRuin();
+								if(!pRuin->bHasSearched)
 								{
-									// move to ruin
-									pGame->PushMoveAction(pSelection);
-									pSelection->GetTile()->RemoveGroup(pSelection);
-									pTile->AddGroup(pSelection);
-									pGame->UpdateMoveAction(pSelection);
+									pHero->AddItem(pRuin->item);
+									pRuin->bHasSearched = true;
 
-									pMap->ClaimFlags(pTile->GetX(), pTile->GetY(), pSelection->GetPlayer());
+									pGame->PushSearch(pSelection, pRuin);
 
-									// strip the step from the path
-									pSelection->pPath->Destroy();
-									pSelection->pPath = NULL;
-
-									// TODO: random encounter?
-
-									// get an item
-									Ruin *pRuin = pTile->GetRuin();
-									if(!pRuin->bHasSearched)
-									{
-										pHero->AddItem(pRuin->item);
-										pRuin->bHasSearched = true;
-
-										pGame->PushSearch(pSelection, pRuin);
-
-										Item *pItem = Game::GetCurrent()->GetUnitDefs()->GetItem(pRuin->item);
-										const char *pMessage = MFStr("You search the ruin and find\n%s", pItem->pName);
-										Game::GetCurrent()->ShowRequest(pMessage, NULL, true);
-									}
-									else
-									{
-										const char *pMessage = "You search the ruin,\nbut it is empty!";
-										Game::GetCurrent()->ShowRequest(pMessage, NULL, true);
-									}
-
-									// commit the actions
-									pGame->CommitActions(pSelection);
-									ShowUndoButton();
+									Item *pItem = Game::GetCurrent()->GetUnitDefs()->GetItem(pRuin->item);
+									const char *pMessage = MFStr("You search the ruin and find\n%s", pItem->pName);
+									Game::GetCurrent()->ShowRequest(pMessage, NULL, true);
+								}
+								else
+								{
+									const char *pMessage = "You search the ruin,\nbut it is empty!";
+									Game::GetCurrent()->ShowRequest(pMessage, NULL, true);
 								}
 							}
+
+							// move group to the square
+							if(pGame->MoveGroupToTile(pSelection, pTile))
+							{
+								pSelection->pPath->Destroy();
+								pSelection->pPath = NULL;
+							}
+
+							// commit the actions
+							pGame->CommitActions(pSelection);
 							break;
 						}
-					}
+						else
+						{
+							// move to destination...
+							bMoving = true;
+							countdown = 0.f;
 
-					// and see if we've commanded to move there
-					if(cursorX == pStep->x && cursorY == pStep->y)
-					{
-						// move to destination...
-						bMoving = true;
-						countdown = 0.f;
+							// push the move to the action list
+							pGame->PushMoveAction(pSelection);
 
-						// push the move to the action list
-						pGame->PushMoveAction(pSelection);
-
-						// if the undo wasn't previously visible, push it now.
-						ShowUndoButton();
-						break;
+							// if the undo wasn't previously visible, push it now.
+							ShowUndoButton();
+							break;
+						}
 					}
 				}
 
@@ -304,6 +292,12 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 int MapScreen::Update()
 {
+	if(pShowCastle)
+	{
+		castleConfig.Show(pShowCastle);
+		pShowCastle = NULL;
+	}
+
 	pGame->GetMap()->Update();
 
 	if(bMoving)

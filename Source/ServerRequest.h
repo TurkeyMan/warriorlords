@@ -42,6 +42,7 @@ enum GameActions
 	GA_BATTLE,
 	GA_ENDTURN,
 	GA_VICTORY,
+	GA_CAPTUREUNITS,
 
 	GA_MAX
 };

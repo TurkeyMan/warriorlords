@@ -13,7 +13,7 @@
 	const int port = 80;
 #endif
 
-static const char *gpActions[] = 
+static const char *gpActions[GA_MAX] = 
 {
 	"UNKNOWN_ACTION",
 
@@ -30,7 +30,8 @@ static const char *gpActions[] =
 	"SEARCH",
 	"BATTLE",
 	"ENDTURN",
-	"VICTORY"
+	"VICTORY",
+	"CAPTUREUNITS"
 };
 
 ServerError WLServ_CreateAccount(const char *pUsername, const char *pPassword, const char *pEmail, uint32 *pUserID)
@@ -698,6 +699,9 @@ ServerError WLServ_GameState(uint32 game, GameState *pState)
 
 ServerError WLServ_ApplyActions(uint32 game, GameAction *pActions, int numActions)
 {
+	if(numActions == 0)
+		return SE_NO_ERROR;
+
 	ServerError err = SE_INVALID_RESPONSE;
 
 	GameAction *pRemainingActions = NULL;
