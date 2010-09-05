@@ -516,9 +516,9 @@ Unit *UnitDefinitions::CreateUnit(int unit, int player)
 	if(pUnits[unit].type == UT_Hero)
 		pUnit->pItems = (int*)MFHeap_Alloc(sizeof(int));
 
+	pUnit->kills = pUnit->victories = 0;
 	pUnit->UpdateStats();
 
-	pUnit->kills = pUnit->victories = 0;
 	pUnit->life = pUnit->GetMaxHP();
 	pUnit->movement = pUnit->GetMaxMovement() * 2;
 

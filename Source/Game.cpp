@@ -45,10 +45,9 @@ Game::Game(GameParams *pParams)
 		// setup players
 		for(int a=0; a<pParams->numPlayers; ++a)
 		{
-			players[a].playerID = -1;//pParams->players[a];
-
-			players[a].race = pParams->playerRaces[a];
-			players[a].colour = pUnitDefs->GetRaceColour(pParams->playerColours[a]);
+			players[a].playerID = pParams->players[a].id;
+			players[a].race = pParams->players[a].race;
+			players[a].colour = pUnitDefs->GetRaceColour(pParams->players[a].colour);
 			players[a].gold = 0;
 			players[a].cursorX = 0;
 			players[a].cursorY = 0;
@@ -142,6 +141,8 @@ void Game::Init(const char *pMapName, bool bEdit)
 
 	ppActionHistory = NULL;
 	numTopActions = 0;
+
+	bUpdating = false;
 }
 
 Game::~Game()

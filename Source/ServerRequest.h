@@ -144,7 +144,7 @@ ServerError WLServ_LeaveGame(uint32 user, uint32 game);
 ServerError WLServ_SetRace(uint32 game, uint32 user, int race);
 ServerError WLServ_SetColour(uint32 game, uint32 user, int colour);
 
-ServerError WLServ_BeginGame(uint32 game, uint32 *pGame);
+ServerError WLServ_BeginGame(uint32 game, uint32 *pPlayers, int numPlayers, uint32 *pGame);
 
 ServerError WLServ_GameState(uint32 game, GameState *pState);
 

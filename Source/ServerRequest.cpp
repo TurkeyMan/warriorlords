@@ -545,13 +545,19 @@ ServerError WLServ_SetColour(uint32 game, uint32 user, int colour)
 	return err;
 }
 
-ServerError WLServ_BeginGame(uint32 game, uint32 *pGame)
+ServerError WLServ_BeginGame(uint32 game, uint32 *pPlayers, int numPlayers, uint32 *pGame)
 {
 	ServerError err = SE_INVALID_RESPONSE;
 
-	MFFileHTTPRequestArg args[2];
+	MFFileHTTPRequestArg args[3];
 	args[0].SetString("request", "BEGINGAME");
 	args[1].SetInt("game", game);
+
+	char players[256] = "";
+	int len = 0;
+	for(int a=0; a<numPlayers; ++a)
+		len += sprintf(players + len, a > 0 ? ",%d" : "%d", pPlayers[a]);
+	args[2].SetString("players", players);
 
 	const char *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 

@@ -30,15 +30,18 @@ struct Player
 
 struct GameParams
 {
-	const char *pMap;
-
-	int numPlayers;
-	int playerRaces[16];
-	uint32 playerColours[16];
-
 	uint32 gameID;
 	bool bOnline;
 
+	struct Player
+	{
+		uint32 id;
+		int race;
+		uint32 colour;
+	} players[16];
+	int numPlayers;
+
+	const char *pMap;
 	bool bEditMap;
 };
 

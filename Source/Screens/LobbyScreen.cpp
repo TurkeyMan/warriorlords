@@ -257,14 +257,19 @@ void LobbyScreen::Click(int button, void *pUserData, int buttonID)
 				bAssigned[p] = true;
 
 				// assign the player details
-				params.playerRaces[p] = pScreen->details.players[a].race;
-				params.playerColours[p] = pScreen->details.players[a].colour;
+				params.players[p].id = pScreen->details.players[a].id;
+				params.players[p].race = pScreen->details.players[a].race;
+				params.players[p].colour = pScreen->details.players[a].colour;
 			}
 
 			// create the game
 			if(!pScreen->bOffline)
 			{
-				ServerError err = WLServ_BeginGame(pScreen->details.id, &params.gameID);
+				uint32 players[16];
+				for(int a=0; a<params.numPlayers; ++a)
+					players[a] = params.players[a].id;
+
+				ServerError err = WLServ_BeginGame(pScreen->details.id, players, params.numPlayers, &params.gameID);
 
 				if(err != SE_NO_ERROR)
 				{
