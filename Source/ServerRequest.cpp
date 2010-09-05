@@ -6,7 +6,7 @@
 #include "stdio.h"
 
 #if defined(_DEBUG)
-	const char *pHostname = "localhost";
+	const char *pHostname = "10.0.0.10";
 	const int port = 8888;
 #else
 	const char *pHostname = "warriorlordsserv.appspot.com";

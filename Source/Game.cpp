@@ -71,9 +71,8 @@ Game::Game(GameState *pState)
 	numActions = 0;
 	numArgs = 0;
 	lastAction = 0;
-
-	currentPlayer = pState->currentPlayer;
-	currentTurn = pState->currentTurn;
+	currentPlayer = 0;
+	currentTurn = 0;
 
 	// setup players
 	for(int a=0; a<pState->numPlayers; ++a)
@@ -285,7 +284,7 @@ void Game::BeginTurn(int player)
 		if(pCastle->player == currentPlayer)
 		{
 			// show the starting castle build screen
-			if(currentTurn == 0)
+			if(currentTurn == 0 && IsMyTurn())
 				pMapScreen->ShowCastleConfig(pCastle);
 
 			++numCastles;
@@ -1300,6 +1299,7 @@ ServerError Game::ApplyActions()
 		return SE_NO_ERROR;
 
 	ServerError err = WLServ_ApplyActions(gameID, pendingActions, numActions);
+	lastAction += numActions;
 	numActions = numArgs = 0;
 	return err;
 }
