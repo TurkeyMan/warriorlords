@@ -24,6 +24,8 @@ struct Player
 	int cursorX, cursorY;
 
 	Unit *pHero;
+
+	uint32 playerID;
 };
 
 struct GameParams
@@ -114,8 +116,13 @@ public:
 	Map *GetMap() { return pMap; }
 	UnitDefinitions *GetUnitDefs() { return pUnitDefs; }
 
+	bool IsOnline() { return bOnline; }
+
 	int GetCurrentTurn() { return currentTurn; }
 	int CurrentPlayer() { return currentPlayer; }
+	bool IsCurrentPlayer(int player);
+	bool IsMyTurn() { return IsCurrentPlayer(CurrentPlayer()); }
+
 	int GetPlayerRace(int player) { return player == -1 ? 0 : players[player].race; }
 	int GetPlayerGold(int player) { return player == -1 ? 0 : players[player].gold; }
 	MFVector GetPlayerColour(int player) { return player == -1 ? pUnitDefs->GetRaceColour(0) : players[player].colour; }
@@ -165,14 +172,14 @@ public:
 	void AddUnit(Unit *pUnit);
 	void AddGroup(Group *pGroup);
 
+	void UpdateGameState();
+
 protected:
 	void Init(const char *pMap, bool bEdit);
 
 	void AddActions(Action *pAction, Action *pParent);
 	void CommitAction(Action *pAction);
 	Action *FindFirstDependency(Action *pAction);
-
-	void UpdateGameState();
 
 	MFPoolHeapExpanding units;
 	MFPoolHeapExpanding groups;

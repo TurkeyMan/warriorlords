@@ -45,6 +45,8 @@ Game::Game(GameParams *pParams)
 		// setup players
 		for(int a=0; a<pParams->numPlayers; ++a)
 		{
+			players[a].playerID = -1;//pParams->players[a];
+
 			players[a].race = pParams->playerRaces[a];
 			players[a].colour = pUnitDefs->GetRaceColour(pParams->playerColours[a]);
 			players[a].gold = 0;
@@ -76,6 +78,8 @@ Game::Game(GameState *pState)
 	// setup players
 	for(int a=0; a<pState->numPlayers; ++a)
 	{
+		players[a].playerID = pState->players[a].id;
+
 		players[a].race = pState->players[a].race;
 		players[a].colour = pUnitDefs->GetRaceColour(pState->players[a].colour);
 
@@ -159,6 +163,18 @@ Game::~Game()
 
 	actionCache.Destroy();
 	actionList.Destroy();
+}
+
+bool Game::IsCurrentPlayer(int player)
+{
+	if(!bOnline)
+		return player == currentPlayer;
+
+	Session *pSession = Session::GetCurrent();
+	if(!pSession || pSession->IsOffline())
+		return false;
+
+	return players[currentPlayer].playerID == pSession->GetUserID();
 }
 
 void Game::BeginGame()
@@ -337,7 +353,7 @@ void Game::EndTurn()
 			pCastle->building = pCastle->nextBuild;
 			pCastle->buildTime = pCastle->nextBuild > -1 ? pCastle->details.buildUnits[pCastle->nextBuild].buildTime : 0;
 
-			if(bOnline)
+			if(IsMyTurn())
 			{
 				PushAction(GA_SETBUILDING);
 				PushActionArg(pCastle->id);
@@ -347,16 +363,17 @@ void Game::EndTurn()
 		}
 	}
 
-	// begin the next players turn
-	int numPlayers = 6;
-	BeginTurn((currentPlayer + 1) % numPlayers);
-
-	if(bOnline)
+	// end the turn
+	if(IsMyTurn())
 	{
 		PushAction(GA_ENDTURN);
 		PushActionArg(currentPlayer);
 		ApplyActions();
 	}
+
+	// begin the next players turn
+	int numPlayers = 6;
+	BeginTurn((currentPlayer + 1) % numPlayers);
 }
 
 void Game::BeginBattle(Group *pGroup, MapTile *pTarget)
@@ -1247,6 +1264,9 @@ Action *Game::FindFirstDependency(Action *pAction)
 
 void Game::PushAction(GameActions action)
 {
+	if(!bOnline)
+		return;
+
 	pendingActions[numActions].action = action;
 	pendingActions[numActions].pArgs = actionArgs + numArgs;
 	pendingActions[numActions].numArgs = 0;
@@ -1255,6 +1275,9 @@ void Game::PushAction(GameActions action)
 
 void Game::PushActionArg(int arg)
 {
+	if(!bOnline)
+		return;
+
 	MFDebug_Assert(arg >= -1, "!");
 
 	actionArgs[numArgs++] = arg;
@@ -1263,6 +1286,9 @@ void Game::PushActionArg(int arg)
 
 void Game::PushActionArgs(int *pArgs, int numArgs)
 {
+	if(!bOnline)
+		return;
+
 	for(int a=0; a<numArgs; ++a)
 		actionArgs[numArgs++] = pArgs[a];
 	pendingActions[numActions-1].numArgs += numArgs;

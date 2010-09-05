@@ -64,6 +64,8 @@ protected:
 	float countdown;
 
 	Castle *pShowCastle;
+
+	float lastUpdateTime;
 };
 
 #endif

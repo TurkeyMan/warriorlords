@@ -74,6 +74,8 @@ void MapScreen::Select()
 
 	pCurrent = this;
 	ShowUndoButton();
+
+	lastUpdateTime = 0.f;
 }
 
 bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
@@ -107,7 +109,7 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 			// get the tile
 			MapTile *pTile = pMap->GetTile(cursorX, cursorY);
 
-			if(pSelection && pSelection->GetPlayer() == pGame->CurrentPlayer())
+			if(pSelection && pGame->IsCurrentPlayer(pSelection->GetPlayer()))
 			{
 				// if we've already selected a group on this tile
 				if(pTile == pSelection->pTile)
@@ -276,7 +278,7 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 				{
 					// see if there's a castle on the square
 					Castle *pCastle = pTile->GetCastle();
-					if(pCastle && pCastle->GetPlayer() == pGame->CurrentPlayer())
+					if(pCastle && pGame->IsCurrentPlayer(pCastle->GetPlayer()))
 					{
 						// enter the castle config menu
 						castleConfig.Show(pCastle);
@@ -347,6 +349,16 @@ int MapScreen::Update()
 		}
 	}
 
+	if(pGame->IsOnline() && !pGame->IsMyTurn())
+	{
+		lastUpdateTime += MFSystem_TimeDelta();
+		if(lastUpdateTime > 10.f)
+		{
+			pGame->UpdateGameState();
+			lastUpdateTime -= 10.f;
+		}
+	}
+
 	return 0;
 }
 
@@ -357,7 +369,7 @@ void MapScreen::Draw()
 	if(pSelection)
 	{
 		// render the path
-		if(pSelection->GetPlayer() == pGame->CurrentPlayer())
+		if(pGame->IsCurrentPlayer(pSelection->GetPlayer()))
 		{
 			Path *pPath = pSelection->GetPath();
 			if(pPath && pPath->GetPathLength())
