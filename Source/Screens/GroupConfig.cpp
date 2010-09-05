@@ -611,50 +611,122 @@ void GroupConfig::Show(MapTile *_pTile)
 	}
 }
 
+static bool ContainsGroup(Group *pGroup, Group **ppGroups, int numGroups)
+{
+	for(int g=0; g<numGroups; ++g)
+	{
+		if(pGroup == ppGroups[g])
+			return true;
+	}
+	return false;
+}
+
 void GroupConfig::Hide()
 {
 	Window::Hide();
 
 	Game *pGame = Game::GetCurrent();
 
-	int numSourceGroups[MapTile::MaxUnitsOnTile * 2] = { 0 };
-	Group *pSourceGroups[MapTile::MaxUnitsOnTile * 2][MapTile::MaxUnitsOnTile * 2];
+	struct Regroup
+	{
+		int numSourceGroups;
+		int numNewGroups;
+		Group *pSourceGroups[MapTile::MaxUnitsOnTile * 2];
+		Group *pNewGroups[MapTile::MaxUnitsOnTile * 2];
+		bool bWasRearranged;
+	};
+	
+	Regroup regroups[MapTile::MaxUnitsOnTile * 2];
+	int numRegroups = 0;
+	int regroupIDs[MapTile::MaxUnitsOnTile * 2];
 
-	// find source groups for each group
+	// sort new groups into regroup actions...
 	for(int a=0; a<numGroups; ++a)
 	{
 		UnitGroup *pGroup = pGroups[a];
 
-		for(int u=0; u<11; ++u)
+		bool bFound = false;
+		for(int g=0; g<numRegroups; ++g)
 		{
-			Unit *pUnit = pGroup->pUnits[u];
-			if(pUnit)
+			Regroup &regroup = regroups[g];
+			bool bContainsGroup = false;
+
+			// find if unit is already in this group
+			for(int u=0; u<11; ++u)
 			{
-				bool bFound = false;
-				for(int b=0; b<numSourceGroups[a]; ++b)
+				Unit *pUnit = pGroup->pUnits[u];
+				if(pUnit && ContainsGroup(pUnit->GetGroup(), regroup.pSourceGroups, regroup.numSourceGroups))
 				{
-					if(pUnit->GetGroup() == pSourceGroups[a][b])
+					bContainsGroup = true;
+					break;
+				}
+			}
+
+			if(bContainsGroup)
+			{
+				regroupIDs[a] = g;
+
+				// add all missing groups
+				for(int u=0; u<11; ++u)
+				{
+					Unit *pUnit = pGroup->pUnits[u];
+					if(pUnit)
 					{
-						bFound = true;
-						break;
+						Group *pG = pUnit->GetGroup();
+						if(pUnit && !ContainsGroup(pG, regroup.pSourceGroups, regroup.numSourceGroups))
+							regroup.pSourceGroups[regroup.numSourceGroups++] = pG;
 					}
 				}
 
-				if(!bFound)
-					pSourceGroups[a][numSourceGroups[a]++] = pUnit->GetGroup();
+				bFound = true;
+				break;
+			}
+		}
+
+		if(!bFound)
+		{
+			Regroup &regroup = regroups[numRegroups];
+			regroupIDs[a] = numRegroups++;
+
+			// add to new group list
+			regroup.numSourceGroups = 0;
+			regroup.numNewGroups = 0;
+
+			// add all source groups
+			for(int u=0; u<11; ++u)
+			{
+				Unit *pUnit = pGroup->pUnits[u];
+				if(pUnit)
+				{
+					Group *pG = pUnit->GetGroup();
+					if(pUnit && !ContainsGroup(pG, regroup.pSourceGroups, regroup.numSourceGroups))
+						regroup.pSourceGroups[regroup.numSourceGroups++] = pG;
+				}
 			}
 		}
 	}
 
-	// rearrange the groups
+	// remove old groups from tile
+	for(int a=0; a<numRegroups; ++a)
+	{
+		Regroup &regroup = regroups[a];
+
+		// remove old groups from tile
+		for(int b=0; b<regroup.numSourceGroups; ++b)
+			pTile->RemoveGroup(regroup.pSourceGroups[b]);
+	}
+
+	// create/rearrange the groups
 	for(int a=numGroups-1; a>=0; --a)
 	{
 		UnitGroup *pGroup = pGroups[a];
+		Regroup &regroup = regroups[regroupIDs[a]];
 
 		// check if the group is only rearranged
-		if(numSourceGroups[a] == 1 && pGroup->totalUnits == pSourceGroups[a][0]->GetNumUnits() + (pSourceGroups[a][0]->pVehicle ? 1 : 0))
+		regroup.bWasRearranged = regroup.numSourceGroups == 1 && pGroup->totalUnits == regroup.pSourceGroups[0]->GetNumUnits() + (regroup.pSourceGroups[0]->GetVehicle() ? 1 : 0);
+		if(regroup.bWasRearranged)
 		{
-			Group *pSource = pSourceGroups[a][0];
+			Group *pSource = regroup.pSourceGroups[0];
 
 			// check that a rearrange actually ocurred
 			bool bWasRearranged = false;
@@ -675,22 +747,20 @@ void GroupConfig::Hide()
 
 				// rearrange the group
 				for(int b=0; b<10; ++b)
-					pSource->pForwardUnits[b] = pGroup->pUnits[b];
+					pSource->pUnits[b] = pGroup->pUnits[b];
 				pSource->numForwardUnits = pGroup->numForward;
 				pSource->numRearUnits = pGroup->numRear;				
 			}
 
 			// put the group on top
-			pTile->BringGroupToFront(pSource);
+			pTile->AddGroup(pSource);
 		}
 		else
 		{
-			// remove old groups from tile
-			for(int b=0; b<numSourceGroups[a]; ++b)
-				pTile->RemoveGroup(pSourceGroups[a][b]);
-
 			// create new group
-			Group *pNewGroup = Group::Create(pSourceGroups[a][0]->GetPlayer());
+			Group *pNewGroup = Group::Create(regroup.pSourceGroups[0]->GetPlayer());
+			regroup.pNewGroups[regroup.numNewGroups++] = pNewGroup;
+
 			for(int b=0; b<10; ++b)
 			{
 				if(pGroup->pUnits[b])
@@ -708,9 +778,18 @@ void GroupConfig::Hide()
 
 			// and add the group to the map
 			pTile->AddGroup(pNewGroup);
+		}
+	}
 
+	// create regroup actions
+	for(int a=0; a<numRegroups; ++a)
+	{
+		Regroup &regroup = regroups[a];
+
+		if(!regroup.bWasRearranged)
+		{
 			// create regroup action
-			pGame->PushRegroup(pSourceGroups[a], numSourceGroups[a], pNewGroup);
+			pGame->PushRegroup(regroup.pSourceGroups, regroup.numSourceGroups, regroup.pNewGroups, regroup.numNewGroups);
 		}
 	}
 

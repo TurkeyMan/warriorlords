@@ -166,6 +166,9 @@ Game::~Game()
 
 bool Game::IsCurrentPlayer(int player)
 {
+	if(player == -1)
+		return false;
+
 	if(!bOnline)
 		return player == currentPlayer;
 
@@ -173,7 +176,7 @@ bool Game::IsCurrentPlayer(int player)
 	if(!pSession || pSession->IsOffline())
 		return false;
 
-	return players[currentPlayer].playerID == pSession->GetUserID();
+	return player == currentPlayer && players[player].playerID == pSession->GetUserID();
 }
 
 void Game::BeginGame()
@@ -352,7 +355,7 @@ void Game::EndTurn()
 			pCastle->building = pCastle->nextBuild;
 			pCastle->buildTime = pCastle->nextBuild > -1 ? pCastle->details.buildUnits[pCastle->nextBuild].buildTime : 0;
 
-			if(IsMyTurn())
+			if(!bUpdating && IsMyTurn())
 			{
 				PushAction(GA_SETBUILDING);
 				PushActionArg(pCastle->id);
@@ -363,7 +366,7 @@ void Game::EndTurn()
 	}
 
 	// end the turn
-	if(IsMyTurn())
+	if(!bUpdating && IsMyTurn())
 	{
 		PushAction(GA_ENDTURN);
 		PushActionArg(currentPlayer);
@@ -775,6 +778,9 @@ bool Game::DrawRequest()
 
 void Game::PushMoveAction(Group *pGroup)
 {
+	if(bUpdating)
+		return;
+
 	Action *pAction = (Action*)actionCache.Alloc();
 	MFZeroMemory(pAction, sizeof(Action));
 
@@ -808,6 +814,9 @@ void Game::PushMoveAction(Group *pGroup)
 
 void Game::PushRearrange(Group *pGroup, Unit **ppNewOrder)
 {
+	if(bUpdating)
+		return;
+
 	Action *pAction = (Action*)actionCache.Alloc();
 	MFZeroMemory(pAction, sizeof(Action));
 
@@ -840,27 +849,47 @@ void Game::PushRearrange(Group *pGroup, Unit **ppNewOrder)
 	pGroup->pLastAction = pAction;
 }
 
-void Game::PushRegroup(Group **ppBefore, int numBefore, Group *pAfter)
+void Game::PushRegroup(Group **ppBefore, int numBefore, Group **ppAfter, int numAfter)
 {
+	if(bUpdating)
+		return;
+
 	Action *pAction = (Action*)actionCache.Alloc();
 	MFZeroMemory(pAction, sizeof(Action));
 
 	pAction->type = Action::AT_Regroup;
-	pAction->pGroup = pAfter;
+	pAction->pGroup = NULL;
 
+	bool bHasParent = false;
 	pAction->regroup.numBefore = numBefore;
 	for(int a=0; a<numBefore; ++a)
 	{
 		pAction->regroup.pBefore[a] = ppBefore[a];
-		AddActions(pAction, ppBefore[a]->pLastAction);
+		if(ppBefore[a]->pLastAction)
+		{
+			AddActions(pAction, ppBefore[a]->pLastAction);
+			bHasParent = true;
+		}
 	}
 
+	pAction->regroup.numAfter = numAfter;
+	for(int a=0; a<numAfter; ++a)
+	{
+		pAction->regroup.pAfter[a] = ppAfter[a];
+		ppAfter[a]->pLastAction = pAction;
+	}
+
+	if(!bHasParent)
+		AddActions(pAction, NULL);
+
 	pAction->pParent = NULL; // regroup actions do not have a single parent
-	pAfter->pLastAction = pAction;
 }
 
 void Game::PushSearch(Group *pGroup, Ruin *pRuin)
 {
+	if(bUpdating)
+		return;
+
 	Action *pAction = (Action*)actionCache.Alloc();
 	MFZeroMemory(pAction, sizeof(Action));
 
@@ -875,6 +904,9 @@ void Game::PushSearch(Group *pGroup, Ruin *pRuin)
 
 void Game::PushCaptureCastle(Group *pGroup, Castle *pCastle)
 {
+	if(bUpdating)
+		return;
+
 	Action *pAction = (Action*)actionCache.Alloc();
 	MFZeroMemory(pAction, sizeof(Action));
 
@@ -888,6 +920,9 @@ void Game::PushCaptureCastle(Group *pGroup, Castle *pCastle)
 
 void Game::PushCaptureUnits(Group *pGroup, Group *pUnits)
 {
+	if(bUpdating)
+		return;
+
 	Action *pAction = (Action*)actionCache.Alloc();
 	MFZeroMemory(pAction, sizeof(Action));
 
@@ -901,6 +936,9 @@ void Game::PushCaptureUnits(Group *pGroup, Group *pUnits)
 
 void Game::UpdateMoveAction(Group *pGroup)
 {
+	if(bUpdating)
+		return;
+
 	MapTile *pTile = pGroup->GetTile();
 	Action *pAction = pGroup->pLastAction;
 	MFDebug_Assert(pAction && pAction->type == Action::AT_Move, "!?");
@@ -989,24 +1027,16 @@ void Game::CommitAction(Action *pAction)
 
 					if(pBefore->pLastAction)
 					{
+						// disconnect parent action
 						for(int b=0; b<pBefore->pLastAction->numChildren; ++b)
 						{
-							Action *pT = pBefore->pLastAction->ppChildren[b];
-							if(pT == pAction)
-								continue;
-
-							for(int c=0; c<pT->regroup.numBefore; ++c)
+							if(pBefore->pLastAction->ppChildren[b] == pAction)
 							{
-								if(pT->regroup.pBefore[c] == pBefore)
-								{
-									--pT->regroup.numBefore;
-									for(int d=c; d<pT->regroup.numBefore; ++d)
-										pT->regroup.pBefore[d] = pT->regroup.pBefore[d + 1];
-									break;
-								}
+								--pBefore->pLastAction->numChildren;
+								for(; b<pBefore->pLastAction->numChildren; ++b)
+									ppActionHistory[b] = ppActionHistory[b+1];
+								break;
 							}
-
-							CommitAction(pT);
 						}
 
 						CommitAction(pBefore->pLastAction);
@@ -1018,7 +1048,15 @@ void Game::CommitAction(Action *pAction)
 					pBefore->Destroy();
 				}
 
-				AddGroup(pAction->pGroup);
+				for(int a=0; a<pAction->regroup.numAfter; ++a)
+				{
+					Group *pAfter = pAction->regroup.pAfter[a];
+
+					if(pAfter->pLastAction == pAction)
+						pAfter->pLastAction = NULL;
+
+					AddGroup(pAfter);
+				}
 				break;
 			case Action::AT_Search:
 				PushAction(GA_SEARCH);
@@ -1053,6 +1091,10 @@ void Game::CommitAction(Action *pAction)
 	// make child actions top level
 	for(int a=0; a<pAction->numChildren; ++a)
 		AddActions(pAction->ppChildren[a], NULL);
+
+	// remove action from group
+	if(pAction->pGroup && pAction->pGroup->pLastAction == pAction)
+		pAction->pGroup->pLastAction = NULL;
 
 	// destroy the action
 	DestroyAction(pAction);
@@ -1126,96 +1168,63 @@ Group *Game::RevertAction(Group *pGroup)
 
 		case Action::AT_Regroup:
 		{
-			Group *pNewGroup = pGroup;
-			bool bDidUndoOne = false;
+			// check if all groups are present
+			for(int a=0; a<pAction->regroup.numAfter; ++a)
+			{
+				Group *pAfter = pAction->regroup.pAfter[a];
+				if(pAfter->pLastAction != pAction)
+				{
+					// one group is still missing, lets undo that units most recent action
+					Action *pUndo = FindFirstDependency(pAfter->pLastAction);
+
+					Group *pDeepestChild = pUndo->pGroup ? pUndo->pGroup : pUndo->regroup.pAfter[0];
+					return RevertAction(pDeepestChild);
+				}
+			}
+
+			// get map tile
+			MapTile *pTile = pAction->regroup.pAfter[0]->GetTile();
+
+			for(int a=0; a<pAction->regroup.numAfter; ++a)
+			{
+				// destroy the target groups
+				Group *pAfter = pAction->regroup.pAfter[a];
+				pTile->RemoveGroup(pAfter);
+				pAfter->Destroy();
+			}
 
 			for(int a=pAction->regroup.numBefore-1; a>=0; --a)
 			{
-				Group *pBefore = pAction->regroup.pBefore[a];
-				Action *pLastAction = pBefore->pLastAction;
+				pGroup = pAction->regroup.pBefore[a];
 
-				// all child branches must undo before we can undo a split regroup
-				bool bAllPresent = true;
-				for(int b=0; b<pLastAction->numChildren; ++b)
+				// assign the units back to the old group
+				for(int b=0; b<pGroup->GetNumUnits(); ++b)
 				{
-					Action *pChild = pLastAction->ppChildren[b];
-
-					if(pChild->numChildren)
-					{
-						bAllPresent = false;
-						break;
-					}
+					Unit *pUnit = pGroup->GetUnit(b);
+					pUnit->SetGroup(pGroup);
 				}
 
-				if(bAllPresent)
+				if(pGroup->pVehicle)
+					pGroup->pVehicle->SetGroup(pGroup);
+
+				// add old group to tile
+				pTile->AddGroup(pGroup);
+
+				// clear child action from old group
+				if(pGroup->pLastAction)
 				{
-					MapTile *pTile = pGroup->GetTile();
-
-					int numUnits = pBefore->GetNumUnits();
-					for(int b=0; b<pLastAction->numChildren;)
+					for(int b=0; b<pGroup->pLastAction->numChildren; ++b)
 					{
-						Group *pGroup = pLastAction->ppChildren[b]->pGroup;
-
-						for(int c=0; c<numUnits; ++c)
+						if(pGroup->pLastAction->ppChildren[a] == pAction)
 						{
-							Unit *pUnit = pBefore->GetUnit(c);
-							pGroup->RemoveUnit(pUnit);
-							pUnit->SetGroup(pBefore);
-						}
-
-						if(pBefore->pVehicle)
-						{
-							pGroup->RemoveUnit(pBefore->pVehicle);
-							pBefore->pVehicle->SetGroup(pBefore);
-						}
-
-						// check if we emptied the group
-						if(pGroup->GetNumUnits() == 0 && !pGroup->pVehicle)
-						{
-							// destroy the groups regroup action
-							DestroyAction(pLastAction->ppChildren[b]);
-
-							// unhook it from patent actions
-							--pLastAction->numChildren;
-							for(int c=b; c<pLastAction->numChildren; ++c)
-								pLastAction->ppChildren[c] = pLastAction->ppChildren[c + 1];
-
-							// destroy the group
-							pTile->RemoveGroup(pGroup);
-							pGroup->Destroy();
-						}
-						else
-						{
-							// move to next child
-							++b;
-						}
-					}
-
-					pTile->AddGroup(pBefore);
-					pNewGroup = pBefore;
-					bDidUndoOne = true;
-				}
-			}
-
-			if(!bDidUndoOne)
-			{				
-				for(int a=0; a<pAction->regroup.numBefore; ++a)
-				{
-					Group *pBefore = pAction->regroup.pBefore[a];
-					Action *pLastAction = pBefore->pLastAction;
-					for(int b=0; b<pLastAction->numChildren; ++b)
-					{
-						Action *pChild = pLastAction->ppChildren[b];
-						if(pChild->numChildren)
-						{
-							pChild = FindFirstDependency(pChild);
-							return RevertAction(pChild->pGroup);
+							--pGroup->pLastAction->numChildren;
+							for(; a<pGroup->pLastAction->numChildren; ++a)
+								pGroup->pLastAction->ppChildren[a] = pGroup->pLastAction->ppChildren[a+1];
+							break;
 						}
 					}
 				}
 			}
-
-			return pNewGroup;
 		}
 	}
 
@@ -1380,12 +1389,10 @@ void Game::UpdateGameState()
 				case GA_MOVEGROUP:
 				{
 					Group *pGroup = ppGroups[pActions[a].pArgs[0]];
+					int x = pActions[a].pArgs[1];
+					int y = pActions[a].pArgs[2];
 
-					MapTile *pTile = pGroup->GetTile();
-					pTile->RemoveGroup(pGroup);
-
-					pTile = pMap->GetTile(pActions[a].pArgs[1], pActions[a].pArgs[2]);
-					pTile->AddGroup(pGroup);
+					MoveGroupToTile(pGroup, pMap->GetTile(x, y));
 
 					int numUnits = pGroup->GetNumUnits();
 					for(int b=0; b<numUnits; ++b)
@@ -1395,6 +1402,8 @@ void Game::UpdateGameState()
 					}
 					if(pGroup->pVehicle)
 						pGroup->pVehicle->SetMovement(pActions[a].pArgs[3 + numUnits]);
+
+					pMap->CenterView((float)x, (float)y);
 					break;
 				}
 				case GA_REARRANGEGROUP:

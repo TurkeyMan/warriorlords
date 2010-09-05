@@ -76,6 +76,8 @@ struct Action
 		{
 			Group *pBefore[MapTile::MaxUnitsOnTile * 2];
 			int numBefore;
+			Group *pAfter[MapTile::MaxUnitsOnTile * 2];
+			int numAfter;
 		} regroup;
 		struct Search
 		{
@@ -143,7 +145,7 @@ public:
 	void PushMoveAction(Group *pGroup);
 	void UpdateMoveAction(Group *pGroup);
 	void PushRearrange(Group *pGroup, Unit **ppNewOrder);
-	void PushRegroup(Group **ppBefore, int numBefore, Group *pAfter);
+	void PushRegroup(Group **ppBefore, int numBefore, Group **ppAfter, int numAfter);
 	void PushSearch(Group *pGroup, Ruin *pRuin);
 	void PushCaptureCastle(Group *pGroup, Castle *pCastle);
 	void PushCaptureUnits(Group *pGroup, Group *pUnits);

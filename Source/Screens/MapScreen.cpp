@@ -134,6 +134,9 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 					{
 						if(pSelection->pPath->IsEnd() && pStep->CanMove())
 						{
+							const char *pMessage = NULL;
+							bool bCommitActions = false;
+
 							// the path is only a single item long, it may be an attack or search command
 							MapTile *pTile = pMap->GetTile(cursorX, cursorY);
 
@@ -177,6 +180,8 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 												// the castle is empty! claim that shit!
 												pCastle->Capture(pGame->CurrentPlayer());
 												pGame->PushCaptureCastle(pSelection, pCastle);
+
+												bCommitActions = true;
 											}
 										}
 										else
@@ -188,6 +193,8 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 												pGame->PushCaptureUnits(pSelection, pUnits);
 												pUnits->SetPlayer(pSelection->GetPlayer());
 											}
+
+											bCommitActions = true;
 										}
 									}
 									else
@@ -223,40 +230,44 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 									pGame->PushSearch(pSelection, pRuin);
 
 									Item *pItem = Game::GetCurrent()->GetUnitDefs()->GetItem(pRuin->item);
-									const char *pMessage = MFStr("You search the ruin and find\n%s", pItem->pName);
-									Game::GetCurrent()->ShowRequest(pMessage, NULL, true);
+									pMessage = MFStr("You search the ruin and find\n%s", pItem->pName);
 								}
 								else
 								{
-									const char *pMessage = "You search the ruin,\nbut it is empty!";
-									Game::GetCurrent()->ShowRequest(pMessage, NULL, true);
+									pMessage = "You search the ruin,\nbut it is empty!";
 								}
+
+								bCommitActions = true;
 							}
 
-							// move group to the square
-							if(pGame->MoveGroupToTile(pSelection, pTile))
+							if(bCommitActions)
 							{
-								pSelection->pPath->Destroy();
-								pSelection->pPath = NULL;
+								// move group to the square
+								if(pGame->MoveGroupToTile(pSelection, pTile))
+								{
+									pSelection->pPath->Destroy();
+									pSelection->pPath = NULL;
+								}
+
+								// commit the actions
+								pGame->CommitActions(pSelection);
+
+								if(pMessage)
+									Game::GetCurrent()->ShowRequest(pMessage, NULL, true);
+								break;
 							}
-
-							// commit the actions
-							pGame->CommitActions(pSelection);
-							break;
 						}
-						else
-						{
-							// move to destination...
-							bMoving = true;
-							countdown = 0.f;
 
-							// push the move to the action list
-							pGame->PushMoveAction(pSelection);
+						// move to destination...
+						bMoving = true;
+						countdown = 0.f;
 
-							// if the undo wasn't previously visible, push it now.
-							ShowUndoButton();
-							break;
-						}
+						// push the move to the action list
+						pGame->PushMoveAction(pSelection);
+
+						// if the undo wasn't previously visible, push it now.
+						ShowUndoButton();
+						break;
 					}
 				}
 
