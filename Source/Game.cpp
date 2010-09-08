@@ -997,84 +997,81 @@ void Game::CommitAction(Action *pAction)
 		CommitAction(pAction->pParent);
 
 	// commit the action
-	if(bOnline)
+	switch(pAction->type)
 	{
-		switch(pAction->type)
+		case Action::AT_Move:
 		{
-			case Action::AT_Move:
+			PushAction(GA_MOVEGROUP);
+			PushActionArg(pAction->pGroup->GetID());
+			PushActionArg(pAction->move.destX);
+			PushActionArg(pAction->move.destY);
+			int numUnits = pAction->pGroup->GetNumUnits() + (pAction->pGroup->pVehicle ? 1 : 0);
+			for(int a=0; a<numUnits; ++a)
+				PushActionArg(pAction->move.destMove[a]);
+			break;
+		}
+		case Action::AT_Rearrange:
+			PushAction(GA_REARRANGEGROUP);
+			PushActionArg(pAction->pGroup->GetID());
+			for(int a=0; a<10; ++a)
 			{
-				PushAction(GA_MOVEGROUP);
-				PushActionArg(pAction->pGroup->GetID());
-				PushActionArg(pAction->move.destX);
-				PushActionArg(pAction->move.destY);
-				int numUnits = pAction->pGroup->GetNumUnits() + (pAction->pGroup->pVehicle ? 1 : 0);
-				for(int a=0; a<numUnits; ++a)
-					PushActionArg(pAction->move.destMove[a]);
-				break;
+				Unit *pUnit = pAction->rearrange.pAfter[a];
+				PushActionArg(pUnit ? pUnit->GetID() : -1);
 			}
-			case Action::AT_Rearrange:
-				PushAction(GA_REARRANGEGROUP);
-				PushActionArg(pAction->pGroup->GetID());
-				for(int a=0; a<10; ++a)
-				{
-					Unit *pUnit = pAction->rearrange.pAfter[a];
-					PushActionArg(pUnit ? pUnit->GetID() : -1);
-				}
-				break;
-			case Action::AT_Regroup:
-				for(int a=0; a<pAction->regroup.numBefore; ++a)
-				{
-					Group *pBefore = pAction->regroup.pBefore[a];
+			break;
+		case Action::AT_Regroup:
+			for(int a=0; a<pAction->regroup.numBefore; ++a)
+			{
+				Group *pBefore = pAction->regroup.pBefore[a];
 
-					if(pBefore->pLastAction)
+				if(pBefore->pLastAction)
+				{
+					// disconnect parent action
+					for(int b=0; b<pBefore->pLastAction->numChildren; ++b)
 					{
-						// disconnect parent action
-						for(int b=0; b<pBefore->pLastAction->numChildren; ++b)
+						if(pBefore->pLastAction->ppChildren[b] == pAction)
 						{
-							if(pBefore->pLastAction->ppChildren[b] == pAction)
-							{
-								--pBefore->pLastAction->numChildren;
-								for(; b<pBefore->pLastAction->numChildren; ++b)
-									ppActionHistory[b] = ppActionHistory[b+1];
-								break;
-							}
+							--pBefore->pLastAction->numChildren;
+							for(; b<pBefore->pLastAction->numChildren; ++b)
+								ppActionHistory[b] = ppActionHistory[b+1];
+							break;
 						}
-
-						CommitAction(pBefore->pLastAction);
 					}
 
-					PushAction(GA_DESTROYGROUP);
-					PushActionArg(pBefore->GetID());
-
-					pBefore->Destroy();
+					CommitAction(pBefore->pLastAction);
 				}
 
-				for(int a=0; a<pAction->regroup.numAfter; ++a)
-				{
-					Group *pAfter = pAction->regroup.pAfter[a];
+				PushAction(GA_DESTROYGROUP);
+				PushActionArg(pBefore->GetID());
 
-					if(pAfter->pLastAction == pAction)
-						pAfter->pLastAction = NULL;
+				pBefore->Destroy();
+			}
 
-					AddGroup(pAfter);
-				}
-				break;
-			case Action::AT_Search:
-				PushAction(GA_SEARCH);
-				PushActionArg(pAction->search.pUnit->GetID());
-				PushActionArg(pAction->search.pRuin->id);
-				break;
-			case Action::AT_CaptureCastle:
-				PushAction(GA_CLAIMCASTLE);
-				PushActionArg(pAction->captureCastle.pCastle->id);
-				PushActionArg(pAction->pGroup->GetPlayer());
-				break;
-			case Action::AT_CaptureUnits:
-				PushAction(GA_CAPTUREUNITS);
-				PushActionArg(pAction->captureUnits.pUnits->GetID());
-				PushActionArg(pAction->pGroup->GetPlayer());
-				break;
-		}
+			for(int a=0; a<pAction->regroup.numAfter; ++a)
+			{
+				Group *pAfter = pAction->regroup.pAfter[a];
+
+				if(pAfter->pLastAction == pAction)
+					pAfter->pLastAction = NULL;
+
+				AddGroup(pAfter);
+			}
+			break;
+		case Action::AT_Search:
+			PushAction(GA_SEARCH);
+			PushActionArg(pAction->search.pUnit->GetID());
+			PushActionArg(pAction->search.pRuin->id);
+			break;
+		case Action::AT_CaptureCastle:
+			PushAction(GA_CLAIMCASTLE);
+			PushActionArg(pAction->captureCastle.pCastle->id);
+			PushActionArg(pAction->pGroup->GetPlayer());
+			break;
+		case Action::AT_CaptureUnits:
+			PushAction(GA_CAPTUREUNITS);
+			PushActionArg(pAction->captureUnits.pUnits->GetID());
+			PushActionArg(pAction->pGroup->GetPlayer());
+			break;
 	}
 
 	// disconnect action

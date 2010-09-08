@@ -696,7 +696,7 @@ void UnitDefinitions::GetUnitUVs(int unit, bool bFlip, MFRect *pUVs, float texel
 	UnitDetails &def = pUnits[unit];
 	pUVs->x = bFlip ? (def.x+def.width)*xScale - halfX : def.x*xScale + halfX;
 	pUVs->y = def.y*yScale + halfY;
-	pUVs->width = (bFlip ? -def.width : def.width)*yScale;
+	pUVs->width = (bFlip ? -def.width : def.width)*xScale;
 	pUVs->height = def.height*yScale;
 }
 
