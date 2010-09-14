@@ -184,7 +184,7 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 									for(int a=dragUnit-5; a<pActiveGroup->numRear; ++a)
 										pActiveGroup->pRear[a] = pActiveGroup->pRear[a + 1];
-									--pActiveGroup->numRear;
+									pActiveGroup->pRear[--pActiveGroup->numRear] = NULL;
 								}
 							}
 							else if(dropped == 1 && dragUnit < 5)
@@ -195,7 +195,7 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 									for(int a=dragUnit; a<pActiveGroup->numForward; ++a)
 										pActiveGroup->pForward[a] = pActiveGroup->pForward[a + 1];
-									--pActiveGroup->numForward;
+									pActiveGroup->pForward[--pActiveGroup->numForward] = NULL;
 								}
 							}
 
@@ -261,13 +261,13 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 								{
 									for(int a=dragUnit; a<pActiveGroup->numForward; ++a)
 										pActiveGroup->pForward[a] = pActiveGroup->pForward[a + 1];
-									--pActiveGroup->numForward;
+									pActiveGroup->pForward[--pActiveGroup->numForward] = NULL;
 								}
 								else
 								{
 									for(int a=dragUnit-5; a<pActiveGroup->numRear; ++a)
 										pActiveGroup->pRear[a] = pActiveGroup->pRear[a + 1];
-									--pActiveGroup->numRear;
+									pActiveGroup->pRear[--pActiveGroup->numRear] = NULL;
 								}
 
 								++pGroup->totalUnits;
@@ -364,13 +364,13 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 							{
 								for(int a=unit; a<pDragGroup->numForward; ++a)
 									pDragGroup->pForward[a] = pDragGroup->pForward[a + 1];
-								--pDragGroup->numForward;
+								pDragGroup->pForward[--pDragGroup->numForward] = NULL;
 							}
 							else
 							{
 								for(int a=unit-5; a<pDragGroup->numRear; ++a)
 									pDragGroup->pRear[a] = pDragGroup->pRear[a + 1];
-								--pDragGroup->numRear;
+								pDragGroup->pRear[--pDragGroup->numRear] = NULL;
 							}
 
 							++pTargetGroup->totalUnits;
@@ -495,29 +495,29 @@ bool GroupConfig::GetUnitPos(int group, int unit, MFRect *pRect)
 	{
 		if(unit == dragUnit)
 		{
-			pRect->x = MFFloor(dragX - pRect->width*.5f);
-			pRect->y = MFFloor(dragY - pRect->height*.5f);
+			pRect->x = MFFloor(dragX - 32.f);
+			pRect->y = MFFloor(dragY - 32.f);
 			return true;
 		}
 
 		if(unit == 10)
 		{
-			pRect->x = MFFloor((rear.x + rear.width + front.x)*0.5f - pRect->width*.5f);
-			pRect->y = MFFloor(front.y + front.height*0.5f - pRect->height*.5f);
+			pRect->x = MFFloor((rear.x + rear.width + front.x)*0.5f - 32.f);
+			pRect->y = MFFloor(front.y + front.height*0.5f - 32.f);
 			return true;
 		}
 		else if(unit >= 5)
 		{
 			int numRear = pGroups[0]->numRear;
-			pRect->x = MFFloor(rear.x + gPositions[numRear-1][unit-5][0]*rear.width - pRect->width*.5f);
-			pRect->y = MFFloor(rear.y + gPositions[numRear-1][unit-5][1]*rear.height - pRect->height*.5f);
+			pRect->x = MFFloor(rear.x + gPositions[numRear-1][unit-5][0]*rear.width - 32.f);
+			pRect->y = MFFloor(rear.y + gPositions[numRear-1][unit-5][1]*rear.height - 32.f);
 			return true;
 		}
 		else
 		{
 			int numForward = pGroups[0]->numForward;
-			pRect->x = MFFloor(front.x + gPositions[numForward-1][unit][0]*front.width - pRect->width*.5f);
-			pRect->y = MFFloor(front.y + gPositions[numForward-1][unit][1]*front.height - pRect->height*.5f);
+			pRect->x = MFFloor(front.x + gPositions[numForward-1][unit][0]*front.width - 32.f);
+			pRect->y = MFFloor(front.y + gPositions[numForward-1][unit][1]*front.height - 32.f);
 			return true;
 		}
 	}
@@ -539,8 +539,8 @@ bool GroupConfig::GetUnitPos(int group, int unit, MFRect *pRect)
 		if(group == dragGroup)
 		{
 			float groupWidth = ((float)pGroups[group]->totalUnits - 1.f)*32.f;
-			pRect->x = dragX - (pRect->width + groupWidth)*0.5f + (float)visUnit*32.f;
-			pRect->y = dragY - pRect->height*0.5f;
+			pRect->x = dragX - (64.f + groupWidth)*0.5f + (float)visUnit*32.f;
+			pRect->y = dragY - 32.f;
 		}
 		else
 		{
@@ -621,21 +621,21 @@ static bool ContainsGroup(Group *pGroup, Group **ppGroups, int numGroups)
 	return false;
 }
 
+struct Regroup
+{
+	int numSourceGroups;
+	int numNewGroups;
+	Group *pSourceGroups[MapTile::MaxUnitsOnTile * 2];
+	Group *pNewGroups[MapTile::MaxUnitsOnTile * 2];
+	bool bWasRearranged;
+};
+
 void GroupConfig::Hide()
 {
 	Window::Hide();
 
 	Game *pGame = Game::GetCurrent();
 
-	struct Regroup
-	{
-		int numSourceGroups;
-		int numNewGroups;
-		Group *pSourceGroups[MapTile::MaxUnitsOnTile * 2];
-		Group *pNewGroups[MapTile::MaxUnitsOnTile * 2];
-		bool bWasRearranged;
-	};
-	
 	Regroup regroups[MapTile::MaxUnitsOnTile * 2];
 	int numRegroups = 0;
 	int regroupIDs[MapTile::MaxUnitsOnTile * 2];

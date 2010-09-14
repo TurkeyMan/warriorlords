@@ -68,7 +68,7 @@ void MapTile::AddGroupToBack(Group *_pGroup)
 
 void MapTile::RemoveGroup(Group *_pGroup)
 {
-	if(!pGroup || !_pGroup)
+	if(!pGroup || !_pGroup || _pGroup->pTile != this)
 		return;
 
 	if(pGroup == _pGroup)
@@ -82,9 +82,9 @@ void MapTile::RemoveGroup(Group *_pGroup)
 			pG = pG->pNext;
 		if(pG->pNext)
 			pG->pNext = pG->pNext->pNext;
-		_pGroup->pNext = NULL;
 	}
 
+	_pGroup->pNext = NULL;
 	_pGroup->pTile = NULL;
 }
 
