@@ -304,8 +304,7 @@ void Game::BeginTurn(int player)
 					if(pGroup)
 					{
 						players[currentPlayer].gold -= buildUnit.cost;
-
-						pCastle->SetBuildUnit(pCastle->building);
+						pCastle->buildTime = pCastle->details.buildUnits[pCastle->building].buildTime;
 					}
 				}
 			}
