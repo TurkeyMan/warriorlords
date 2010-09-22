@@ -370,6 +370,7 @@ int MapScreen::Update()
 		}
 	}
 
+#if defined(_DEBUG)
 	int w, h;
 	pMap->GetMapSize(&w, &h);
 	for(int y=0; y<h; ++y)
@@ -386,6 +387,7 @@ int MapScreen::Update()
 			}
 		}
 	}
+#endif
 
 	return 0;
 }
@@ -495,11 +497,9 @@ void MapScreen::EndTurn(int button, void *pUserData, int buttonID)
 {
 	Game *pGame = Game::GetCurrent();
 
-/*
 	if(pGame->NumPendingActions() > 0)
 		pGame->ReplayNextAction();
 	else
-*/
 		pGame->ShowRequest("End Turn?", FinishTurn, false, pUserData);
 }
 

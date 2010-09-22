@@ -705,7 +705,7 @@ void Game::AddGroup(Group *pGroup, bool bCommitGroup)
 	ppGroups[numGroups++] = pGroup;
 
 	// notify the server of the new group
-	if(bOnline && bCommitGroup)
+	if(bOnline && (!bUpdating || bCommitGroup))
 	{
 		PushAction(GA_CREATEGROUP);
 		PushActionArg(pGroup->GetPlayer());
