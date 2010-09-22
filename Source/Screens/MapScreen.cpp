@@ -366,6 +366,7 @@ int MapScreen::Update()
 		if(lastUpdateTime > 10.f)
 		{
 			pGame->UpdateGameState();
+			pGame->ReplayActions();
 			lastUpdateTime -= 10.f;
 		}
 	}
