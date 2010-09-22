@@ -39,6 +39,8 @@ int MapTile::GetRegionRace() const
 
 void MapTile::AddGroup(Group *_pGroup)
 {
+	MFDebug_Assert(_pGroup->ValidateGroup(), "EEK!");
+
 	_pGroup->pTile = this;
 	_pGroup->x = x;
 	_pGroup->y = y;
@@ -48,6 +50,8 @@ void MapTile::AddGroup(Group *_pGroup)
 
 void MapTile::AddGroupToBack(Group *_pGroup)
 {
+	MFDebug_Assert(_pGroup->ValidateGroup(), "EEK!");
+
 	_pGroup->pTile = this;
 	_pGroup->x = x;
 	_pGroup->y = y;
@@ -86,6 +90,8 @@ void MapTile::RemoveGroup(Group *_pGroup)
 
 	_pGroup->pNext = NULL;
 	_pGroup->pTile = NULL;
+
+	MFDebug_Assert(_pGroup->ValidateGroup(), "EEK!");
 }
 
 int MapTile::GetNumGroups()

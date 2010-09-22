@@ -587,6 +587,7 @@ void GroupConfig::Show(MapTile *_pTile)
 	for(int g=0; g<numGroups; ++g)
 	{
 		Group *pGroup = pTile->GetGroup(g);
+		MFDebug_Assert(pGroup->ValidateGroup(), "EEK!");
 
 		groups[g].numForward = pGroup->GetNumForwardUnits();
 		for(int a=0; a<groups[g].numForward; ++a)
@@ -778,6 +779,8 @@ void GroupConfig::Hide()
 
 			// and add the group to the map
 			pTile->AddGroup(pNewGroup);
+
+			MFDebug_Assert(pNewGroup->ValidateGroup(), "EEK!");
 		}
 	}
 

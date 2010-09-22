@@ -340,7 +340,7 @@ public:
 	uint32 GetID() { return id; }
 	void SetID(uint32 _id) { id = _id; }
 
-	void SetGroup(Group *_pGroup) { pGroup = _pGroup; }
+	void SetGroup(Group *_pGroup);// { pGroup = _pGroup; }
 
 	UnitDetails *GetDetails() { return &details; }
 	int GetPlayer() const { return player; }
@@ -506,7 +506,6 @@ public:
 	bool AddForwardUnit(Unit *pUnit);
 	bool AddRearUnit(Unit *pUnit);
 	void RemoveUnit(Unit *pUnit);
-	void SwapUnits(Unit *pUnit1, Unit *pUnit2);
 
 	int GetMovement();
 	bool SubtractMovementCost(MapTile *pTile);
@@ -535,6 +534,8 @@ public:
 	Path *GetPath() const { return pPath; }
 
 	Action *GetLastAction() { return pLastAction; }
+
+	bool ValidateGroup();
 
 //protected:
 	void UpdateGroupStats();

@@ -141,7 +141,7 @@ public:
 	Group *AllocGroup();
 	void DestroyGroup(Group *pGroup);
 
-	Group *CreateUnit(int unit, Castle *pCastle);
+	Group *CreateUnit(int unit, Castle *pCastle, bool bCommitUnit = false);
 
 	bool MoveGroupToTile(Group *pGroup, MapTile *pTile);
 
@@ -174,10 +174,15 @@ public:
 
 	ServerError ApplyActions();
 
-	void AddUnit(Unit *pUnit);
-	void AddGroup(Group *pGroup);
+	void AddUnit(Unit *pUnit, bool bCommitUnit = false);
+	void AddGroup(Group *pGroup, bool bCommitGroup = false);
 
 	void UpdateGameState();
+	void ReplayActions(int stopAction = -1);
+	void ReplayNextAction();
+	int NumPendingActions() { return numServerActions - lastAction; }
+
+	const char *GetNextActionDesc();
 
 protected:
 	void Init(const char *pMap, bool bEdit);
@@ -185,6 +190,8 @@ protected:
 	void AddActions(Action *pAction, Action *pParent);
 	void CommitAction(Action *pAction);
 	Action *FindFirstDependency(Action *pAction);
+
+	void ReplayAction(GameAction *pAction);
 
 	MFPoolHeapExpanding units;
 	MFPoolHeapExpanding groups;
@@ -235,6 +242,10 @@ protected:
 
 	Action **ppActionHistory;
 	int numTopActions;
+
+	// server actions
+	GameAction *pServerActions;
+	int firstServerAction, numServerActions, serverActionCount;
 
 	static Game *pCurrent;
 };

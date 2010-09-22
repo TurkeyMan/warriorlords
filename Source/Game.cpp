@@ -93,6 +93,7 @@ Game::Game(GameState *pState)
 
 	// update the game state
 	UpdateGameState();
+	ReplayActions();
 
 	// resume the game
 	Screen::SetNext(pMapScreen);
@@ -300,8 +301,12 @@ void Game::BeginTurn(int player)
 
 				if(buildUnit.cost <= players[currentPlayer].gold)
 				{
-					Group *pGroup = CreateUnit(buildUnit.unit, pCastle);
-					if(pGroup)
+					Group *pGroup = NULL;
+
+					if(!bOnline || (IsMyTurn() && NumPendingActions() <= 1))
+						pGroup = CreateUnit(buildUnit.unit, pCastle, true);
+
+					if(pGroup || bOnline)
 					{
 						players[currentPlayer].gold -= buildUnit.cost;
 						pCastle->buildTime = pCastle->details.buildUnits[pCastle->building].buildTime;
@@ -338,6 +343,9 @@ void Game::BeginTurn(int player)
 
 	// focus map on starting castle, oooor maybe not (focus on last focused position?)
 	pMap->CenterView((float)players[player].cursorX, (float)players[player].cursorY);
+
+	// commit all outstanding actions
+	CommitAllActions();
 }
 
 void Game::EndTurn()
@@ -520,7 +528,7 @@ void Game::DestroyGroup(Group *pGroup)
 	groups.Delete(pGroup);
 }
 
-Group *Game::CreateUnit(int unit, Castle *pCastle)
+Group *Game::CreateUnit(int unit, Castle *pCastle, bool bCommitUnit)
 {
 	// find space in the castle for the unit
 	MapTile *pTile = NULL;
@@ -597,7 +605,7 @@ Group *Game::CreateUnit(int unit, Castle *pCastle)
 		else
 		{
 			pUnit = pUnitDefs->CreateUnit(unit, pCastle->player);
-			AddUnit(pUnit);
+			AddUnit(pUnit, bCommitUnit);
 		}
 
 		// create a group for the unit, and add it to the tile
@@ -612,7 +620,7 @@ Group *Game::CreateUnit(int unit, Castle *pCastle)
 			{
 				// if there's space on the same tile, add the second one to the same group
 				Unit *pUnit2 = pUnitDefs->CreateUnit(unit, pCastle->player);
-				AddUnit(pUnit2);
+				AddUnit(pUnit2, bCommitUnit);
 				pGroup->AddUnit(pUnit2);
 			}
 			else
@@ -626,13 +634,13 @@ Group *Game::CreateUnit(int unit, Castle *pCastle)
 					{
 						// create the second on the new tile
 						Unit *pUnit2 = pUnitDefs->CreateUnit(unit, pCastle->player);
-						AddUnit(pUnit2);
+						AddUnit(pUnit2, bCommitUnit);
 
 						// create a group for the unit, and add it to the tile
 						Group *pGroup2 = Group::Create(pCastle->player);
 						pGroup2->AddUnit(pUnit2);
 						pT->AddGroup(pGroup2);
-						AddGroup(pGroup2);
+						AddGroup(pGroup2, bCommitUnit);
 						break;
 					}
 				}
@@ -640,7 +648,7 @@ Group *Game::CreateUnit(int unit, Castle *pCastle)
 		}
 
 		// add the group to the manager
-		AddGroup(pGroup);
+		AddGroup(pGroup, bCommitUnit);
 
 		return pGroup;
 	}
@@ -675,13 +683,13 @@ bool Game::MoveGroupToTile(Group *pGroup, MapTile *pTile)
 	return true;
 }
 
-void Game::AddUnit(Unit *pUnit)
+void Game::AddUnit(Unit *pUnit, bool bCommitUnit)
 {
 	pUnit->SetID(numUnits);
 	ppUnits[numUnits++] = pUnit;
 
 	// notify the server of the new unit
-	if(bOnline && !bUpdating)
+	if(bOnline && bCommitUnit)
 	{
 		PushAction(GA_CREATEUNIT);
 		PushActionArg(pUnit->GetPlayer());
@@ -691,13 +699,13 @@ void Game::AddUnit(Unit *pUnit)
 	}
 }
 
-void Game::AddGroup(Group *pGroup)
+void Game::AddGroup(Group *pGroup, bool bCommitGroup)
 {
 	pGroup->SetID(numGroups);
 	ppGroups[numGroups++] = pGroup;
 
 	// notify the server of the new group
-	if(bOnline && !bUpdating)
+	if(bOnline && bCommitGroup)
 	{
 		PushAction(GA_CREATEGROUP);
 		PushActionArg(pGroup->GetPlayer());
@@ -1312,174 +1320,200 @@ ServerError Game::ApplyActions()
 
 void Game::UpdateGameState()
 {
+	ServerError err = WLServ_UpdateState(gameID, lastAction, &pServerActions, &numServerActions, &serverActionCount);
+	firstServerAction = lastAction;
+}
+
+void Game::ReplayActions(int stopAction)
+{
+	uint32 stop = (uint32)stopAction;
+	while((uint32)lastAction < stop && lastAction < numServerActions)
+		ReplayNextAction();
+}
+
+void Game::ReplayNextAction()
+{
+	if(lastAction >= numServerActions)
+		return;
+
+	ReplayAction(&pServerActions[lastAction - firstServerAction]);
+	++lastAction;
+}
+
+const char *Game::GetNextActionDesc()
+{
+	if(!pServerActions || numServerActions == 0)
+		return "";
+
+	int a = lastAction - firstServerAction;
+	const char *pDesc = MFStr("%d - %s: ", lastAction, WLServ_GetActionName(pServerActions[a].action));
+
+	for(int b=0; b<pServerActions[a].numArgs; ++b)
+		pDesc = MFStr(b > 0 ? "%s, %d" : "%s%d", pDesc, pServerActions[a].pArgs[b]);
+	return pDesc;
+}
+
+void Game::ReplayAction(GameAction *pAction)
+{
 	bUpdating = true;
 
-	GameAction *pActions;
-	int numActions, actionCount;
-
-	do
+	switch(pAction->action)
 	{
-		ServerError err = WLServ_UpdateState(gameID, lastAction, &pActions, &numActions, &actionCount);
-		lastAction += numActions;
-
-		for(int a=0; a<numActions; ++a)
+		case GA_ADDCASTLES:
+			//...
+			break;
+		case GA_ADDRUINS:
 		{
-			switch(pActions[a].action)
+			for(int b=0; b<pAction->numArgs; ++b)
 			{
-				case GA_ADDCASTLES:
-					//...
-					break;
-				case GA_ADDRUINS:
-				{
-					for(int b=0; b<pActions[a].numArgs; ++b)
-					{
-						Ruin *pRuin = pMap->GetRuin(b);
-						pRuin->item = pActions[a].pArgs[0];
-					}
-					break;
-				}
-				case GA_CREATEUNIT:
-				{
-					int player = pActions[a].pArgs[0];
-					int unit = pActions[a].pArgs[1];
-					Unit *pUnit = pUnitDefs->CreateUnit(unit, player);
-					if(unit < 8)
-						players[player].pHero = pUnit;
-					AddUnit(pUnit);
-					break;
-				}
-				case GA_CREATEGROUP:
-				{
-					Group *pGroup = Group::Create(pActions[a].pArgs[0]);
-					AddGroup(pGroup);
-
-					for(int b=0; b<11; ++b)
-					{
-						int unit = pActions[a].pArgs[3 + b];
-
-						if(unit > -1)
-						{
-							if(b < 5)
-								pGroup->AddForwardUnit(ppUnits[unit]);
-							else if (b < 10)
-								pGroup->AddRearUnit(ppUnits[unit]);
-							else
-								pGroup->AddUnit(ppUnits[unit]);
-						}
-					}
-
-					MapTile *pTile = pMap->GetTile(pActions[a].pArgs[1], pActions[a].pArgs[2]);
-					pTile->AddGroup(pGroup);
-					break;
-				}
-				case GA_DESTROYGROUP:
-				{
-					Group *pGroup = ppGroups[pActions[a].pArgs[0]];
-
-					MapTile *pTile = pGroup->GetTile();
-					pTile->RemoveGroup(pGroup);
-
-					pGroup->Destroy();
-					ppGroups[pActions[a].pArgs[0]] = NULL;
-					break;
-				}
-				case GA_MOVEGROUP:
-				{
-					Group *pGroup = ppGroups[pActions[a].pArgs[0]];
-					int x = pActions[a].pArgs[1];
-					int y = pActions[a].pArgs[2];
-
-					MoveGroupToTile(pGroup, pMap->GetTile(x, y));
-
-					int numUnits = pGroup->GetNumUnits();
-					for(int b=0; b<numUnits; ++b)
-					{
-						Unit *pUnit = pGroup->GetUnit(b);
-						pUnit->SetMovement(pActions[a].pArgs[3 + b]);
-					}
-					if(pGroup->pVehicle)
-						pGroup->pVehicle->SetMovement(pActions[a].pArgs[3 + numUnits]);
-
-					pMap->CenterView((float)x, (float)y);
-					break;
-				}
-				case GA_REARRANGEGROUP:
-				{
-					Group *pGroup = ppGroups[pActions[a].pArgs[0]];
-
-					for(int b=0; b<10; ++b)
-					{
-//						pGroup->
-					}
-					break;
-				}
-				case GA_CLAIMCASTLE:
-				{
-					Castle *pCastle = pMap->GetCastle(pActions[a].pArgs[0]);
-					pCastle->player = pActions[a].pArgs[1];
-					break;
-				}
-				case GA_CAPTUREUNITS:
-				{
-					Group *pGroup = ppGroups[pActions[a].pArgs[0]];
-					pGroup->SetPlayer(pActions[a].pArgs[1]);
-					break;
-				}
-				case GA_SETBUILDING:
-				{
-					Castle *pCastle = pMap->GetCastle(pActions[a].pArgs[0]);
-					pCastle->building = pCastle->nextBuild = pActions[a].pArgs[1];
-					pCastle->buildTime = pActions[a].pArgs[2];
-					break;
-				}
-				case GA_SETBATTLEPLAN:
-					//...
-					break;
-				case GA_SEARCH:
-				{
-					Unit *pUnit = ppUnits[pActions[a].pArgs[0]];
-					Ruin *pRuin = pMap->GetRuin(pActions[a].pArgs[0]);
-					pUnit->AddItem(pRuin->item);
-					pRuin->bHasSearched = true;
-					break;
-				}
-				case GA_BATTLE:
-				{
-					Group *pGroup = ppGroups[pActions[a].pArgs[0]];
-					for(int a=0; a<pGroup->GetNumUnits(); ++a)
-					{
-						Unit *pUnit = pGroup->GetUnit(a);
-						pUnit->SetHP(pActions[a].pArgs[1 + a*2]);
-						pUnit->SetKills(pActions[a].pArgs[2 + a*2]);
-
-						if(pUnit->IsDead())
-						{
-							pGroup->RemoveUnit(pUnit);
-							if(!pUnit->IsHero())
-								pUnit->Destroy();
-							--a;
-						}
-					}
-
-					MapTile *pTile = pGroup->GetTile();
-					if(pGroup->GetNumUnits() == 0)
-					{
-						pTile->RemoveGroup(pGroup);
-						pGroup->Destroy();
-						pGroup = NULL;
-					}
-					break;
-				}
-				case GA_ENDTURN:
-					EndTurn();
-					break;
-				case GA_VICTORY:
-					//...
-					break;
+				Ruin *pRuin = pMap->GetRuin(b);
+				pRuin->item = pAction->pArgs[0];
 			}
+			break;
 		}
+		case GA_CREATEUNIT:
+		{
+			int player = pAction->pArgs[0];
+			int unit = pAction->pArgs[1];
+			Unit *pUnit = pUnitDefs->CreateUnit(unit, player);
+			if(unit < 8)
+				players[player].pHero = pUnit;
+			AddUnit(pUnit);
+			break;
+		}
+		case GA_CREATEGROUP:
+		{
+			Group *pGroup = Group::Create(pAction->pArgs[0]);
+			AddGroup(pGroup);
+
+			for(int b=0; b<11; ++b)
+			{
+				int unit = pAction->pArgs[3 + b];
+
+				if(unit > -1)
+				{
+					if(b < 5)
+						pGroup->AddForwardUnit(ppUnits[unit]);
+					else if (b < 10)
+						pGroup->AddRearUnit(ppUnits[unit]);
+					else
+						pGroup->AddUnit(ppUnits[unit]);
+				}
+			}
+
+			MapTile *pTile = pMap->GetTile(pAction->pArgs[1], pAction->pArgs[2]);
+			pTile->AddGroup(pGroup);
+
+			MFDebug_Assert(pGroup->ValidateGroup(), "EEK!");
+			break;
+		}
+		case GA_DESTROYGROUP:
+		{
+			Group *pGroup = ppGroups[pAction->pArgs[0]];
+
+			MapTile *pTile = pGroup->GetTile();
+			pTile->RemoveGroup(pGroup);
+
+			pGroup->Destroy();
+			ppGroups[pAction->pArgs[0]] = NULL;
+			break;
+		}
+		case GA_MOVEGROUP:
+		{
+			Group *pGroup = ppGroups[pAction->pArgs[0]];
+			MFDebug_Assert(pGroup->ValidateGroup(), "EEK!");
+
+			int x = pAction->pArgs[1];
+			int y = pAction->pArgs[2];
+
+			MoveGroupToTile(pGroup, pMap->GetTile(x, y));
+
+			int numUnits = pGroup->GetNumUnits();
+			for(int b=0; b<numUnits; ++b)
+			{
+				Unit *pUnit = pGroup->GetUnit(b);
+				pUnit->SetMovement(pAction->pArgs[3 + b]);
+			}
+			if(pGroup->pVehicle)
+				pGroup->pVehicle->SetMovement(pAction->pArgs[3 + numUnits]);
+
+			pMap->CenterView((float)x, (float)y);
+			break;
+		}
+		case GA_REARRANGEGROUP:
+		{
+			Group *pGroup = ppGroups[pAction->pArgs[0]];
+
+			for(int b=0; b<10; ++b)
+			{
+//				pGroup->
+			}
+			break;
+		}
+		case GA_CLAIMCASTLE:
+		{
+			Castle *pCastle = pMap->GetCastle(pAction->pArgs[0]);
+			pCastle->player = pAction->pArgs[1];
+			break;
+		}
+		case GA_CAPTUREUNITS:
+		{
+			Group *pGroup = ppGroups[pAction->pArgs[0]];
+			pGroup->SetPlayer(pAction->pArgs[1]);
+			break;
+		}
+		case GA_SETBUILDING:
+		{
+			Castle *pCastle = pMap->GetCastle(pAction->pArgs[0]);
+			pCastle->building = pCastle->nextBuild = pAction->pArgs[1];
+			pCastle->buildTime = pAction->pArgs[2];
+			break;
+		}
+		case GA_SETBATTLEPLAN:
+			//...
+			break;
+		case GA_SEARCH:
+		{
+			Unit *pUnit = ppUnits[pAction->pArgs[0]];
+			Ruin *pRuin = pMap->GetRuin(pAction->pArgs[0]);
+			pUnit->AddItem(pRuin->item);
+			pRuin->bHasSearched = true;
+			break;
+		}
+		case GA_BATTLE:
+		{
+			Group *pGroup = ppGroups[pAction->pArgs[0]];
+			for(int a=0; a<pGroup->GetNumUnits(); ++a)
+			{
+				Unit *pUnit = pGroup->GetUnit(a);
+				pUnit->SetHP(pAction->pArgs[1 + a*2]);
+				pUnit->SetKills(pAction->pArgs[2 + a*2]);
+
+				if(pUnit->IsDead())
+				{
+					pGroup->RemoveUnit(pUnit);
+					if(!pUnit->IsHero())
+						pUnit->Destroy();
+					--a;
+				}
+			}
+
+			MapTile *pTile = pGroup->GetTile();
+			if(pGroup->GetNumUnits() == 0)
+			{
+				pTile->RemoveGroup(pGroup);
+				pGroup->Destroy();
+				pGroup = NULL;
+			}
+			break;
+		}
+		case GA_ENDTURN:
+			EndTurn();
+			break;
+		case GA_VICTORY:
+			//...
+			break;
 	}
-	while(numActions < actionCount);
 
 	bUpdating = false;
 }

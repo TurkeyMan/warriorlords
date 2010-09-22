@@ -769,6 +769,12 @@ void Unit::Draw(float x, float y, bool bFlip, float alpha)
 	pUnitDefs->AddRenderUnit(type, x, y, player, bFlip, alpha, GetRank());
 }
 
+void Unit::SetGroup(Group *_pGroup)
+{
+	pGroup = _pGroup;
+	MFDebug_Assert(_pGroup->ValidateGroup(), "EEK!");
+}
+
 int Unit::GetRace()
 {
 	return pGame->GetPlayerRace(player);
@@ -1147,6 +1153,7 @@ bool Group::AddUnit(Unit *pUnit)
 	else
 		pUnit->UpdateStats();
 
+	MFDebug_Assert(ValidateGroup(), "EEK!");
 	return true;
 }
 
@@ -1163,6 +1170,7 @@ bool Group::AddForwardUnit(Unit *pUnit)
 	else
 		pUnit->UpdateStats();
 
+	MFDebug_Assert(ValidateGroup(), "EEK!");
 	return true;
 }
 
@@ -1179,6 +1187,7 @@ bool Group::AddRearUnit(Unit *pUnit)
 	else
 		pUnit->UpdateStats();
 
+	MFDebug_Assert(ValidateGroup(), "EEK!");
 	return true;
 }
 
@@ -1222,24 +1231,8 @@ void Group::RemoveUnit(Unit *pUnit)
 
 	if(pUnit->IsHero())
 		UpdateGroupStats();
-}
 
-void Group::SwapUnits(Unit *pUnit1, Unit *pUnit2)
-{
-	for(int a=0; a<numForwardUnits; ++a)
-	{
-		if(pForwardUnits[a] == pUnit1)
-			pForwardUnits[a] = pUnit2;
-		else if(pForwardUnits[a] == pUnit2)
-			pForwardUnits[a] = pUnit1;
-	}
-	for(int a=0; a<numRearUnits; ++a)
-	{
-		if(pRearUnits[a] == pUnit1)
-			pRearUnits[a] = pUnit2;
-		else if(pRearUnits[a] == pUnit2)
-			pRearUnits[a] = pUnit1;
-	}	
+	MFDebug_Assert(ValidateGroup(), "EEK!");
 }
 
 void Group::UpdateGroupStats()
@@ -1372,6 +1365,26 @@ void Group::FindPath(int x, int y)
 
 	if(bSelected)
 		pPath = Game::GetCurrent()->GetMap()->FindPath(this, x, y);
+}
+
+bool Group::ValidateGroup()
+{
+	if(pVehicle && pVehicle->pGroup != this)
+		return false;
+
+	for(int a=0; a<numForwardUnits; ++a)
+	{
+		if(pForwardUnits[a]->pGroup != this)
+			return false;
+	}
+
+	for(int a=0; a<numRearUnits; ++a)
+	{
+		if(pRearUnits[a]->pGroup != this)
+			return false;
+	}
+
+	return true;
 }
 
 void Item::StatMod::Parse(const char *pString)

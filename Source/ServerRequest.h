@@ -122,6 +122,8 @@ struct GameAction
 	int numArgs;
 };
 
+const char *WLServ_GetActionName(GameActions action);
+
 ServerError WLServ_CreateAccount(const char *pUsername, const char *pPassword, const char *pEmail, uint32 *pUserID);
 ServerError WLServ_Login(const char *pUsername, const char *pPassword, uint32 *pUserID);
 

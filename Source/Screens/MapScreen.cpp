@@ -370,6 +370,23 @@ int MapScreen::Update()
 		}
 	}
 
+	int w, h;
+	pMap->GetMapSize(&w, &h);
+	for(int y=0; y<h; ++y)
+	{
+		for(int x=0; x<w; ++x)
+		{
+			MapTile *pTile = pMap->GetTile(x, y);
+
+			int numGroups = pTile->GetNumGroups();
+			for(int g=0; g<numGroups; ++g)
+			{
+				Group *pGroup = pTile->GetGroup(g);
+				MFDebug_Assert(pGroup->ValidateGroup(), "EEK!");
+			}
+		}
+	}
+
 	return 0;
 }
 
@@ -463,6 +480,9 @@ void MapScreen::Draw()
 	miniMap.Draw();
 
 	pGame->DrawRequest();
+
+	if(pGame->NumPendingActions() > 0)
+		MFFont_BlitTextf(pFont, 100, 50, MakeVector(1,1,1,1), pGame->GetNextActionDesc());
 }
 
 void MapScreen::Deselect()
@@ -473,7 +493,14 @@ void MapScreen::Deselect()
 
 void MapScreen::EndTurn(int button, void *pUserData, int buttonID)
 {
-	Game::GetCurrent()->ShowRequest("End Turn?", FinishTurn, false, pUserData);
+	Game *pGame = Game::GetCurrent();
+
+/*
+	if(pGame->NumPendingActions() > 0)
+		pGame->ReplayNextAction();
+	else
+*/
+		pGame->ShowRequest("End Turn?", FinishTurn, false, pUserData);
 }
 
 void MapScreen::FinishTurn(int selection, void *pUserData)

@@ -5,7 +5,7 @@
 #include "string.h"
 #include "stdio.h"
 
-#if defined(_DEBUG)
+#if 0//defined(_DEBUG)
 	const char *pHostname = "10.0.0.10";
 	const int port = 8888;
 #else
@@ -33,6 +33,11 @@ static const char *gpActions[GA_MAX] =
 	"VICTORY",
 	"CAPTUREUNITS"
 };
+
+const char *WLServ_GetActionName(GameActions action)
+{
+	return gpActions[action];
+}
 
 ServerError WLServ_CreateAccount(const char *pUsername, const char *pPassword, const char *pEmail, uint32 *pUserID)
 {
@@ -740,6 +745,8 @@ ServerError WLServ_ApplyActions(uint32 game, GameAction *pActions, int numAction
 	}
 
 	args[2].SetString("actions", actionList);
+
+	MFDebug_Log(3, actionList);
 
 	// send the request
 	const char *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
