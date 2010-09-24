@@ -303,8 +303,8 @@ void Game::BeginTurn(int player)
 				{
 					Group *pGroup = NULL;
 
-					if(!bOnline || (IsMyTurn() && NumPendingActions() <= 1))
-						pGroup = CreateUnit(buildUnit.unit, pCastle, true);
+					if(!bOnline || (IsMyTurn() && NumPendingActions() <= 1) || buildUnit.unit < 8)
+						pGroup = CreateUnit(buildUnit.unit, pCastle, buildUnit.unit >= 8);
 
 					if(pGroup || bOnline)
 					{
@@ -1443,11 +1443,12 @@ void Game::ReplayAction(GameAction *pAction)
 		case GA_REARRANGEGROUP:
 		{
 			Group *pGroup = ppGroups[pAction->pArgs[0]];
+			MFDebug_Assert(pGroup->ValidateGroup(), "EEK!");
 
 			for(int b=0; b<10; ++b)
-			{
-//				pGroup->
-			}
+				pGroup->pUnits[b] = pAction->pArgs[b+1] >=0 ? ppUnits[pAction->pArgs[b+1]] : NULL;
+
+			MFDebug_Assert(pGroup->ValidateGroup(), "EEK!");
 			break;
 		}
 		case GA_CLAIMCASTLE:
@@ -1483,24 +1484,29 @@ void Game::ReplayAction(GameAction *pAction)
 		case GA_BATTLE:
 		{
 			Group *pGroup = ppGroups[pAction->pArgs[0]];
-			for(int a=0; a<pGroup->GetNumUnits(); ++a)
+			for(int u=0, a=0; u<pGroup->GetNumUnits(); ++a)
 			{
-				Unit *pUnit = pGroup->GetUnit(a);
+				Unit *pUnit = pGroup->GetUnit(u);
 				pUnit->SetHP(pAction->pArgs[1 + a*2]);
 				pUnit->SetKills(pAction->pArgs[2 + a*2]);
 
 				if(pUnit->IsDead())
 				{
+					// destroy the unit
 					pGroup->RemoveUnit(pUnit);
 					if(!pUnit->IsHero())
 						pUnit->Destroy();
-					--a;
+				}
+				else
+				{
+					// move to next unit
+					++u;
 				}
 			}
 
-			MapTile *pTile = pGroup->GetTile();
 			if(pGroup->GetNumUnits() == 0)
 			{
+				MapTile *pTile = pGroup->GetTile();
 				pTile->RemoveGroup(pGroup);
 				pGroup->Destroy();
 				pGroup = NULL;
