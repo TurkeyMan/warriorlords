@@ -1445,8 +1445,21 @@ void Game::ReplayAction(GameAction *pAction)
 			Group *pGroup = ppGroups[pAction->pArgs[0]];
 			MFDebug_Assert(pGroup->ValidateGroup(), "EEK!");
 
+			pGroup->numForwardUnits = 0;
+			pGroup->numRearUnits = 0;
 			for(int b=0; b<10; ++b)
-				pGroup->pUnits[b] = pAction->pArgs[b+1] >=0 ? ppUnits[pAction->pArgs[b+1]] : NULL;
+			{
+				int unit = pAction->pArgs[b+1];
+				Unit *pUnit = unit >= 0 ? ppUnits[unit] : NULL;
+				pGroup->pUnits[b] = pUnit;
+				if(pUnit)
+				{
+					if(b < 5)
+						++pGroup->numForwardUnits;
+					else
+						++pGroup->numRearUnits;
+				}
+			}
 
 			MFDebug_Assert(pGroup->ValidateGroup(), "EEK!");
 			break;
