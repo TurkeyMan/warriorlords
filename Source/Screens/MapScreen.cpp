@@ -500,7 +500,7 @@ void MapScreen::EndTurn(int button, void *pUserData, int buttonID)
 
 	if(pGame->NumPendingActions() > 0)
 		pGame->ReplayNextAction();
-	else
+	else if(pGame->IsMyTurn())
 		pGame->ShowRequest("End Turn?", FinishTurn, false, pUserData);
 }
 

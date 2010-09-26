@@ -93,7 +93,7 @@ Game::Game(GameState *pState)
 
 	// update the game state
 	UpdateGameState();
-	ReplayActions(112);
+	ReplayActions();
 
 	// resume the game
 	Screen::SetNext(pMapScreen);
