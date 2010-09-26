@@ -360,7 +360,7 @@ int MapScreen::Update()
 		}
 	}
 
-	if(pGame->IsOnline() && !pGame->IsMyTurn())
+	if(pGame->IsOnline() && !pGame->IsMyTurn() && pGame->NumPendingActions() == 0)
 	{
 		lastUpdateTime += MFSystem_TimeDelta();
 		if(lastUpdateTime > 10.f)

@@ -93,7 +93,7 @@ Game::Game(GameState *pState)
 
 	// update the game state
 	UpdateGameState();
-	ReplayActions();
+	ReplayActions(112);
 
 	// resume the game
 	Screen::SetNext(pMapScreen);
@@ -222,12 +222,12 @@ void Game::BeginGame()
 			players[pCastle->player].cursorY = pCastle->details.y;
 
 			// produce starting hero (or flag that hero wants to join on the first turn)
-			Group *pGroup = CreateUnit(players[pCastle->player].race - 1, pCastle);
+			Group *pGroup = CreateUnit(players[pCastle->player].race - 1, pCastle, true);
 			players[pCastle->player].pHero = pGroup->GetUnit(0);
 
 			// pirates also start with a galleon
 			if(players[pCastle->player].race == 3)
-				CreateUnit(38, pCastle);
+				CreateUnit(38, pCastle, true);
 		}
 	}
 
@@ -1327,16 +1327,18 @@ void Game::UpdateGameState()
 void Game::ReplayActions(int stopAction)
 {
 	uint32 stop = (uint32)stopAction;
-	while((uint32)lastAction < stop && lastAction < numServerActions)
+	int serverAction = lastAction - firstServerAction;
+	while((uint32)lastAction < stop && serverAction >= 0 && serverAction < numServerActions)
 		ReplayNextAction();
 }
 
 void Game::ReplayNextAction()
 {
-	if(lastAction >= numServerActions)
+	int serverAction = lastAction - firstServerAction;
+	if(serverAction < 0 || serverAction >= numServerActions)
 		return;
 
-	ReplayAction(&pServerActions[lastAction - firstServerAction]);
+	ReplayAction(&pServerActions[serverAction]);
 	++lastAction;
 }
 

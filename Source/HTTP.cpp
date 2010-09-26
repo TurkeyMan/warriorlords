@@ -96,9 +96,13 @@ HTTPResponse *HTTP_Post(const char *pServer, int port, const char *pResourcePath
 
 HTTPResponse *HTTPResponse::Create(MFSocket s)
 {
+	MFDebug_Log(0, "---------------------- Begin Transfer ----------------------");
+
 	char revcBuffer[2048];
 	int bytes = MFSockets_Recv(s, revcBuffer, sizeof(revcBuffer)-1, 0);
 	revcBuffer[bytes] = 0;
+
+	MFDebug_Log(0, MFStr("Recv: %d", bytes));
 
 	// parse HTTP header
 	HTTPResponse *pHeader = NULL;
@@ -252,7 +256,11 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 			{
 				// read chunk size
 				char *pNumBytes = MFTokeniseLine(pPacketData, &pPacketData);
+				MFDebug_Assert(MFString_Length(pNumBytes) > 0, "Expected: Chunk size!");
+
 				uint32 numBytes = MFString_AsciiToInteger(pNumBytes, false, 16);
+
+				MFDebug_Log(0, MFStr("ChunkBytes: %d - '%s'", numBytes, pNumBytes));
 
 				// check if we've reached the end of the stream
 				if(numBytes == 0)
@@ -268,6 +276,8 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 					uint32 bytesRemaining = bytes - (uint32)(pPacketData - revcBuffer);
 					uint32 bytesToCopy = MFMin(bytesRemaining, numBytes);
 
+					MFDebug_Log(0, MFStr("CopyBytes: %d", bytesToCopy));
+
 					MFCopyMemory(pHeader->pData + pHeader->dataSize, pPacketData, bytesToCopy);
 
 					// adjust pointers
@@ -279,6 +289,8 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 					{
 						bytes = MFSockets_Recv(s, revcBuffer, sizeof(revcBuffer)-1, 0);
 						revcBuffer[bytes] = 0;
+
+						MFDebug_Log(0, MFStr("Recv: %d", bytes));
 
 						pPacketData = revcBuffer;
 					}
@@ -292,6 +304,19 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 					pHeader->error = HTTP_UnknownError;
 					break;
 				}
+
+				MFDebug_Log(0, MFStr("RemainingBuffer: %d\n%s", MFString_Length(pPacketData), pPacketData));
+
+				// check that the server has actually sent the next chunk
+				if(*pPacketData == 0)
+				{
+					bytes = MFSockets_Recv(s, revcBuffer, sizeof(revcBuffer)-1, 0);
+					revcBuffer[bytes] = 0;
+
+					MFDebug_Log(0, MFStr("Recv: %d", bytes));
+
+					pPacketData = revcBuffer;
+				}
 			}
 			break;
 		}
@@ -301,6 +326,8 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 			pHeader->error = HTTP_UnsupportedTransferEncodingType;
 			break;
 	}
+
+	MFDebug_Log(0, MFStr("Done: %d", pHeader->dataSize));
 
 	pHeader->error = HTTP_OK;
 	return pHeader;

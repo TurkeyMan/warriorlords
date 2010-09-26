@@ -836,7 +836,7 @@ ServerError WLServ_UpdateState(uint32 game, int lastAction, GameAction **ppActio
 		}
 		else if(!MFString_CaseCmpN(pLine, "COUNT", 5) && pLine[5] == '=')
 		{
-			*pActionCount = MFString_AsciiToInteger(pLine + 6);
+			*pNumActions = MFString_AsciiToInteger(pLine + 6);
 		}
 		else if(!MFString_CaseCmpN(pLine, "ACTION", 6) && pLine[6] == '=')
 		{
@@ -884,7 +884,9 @@ ServerError WLServ_UpdateState(uint32 game, int lastAction, GameAction **ppActio
 		pLine = strtok(NULL, "\n");
 	}
 
-	*pNumActions = numActions;
+	MFDebug_Assert(numActions == *pNumActions, "Incorrect number of actions received?!");
+
+	*pActionCount = lastAction + numActions;
 
 	pResponse->Destroy();
 
