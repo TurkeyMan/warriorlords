@@ -1345,6 +1345,11 @@ void Game::ReplayNextAction()
 	++lastAction;
 }
 
+int Game::NumPendingActions()
+{
+	return MFMax(numServerActions - lastAction, 0);
+}
+
 const char *Game::GetNextActionDesc()
 {
 	if(!pServerActions || numServerActions == 0)

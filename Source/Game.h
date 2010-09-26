@@ -180,7 +180,7 @@ public:
 	void UpdateGameState();
 	void ReplayActions(int stopAction = -1);
 	void ReplayNextAction();
-	int NumPendingActions() { return numServerActions - (lastAction - firstServerAction); }
+	int NumPendingActions();
 
 	const char *GetNextActionDesc();
 
