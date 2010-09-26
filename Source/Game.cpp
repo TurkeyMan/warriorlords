@@ -1326,9 +1326,12 @@ void Game::UpdateGameState()
 
 void Game::ReplayActions(int stopAction)
 {
+	if(lastAction < firstServerAction)
+		return;
+
 	uint32 stop = (uint32)stopAction;
-	int serverAction = lastAction - firstServerAction;
-	while((uint32)lastAction < stop && serverAction >= 0 && serverAction < numServerActions)
+
+	while((uint32)lastAction < stop && lastAction - firstServerAction < numServerActions)
 		ReplayNextAction();
 }
 
