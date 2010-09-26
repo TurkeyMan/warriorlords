@@ -69,7 +69,6 @@ Game::Game(GameState *pState)
 	// TODO: we should try loading game state and pending actions from disk...
 	numActions = 0;
 	numArgs = 0;
-	lastAction = 0;
 	currentPlayer = 0;
 	currentTurn = 0;
 
@@ -92,8 +91,14 @@ Game::Game(GameState *pState)
 	pMap->ConstructMap();
 
 	// update the game state
-	UpdateGameState();
-	ReplayActions();
+	lastAction = 0;
+	numServerActions = serverActionCount = 0;
+	do
+	{
+		UpdateGameState();
+		ReplayActions();
+	}
+	while(lastAction < serverActionCount);
 
 	// resume the game
 	Screen::SetNext(pMapScreen);
@@ -1313,6 +1318,7 @@ ServerError Game::ApplyActions()
 		return SE_NO_ERROR;
 
 	ServerError err = WLServ_ApplyActions(gameID, pendingActions, numActions);
+	serverActionCount += numActions;
 	lastAction += numActions;
 	numActions = numArgs = 0;
 	return err;
@@ -1347,7 +1353,8 @@ void Game::ReplayNextAction()
 
 int Game::NumPendingActions()
 {
-	return MFMax(numServerActions - lastAction, 0);
+	int action = lastAction - firstServerAction;
+	return numServerActions - action;
 }
 
 const char *Game::GetNextActionDesc()
