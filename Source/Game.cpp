@@ -606,6 +606,7 @@ Group *Game::CreateUnit(int unit, Castle *pCastle, bool bCommitUnit)
 			pUnit->Revive();
 
 			pCastle->building = -1;
+			pCastle->nextBuild = -1;
 		}
 		else
 		{
@@ -1384,7 +1385,7 @@ void Game::ReplayAction(GameAction *pAction)
 			for(int b=0; b<pAction->numArgs; ++b)
 			{
 				Ruin *pRuin = pMap->GetRuin(b);
-				pRuin->item = pAction->pArgs[0];
+				pRuin->item = pAction->pArgs[b];
 			}
 			break;
 		}
