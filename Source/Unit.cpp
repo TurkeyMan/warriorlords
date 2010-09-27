@@ -1045,6 +1045,7 @@ void Castle::Capture(int _player)
 {
 	player = _player;
 	building = -1;
+	nextBuild = -1;
 	buildTime = 0;
 
 	for(int a=0; a<4; ++a)
