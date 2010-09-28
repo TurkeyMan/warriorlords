@@ -759,6 +759,36 @@ void UnitDefinitions::GetBadgeUVs(int rank, MFRect *pUVs, float texelOffset)
 	pUVs->height = yScale;
 }
 
+const char *UnitDetails::AttackSpeedDescription()
+{
+	float attackTime = cooldown + attackSpeed;
+	if(attackTime <= 3.f)
+		return "Very Fast ";
+	else if(attackTime <= 4.f)
+		return "Fast ";
+	else if(attackTime <= 6.f)
+		return "Moderate ";
+	else if(attackTime <= 8.f)
+		return "Slow ";
+	else
+		return "Very Slow ";
+}
+
+const char *Unit::AttackSpeedDescription()
+{
+	float attackTime = GetCooldown() + details.attackSpeed;
+	if(attackTime <= 3.f)
+		return "Very Fast ";
+	else if(attackTime <= 4.f)
+		return "Fast ";
+	else if(attackTime <= 6.f)
+		return "Moderate ";
+	else if(attackTime <= 8.f)
+		return "Slow ";
+	else
+		return "Very Slow ";
+}
+
 void Unit::Destroy()
 {
 	pUnitDefs->DestroyUnit(this);

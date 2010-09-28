@@ -181,6 +181,8 @@ struct UnitDetails
 	// visible info
 	int x, y;
 	int width, height;
+
+	const char *AttackSpeedDescription();
 };
 
 class UnitDefinitions
@@ -390,6 +392,8 @@ public:
 	int GetMaxHP() { return lifeMax; }
 	float GetCooldown();
 	float GetRegen();
+
+	const char *AttackSpeedDescription();
 
 	float GetDefence(float damage, int wpnClass);
 

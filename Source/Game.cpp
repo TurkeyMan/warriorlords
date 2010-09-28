@@ -284,7 +284,7 @@ void Game::BeginTurn(int player)
 		}
 	}
 
-	// get money + add new units
+	// count castles, tax the land
 	int numCastles = 0;
 	int numOpponentCastles = 0;
 
@@ -300,7 +300,55 @@ void Game::BeginTurn(int player)
 			++numCastles;
 			players[currentPlayer].gold += pCastle->details.income;
 
-			if(pCastle->building != -1 && --pCastle->buildTime <= 0)
+			if(pCastle->building != -1)
+				--pCastle->buildTime;
+		}
+		else if(pCastle->player != -1)
+		{
+			++numOpponentCastles;
+		}
+	}
+
+	// resurrect heroes
+	for(int a = 0; a < pMap->GetNumCastles(); ++a)
+	{
+		Castle *pCastle = pMap->GetCastle(a);
+		if(pCastle->player == currentPlayer)
+		{
+			if(pCastle->building != -1 && pCastle->buildTime <= 0)
+			{
+				BuildUnit &buildUnit = pCastle->details.buildUnits[pCastle->building];
+
+				// if a hero is building here
+				if(buildUnit.unit < 8 && buildUnit.cost <= players[currentPlayer].gold)
+				{
+					Group *pGroup = NULL;
+
+					if(!bOnline || (IsMyTurn() && NumPendingActions() <= 1) || buildUnit.unit < 8)
+						pGroup = CreateUnit(buildUnit.unit, pCastle, buildUnit.unit >= 8);
+
+					if(pGroup || bOnline)
+					{
+						players[currentPlayer].gold -= buildUnit.cost;
+
+						// clear the hero from building, and show the build dialog
+						pCastle->building = pCastle->nextBuild = -1;
+						pCastle->buildTime = 0;
+
+						pMapScreen->ShowCastleConfig(pCastle);
+					}
+				}
+			}
+		}
+	}
+
+	// build units
+	for(int a = 0; a < pMap->GetNumCastles(); ++a)
+	{
+		Castle *pCastle = pMap->GetCastle(a);
+		if(pCastle->player == currentPlayer)
+		{
+			if(pCastle->building != -1 && pCastle->buildTime <= 0)
 			{
 				BuildUnit &buildUnit = pCastle->details.buildUnits[pCastle->building];
 
@@ -318,10 +366,6 @@ void Game::BeginTurn(int player)
 					}
 				}
 			}
-		}
-		else if(pCastle->player != -1)
-		{
-			++numOpponentCastles;
 		}
 	}
 

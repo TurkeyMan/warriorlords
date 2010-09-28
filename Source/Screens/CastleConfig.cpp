@@ -61,7 +61,7 @@ bool CastleConfig::DrawContent()
 		else
 		{
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 9 + height, MFVector::white, "Type: %s", pUnitDefs->GetArmourClassName(pDetails->defenceClass));
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 8 + height*2, MFVector::white, "Atk: %d - %d %s", pDetails->attackMin, pDetails->attackMax, pUnitDefs->GetWeaponClassName(pDetails->attackClass));
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 8 + height*2, MFVector::white, "Atk: %d - %d (%s%s)", pDetails->attackMin, pDetails->attackMax, pDetails->AttackSpeedDescription(), pUnitDefs->GetWeaponClassName(pDetails->attackClass));
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 7 + height*3, MFVector::white, "Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : "");
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 6 + height*4, MFVector::white, "Gold: %d", pCastle->details.buildUnits[pCastle->nextBuild].cost);
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 5 + height*5, MFVector::white, "Turns: %d", pCastle->GetBuildTime());
@@ -82,7 +82,7 @@ bool CastleConfig::DrawContent()
 			income += pCastle->details.income;
 
 			int building = pCastle->GetBuildUnit();
-			if(building > -1 && pCastle->buildTime <= 1)
+			if(building > -1 && pCastle->GetBuildTime() <= 1)
 			{
 				UnitDetails *pDetails = pMap->GetUnitDefinitions()->GetUnitDetails(building);
 				expense += pDetails->cost;
