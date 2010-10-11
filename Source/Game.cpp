@@ -97,6 +97,8 @@ Game::Game(GameState *pState)
 	{
 		UpdateGameState();
 		ReplayActions();
+//		UpdateGameState();
+//		ReplayActions(300);
 	}
 	while(lastAction < serverActionCount);
 
@@ -1132,16 +1134,20 @@ void Game::CommitAction(Action *pAction)
 	}
 
 	// disconnect action
+//	int numInstances = 0;
 	for(int a=0; a<numTopActions; ++a)
 	{
 		if(ppActionHistory[a] == pAction)
 		{
 			--numTopActions;
-			for(; a<numTopActions; ++a)
-				ppActionHistory[a] = ppActionHistory[a+1];
-			break;
+			for(int b=a; b<numTopActions; ++b)
+				ppActionHistory[b] = ppActionHistory[b+1];
+//			break;
+			--a;
+//			++numInstances;
 		}
 	}
+//	MFDebug_Assert(numInstances < 2, "!!");
 
 	// make child actions top level
 	for(int a=0; a<pAction->numChildren; ++a)
