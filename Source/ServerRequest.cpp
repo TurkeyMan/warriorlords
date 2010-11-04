@@ -761,13 +761,13 @@ ServerError WLServ_ApplyActions(uint32 game, GameAction *pActions, int numAction
 		}
 
 		if(len > 0)
-			len += sprintf_s(actionList + len, sizeof(actionList) - len, "\n");
+			len += sprintf(actionList + len, "\n");
 
 		GameAction &action = pActions[a];
-		len += sprintf_s(actionList + len, sizeof(actionList) - len, gpActions[action.action]);
+		len += sprintf(actionList + len, gpActions[action.action]);
 
 		for(int b=0; b<action.numArgs; ++b)
-			len += sprintf_s(actionList + len, sizeof(actionList) - len, "%s%d", b == 0 ? ":" : ",", action.pArgs[b]);
+			len += sprintf(actionList + len, "%s%d", b == 0 ? ":" : ",", action.pArgs[b]);
 	}
 
 	args[2].SetString("actions", actionList);

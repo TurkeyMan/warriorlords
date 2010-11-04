@@ -73,7 +73,7 @@ HTTPResponse *HTTP_Post(const char *pServer, int port, const char *pResourcePath
 		}
 
 		char buffer[2048];
-		int len = sprintf_s(buffer, sizeof(buffer), "POST %s HTTP/1.1\nHost: %s:%d\nUser-Agent: WarriorLords Client/1.0\nContent-Type: application/x-www-form-urlencoded\nContent-Length: %d\n\n%s", pResourcePath, pServer, port, MFString_Length(pArgString), pArgString);
+		int len = sprintf(buffer, "POST %s HTTP/1.1\nHost: %s:%d\nUser-Agent: WarriorLords Client/1.0\nContent-Type: application/x-www-form-urlencoded\nContent-Length: %d\n\n%s", pResourcePath, pServer, port, MFString_Length(pArgString), pArgString);
 
 		MFSocket s = MFSockets_CreateSocket(pAddrInfo->pAddress->family, MFSockType_Stream, MFProtocol_TCP);
 
@@ -243,7 +243,7 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 			// while there is still data pending
 			while(receivedData < pHeader->dataSize)
 			{
-				bytes = MFSockets_Recv(s, revcBuffer, MFMin(pHeader->dataSize - receivedData, sizeof(revcBuffer)), 0);
+				bytes = MFSockets_Recv(s, revcBuffer, MFMin((size_t)(pHeader->dataSize - receivedData), sizeof(revcBuffer)), 0);
 				MFCopyMemory(pHeader->pData + receivedData, revcBuffer, bytes);
 				receivedData += bytes;
 			}

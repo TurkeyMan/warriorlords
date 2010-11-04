@@ -59,7 +59,7 @@ struct Action
 
 	ActionType type;
 	Group *pGroup;
-	union
+	union Properties
 	{
 		struct Move
 		{
@@ -95,7 +95,7 @@ struct Action
 		{
 			Group *pUnits;
 		} captureUnits;
-	};
+	} prop;
 
 	Action *pParent;
 	Action **ppChildren;

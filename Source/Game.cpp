@@ -848,24 +848,24 @@ void Game::PushMoveAction(Group *pGroup)
 	pAction->pGroup = pGroup;
 
 	MapTile *pTile = pGroup->GetTile();
-	pAction->move.startX = pGroup->x;
-	pAction->move.startY = pGroup->y;
-	pAction->move.destX = pAction->move.startX;
-	pAction->move.destY = pAction->move.startY;
+	pAction->prop.move.startX = pGroup->x;
+	pAction->prop.move.startY = pGroup->y;
+	pAction->prop.move.destX = pAction->prop.move.startX;
+	pAction->prop.move.destY = pAction->prop.move.startY;
 
 	int numUnits = pGroup->GetNumUnits();
 	for(int a=0; a<numUnits; ++a)
 	{
 		Unit *pUnit = pGroup->GetUnit(a);
-		pAction->move.startMove[a] = pUnit->GetMovement();
-		pAction->move.destMove[a] = pAction->move.startMove[a];
+		pAction->prop.move.startMove[a] = pUnit->GetMovement();
+		pAction->prop.move.destMove[a] = pAction->prop.move.startMove[a];
 	}
 
 	Unit *pUnit = pGroup->GetVehicle();
 	if(pUnit)
 	{
-		pAction->move.startMove[numUnits] = pUnit->GetMovement();
-		pAction->move.destMove[numUnits] = pAction->move.startMove[numUnits];
+		pAction->prop.move.startMove[numUnits] = pUnit->GetMovement();
+		pAction->prop.move.destMove[numUnits] = pAction->prop.move.startMove[numUnits];
 	}
 
 	AddActions(pAction, pGroup->pLastAction);
@@ -883,27 +883,27 @@ void Game::PushRearrange(Group *pGroup, Unit **ppNewOrder)
 	pAction->type = Action::AT_Rearrange;
 	pAction->pGroup = pGroup;
 
-	pAction->rearrange.beforeForward = pGroup->numForwardUnits;
-	pAction->rearrange.beforeRear = pGroup->numRearUnits;
+	pAction->prop.rearrange.beforeForward = pGroup->numForwardUnits;
+	pAction->prop.rearrange.beforeRear = pGroup->numRearUnits;
 
 	for(int a=0; a<pGroup->numForwardUnits; ++a)
-		pAction->rearrange.pBefore[a] = pGroup->pForwardUnits[a];
+		pAction->prop.rearrange.pBefore[a] = pGroup->pForwardUnits[a];
 	for(int a=0; a<pGroup->numRearUnits; ++a)
-		pAction->rearrange.pBefore[a + 5] = pGroup->pRearUnits[a];
+		pAction->prop.rearrange.pBefore[a + 5] = pGroup->pRearUnits[a];
 
 	for(int a=0; a<10; ++a)
 	{
-		pAction->rearrange.pAfter[a] = ppNewOrder[a];
+		pAction->prop.rearrange.pAfter[a] = ppNewOrder[a];
 		if(ppNewOrder[a])
 		{
 			if(a < 5)
-				++pAction->rearrange.afterForward;
+				++pAction->prop.rearrange.afterForward;
 			else
-				++pAction->rearrange.afterRear;
+				++pAction->prop.rearrange.afterRear;
 		}
 	}
-	pGroup->numForwardUnits = pAction->rearrange.afterForward;
-	pGroup->numRearUnits = pAction->rearrange.afterRear;
+	pGroup->numForwardUnits = pAction->prop.rearrange.afterForward;
+	pGroup->numRearUnits = pAction->prop.rearrange.afterRear;
 
 	AddActions(pAction, pGroup->pLastAction);
 	pGroup->pLastAction = pAction;
@@ -921,10 +921,10 @@ void Game::PushRegroup(Group **ppBefore, int numBefore, Group **ppAfter, int num
 	pAction->pGroup = NULL;
 
 	bool bHasParent = false;
-	pAction->regroup.numBefore = numBefore;
+	pAction->prop.regroup.numBefore = numBefore;
 	for(int a=0; a<numBefore; ++a)
 	{
-		pAction->regroup.pBefore[a] = ppBefore[a];
+		pAction->prop.regroup.pBefore[a] = ppBefore[a];
 		if(ppBefore[a]->pLastAction)
 		{
 			AddActions(pAction, ppBefore[a]->pLastAction);
@@ -932,10 +932,10 @@ void Game::PushRegroup(Group **ppBefore, int numBefore, Group **ppAfter, int num
 		}
 	}
 
-	pAction->regroup.numAfter = numAfter;
+	pAction->prop.regroup.numAfter = numAfter;
 	for(int a=0; a<numAfter; ++a)
 	{
-		pAction->regroup.pAfter[a] = ppAfter[a];
+		pAction->prop.regroup.pAfter[a] = ppAfter[a];
 		ppAfter[a]->pLastAction = pAction;
 	}
 
@@ -955,8 +955,8 @@ void Game::PushSearch(Group *pGroup, Ruin *pRuin)
 
 	pAction->type = Action::AT_Search;
 	pAction->pGroup = pGroup;
-	pAction->search.pUnit = pGroup->GetHero();
-	pAction->search.pRuin = pRuin;
+	pAction->prop.search.pUnit = pGroup->GetHero();
+	pAction->prop.search.pRuin = pRuin;
 
 	AddActions(pAction, pGroup->pLastAction);
 	pGroup->pLastAction = pAction;
@@ -972,7 +972,7 @@ void Game::PushCaptureCastle(Group *pGroup, Castle *pCastle)
 
 	pAction->type = Action::AT_CaptureCastle;
 	pAction->pGroup = pGroup;
-	pAction->captureCastle.pCastle = pCastle;
+	pAction->prop.captureCastle.pCastle = pCastle;
 
 	AddActions(pAction, pGroup->pLastAction);
 	pGroup->pLastAction = pAction;
@@ -988,7 +988,7 @@ void Game::PushCaptureUnits(Group *pGroup, Group *pUnits)
 
 	pAction->type = Action::AT_CaptureUnits;
 	pAction->pGroup = pGroup;
-	pAction->captureUnits.pUnits = pUnits;
+	pAction->prop.captureUnits.pUnits = pUnits;
 
 	AddActions(pAction, pGroup->pLastAction);
 	pGroup->pLastAction = pAction;
@@ -1003,19 +1003,19 @@ void Game::UpdateMoveAction(Group *pGroup)
 	Action *pAction = pGroup->pLastAction;
 	MFDebug_Assert(pAction && pAction->type == Action::AT_Move, "!?");
 
-	pAction->move.destX = pTile->GetX();
-	pAction->move.destY = pTile->GetY();
+	pAction->prop.move.destX = pTile->GetX();
+	pAction->prop.move.destY = pTile->GetY();
 
 	int numUnits = pGroup->GetNumUnits();
 	for(int a=0; a<numUnits; ++a)
 	{
 		Unit *pUnit = pGroup->GetUnit(a);
-		pAction->move.destMove[a] = pUnit->GetMovement();
+		pAction->prop.move.destMove[a] = pUnit->GetMovement();
 	}
 
 	Unit *pUnit = pGroup->GetVehicle();
 	if(pUnit)
-		pAction->move.destMove[numUnits] = pUnit->GetMovement();
+		pAction->prop.move.destMove[numUnits] = pUnit->GetMovement();
 }
 
 void Game::AddActions(Action *pAction, Action *pParent)
@@ -1062,11 +1062,11 @@ void Game::CommitAction(Action *pAction)
 		{
 			PushAction(GA_MOVEGROUP);
 			PushActionArg(pAction->pGroup->GetID());
-			PushActionArg(pAction->move.destX);
-			PushActionArg(pAction->move.destY);
+			PushActionArg(pAction->prop.move.destX);
+			PushActionArg(pAction->prop.move.destY);
 			int numUnits = pAction->pGroup->GetNumUnits() + (pAction->pGroup->pVehicle ? 1 : 0);
 			for(int a=0; a<numUnits; ++a)
-				PushActionArg(pAction->move.destMove[a]);
+				PushActionArg(pAction->prop.move.destMove[a]);
 			break;
 		}
 		case Action::AT_Rearrange:
@@ -1074,14 +1074,14 @@ void Game::CommitAction(Action *pAction)
 			PushActionArg(pAction->pGroup->GetID());
 			for(int a=0; a<10; ++a)
 			{
-				Unit *pUnit = pAction->rearrange.pAfter[a];
+				Unit *pUnit = pAction->prop.rearrange.pAfter[a];
 				PushActionArg(pUnit ? pUnit->GetID() : -1);
 			}
 			break;
 		case Action::AT_Regroup:
-			for(int a=0; a<pAction->regroup.numBefore; ++a)
+			for(int a=0; a<pAction->prop.regroup.numBefore; ++a)
 			{
-				Group *pBefore = pAction->regroup.pBefore[a];
+				Group *pBefore = pAction->prop.regroup.pBefore[a];
 
 				if(pBefore->pLastAction)
 				{
@@ -1106,9 +1106,9 @@ void Game::CommitAction(Action *pAction)
 				pBefore->Destroy();
 			}
 
-			for(int a=0; a<pAction->regroup.numAfter; ++a)
+			for(int a=0; a<pAction->prop.regroup.numAfter; ++a)
 			{
-				Group *pAfter = pAction->regroup.pAfter[a];
+				Group *pAfter = pAction->prop.regroup.pAfter[a];
 
 				if(pAfter->pLastAction == pAction)
 					pAfter->pLastAction = NULL;
@@ -1118,17 +1118,17 @@ void Game::CommitAction(Action *pAction)
 			break;
 		case Action::AT_Search:
 			PushAction(GA_SEARCH);
-			PushActionArg(pAction->search.pUnit->GetID());
-			PushActionArg(pAction->search.pRuin->id);
+			PushActionArg(pAction->prop.search.pUnit->GetID());
+			PushActionArg(pAction->prop.search.pRuin->id);
 			break;
 		case Action::AT_CaptureCastle:
 			PushAction(GA_CLAIMCASTLE);
-			PushActionArg(pAction->captureCastle.pCastle->id);
+			PushActionArg(pAction->prop.captureCastle.pCastle->id);
 			PushActionArg(pAction->pGroup->GetPlayer());
 			break;
 		case Action::AT_CaptureUnits:
 			PushAction(GA_CAPTUREUNITS);
-			PushActionArg(pAction->captureUnits.pUnits->GetID());
+			PushActionArg(pAction->prop.captureUnits.pUnits->GetID());
 			PushActionArg(pAction->pGroup->GetPlayer());
 			break;
 	}
@@ -1190,7 +1190,7 @@ Group *Game::RevertAction(Group *pGroup)
 			// revert to old tile
 			MapTile *pTile = pGroup->GetTile();
 			pTile->RemoveGroup(pGroup);
-			MapTile *pOldTile = pMap->GetTile(pAction->move.startX, pAction->move.startY);
+			MapTile *pOldTile = pMap->GetTile(pAction->prop.move.startX, pAction->prop.move.startY);
 			pOldTile->AddGroup(pGroup);
 
 			int numUnits = pGroup->GetNumUnits();
@@ -1198,17 +1198,17 @@ Group *Game::RevertAction(Group *pGroup)
 			{
 				// restore unit movement
 				Unit *pUnit = pGroup->GetUnit(a);
-				pUnit->SetMovement(pAction->move.startMove[a]);
+				pUnit->SetMovement(pAction->prop.move.startMove[a]);
 			}
 
 			if(pGroup->pVehicle)
 			{
 				// restore vehicle movement
-				pGroup->pVehicle->SetMovement(pAction->move.startMove[numUnits]);
+				pGroup->pVehicle->SetMovement(pAction->prop.move.startMove[numUnits]);
 			}
 
 			// set the groups path target to the position we undid
-			pGroup->FindPath(pAction->move.destX, pAction->move.destY);
+			pGroup->FindPath(pAction->prop.move.destX, pAction->prop.move.destY);
 
 			// pop action
 			pGroup->pLastAction = pAction->pParent;
@@ -1218,9 +1218,9 @@ Group *Game::RevertAction(Group *pGroup)
 		case Action::AT_Rearrange:
 		{
 			for(int a=0; a<10; ++a)
-				pGroup->pForwardUnits[a] = pAction->rearrange.pBefore[a];
-			pGroup->numForwardUnits = pAction->rearrange.beforeForward;
-			pGroup->numRearUnits = pAction->rearrange.beforeRear;
+				pGroup->pForwardUnits[a] = pAction->prop.rearrange.pBefore[a];
+			pGroup->numForwardUnits = pAction->prop.rearrange.beforeForward;
+			pGroup->numRearUnits = pAction->prop.rearrange.beforeRear;
 
 			// pop action
 			pGroup->pLastAction = pAction->pParent;
@@ -1230,33 +1230,33 @@ Group *Game::RevertAction(Group *pGroup)
 		case Action::AT_Regroup:
 		{
 			// check if all groups are present
-			for(int a=0; a<pAction->regroup.numAfter; ++a)
+			for(int a=0; a<pAction->prop.regroup.numAfter; ++a)
 			{
-				Group *pAfter = pAction->regroup.pAfter[a];
+				Group *pAfter = pAction->prop.regroup.pAfter[a];
 				if(pAfter->pLastAction != pAction)
 				{
 					// one group is still missing, lets undo that units most recent action
 					Action *pUndo = FindFirstDependency(pAfter->pLastAction);
 
-					Group *pDeepestChild = pUndo->pGroup ? pUndo->pGroup : pUndo->regroup.pAfter[0];
+					Group *pDeepestChild = pUndo->pGroup ? pUndo->pGroup : pUndo->prop.regroup.pAfter[0];
 					return RevertAction(pDeepestChild);
 				}
 			}
 
 			// get map tile
-			MapTile *pTile = pAction->regroup.pAfter[0]->GetTile();
+			MapTile *pTile = pAction->prop.regroup.pAfter[0]->GetTile();
 
-			for(int a=0; a<pAction->regroup.numAfter; ++a)
+			for(int a=0; a<pAction->prop.regroup.numAfter; ++a)
 			{
 				// destroy the target groups
-				Group *pAfter = pAction->regroup.pAfter[a];
+				Group *pAfter = pAction->prop.regroup.pAfter[a];
 				pTile->RemoveGroup(pAfter);
 				pAfter->Destroy();
 			}
 
-			for(int a=pAction->regroup.numBefore-1; a>=0; --a)
+			for(int a=pAction->prop.regroup.numBefore-1; a>=0; --a)
 			{
-				pGroup = pAction->regroup.pBefore[a];
+				pGroup = pAction->prop.regroup.pBefore[a];
 
 				// assign the units back to the old group
 				for(int b=0; b<pGroup->GetNumUnits(); ++b)

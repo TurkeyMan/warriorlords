@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="3.5" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{1E66441D-9744-491A-A060-EDC3FEE53993}</ProjectGuid>
+    <Target>Bin</Target>
+    <Language>CPP</Language>
+    <Compiler>
+      <Compiler ctype="GppCompiler" />
+    </Compiler>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineSymbols>DEBUG MONODEVELOP</DefineSymbols>
+    <SourceDirectory>.</SourceDirectory>
+    <OutputName>Warlords</OutputName>
+    <CompileTarget>Bin</CompileTarget>
+    <Includes>
+      <Includes>
+        <Include>/media/Data/Projects/Fuji/Include</Include>
+        <Include>/media/Data/Projects/Warlords/Source</Include>
+        <Include>/media/Data/Projects/Warlords/Source/Screens</Include>
+      </Includes>
+    </Includes>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release</OutputPath>
+    <DefineSymbols>MONODEVELOP</DefineSymbols>
+    <SourceDirectory>.</SourceDirectory>
+    <OptimizationLevel>3</OptimizationLevel>
+    <OutputName>Warlords</OutputName>
+    <CompileTarget>Bin</CompileTarget>
+    <Includes>
+      <Includes>
+        <Include>/media/Data/Projects/Fuji/Include</Include>
+        <Include>/media/Data/Projects/Warlords/Source</Include>
+        <Include>/media/Data/Projects/Warlords/Source/Screens</Include>
+      </Includes>
+    </Includes>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Source\Button.cpp" />
+    <Compile Include="Source\Display.cpp" />
+    <Compile Include="Source\Editor.cpp" />
+    <Compile Include="Source\Game.cpp" />
+    <Compile Include="Source\HTTP.cpp" />
+    <Compile Include="Source\InputHandler.cpp" />
+    <Compile Include="Source\ListBox.cpp" />
+    <Compile Include="Source\Map.cpp" />
+    <Compile Include="Source\Path.cpp" />
+    <Compile Include="Source\Screen.cpp" />
+    <Compile Include="Source\SelectBox.cpp" />
+    <Compile Include="Source\ServerRequest.cpp" />
+    <Compile Include="Source\Session.cpp" />
+    <Compile Include="Source\StringBox.cpp" />
+    <Compile Include="Source\StringEntryLogic.cpp" />
+    <Compile Include="Source\Tileset.cpp" />
+    <Compile Include="Source\Unit.cpp" />
+    <Compile Include="Source\Warlords.cpp" />
+    <Compile Include="Source\Screens\Battle.cpp" />
+    <Compile Include="Source\Screens\CastleConfig.cpp" />
+    <Compile Include="Source\Screens\GroupConfig.cpp" />
+    <Compile Include="Source\Screens\HomeScreen.cpp" />
+    <Compile Include="Source\Screens\Inventory.cpp" />
+    <Compile Include="Source\Screens\JoinGameScreen.cpp" />
+    <Compile Include="Source\Screens\LobbyScreen.cpp" />
+    <Compile Include="Source\Screens\LoginScreen.cpp" />
+    <Compile Include="Source\Screens\MapScreen.cpp" />
+    <Compile Include="Source\Screens\MenuScreen.cpp" />
+    <Compile Include="Source\Screens\MiniMap.cpp" />
+    <Compile Include="Source\Screens\RequestBox.cpp" />
+    <Compile Include="Source\Screens\UnitConfig.cpp" />
+    <Compile Include="Source\Screens\Window.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Source\Button.h" />
+    <None Include="Source\Display.h" />
+    <None Include="Source\Editor.h" />
+    <None Include="Source\Game.h" />
+    <None Include="Source\HTTP.h" />
+    <None Include="Source\InputHandler.h" />
+    <None Include="Source\ListBox.h" />
+    <None Include="Source\Map.h" />
+    <None Include="Source\Path.h" />
+    <None Include="Source\Screen.h" />
+    <None Include="Source\SelectBox.h" />
+    <None Include="Source\ServerRequest.h" />
+    <None Include="Source\Session.h" />
+    <None Include="Source\StringBox.h" />
+    <None Include="Source\StringEntryLogic.h" />
+    <None Include="Source\Tileset.h" />
+    <None Include="Source\Unit.h" />
+    <None Include="Source\Warlords.h" />
+    <None Include="Source\Screens\Battle.h" />
+    <None Include="Source\Screens\CastleConfig.h" />
+    <None Include="Source\Screens\GroupConfig.h" />
+    <None Include="Source\Screens\HomeScreen.h" />
+    <None Include="Source\Screens\Inventory.h" />
+    <None Include="Source\Screens\JoinGameScreen.h" />
+    <None Include="Source\Screens\LobbyScreen.h" />
+    <None Include="Source\Screens\LoginScreen.h" />
+    <None Include="Source\Screens\MapScreen.h" />
+    <None Include="Source\Screens\MenuScreen.h" />
+    <None Include="Source\Screens\MiniMap.h" />
+    <None Include="Source\Screens\RequestBox.h" />
+    <None Include="Source\Screens\UnitConfig.h" />
+    <None Include="Source\Screens\Window.h" />
+  </ItemGroup>
+</Project>

@@ -57,6 +57,6 @@ CastleSet *CastleSet::Create(const char *pFilename)
 
 void CastleSet::Destroy()
 {
-  MFMaterial_Destroy(pRoadMap);
+	MFMaterial_Destroy(pRoadMap);
 	MFHeap_Free(this);
 }
