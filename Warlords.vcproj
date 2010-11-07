@@ -517,6 +517,14 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="Middleware"
+				>
+				<File
+					RelativePath=".\Source\Middleware\FastDelegate.h"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<File
 			RelativePath=".\Makefile"

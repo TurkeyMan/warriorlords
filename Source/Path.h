@@ -10,6 +10,7 @@ class MapTile;
 struct Step
 {
 	bool CanMove() { return !!(flags & 1); }
+	bool InvalidMove() { return !(flags & 4); }
 	bool IsRoad() { return !!(flags & 2); }
 
 	uint16 x, y;
@@ -30,7 +31,7 @@ public:
 	void Destroy() { pathStart = MaxPath; }
 
 	Step *GetPath() { return pathStart < MaxPath ? &path[pathStart] : NULL; }
-	Step *GetStep(int step) { return pathStart < MaxPath ? &path[pathStart + step] : NULL; }
+	Step *GetStep(int step) { return pathStart + step < MaxPath ? &path[pathStart + step] : NULL; }
 	Step *GetLast() { return pathStart < MaxPath ? &path[MaxPath-1] : NULL; }
 	int GetPathLength() const { return MaxPath - pathStart; }
 

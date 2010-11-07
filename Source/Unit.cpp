@@ -370,7 +370,12 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 						int movClass = pMovement->GetInt(0);
 						pUnitDefs->pMovementClasses[movClass].pName = pMovement->GetString(1);
 						for(int a=0; a<numTerrainTypes; ++a)
-							pUnitDefs->pMovementClasses[movClass].pMovementPenalty[a] = pMovement->GetInt(2 + a);
+						{
+							int &penalty = pUnitDefs->pMovementClasses[movClass].pMovementPenalty[a];
+							penalty = pMovement->GetInt(2 + a);
+//							if(penalty == 0)
+//								penalty = 1000;
+						}
 
 						int flagsStart = 2 + numTerrainTypes;
 						const char *pFlags = NULL;
@@ -802,7 +807,6 @@ void Unit::Draw(float x, float y, bool bFlip, float alpha)
 void Unit::SetGroup(Group *_pGroup)
 {
 	pGroup = _pGroup;
-	MFDebug_Assert(_pGroup->ValidateGroup(), "EEK!");
 }
 
 int Unit::GetRace()

@@ -27,13 +27,13 @@ HomeScreen::HomeScreen()
 	// populate map list
 	MFRect rect = { 10.f, 64.f, 240.f, 200.f };
 	pWaiting = ListBox::Create(&rect, pFont);
-	pWaiting->SetSelectCallback(SelectPending, this);
-	pWaiting->SetDblClickCallback(EnterPending, this);
+	pWaiting->SetSelectCallback(MakeDelegate(this, &HomeScreen::SelectPending));
+	pWaiting->SetDblClickCallback(MakeDelegate(this, &HomeScreen::EnterPending));
 
 	rect.x += 260.f;
 	pMyGames = ListBox::Create(&rect, pFont);
-	pMyGames->SetSelectCallback(SelectGame, this);
-	pMyGames->SetDblClickCallback(EnterGame, this);
+	pMyGames->SetSelectCallback(MakeDelegate(this, &HomeScreen::SelectGame));
+	pMyGames->SetDblClickCallback(MakeDelegate(this, &HomeScreen::EnterGame));
 
 	// start buttons
 	MFRect uvs, pos = { 0, 0, 64.f, 64.f };
@@ -46,27 +46,32 @@ HomeScreen::HomeScreen()
 	pos.y = 32.f + 256.f;
 	uvs.x = 0.75f + texelCenterOffset; uvs.y = 0.75f + texelCenterOffset;
 	uvs.width = 0.25f; uvs.height = 0.25f;
-	pCreate = Button::Create(pIcons, &pos, &uvs, MFVector::one, CreateGame, this, 0, false);
+	pCreate = Button::Create(pIcons, &pos, &uvs, MFVector::one, 0, false);
+	pCreate->SetClickCallback(MakeDelegate(this, &HomeScreen::CreateGame));
 
 	// join game button
 	pos.x = 32.f + 64.f;
 	uvs.x = 0.5f + texelCenterOffset; uvs.y = 0.75f + texelCenterOffset;
-	pJoin = Button::Create(pIcons, &pos, &uvs, MFVector::one, JoinGame, this, 2, false);
+	pJoin = Button::Create(pIcons, &pos, &uvs, MFVector::one, 2, false);
+	pJoin->SetClickCallback(MakeDelegate(this, &HomeScreen::JoinGame));
 
 	// find game button
 	pos.x = 48.f + 128.f;
 	uvs.x = 0.75f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
-	pFind = Button::Create(pIcons, &pos, &uvs, MFVector::one, FindGame, this, 3, false);
+	pFind = Button::Create(pIcons, &pos, &uvs, MFVector::one, 3, false);
+	pFind->SetClickCallback(MakeDelegate(this, &HomeScreen::FindGame));
 
 	// offline game button
 	pos.x = 64.f + 192.f;
 	uvs.x = 0.f + texelCenterOffset; uvs.y = 0.75f + texelCenterOffset;
-	pOffline = Button::Create(pIcons, &pos, &uvs, MFVector::one, CreateGame, this, 1, false);
+	pOffline = Button::Create(pIcons, &pos, &uvs, MFVector::one, 1, false);
+	pOffline->SetClickCallback(MakeDelegate(this, &HomeScreen::CreateGame));
 
 	// continue game button
 	pos.x = 80.f + 256.f;
 	uvs.x = 0.25f + texelCenterOffset; uvs.y = 0.75f + texelCenterOffset;
-	pContinue = Button::Create(pIcons, &pos, &uvs, MFVector::one, ContinueGame, this, 4, false);
+	pContinue = Button::Create(pIcons, &pos, &uvs, MFVector::one, 4, false);
+	pContinue->SetClickCallback(MakeDelegate(this, &HomeScreen::ContinueGame));
 }
 
 HomeScreen::~HomeScreen()
@@ -193,87 +198,75 @@ void HomeScreen::ResumeGame(uint32 game)
 	//... error string?
 }
 
-void HomeScreen::CreateGame(int button, void *pUserData, int buttonID)
+void HomeScreen::CreateGame(int button, int buttonID)
 {
 	// go to game create screen
 	pMenu->SetGameType(buttonID);
 	Screen::SetNext(pMenu);
 }
 
-void HomeScreen::JoinGame(int button, void *pUserData, int buttonID)
+void HomeScreen::JoinGame(int button, int buttonID)
 {
 	Screen::SetNext(pJoinGame);
 }
 
-void HomeScreen::FindGame(int button, void *pUserData, int buttonID)
+void HomeScreen::FindGame(int button, int buttonID)
 {
-	HomeScreen *pScreen = (HomeScreen*)pUserData;
-
 }
 
-void HomeScreen::ContinueGame(int button, void *pUserData, int buttonID)
+void HomeScreen::ContinueGame(int button, int buttonID)
 {
-	HomeScreen *pScreen = (HomeScreen*)pUserData;
-
-	pScreen->ResumeGame(pScreen->continueGame);
+	ResumeGame(continueGame);
 }
 
-void HomeScreen::SelectPending(int item, void *pUserData)
+void HomeScreen::SelectPending(int item)
 {
-	HomeScreen *pScreen = (HomeScreen*)pUserData;
-
-	pScreen->pMyGames->SetSelection(-1);
+	pMyGames->SetSelection(-1);
 
 	if(item < 0)
 	{
-		pScreen->pContinue->Enable(false);
+		pContinue->Enable(false);
 		return;
 	}
 
 	// select game
-	GameDetails *pGame = (GameDetails*)pScreen->pWaiting->GetItemData(item);
-	pScreen->continueGame = pGame->id;
+	GameDetails *pGame = (GameDetails*)pWaiting->GetItemData(item);
+	continueGame = pGame->id;
 
-	pScreen->pContinue->Enable(true);
+	pContinue->Enable(true);
 }
 
-void HomeScreen::SelectGame(int item, void *pUserData)
+void HomeScreen::SelectGame(int item)
 {
-	HomeScreen *pScreen = (HomeScreen*)pUserData;
-
-	pScreen->pWaiting->SetSelection(-1);
+	pWaiting->SetSelection(-1);
 
 	if(item < 0)
 	{
-		pScreen->pContinue->Enable(false);
+		pContinue->Enable(false);
 		return;
 	}
 
 	// select game
-	GameDetails *pGame = (GameDetails*)pScreen->pMyGames->GetItemData(item);
-	pScreen->continueGame = pGame->id;
+	GameDetails *pGame = (GameDetails*)pMyGames->GetItemData(item);
+	continueGame = pGame->id;
 
-	pScreen->pContinue->Enable(true);
+	pContinue->Enable(true);
 }
 
-void HomeScreen::EnterPending(int item, void *pUserData)
+void HomeScreen::EnterPending(int item)
 {
-	HomeScreen *pThis = (HomeScreen*)pUserData;
-
 	if(item < 0)
 		return;
 
-	GameDetails *pGame = (GameDetails*)pThis->pWaiting->GetItemData(item);
-	pThis->ResumeGame(pGame->id);
+	GameDetails *pGame = (GameDetails*)pWaiting->GetItemData(item);
+	ResumeGame(pGame->id);
 }
 
-void HomeScreen::EnterGame(int item, void *pUserData)
+void HomeScreen::EnterGame(int item)
 {
-	HomeScreen *pThis = (HomeScreen*)pUserData;
-
 	if(item < 0)
 		return;
 
-	GameDetails *pGame = (GameDetails*)pThis->pMyGames->GetItemData(item);
-	pThis->ResumeGame(pGame->id);
+	GameDetails *pGame = (GameDetails*)pMyGames->GetItemData(item);
+	ResumeGame(pGame->id);
 }

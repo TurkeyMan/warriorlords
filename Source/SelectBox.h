@@ -10,7 +10,7 @@ struct MFFont;
 class SelectBox : public InputReceiver
 {
 public:
-	typedef void (SelectCallback)(int item, void *pUserData, int id);
+	typedef FastDelegate2<int, int> SelectCallback;
 
 	static SelectBox *Create(const MFRect *pPosition, MFFont *pFont, MFMaterial *pIcons = NULL, float iconSize = 32);
 	void Destroy();
@@ -21,7 +21,7 @@ public:
 	void SetImage(const MFMaterial *pImage, const MFRect *pUVs, const MFVector &colour = MFVector::one);
 	void SetPos(const MFRect *pPos);
 
-	void SetSelectCallback(SelectCallback *pCallback, void *pUserData, int id = 0);
+	void SetSelectCallback(SelectCallback callback, int id = 0);
 
 	void Enable(bool enabled) { bEnabled = enabled; }
 
@@ -51,11 +51,10 @@ protected:
 
 	ListBox *pList;
 
-	SelectCallback *pCallback;
-	void *pUserData;
+	SelectCallback callback;
 	int id;
 
-	static void ListCallback(int item, void *pUserData);
+	void ListCallback(int item);
 };
 
 #endif

@@ -4,6 +4,8 @@
 #include "Fuji.h"
 #include "MFHeap.h"
 
+#include "Middleware/FastDelegate.h"
+
 #include "Game.h"
 #include "Session.h"
 

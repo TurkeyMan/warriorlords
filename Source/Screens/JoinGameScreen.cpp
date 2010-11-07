@@ -22,7 +22,7 @@ JoinGameScreen::JoinGameScreen()
 	float texelCenterOffset = MFRenderer_GetTexelCenterOffset() / 256.f;
 
 	MFRect stringPos = { 140, 80, 256, MFFont_GetFontHeight(pFont) };
-	pGame = StringBox::Create(pFont, &stringPos, NULL, NULL);
+	pGame = StringBox::Create(pFont, &stringPos);
 
 	// login button
 	MFRect display;
@@ -31,12 +31,14 @@ JoinGameScreen::JoinGameScreen()
 	pos.y = 32.f + 256.f;
 	uvs.x = 0.25f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
 	uvs.width = 0.25f; uvs.height = 0.25f;
-	pJoin = Button::Create(pIcons, &pos, &uvs, MFVector::one, Click, this, 0, false);
+	pJoin = Button::Create(pIcons, &pos, &uvs, MFVector::one, 0, false);
+	pJoin->SetClickCallback(MakeDelegate(this, &JoinGameScreen::Click));
 
 	// return button
 	pos.x = 64.f + 96.f + 128.f;
 	uvs.x = 0.0f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
-	pReturn = Button::Create(pIcons, &pos, &uvs, MFVector::one, Click, this, 1, false);
+	pReturn = Button::Create(pIcons, &pos, &uvs, MFVector::one, 1, false);
+	pReturn->SetClickCallback(MakeDelegate(this, &JoinGameScreen::Click));
 }
 
 JoinGameScreen::~JoinGameScreen()
@@ -100,16 +102,14 @@ void JoinGameScreen::Deselect()
 	pInputManager->PopReceiver(this);
 }
 
-void JoinGameScreen::Click(int button, void *pUserData, int buttonID)
+void JoinGameScreen::Click(int button, int buttonID)
 {
-	JoinGameScreen *pScreen = (JoinGameScreen*)pUserData;
-
 	switch(buttonID)
 	{
 		case 0:
 		{
 			GameDetails details;
-			ServerError err = WLServ_GetGameByName(pScreen->pGame->GetString(), &details);
+			ServerError err = WLServ_GetGameByName(pGame->GetString(), &details);
 
 			if(err == SE_NO_ERROR)
 			{
@@ -125,17 +125,17 @@ void JoinGameScreen::Click(int button, void *pUserData, int buttonID)
 					else
 					{
 						// couldn't join game
-						pScreen->pMessage = "Couldn't join game!";
+						pMessage = "Couldn't join game!";
 					}
 				}
 				else
 				{
-					pScreen->pMessage = "Invalid session!";
+					pMessage = "Invalid session!";
 				}
 			}
 			else
 			{
-				pScreen->pMessage = "Invalid game!";
+				pMessage = "Invalid game!";
 			}
 			break;
 		}

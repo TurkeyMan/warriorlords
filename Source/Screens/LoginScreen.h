@@ -39,11 +39,11 @@ protected:
 
 	void AutoLogin();
 
-	static void Click(int button, void *pUserData, int buttonID);
+	void Click(int button, int buttonID);
 
-	static void TabUser(const char *pString, void *pUserData);
-	static void TabPass(const char *pString, void *pUserData);
-	static void TabEmail(const char *pString, void *pUserData);
+	void TabUser(const char *pString);
+	void TabPass(const char *pString);
+	void TabEmail(const char *pString);
 };
 
 #endif

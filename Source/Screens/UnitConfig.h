@@ -27,8 +27,8 @@ protected:
 	Button *pInventory;
 	CheckBox *pStrategySelect[6];
 
-	static void ShowInventory(int button, void *pUserData, int buttonID);
-	static void SelectStrat(int value, void *pUserData, int buttonID);
+	void ShowInventory(int button, int buttonID);
+	void SelectStrat(int value, int buttonID);
 };
 
 #endif

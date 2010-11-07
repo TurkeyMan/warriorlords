@@ -46,9 +46,9 @@ protected:
 	MapDetails map;
 	bool bOffline;
 
-	static void Click(int button, void *pUserData, int buttonID);
-	static void SetRace(int item, void *pUserData, int id);
-	static void SetColour(int item, void *pUserData, int id);
+	void Click(int button, int buttonID);
+	void SetRace(int item, int id);
+	void SetColour(int item, int id);
 };
 
 #endif

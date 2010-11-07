@@ -14,11 +14,13 @@ RequestBox::RequestBox()
 
 	MFRect pos1 = { window.x + 16.f, window.y + window.height - 80.f, 64.f, 64.f };
 	MFRect uvs1 = { 0.25f + (.5f/256.f), 0.f + (.5f/256.f), 0.25f, 0.25f };
-	pYes = Button::Create(pIcons, &pos1, &uvs1, MFVector::white, Select, this, 0);
+	pYes = Button::Create(pIcons, &pos1, &uvs1, MFVector::white, 0);
+	pYes->SetClickCallback(MakeDelegate(this, &RequestBox::Select));
 
 	MFRect pos2 = { window.x + window.width - 80.f, window.y + window.height - 80.f, 64.f, 64.f };
 	MFRect uvs2 = { 0.5f + (.5f/256.f), 0.f + (.5f/256.f), 0.25f, 0.25f };
-	pNo = Button::Create(pIcons, &pos2, &uvs2, MFVector::white, Select, this, 1);
+	pNo = Button::Create(pIcons, &pos2, &uvs2, MFVector::white, 1);
+	pNo->SetClickCallback(MakeDelegate(this, &RequestBox::Select));
 }
 
 RequestBox::~RequestBox()
@@ -43,14 +45,13 @@ bool RequestBox::HandleInputEvent(InputEvent ev, InputInfo &info)
 	return Window::HandleInputEvent(ev, info);
 }
 
-void RequestBox::Show(const char *pMessage, SelectCallback *_pSelectCallback, bool _bNotification, void *_pUserData)
+void RequestBox::Show(const char *pMessage, SelectCallback _selectCallback, bool _bNotification)
 {
 	Window::Show();
 
 	MFString_Copy(message, pMessage);
-	pSelectCallback = _pSelectCallback;
+	selectCallback = _selectCallback;
 	bNotification = _bNotification;
-	pUserData = _pUserData;
 
 	pInputManager->PushReceiver(pYes);
 	if(!bNotification)
@@ -62,12 +63,10 @@ void RequestBox::Hide()
 	Window::Hide();
 }
 
-void RequestBox::Select(int button, void *_pUserData, int buttonID)
+void RequestBox::Select(int button, int buttonID)
 {
-	RequestBox *pThis = (RequestBox*)_pUserData;
+	Hide();
 
-	pThis->Hide();
-
-	if(pThis->pSelectCallback)
-		pThis->pSelectCallback(buttonID, pThis->pUserData);
+	if(selectCallback)
+		selectCallback(buttonID);
 }

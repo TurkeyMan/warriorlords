@@ -14,22 +14,29 @@ UnitConfig::UnitConfig()
 	float texelCenter = MFRenderer_GetTexelCenterOffset() / 256.f;
 	MFRect pos = { top.x + top.width - 64.f, top.y + top.height - 64.f, 64.f, 64.f };
 	MFRect uvs = { 0.f + texelCenter, 0.25f + texelCenter, 0.25f, 0.25f };
-	pInventory = Button::Create(pIcons, &pos, &uvs, MFVector::white, ShowInventory, this);
+	pInventory = Button::Create(pIcons, &pos, &uvs, MFVector::white);
+	pInventory->SetClickCallback(MakeDelegate(this, &UnitConfig::ShowInventory));
 
 	float height = MFFont_GetFontHeight(pFont);
 	MFRect cbRect = { bottom.x + 40, bottom.y + 10, 200.f, height };
-	pStrategySelect[0] = CheckBox::Create(&cbRect, "Attack Strongest", MFVector::yellow, 1, SelectStrat, this, 0);
+	pStrategySelect[0] = CheckBox::Create(&cbRect, "Attack Strongest", MFVector::yellow, 1, 0);
+	pStrategySelect[0]->SetChangeCallback(MakeDelegate(this, &UnitConfig::SelectStrat));
 	cbRect.y += height;
-	pStrategySelect[1] = CheckBox::Create(&cbRect, "Attack Weakest", MFVector::yellow, 0, SelectStrat, this, 1);
+	pStrategySelect[1] = CheckBox::Create(&cbRect, "Attack Weakest", MFVector::yellow, 0, 1);
+	pStrategySelect[1]->SetChangeCallback(MakeDelegate(this, &UnitConfig::SelectStrat));
 	cbRect.y += height + 10;
-	pStrategySelect[2] = CheckBox::Create(&cbRect, "Attack First Available", MFVector::yellow, 1, SelectStrat, this, 2);
+	pStrategySelect[2] = CheckBox::Create(&cbRect, "Attack First Available", MFVector::yellow, 1, 2);
+	pStrategySelect[2]->SetChangeCallback(MakeDelegate(this, &UnitConfig::SelectStrat));
 	cbRect.x = bottom.x + 260;
 	cbRect.y = bottom.y + 15;
-	pStrategySelect[3] = CheckBox::Create(&cbRect, "Attack Any", MFVector::yellow, 1, SelectStrat, this, 3);
+	pStrategySelect[3] = CheckBox::Create(&cbRect, "Attack Any", MFVector::yellow, 1, 3);
+	pStrategySelect[3]->SetChangeCallback(MakeDelegate(this, &UnitConfig::SelectStrat));
 	cbRect.y += height;
-	pStrategySelect[4] = CheckBox::Create(&cbRect, "Attack Melee", MFVector::yellow, 0, SelectStrat, this, 4);
+	pStrategySelect[4] = CheckBox::Create(&cbRect, "Attack Melee", MFVector::yellow, 0, 4);
+	pStrategySelect[4]->SetChangeCallback(MakeDelegate(this, &UnitConfig::SelectStrat));
 	cbRect.y += height;
-	pStrategySelect[5] = CheckBox::Create(&cbRect, "Attack Ranged", MFVector::yellow, 0, SelectStrat, this, 5);
+	pStrategySelect[5] = CheckBox::Create(&cbRect, "Attack Ranged", MFVector::yellow, 0, 5);
+	pStrategySelect[5]->SetChangeCallback(MakeDelegate(this, &UnitConfig::SelectStrat));
 }
 
 UnitConfig::~UnitConfig()
@@ -124,17 +131,14 @@ void UnitConfig::Hide()
 	Window::Hide();
 }
 
-void UnitConfig::ShowInventory(int button, void *pUserData, int buttonID)
+void UnitConfig::ShowInventory(int button, int buttonID)
 {
-	UnitConfig *pThis = (UnitConfig*)pUserData;
-	pThis->inventory.Show(pThis->pUnit);
+	inventory.Show(pUnit);
 }
 
-void UnitConfig::SelectStrat(int value, void *pUserData, int buttonID)
+void UnitConfig::SelectStrat(int value, int buttonID)
 {
-	UnitConfig *pThis = (UnitConfig*)pUserData;
-
-	BattlePlan *pPlan = pThis->pUnit->GetBattlePlan();
+	BattlePlan *pPlan = pUnit->GetBattlePlan();
 
 	switch(buttonID)
 	{
@@ -143,9 +147,9 @@ void UnitConfig::SelectStrat(int value, void *pUserData, int buttonID)
 			pPlan->strength = (TargetStrength)buttonID;
 
 			if(value == 0)
-				pThis->pStrategySelect[buttonID]->SetValue(1);
+				pStrategySelect[buttonID]->SetValue(1);
 			else
-				pThis->pStrategySelect[1 - buttonID]->SetValue(0);
+				pStrategySelect[1 - buttonID]->SetValue(0);
 			break;
 
 		case 2:
@@ -159,14 +163,14 @@ void UnitConfig::SelectStrat(int value, void *pUserData, int buttonID)
 
 			if(value == 0)
 			{
-				pThis->pStrategySelect[buttonID]->SetValue(1);
+				pStrategySelect[buttonID]->SetValue(1);
 			}
 			else
 			{
 				for(int a=3; a<6; ++a)
 				{
 					if(buttonID != a)
-						pThis->pStrategySelect[a]->SetValue(0);
+						pStrategySelect[a]->SetValue(0);
 				}
 			}
 			break;

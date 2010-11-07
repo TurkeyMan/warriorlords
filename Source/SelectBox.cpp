@@ -20,8 +20,7 @@ SelectBox *SelectBox::Create(const MFRect *pPosition, MFFont *pFont, MFMaterial 
 	pNew->pFont = pFont;
 	pNew->pIcons = pIcons;
 	pNew->iconSize = iconSize;
-	pNew->pCallback = NULL;
-	pNew->pUserData = NULL;
+	pNew->callback.clear();
 	pNew->bShowList = false;
 	pNew->bEnabled = true;
 
@@ -31,7 +30,7 @@ SelectBox *SelectBox::Create(const MFRect *pPosition, MFFont *pFont, MFMaterial 
 	// create the listbox
 	r.y += itemHeight;
 	pNew->pList = ListBox::Create(&r, pFont, pIcons, iconSize);
-	pNew->pList->SetSelectCallback(ListCallback, pNew);
+	pNew->pList->SetSelectCallback(MakeDelegate(pNew, &SelectBox::ListCallback));
 	pNew->pList->HighlightCursor(true);
 
 	return pNew;
@@ -105,10 +104,9 @@ void SelectBox::SetPos(const MFRect *pPos)
 	UpdateRect(pPos);
 }
 
-void SelectBox::SetSelectCallback(SelectCallback *_pCallback, void *_pUserData, int _id)
+void SelectBox::SetSelectCallback(SelectCallback _callback, int _id)
 {
-	pCallback = _pCallback;
-	pUserData = _pUserData;
+	callback = _callback;
 	id = _id;
 }
 
@@ -154,13 +152,11 @@ int SelectBox::GetSelection()
 	return pList->GetSelection();
 }
 
-void SelectBox::ListCallback(int item, void *pThis)
+void SelectBox::ListCallback(int item)
 {
-	SelectBox *pSB = (SelectBox*)pThis;
+	bShowList = false;
+	pInputManager->PopReceiver(pList);
 
-	pSB->bShowList = false;
-	pInputManager->PopReceiver(pSB->pList);
-
-	if(pSB->pCallback)
-		pSB->pCallback(item, pSB->pUserData, pSB->id);
+	if(callback)
+		callback(item, id);
 }

@@ -24,8 +24,7 @@ StringEntryLogic::StringEntryLogic()
 	selectionStart = selectionEnd = 0;
 	holdKey = 0;
 	repeatDelay = 0.f;
-	pChangeCallback = NULL;
-	pUserData = NULL;
+	changeCallback.clear();
 }
 
 StringEntryLogic::StringEntryLogic(int bufferSize, StringType type)
@@ -35,8 +34,7 @@ StringEntryLogic::StringEntryLogic(int bufferSize, StringType type)
 	selectionStart = selectionEnd = 0;
 	holdKey = 0;
 	repeatDelay = 0.f;
-	pChangeCallback = NULL;
-	pUserData = NULL;
+	changeCallback.clear();
 
 	Create(bufferSize, type);
 }
@@ -76,8 +74,8 @@ void StringEntryLogic::ClearSelection()
 
 	selectionStart = selectionEnd = cursorPos;
 
-	if(pChangeCallback)
-		pChangeCallback(pBuffer, pUserData);
+	if(changeCallback)
+		changeCallback(pBuffer);
 }
 
 void StringEntryLogic::Create(int bufferSize, StringType _type)
@@ -183,8 +181,8 @@ void StringEntryLogic::Update()
 
 			CloseClipboard();
 
-			if(pasteLen && pChangeCallback)
-				pChangeCallback(pBuffer, pUserData);
+			if(pasteLen && changeCallback)
+				changeCallback(pBuffer);
 		}
 	}
 	else
@@ -234,16 +232,16 @@ void StringEntryLogic::Update()
 							--cursorPos;
 							--stringLen;
 
-							if(pChangeCallback)
-								pChangeCallback(pBuffer, pUserData);
+							if(changeCallback)
+								changeCallback(pBuffer);
 						}
 						else if(keyPressed == Key_Delete && cursorPos < stringLen)
 						{
 							StringCopyOverlap(&pBuffer[cursorPos], &pBuffer[cursorPos+1]);
 							--stringLen;
 
-							if(pChangeCallback)
-								pChangeCallback(pBuffer, pUserData);
+							if(changeCallback)
+								changeCallback(pBuffer);
 						}
 					}
 					break;
@@ -330,8 +328,8 @@ void StringEntryLogic::Update()
 
 						selectionStart = selectionEnd = cursorPos;
 
-						if(pChangeCallback)
-							pChangeCallback(pBuffer, pUserData);
+						if(changeCallback)
+							changeCallback(pBuffer);
 					}
 					break;
 				}
@@ -348,7 +346,7 @@ void StringEntryLogic::SetString(const char *pString)
 		MFString_Copy(pBuffer, pString);
 		selectionStart = selectionEnd = cursorPos = stringLen = len;
 
-		if(pChangeCallback)
-			pChangeCallback(pBuffer, pUserData);
+		if(changeCallback)
+			changeCallback(pBuffer);
 	}
 }

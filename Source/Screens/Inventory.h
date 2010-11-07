@@ -26,7 +26,7 @@ protected:
 
 	int selected;
 
-	static void SelectItem(int button, void *pUserData, int buttonID);
+	void SelectItem(int button, int buttonID);
 };
 
 #endif

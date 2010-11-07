@@ -24,7 +24,7 @@ protected:
 	Button *pBuildUnits[4];
 	int numBuildUnits;
 
-	static void SelectUnit(int button, void *pUserData, int buttonID);
+	void SelectUnit(int button, int buttonID);
 };
 
 #endif

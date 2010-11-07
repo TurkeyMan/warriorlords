@@ -25,6 +25,8 @@ Game::Game(GameParams *pParams)
 	numArgs = 0;
 
 	lastAction = 0;
+	firstServerAction = numServerActions = serverActionCount = 0;
+
 	currentPlayer = 0;
 	currentTurn = 0;
 
@@ -92,7 +94,7 @@ Game::Game(GameState *pState)
 
 	// update the game state
 	lastAction = 0;
-	numServerActions = serverActionCount = 0;
+	firstServerAction = numServerActions = serverActionCount = 0;
 	do
 	{
 		UpdateGameState();
@@ -590,7 +592,8 @@ Group *Game::CreateUnit(int unit, Castle *pCastle, bool bCommitUnit)
 	UnitDetails *pDetails = pUnitDefs->GetUnitDetails(unit);
 	uint32 castleTerrain = pMap->GetTerrainAt(x, y);
 
-	if(pUnitDefs->GetMovementPenalty(pDetails->movementClass, castleTerrain & 0xFF) == 0)
+	int movePenalty = pUnitDefs->GetMovementPenalty(pDetails->movementClass, castleTerrain & 0xFF);
+	if(movePenalty == 0 || movePenalty >= 100)
 	{
 		// the unit can't go on the castle, it must be a boat or something
 		// find a patch of terrain around the castle where it can begin
@@ -826,9 +829,9 @@ void Game::DrawLine(float sx, float sy, float dx, float dy)
 		MFPrimitive_DrawQuad(sx, sy-8.f, dx-sx, 16.f, MFVector::one, 0.f, texelCenter, 1.f, 1.f + (texelCenter));
 }
 
-void Game::ShowRequest(const char *pMessage, RequestBox::SelectCallback *pCallback, bool bNotification, void *pUserData)
+void Game::ShowRequest(const char *pMessage, RequestBox::SelectCallback callback, bool bNotification)
 {
-	pRequestBox->Show(pMessage, pCallback, bNotification, pUserData);
+	pRequestBox->Show(pMessage, callback, bNotification);
 }
 
 bool Game::DrawRequest()
@@ -1179,7 +1182,7 @@ void Game::DestroyAction(Action *pAction)
 Group *Game::RevertAction(Group *pGroup)
 {
 	Action *pAction = pGroup->pLastAction;
-	if(!pAction || pAction->numChildren)
+	if(!pAction || (pAction->numChildren && pAction->type != Action::AT_Regroup))
 		return pGroup;
 
 	// perform undo
@@ -1300,6 +1303,26 @@ Group *Game::RevertAction(Group *pGroup)
 				for(; a<pAction->pParent->numChildren; ++a)
 					pAction->pParent->ppChildren[a] = pAction->pParent->ppChildren[a+1];
 				break;
+			}
+		}
+	}
+	else if(pAction->type == Action::AT_Regroup)
+	{
+		for(int p=0; p<pAction->prop.regroup.numBefore; ++p)
+		{
+			Action *pParent = pAction->prop.regroup.pBefore[p]->pLastAction;
+			if(!pParent)
+				continue;
+
+			for(int a=0; a<pParent->numChildren; ++a)
+			{
+				if(pParent->ppChildren[a] == pAction)
+				{
+					--pParent->numChildren;
+					for(; a<pParent->numChildren; ++a)
+						pParent->ppChildren[a] = pParent->ppChildren[a+1];
+					break;
+				}
 			}
 		}
 	}

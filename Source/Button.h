@@ -9,14 +9,15 @@ struct MFFont;
 class Button : public InputReceiver
 {
 public:
-	typedef void (TriggerCallback)(int button, void *pUserData, int buttonID);
+	typedef FastDelegate2<int, int> ClickCallback;
 
-	static Button *Create(const MFMaterial *pImage, const MFRect *pPosition, const MFRect *pUVs, const MFVector &colour, TriggerCallback *pCallback, void *pUserData, int ButtonID = 0, bool bTriggerOnDown = false);
+	static Button *Create(const MFMaterial *pImage, const MFRect *pPosition, const MFRect *pUVs, const MFVector &colour, int ButtonID = 0, bool bTriggerOnDown = false);
 	void Destroy();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 	void Draw();
 
+	void SetClickCallback(ClickCallback clickHandler) { clickCallback = clickHandler; }
 	void SetImage(const MFMaterial *pImage, const MFRect *pUVs, const MFVector &colour = MFVector::one);
 	void SetPos(const MFRect *pPos);
 
@@ -37,8 +38,7 @@ protected:
 	bool bTriggerOnDown;
 	int isPressed;
 
-	TriggerCallback *pCallback;
-	void *pUserData;
+	ClickCallback clickCallback;
 	int buttonID;
 
 	int button;
@@ -47,9 +47,9 @@ protected:
 class CheckBox : public InputReceiver
 {
 public:
-	typedef void (ChangeCallback)(int value, void *pUserData, int buttonID);
+	typedef FastDelegate2<int, int> ChangeCallback;
 
-	static CheckBox *Create(const MFRect *pPosition, const char *pText, const MFVector &colour, int value, ChangeCallback *pCallback, void *pUserData, int ButtonID = 0);
+	static CheckBox *Create(const MFRect *pPosition, const char *pText, const MFVector &colour, int value, int ButtonID = 0);
 	void Destroy();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
@@ -57,13 +57,15 @@ public:
 
 	void SetFont(MFFont *pFont);
 
+	void SetClickCallback(Button::ClickCallback clickHandler) { clickCallback = clickHandler; }
+	void SetChangeCallback(ChangeCallback changeHandler) { changeCallback = changeHandler; }
 	int GetValue() { return value; }
 	int SetValue(int newValue);
 
 protected:
 	CheckBox(const MFRect &rect) : InputReceiver(rect) { }
 
-	static void ButtonCallback(int button, void *pUserData, int buttonID);
+	void ButtonCallback(int button, int buttonID);
 
 	char text[64];
 
@@ -75,8 +77,8 @@ protected:
 
 	int isPressed;
 
-	ChangeCallback *pCallback;
-	void *pUserData;
+	Button::ClickCallback clickCallback;
+	ChangeCallback changeCallback;
 
 	int value;
 	int buttonID;

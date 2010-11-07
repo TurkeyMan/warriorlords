@@ -29,7 +29,7 @@ MenuScreen::MenuScreen()
 	// populate map list
 	MFRect rect = { 10.f, 64.f, 240.f, 200.f };
 	pMapList = ListBox::Create(&rect, pFont);
-	pMapList->SetSelectCallback(SelectMap, this);
+	pMapList->SetSelectCallback(MakeDelegate(this, &MenuScreen::SelectMap));
 
 	MFFindData fd;
 	MFFind *pFind = MFFileSystem_FindFirst("game:Map*.ini", &fd);
@@ -61,7 +61,7 @@ MenuScreen::MenuScreen()
 
 	// create the game name textbox
 	MFRect stringPos = { 340, 70, 160, MFFont_GetFontHeight(pFont) };
-	pGameName = StringBox::Create(pFont, &stringPos, NULL, NULL);
+	pGameName = StringBox::Create(pFont, &stringPos);
 
 	// start buttons
 	MFRect uvs, pos = { 0, 0, 64.f, 64.f };
@@ -74,17 +74,20 @@ MenuScreen::MenuScreen()
 	pos.y = 32.f + 256.f;
 	uvs.x = 0.25f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
 	uvs.width = 0.25f; uvs.height = 0.25f;
-	pStart = Button::Create(pIcons, &pos, &uvs, MFVector::one, Click, this, 0, false);
+	pStart = Button::Create(pIcons, &pos, &uvs, MFVector::one, 0, false);
+	pStart->SetClickCallback(MakeDelegate(this, &MenuScreen::Click));
 
 	// edit map button
 	pos.x = 32.f + 64.f;
 	uvs.x = 0.75f + texelCenterOffset; uvs.y = 0.75f + texelCenterOffset;
-	pEdit = Button::Create(pIcons, &pos, &uvs, MFVector::one, Click, this, 1, false);
+	pEdit = Button::Create(pIcons, &pos, &uvs, MFVector::one, 1, false);
+	pEdit->SetClickCallback(MakeDelegate(this, &MenuScreen::Click));
 
 	// return button
 	pos.x = 64.f + 128.f;
 	uvs.x = 0.0f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
-	pReturn = Button::Create(pIcons, &pos, &uvs, MFVector::one, Click, this, 2, false);
+	pReturn = Button::Create(pIcons, &pos, &uvs, MFVector::one, 2, false);
+	pReturn->SetClickCallback(MakeDelegate(this, &MenuScreen::Click));
 }
 
 MenuScreen::~MenuScreen()
@@ -199,38 +202,36 @@ void MenuScreen::Deselect()
 	pInputManager->PopReceiver(this);
 }
 
-void MenuScreen::Click(int button, void *pUserData, int buttonID)
+void MenuScreen::Click(int button, int buttonID)
 {
-	MenuScreen *pMenu = (MenuScreen*)pUserData;
-
 	switch(buttonID)
 	{
 		case 0:
 		case 1:
 		{
-			int selection = pMenu->pMapList->GetSelection();
+			int selection = pMapList->GetSelection();
 			if(selection == -1)
 				return;
 
-			MapData *pMap = (MapData*)pMenu->pMapList->GetItemData(selection);
+			MapData *pMap = (MapData*)pMapList->GetItemData(selection);
 
 			// create game
 			if(buttonID == 0)
 			{
-				if(pMenu->gameType == 0)
+				if(gameType == 0)
 				{
 					Session *pSession = Session::GetCurrent();
 					if(!pSession)
 					{
-						pMenu->pMessage = "Not logged in!";
+						pMessage = "Not logged in!";
 						break;
 					}
 
-					const char *pGameName = pMenu->pGameName->GetString();
+					const char *pGameName = this->pGameName->GetString();
 
 					if(pGameName[0] == 0)
 					{
-						pMenu->pMessage = "Enter a game name!";
+						pMessage = "Enter a game name!";
 						break;
 					}
 
@@ -249,13 +250,13 @@ void MenuScreen::Click(int button, void *pUserData, int buttonID)
 						switch(err)
 						{
 							case SE_CONNECTION_FAILED:
-								pMenu->pMessage = "Couldn't connect to server!";
+								pMessage = "Couldn't connect to server!";
 								break;
 							case SE_INVALID_GAME:
-								pMenu->pMessage = "Invalid game!";
+								pMessage = "Invalid game!";
 								break;
 							default:
-								pMenu->pMessage = "Unknown Error!";
+								pMessage = "Unknown Error!";
 								break;
 						}
 					}
@@ -294,16 +295,14 @@ void MenuScreen::Click(int button, void *pUserData, int buttonID)
 	}
 }
 
-void MenuScreen::SelectMap(int item, void *pUserData)
+void MenuScreen::SelectMap(int item)
 {
-	MenuScreen *pScreen = (MenuScreen*)pUserData;
-
-	pScreen->pStart->Enable(item >= 0);
+	pStart->Enable(item >= 0);
 
 	if(item < 0)
 		return;
 
-	MapData *pMap = (MapData*)pScreen->pMapList->GetItemData(item);
+	MapData *pMap = (MapData*)pMapList->GetItemData(item);
 	if(!pMap->bDetailsLoaded)
 	{
 		Map::GetMapDetails(pMap->name, &pMap->details);

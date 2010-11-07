@@ -8,6 +8,7 @@ struct Cell
 	uint16 gScore, hScore, fScore;
 	uint8 x, y;
 	uint8 open;
+	uint8 traversible;
 
 	void Set(int _x, int _y, int _gScore, int _hScore, int _fScore)
 	{
@@ -142,7 +143,7 @@ bool Path::FindPath(Group *pGroup, int destX, int destY)
 
 				step.x = gpSearchList[x].x;
 				step.y = gpSearchList[x].y;
-				step.flags = 0;
+				step.flags = gpSearchList[x].traversible ? 4 : 0;
 
 				x = gpSearchList[x].from;
 			}
@@ -261,8 +262,8 @@ bool Path::FindPath(Group *pGroup, int destX, int destY)
 				}
 
 				// if we can't move that way
-				if(bNonTraversible)
-					continue;
+//				if(bNonTraversible)
+//					continue;
 
 				int y = -1;
 				for(int a=0; a<numItems; ++a)
@@ -278,7 +279,7 @@ bool Path::FindPath(Group *pGroup, int destX, int destY)
 				{
 					// calculate the path score
 					MapTile *pTile = pMap->GetTile(tx, ty);
-					int terrainSpeed = Map::GetMovementPenalty(pTile, terrainPenalties, player, bRoadWalk);
+					int terrainSpeed = !bNonTraversible ? Map::GetMovementPenalty(pTile, terrainPenalties, player, bRoadWalk) : 1000;
 					int cornerPenalty = (tx != item.x) && (ty != item.y) ? 1 : 0;
 
 					int tg = item.gScore + (terrainSpeed*2) + cornerPenalty;
@@ -310,6 +311,7 @@ bool Path::FindPath(Group *pGroup, int destX, int destY)
 						gpSearchList[y].from = x;
 						gpSearchList[y].gScore = tg;
 						gpSearchList[y].fScore = tg + gpSearchList[y].hScore;
+						gpSearchList[y].traversible = bNonTraversible ? 0 : 1;
 					}
 				}
 			}

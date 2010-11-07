@@ -44,19 +44,22 @@ MapScreen::MapScreen(Game *_pGame)
 	pos.y = display.height - (16.f + (float)tileHeight);
 	uvs.x = 0.25f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
 	uvs.width = 0.25f; uvs.height = 0.25f;
-	pEndTurn = Button::Create(pIcons, &pos, &uvs, MFVector::one, EndTurn, this, 0, false);
+	pEndTurn = Button::Create(pIcons, &pos, &uvs, MFVector::one, 0, false);
+	pEndTurn->SetClickCallback(MakeDelegate(this, &MapScreen::EndTurn));
 
 	// minimap button
 	pos.x = display.width - (16.f + (float)tileWidth);
 	pos.y = 16.f;
 	uvs.x = 0.75f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
-	pMiniMap = Button::Create(pIcons, &pos, &uvs, MFVector::one, ShowMiniMap, this, 0, false);
+	pMiniMap = Button::Create(pIcons, &pos, &uvs, MFVector::one, 0, false);
+	pMiniMap->SetClickCallback(MakeDelegate(this, &MapScreen::ShowMiniMap));
 
 	// undo button
 	pos.x = 16.f;
 	pos.y = display.height - (16.f + (float)tileHeight);
 	uvs.x = 0.f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
-	pUndo = Button::Create(pIcons, &pos, &uvs, MFVector::one, UndoMove, this, 0, false);
+	pUndo = Button::Create(pIcons, &pos, &uvs, MFVector::one, 0, false);
+	pUndo->SetClickCallback(MakeDelegate(this, &MapScreen::UndoMove));
 }
 
 MapScreen::~MapScreen()
@@ -129,9 +132,15 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 				{
 					Step *pStep = pSelection->pPath->GetLast();
 
-					// first check for an attack command
+					// if we commit to move
 					if(cursorX == pStep->x && cursorY == pStep->y)
 					{
+						// check we can move at all
+						Step *pFirst = pSelection->pPath->GetPath();
+						if(!pFirst->CanMove() || pFirst->InvalidMove())
+							break;
+
+						// first check for an attack command
 						if(pSelection->pPath->IsEnd() && pStep->CanMove())
 						{
 							const char *pMessage = NULL;
@@ -320,6 +329,12 @@ int MapScreen::Update()
 		while(countdown <= 0.f)
 		{
 			Step *pStep = pSelection->pPath->GetPath();
+			if(pStep->InvalidMove())
+			{
+				bMoving = false;
+				break;
+			}
+
 			int x = pStep->x;
 			int y = pStep->y;
 
@@ -425,6 +440,9 @@ void MapScreen::Draw()
 
 				for(int p = 0; p < len; ++p)
 				{
+					if(pStep[p].InvalidMove())
+						break;
+
 					float texelCenterOffset = MFRenderer_GetTexelCenterOffset() / 256.f;
 					if(pStep[p].x >= xS && pStep[p].y >= yS && pStep[p].x < xTiles && pStep[p].y < yTiles)
 					{
@@ -436,6 +454,9 @@ void MapScreen::Draw()
 
 				for(int p = 0; p < len; ++p)
 				{
+					if(pStep[p].InvalidMove())
+						break;
+
 					if(pStep[p].cost > 2 && pStep[p].CanMove())
 						MFFont_DrawTextf(pSmallNumbers, pStep[p].x + 0.61f, pStep[p].y + 0.61f, 0.27f, MFVector::yellow, "%g", (float)pStep[p].cost * 0.5f);
 				}
@@ -494,44 +515,44 @@ void MapScreen::Deselect()
 	bUndoVisible = false;
 }
 
-void MapScreen::EndTurn(int button, void *pUserData, int buttonID)
+void MapScreen::EndTurn(int button, int buttonID)
 {
 	Game *pGame = Game::GetCurrent();
 
 	if(pGame->NumPendingActions() > 0)
 		pGame->ReplayNextAction();
 	else if(pGame->IsMyTurn())
-		pGame->ShowRequest("End Turn?", FinishTurn, false, pUserData);
+		pGame->ShowRequest("End Turn?", MakeDelegate(this, &MapScreen::FinishTurn), false);
 }
 
-void MapScreen::FinishTurn(int selection, void *pUserData)
+void MapScreen::FinishTurn(int selection)
 {
 	if(selection == 0)
 	{
-		MapScreen *pMapScreen = (MapScreen*)pUserData;
-		pMapScreen->SelectGroup(NULL);
-		pMapScreen->pGame->EndTurn();
+		SelectGroup(NULL);
+		pGame->EndTurn();
 	}
 }
 
-void MapScreen::ShowMiniMap(int button, void *pUserData, int buttonID)
+void MapScreen::ShowMiniMap(int button, int buttonID)
 {
-	MapScreen *pThis = (MapScreen*)pUserData;
-	pThis->miniMap.Show(Game::GetCurrent()->GetMap());
+	miniMap.Show(Game::GetCurrent()->GetMap());
 }
 
-void MapScreen::UndoMove(int button, void *pUserData, int buttonID)
+void MapScreen::UndoMove(int button, int buttonID)
 {
-	MapScreen *pThis = (MapScreen*)pUserData;
+	if(bMoving)
+		return;
 
-	Group *pGroup = pThis->pGame->RevertAction(pThis->pSelection);
+	Group *pGroup = pGame->RevertAction(pSelection);
 	if(pGroup)
 	{
 		MapTile *pTile = pGroup->GetTile();
-		pThis->pMap->CenterView((float)pTile->GetX(), (float)pTile->GetY());
-
-		pThis->SelectGroup(pGroup);
+		pMap->CenterView((float)pTile->GetX(), (float)pTile->GetY());
 	}
+
+	SelectGroup(pGroup);
+	ShowUndoButton();
 }
 
 void MapScreen::SelectGroup(Group *pGroup)

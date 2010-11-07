@@ -9,15 +9,13 @@ struct MFFont;
 class StringBox : public InputReceiver
 {
 public:
-	typedef void (ChangeCallback)(const char *pString, void *pUserData);
+	typedef FastDelegate1<const char *> ChangeCallback;
 
 	StringBox(MFRect &rect, StringEntryLogic::StringType type);
 	virtual ~StringBox();
 
-	static StringBox *Create(MFFont *pFont, MFRect *pPos, ChangeCallback *pCallback = NULL, void *pUserData = NULL, StringEntryLogic::StringType type = StringEntryLogic::ST_Regular, const char *pDefaultString = NULL);
+	static StringBox *Create(MFFont *pFont, MFRect *pPos, StringEntryLogic::StringType type = StringEntryLogic::ST_Regular, const char *pDefaultString = NULL);
 	void Destroy();
-
-	void RegisterTabCallback(ChangeCallback *pCallback, void *pUserData = NULL);
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 
@@ -29,17 +27,17 @@ public:
 
 	void Enable(bool bEnable);
 
+	void SetChangeCallback(ChangeCallback handler) { changeCallback = handler; }
+	void SetTabCallback(ChangeCallback handler) { tabCallback = handler; }
 	void SetString(const char *pString) { return stringLogic.SetString(pString); }
 	const char *GetString() { return stringLogic.GetString(); }
 
 protected:
-	static void StringChangeCallback(const char *pString, void *pUserData);
+	void StringChangeCallback(const char *pString);
 
 	StringEntryLogic stringLogic;
-	ChangeCallback *pCallback;
-	void *pUserData;
-	ChangeCallback *pTab;
-	void *pTabData;
+	ChangeCallback changeCallback;
+	ChangeCallback tabCallback;
 
 	MFFont *pFont;
 

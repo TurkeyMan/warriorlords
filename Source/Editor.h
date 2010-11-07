@@ -15,7 +15,7 @@ public:
 	Chooser();
 	~Chooser();
 
-	Button *AddButton(int page, MFMaterial *pImage, MFRect *pUVs, const MFVector &colour, int buttonID, Button::TriggerCallback *pCallback, void *pUserData);
+	Button *AddButton(int page, MFMaterial *pImage, MFRect *pUVs, const MFVector &colour, int buttonID, Button::ClickCallback callback);
 
 	void Show();
 	void Hide();
@@ -40,7 +40,7 @@ protected:
 	int currentPage;
 	bool bVisible;
 
-	static void FlipPage(int button, void *pUserData, int buttonID);
+	void FlipPage(int button, int buttonID);
 };
 
 class CastleEdit : public InputReceiver
@@ -75,9 +75,9 @@ protected:
 	bool bVisible;
 	bool bHide;
 
-	static void SelectUnit(int button, void *pUserData, int buttonID);
-	static void SetUnit(int button, void *pUserData, int buttonID);
-	static void ChangeCallback(const char *pString, void *pUserData);
+	void SelectUnit(int button, int buttonID);
+	void SetUnit(int button, int buttonID);
+	void NameChangeCallback(const char *pString);
 };
 
 class Editor : public Screen
@@ -93,11 +93,11 @@ public:
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 
-	static void BrushSelect(int button, void *pUserData, int buttonID);
-	static void ChooseBrush(int button, void *pUserData, int buttonID);
-	static void FlipPage(int button, void *pUserData, int buttonID);
-	static void ShowMiniMap(int button, void *pUserData, int buttonID);
-	static void ChangeMode(int button, void *pUserData, int buttonID);
+	void BrushSelect(int button,int buttonID);
+	void ChooseBrush(int button, int buttonID);
+	void FlipPage(int button, int buttonID);
+	void ShowMiniMap(int button, int buttonID);
+	void ChangeMode(int button, int buttonID);
 
 protected:
 	Game *pGame;

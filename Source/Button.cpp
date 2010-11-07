@@ -6,15 +6,14 @@
 #include "MFInput.h"
 #include "MFFont.h"
 
-Button *Button::Create(const MFMaterial *pImage, const MFRect *pPosition, const MFRect *pUVs, const MFVector &colour, TriggerCallback *pCallback, void *pUserData, int buttonID, bool bTriggerOnDown)
+Button *Button::Create(const MFMaterial *pImage, const MFRect *pPosition, const MFRect *pUVs, const MFVector &colour, int buttonID, bool bTriggerOnDown)
 {
 	Button *pNew = (Button*)MFHeap_Alloc(sizeof(Button));
 	pNew = new(pNew) Button(*pPosition);
 
 	pNew->pMaterial = pImage;
 	pNew->uvs = *pUVs;
-	pNew->pCallback = pCallback;
-	pNew->pUserData = pUserData;
+	pNew->clickCallback.clear();
 	pNew->isPressed = -1;
 	pNew->bTriggerOnDown = bTriggerOnDown;
 	pNew->bOutline = false;
@@ -52,8 +51,8 @@ bool Button::HandleInputEvent(InputEvent ev, InputInfo &info)
 			{
 				if(bTriggerOnDown)
 				{
-					if(pCallback)
-						pCallback(info.buttonID, pUserData, buttonID);
+					if(clickCallback)
+						clickCallback(info.buttonID, buttonID);
 				}
 				else
 				{
@@ -70,8 +69,8 @@ bool Button::HandleInputEvent(InputEvent ev, InputInfo &info)
 				MFRect client = { 0, 0, rect.width, rect.height };
 				if(MFTypes_PointInRect(info.up.x, info.up.y, &client))
 				{
-					if(pCallback)
-						pCallback(info.buttonID, pUserData, buttonID);
+					if(clickCallback)
+						clickCallback(info.buttonID, buttonID);
 				}
 			}
 			return true;
@@ -122,7 +121,7 @@ void Button::SetOutline(bool bEnable, const MFVector &colour)
 	outlineColour = colour;
 }
 
-CheckBox *CheckBox::Create(const MFRect *pPosition, const char *pText, const MFVector &colour, int value, ChangeCallback *pCallback, void *pUserData, int ButtonID)
+CheckBox *CheckBox::Create(const MFRect *pPosition, const char *pText, const MFVector &colour, int value, int ButtonID)
 {
 	CheckBox *pNew = (CheckBox*)MFHeap_Alloc(sizeof(CheckBox));
 	pNew = new(pNew) CheckBox(*pPosition);
@@ -134,7 +133,8 @@ CheckBox *CheckBox::Create(const MFRect *pPosition, const char *pText, const MFV
 	buttonRect.x = pPosition->x;
 	buttonRect.y = pPosition->y;
 	buttonRect.width = buttonRect.height = pPosition->height;
-	pNew->pButton = Button::Create(pNew->pIcons, &buttonRect, &uvs, MFVector::one, ButtonCallback, pNew, 0, false);
+	pNew->pButton = Button::Create(pNew->pIcons, &buttonRect, &uvs, MFVector::one, 0, false);
+	pNew->pButton->SetClickCallback(MakeDelegate(pNew, &CheckBox::ButtonCallback));
 
 	MFString_Copy(pNew->text, pText);
 
@@ -143,8 +143,8 @@ CheckBox *CheckBox::Create(const MFRect *pPosition, const char *pText, const MFV
 	pNew->isPressed = false;
 	pNew->value = value;
 	pNew->buttonID = ButtonID;
-	pNew->pCallback = pCallback;
-	pNew->pUserData = pUserData;
+	pNew->clickCallback.clear();
+	pNew->changeCallback.clear();
 
 	return pNew;
 }
@@ -189,14 +189,16 @@ int CheckBox::SetValue(int newValue)
 	return oldValue;
 }
 
-void CheckBox::ButtonCallback(int button, void *pUserData, int buttonID)
+void CheckBox::ButtonCallback(int button, int buttonID)
 {
-	CheckBox *pCB = (CheckBox*)pUserData;
-	pCB->value = 1 - pCB->value;
+	value = 1 - value;
 
-	MFRect uvs = { 0.5f - 0.25f*(float)pCB->value, 0.f, 0.25f, 0.25f };
-	pCB->pButton->SetImage(pCB->pIcons, &uvs, MFVector::white);
+	MFRect uvs = { 0.5f - 0.25f*(float)value, 0.f, 0.25f, 0.25f };
+	pButton->SetImage(pIcons, &uvs, MFVector::white);
 
-	if(pCB->pCallback)
-		pCB->pCallback(pCB->value, pCB->pUserData, pCB->buttonID);
+	if(clickCallback)
+		clickCallback(button, buttonID);
+
+	if(changeCallback)
+		changeCallback(value, buttonID);
 }

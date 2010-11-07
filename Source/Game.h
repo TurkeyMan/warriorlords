@@ -165,7 +165,7 @@ public:
 	MFFont *GetBattleNumbersFont() { return pBattleNumbersFont; }
 	MFFont *GetSmallNumbersFont() { return pSmallNumbersFont; }
 
-	void ShowRequest(const char *pMessage, RequestBox::SelectCallback *pCallback, bool bNotification, void *pUserData = NULL);
+	void ShowRequest(const char *pMessage, RequestBox::SelectCallback callback, bool bNotification);
 	bool DrawRequest();
 
 	void PushAction(GameActions action);

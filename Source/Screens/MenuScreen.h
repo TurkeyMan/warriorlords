@@ -45,8 +45,8 @@ protected:
 
 	const char *pMessage;
 
-	static void Click(int button, void *pUserData, int buttonID);
-	static void SelectMap(int item, void *pUserData);
+	void Click(int button, int buttonID);
+	void SelectMap(int item);
 };
 
 #endif

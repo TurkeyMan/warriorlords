@@ -36,16 +36,16 @@ protected:
 
 	uint32 continueGame;
 
-	static void CreateGame(int button, void *pUserData, int buttonID);
-	static void JoinGame(int button, void *pUserData, int buttonID);
-	static void FindGame(int button, void *pUserData, int buttonID);
-	static void ContinueGame(int button, void *pUserData, int buttonID);
+	void CreateGame(int button, int buttonID);
+	void JoinGame(int button, int buttonID);
+	void FindGame(int button, int buttonID);
+	void ContinueGame(int button, int buttonID);
 
-	static void SelectPending(int item, void *pUserData);
-	static void SelectGame(int item, void *pUserData);
+	void SelectPending(int item);
+	void SelectGame(int item);
 
-	static void EnterGame(int item, void *pUserData);
-	static void EnterPending(int item, void *pUserData);
+	void EnterGame(int item);
+	void EnterPending(int item);
 };
 
 #endif

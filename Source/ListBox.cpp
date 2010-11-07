@@ -66,8 +66,8 @@ bool ListBox::HandleInputEvent(InputEvent ev, InputInfo &info)
 				if(selection < 0 || selection >= numItems)
 					selection = -1;
 
-				if(pSelectCallback)
-					pSelectCallback(selection, pSelectUserData);
+				if(selectCallback)
+					selectCallback(selection);
 			}
 			return true;
 		case IE_Drag:

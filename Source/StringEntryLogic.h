@@ -1,7 +1,7 @@
 #if !defined(_STRING_ENTRY_LOGIC)
 #define _STRING_ENTRY_LOGIC
 
-typedef void (*StringChangeCallback)(const char *pString, void *pUserData);
+typedef FastDelegate1<const char *> StringChangeCallback;
 
 class OnScreenKeyboard
 {
@@ -43,7 +43,7 @@ public:
 
 	int StringLength() { return stringLen; }
 
-	void SetChangeCallback(StringChangeCallback _pChangeCallback, void *_pUserData) { pChangeCallback = _pChangeCallback; pUserData = _pUserData; }
+	void SetChangeCallback(StringChangeCallback callback) { changeCallback = callback; }
 
 	int GetCursorPos() { return cursorPos; }
 	void GetSelection(int *pSelStart, int *pSelEnd) { if(pSelStart) *pSelStart = selectionStart; if(pSelEnd) *pSelEnd = selectionEnd; }
@@ -65,8 +65,7 @@ private:
 
 	StringType type;
 
-	StringChangeCallback pChangeCallback;
-	void *pUserData;
+	StringChangeCallback changeCallback;
 
 	static OnScreenKeyboard *pOSK;
 

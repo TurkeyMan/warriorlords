@@ -14,7 +14,8 @@ Inventory::Inventory()
 	for(int a=0; a<8; ++a)
 	{
 		MFRect pos = { x + (a & 0x3)*72.f, window.y + 40.f + (a >> 2)*72.f, 64.f, 64.f };
-		pInventory[a] = Button::Create(pItems, &pos, &pos, MFVector::one, SelectItem, this, a);
+		pInventory[a] = Button::Create(pItems, &pos, &pos, MFVector::one, a);
+		pInventory[a]->SetClickCallback(MakeDelegate(this, &Inventory::SelectItem));
 	}
 }
 
@@ -93,8 +94,7 @@ void Inventory::Hide()
 	Window::Hide();
 }
 
-void Inventory::SelectItem(int button, void *pUserData, int buttonID)
+void Inventory::SelectItem(int button, int buttonID)
 {
-	Inventory *pThis = (Inventory*)pUserData;
-	pThis->selected = buttonID;
+	selected = buttonID;
 }

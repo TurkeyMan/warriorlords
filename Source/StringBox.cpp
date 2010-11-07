@@ -12,13 +12,11 @@ static float gBlinkTime = 0.4f;
 StringBox::StringBox(MFRect &rect, StringEntryLogic::StringType type)
 : InputReceiver(rect), stringLogic(256, type)
 {
-	stringLogic.SetChangeCallback(StringChangeCallback, this);
+	stringLogic.SetChangeCallback(MakeDelegate(this, &StringBox::StringChangeCallback));
 
 	pFont = NULL;
-	pCallback = NULL;
-	pUserData = NULL;
-	pTab = NULL;
-	pTabData = NULL;
+	changeCallback.clear();
+	tabCallback.clear();
 
 	bVisible = true;
 	bEnabled = false;
@@ -30,7 +28,7 @@ StringBox::~StringBox()
 {
 }
 
-StringBox *StringBox::Create(MFFont *pFont, MFRect *pPos, ChangeCallback *pCallback, void *pUserData, StringEntryLogic::StringType type, const char *pDefaultString)
+StringBox *StringBox::Create(MFFont *pFont, MFRect *pPos, StringEntryLogic::StringType type, const char *pDefaultString)
 {
 	StringBox *pNew = (StringBox*)MFHeap_Alloc(sizeof(StringBox));
 	pNew = new(pNew) StringBox(*pPos, type);
@@ -39,8 +37,6 @@ StringBox *StringBox::Create(MFFont *pFont, MFRect *pPos, ChangeCallback *pCallb
 		pNew->stringLogic.SetString(pDefaultString);
 
 	pNew->pFont = pFont;
-	pNew->pCallback = pCallback;
-	pNew->pUserData = pUserData;
 
 	return pNew;
 }
@@ -49,12 +45,6 @@ void StringBox::Destroy()
 {
 	StringBox::~StringBox();
 	MFHeap_Free(this);
-}
-
-void StringBox::RegisterTabCallback(ChangeCallback *pCallback, void *pUserData)
-{
-	pTab = pCallback;
-	pTabData = pUserData;
 }
 
 bool StringBox::HandleInputEvent(InputEvent ev, InputInfo &info)
@@ -97,8 +87,8 @@ void StringBox::Update()
 			{
 				Enable(false);
 
-				if(pTab)
-					pTab(stringLogic.GetString(), pTabData);
+				if(tabCallback)
+					tabCallback(stringLogic.GetString());
 			}
 		}
 		else
@@ -168,12 +158,10 @@ void StringBox::Enable(bool bEnable)
 	pInputManager->SetExclusiveReceiver(bEnable ? this : NULL);
 }
 
-void StringBox::StringChangeCallback(const char *pString, void *pUserData)
+void StringBox::StringChangeCallback(const char *pString)
 {
-	StringBox *pStringBox = (StringBox*)pUserData;
-
 	gBlinkTime = 0.4f;
 
-	if(pStringBox->pCallback)
-		pStringBox->pCallback(pStringBox->stringLogic.GetString(), pStringBox->pUserData);
+	if(changeCallback)
+		changeCallback(stringLogic.GetString());
 }

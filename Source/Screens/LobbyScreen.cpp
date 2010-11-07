@@ -27,17 +27,20 @@ LobbyScreen::LobbyScreen()
 	pos.y = 32.f + 256.f;
 	uvs.x = 0.25f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
 	uvs.width = 0.25f; uvs.height = 0.25f;
-	pBegin = Button::Create(pIcons, &pos, &uvs, MFVector::one, Click, this, 0, false);
+	pBegin = Button::Create(pIcons, &pos, &uvs, MFVector::one, 0, false);
+	pBegin->SetClickCallback(MakeDelegate(this, &LobbyScreen::Click));
 
 	// leave button
 	pos.x = 64.f + 96.f;
 	uvs.x = 0.5f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
-	pLeave = Button::Create(pIcons, &pos, &uvs, MFVector::one, Click, this, 1, false);
+	pLeave = Button::Create(pIcons, &pos, &uvs, MFVector::one, 1, false);
+	pLeave->SetClickCallback(MakeDelegate(this, &LobbyScreen::Click));
 
 	// return button
 	pos.x = 64.f + 96.f + 128.f;
 	uvs.x = 0.0f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
-	pReturn = Button::Create(pIcons, &pos, &uvs, MFVector::one, Click, this, 2, false);
+	pReturn = Button::Create(pIcons, &pos, &uvs, MFVector::one, 2, false);
+	pReturn->SetClickCallback(MakeDelegate(this, &LobbyScreen::Click));
 
 	// create the select boxes
 	MFRect rect = { 10.f, 10.f, 100.f, 20.f };
@@ -50,12 +53,12 @@ LobbyScreen::LobbyScreen()
 		rect.x = 300.f;
 		rect.width = 90.f;
 		pRaces[a] = SelectBox::Create(&rect, pFont);
-		pRaces[a]->SetSelectCallback(SetRace, this, a);
+		pRaces[a]->SetSelectCallback(MakeDelegate(this, &LobbyScreen::SetRace), a);
 
 		rect.x += 100.f;
 		rect.width = 30.f;
 		pColours[a] = SelectBox::Create(&rect, pFont);
-		pColours[a]->SetSelectCallback(SetColour, this, a);
+		pColours[a]->SetSelectCallback(MakeDelegate(this, &LobbyScreen::SetColour), a);
 	}
 }
 
@@ -228,10 +231,8 @@ void LobbyScreen::Deselect()
 	pInputManager->PopReceiver(this);
 }
 
-void LobbyScreen::Click(int button, void *pUserData, int buttonID)
+void LobbyScreen::Click(int button, int buttonID)
 {
-	LobbyScreen *pScreen = (LobbyScreen*)pUserData;
-
 	switch(buttonID)
 	{
 		case 0:
@@ -241,13 +242,13 @@ void LobbyScreen::Click(int button, void *pUserData, int buttonID)
 			// setup game parameters
 			GameParams params;
 			MFZeroMemory(&params, sizeof(params));
-			params.pMap = pScreen->details.map;
-			params.bOnline = !pScreen->bOffline;
+			params.pMap = details.map;
+			params.bOnline = !bOffline;
 
 			// set up the players
 			bool bAssigned[16];
 			MFZeroMemory(bAssigned, sizeof(bAssigned));
-			params.numPlayers = pScreen->details.numPlayers;
+			params.numPlayers = details.numPlayers;
 			for(int a=0; a<params.numPlayers; ++a)
 			{
 				// select a random starting position for the player
@@ -257,19 +258,19 @@ void LobbyScreen::Click(int button, void *pUserData, int buttonID)
 				bAssigned[p] = true;
 
 				// assign the player details
-				params.players[p].id = pScreen->details.players[a].id;
-				params.players[p].race = pScreen->details.players[a].race;
-				params.players[p].colour = pScreen->details.players[a].colour;
+				params.players[p].id = details.players[a].id;
+				params.players[p].race = details.players[a].race;
+				params.players[p].colour = details.players[a].colour;
 			}
 
 			// create the game
-			if(!pScreen->bOffline)
+			if(!bOffline)
 			{
 				uint32 players[16];
 				for(int a=0; a<params.numPlayers; ++a)
 					players[a] = params.players[a].id;
 
-				ServerError err = WLServ_BeginGame(pScreen->details.id, players, params.numPlayers, &params.gameID);
+				ServerError err = WLServ_BeginGame(details.id, players, params.numPlayers, &params.gameID);
 
 				if(err != SE_NO_ERROR)
 				{
@@ -289,7 +290,7 @@ void LobbyScreen::Click(int button, void *pUserData, int buttonID)
 			// leave the game
 			Session *pSession = Session::GetCurrent();
 			if(pSession)
-				WLServ_LeaveGame(pSession->GetUserID(), pScreen->details.id);
+				WLServ_LeaveGame(pSession->GetUserID(), details.id);
 		}
 		case 2:
 		{
@@ -300,35 +301,31 @@ void LobbyScreen::Click(int button, void *pUserData, int buttonID)
 	}
 }
 
-void LobbyScreen::SetRace(int item, void *pUserData, int id)
+void LobbyScreen::SetRace(int item, int id)
 {
-	LobbyScreen *pThis = (LobbyScreen*)pUserData;
-
 	++item;
 	ServerError err = SE_NO_ERROR;
 	
-	if(!pThis->bOffline)
-		err = WLServ_SetRace(pThis->details.id, pThis->details.players[id].id, item);
+	if(!bOffline)
+		err = WLServ_SetRace(details.id, details.players[id].id, item);
 
 	if(err == SE_NO_ERROR)
-		pThis->details.players[id].race = item;
+		details.players[id].race = item;
 	else
-		pThis->pRaces[id]->SetSelection(pThis->details.players[id].race - 1);
+		pRaces[id]->SetSelection(details.players[id].race - 1);
 }
 
-void LobbyScreen::SetColour(int item, void *pUserData, int id)
+void LobbyScreen::SetColour(int item, int id)
 {
-	LobbyScreen *pThis = (LobbyScreen*)pUserData;
-
 	++item;
 	ServerError err = SE_NO_ERROR;
 
-	if(!pThis->bOffline)
-		err = WLServ_SetColour(pThis->details.id, pThis->details.players[id].id, item);
+	if(!bOffline)
+		err = WLServ_SetColour(details.id, details.players[id].id, item);
 
-	for(int a=0; a<pThis->details.numPlayers; ++a)
+	for(int a=0; a<details.numPlayers; ++a)
 	{
-		if(item == pThis->details.players[a].colour)
+		if(item == details.players[a].colour)
 		{
 			err = SE_ALREADY_PRESENT;
 			break;
@@ -336,7 +333,7 @@ void LobbyScreen::SetColour(int item, void *pUserData, int id)
 	}
 
 	if(err == SE_NO_ERROR)
-		pThis->details.players[id].colour = item;
+		details.players[id].colour = item;
 	else
-		pThis->pColours[id]->SetSelection(pThis->details.players[id].colour - 1);
+		pColours[id]->SetSelection(details.players[id].colour - 1);
 }

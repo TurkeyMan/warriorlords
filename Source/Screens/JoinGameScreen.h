@@ -30,7 +30,7 @@ protected:
 
 	const char *pMessage;
 
-	static void Click(int button, void *pUserData, int buttonID);
+	void Click(int button, int buttonID);
 };
 
 #endif

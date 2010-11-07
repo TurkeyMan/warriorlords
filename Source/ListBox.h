@@ -32,7 +32,7 @@ protected:
 class ListBox : public InputReceiver
 {
 public:
-	typedef void (ListCallback)(int item, void *pUserData);
+	typedef FastDelegate1<int> ListCallback;
 
 	static ListBox *Create(const MFRect *pPosition, MFFont *pFont, MFMaterial *pIcons = NULL, float iconSize = 32);
 	void Destroy();
@@ -45,8 +45,8 @@ public:
 
 	void HighlightCursor(bool bEnable) { bHighlightCursor = bEnable; }
 
-	void SetSelectCallback(ListCallback *pCallback, void *pUserData) { pSelectCallback = pCallback; pSelectUserData = pUserData; }
-	void SetDblClickCallback(ListCallback *pCallback, void *pUserData) { pDblClickCallback = pCallback; pDblClickUserData = pUserData; }
+	void SetSelectCallback(ListCallback callback) { selectCallback = callback; }
+	void SetDblClickCallback(ListCallback callback) { dblClickCallback = callback; }
 
 	void Clear();
 
@@ -96,10 +96,8 @@ protected:
 	float downPos;
 	bool bSelecting;
 
-	ListCallback *pSelectCallback;
-	void *pSelectUserData;
-	ListCallback *pDblClickCallback;
-	void *pDblClickUserData;
+	ListCallback selectCallback;
+	ListCallback dblClickCallback;
 };
 
 #endif

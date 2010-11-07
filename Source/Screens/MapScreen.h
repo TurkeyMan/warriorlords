@@ -28,10 +28,10 @@ public:
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 
-	static void EndTurn(int button, void *pUserData, int buttonID);
-	static void FinishTurn(int selection, void *pUserData);
-	static void ShowMiniMap(int button, void *pUserData, int buttonID);
-	static void UndoMove(int button, void *pUserData, int buttonID);
+	void EndTurn(int button, int buttonID);
+	void FinishTurn(int selection);
+	void ShowMiniMap(int button, int buttonID);
+	void UndoMove(int button, int buttonID);
 
 	void SelectGroup(Group *pGroup);
 	Group *GetSelected();

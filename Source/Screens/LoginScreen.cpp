@@ -29,16 +29,16 @@ LoginScreen::LoginScreen()
 	float texelCenterOffset = MFRenderer_GetTexelCenterOffset() / 256.f;
 
 	MFRect stringPos = { 140, 80, 256, MFFont_GetFontHeight(pFont) };
-	pUsername = StringBox::Create(pFont, &stringPos, NULL, NULL);
-	pUsername->RegisterTabCallback(TabUser, this);
+	pUsername = StringBox::Create(pFont, &stringPos);
+	pUsername->SetTabCallback(MakeDelegate(this, &LoginScreen::TabUser));
 
 	stringPos.y += 40.f;
-	pPassword = StringBox::Create(pFont, &stringPos, NULL, NULL);
-	pPassword->RegisterTabCallback(TabPass, this);
+	pPassword = StringBox::Create(pFont, &stringPos);
+	pPassword->SetTabCallback(MakeDelegate(this, &LoginScreen::TabPass));
 
 	stringPos.y += 40.f;
-	pEmail = StringBox::Create(pFont, &stringPos, NULL, NULL);
-	pEmail->RegisterTabCallback(TabEmail, this);
+	pEmail = StringBox::Create(pFont, &stringPos);
+	pEmail->SetTabCallback(MakeDelegate(this, &LoginScreen::TabEmail));
 
 	// login button
 	MFRect display;
@@ -47,27 +47,32 @@ LoginScreen::LoginScreen()
 	pos.y = 32.f + 256.f;
 	uvs.x = 0.25f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
 	uvs.width = 0.25f; uvs.height = 0.25f;
-	pLogin = Button::Create(pIcons, &pos, &uvs, MFVector::one, Click, this, 0, false);
+	pLogin = Button::Create(pIcons, &pos, &uvs, MFVector::one, 0, false);
+	pLogin->SetClickCallback(MakeDelegate(this, &LoginScreen::Click));
 
 	// offline button
 	pos.x = 64.f + 96.f;
 	uvs.x = 0.5f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
-	pOffline = Button::Create(pIcons, &pos, &uvs, MFVector::one, Click, this, 1, false);
+	pOffline = Button::Create(pIcons, &pos, &uvs, MFVector::one, 1, false);
+	pOffline->SetClickCallback(MakeDelegate(this, &LoginScreen::Click));
 
 	// new account button
 	pos.x = 64.f + 96.f + 128.f;
 	uvs.x = 0.75f + texelCenterOffset; uvs.y = 0.75f + texelCenterOffset;
-	pNew = Button::Create(pIcons, &pos, &uvs, MFVector::one, Click, this, 2, false);
+	pNew = Button::Create(pIcons, &pos, &uvs, MFVector::one, 2, false);
+	pNew->SetClickCallback(MakeDelegate(this, &LoginScreen::Click));
 
 	// create account button
 	pos.x = 64.f;
 	uvs.x = 0.25f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
-	pCreate = Button::Create(pIcons, &pos, &uvs, MFVector::one, Click, this, 3, false);
+	pCreate = Button::Create(pIcons, &pos, &uvs, MFVector::one, 3, false);
+	pCreate->SetClickCallback(MakeDelegate(this, &LoginScreen::Click));
 
 	// return button
 	pos.x = 64.f + 96.f + 128.f;
 	uvs.x = 0.0f + texelCenterOffset; uvs.y = 0.f + texelCenterOffset;
-	pReturn = Button::Create(pIcons, &pos, &uvs, MFVector::one, Click, this, 4, false);
+	pReturn = Button::Create(pIcons, &pos, &uvs, MFVector::one, 4, false);
+	pReturn->SetClickCallback(MakeDelegate(this, &LoginScreen::Click));
 }
 
 LoginScreen::~LoginScreen()
@@ -168,10 +173,8 @@ void LoginScreen::Deselect()
 	pInputManager->PopReceiver(this);
 }
 
-void LoginScreen::Click(int button, void *pUserData, int buttonID)
+void LoginScreen::Click(int button, int buttonID)
 {
-	LoginScreen *pScreen = (LoginScreen*)pUserData;
-
 	switch(buttonID)
 	{
 		case 0:
@@ -179,7 +182,7 @@ void LoginScreen::Click(int button, void *pUserData, int buttonID)
 			Session *pSession = new Session();
 
 			// try and login...
-			ServerError err = pSession->Login(pScreen->pUsername->GetString(), pScreen->pPassword->GetString());
+			ServerError err = pSession->Login(pUsername->GetString(), pPassword->GetString());
 			if(err != SE_NO_ERROR)
 			{
 				delete pSession;
@@ -187,13 +190,13 @@ void LoginScreen::Click(int button, void *pUserData, int buttonID)
 				switch(err)
 				{
 					case SE_CONNECTION_FAILED:
-						pScreen->pMessage = "Couldn't connect to server!";
+						pMessage = "Couldn't connect to server!";
 						break;
 					case SE_INVALID_LOGIN:
-						pScreen->pMessage = "Invalid login!";
+						pMessage = "Invalid login!";
 						break;
 					default:
-						pScreen->pMessage = "Unknown Error!";
+						pMessage = "Unknown Error!";
 						break;
 				}
 				return;
@@ -201,7 +204,7 @@ void LoginScreen::Click(int button, void *pUserData, int buttonID)
 
 			if(pSession->IsActive())
 			{
-				pScreen->pMessage = NULL;
+				pMessage = NULL;
 
 				// set the current session
 				Session::SetCurrent(pSession);
@@ -225,16 +228,16 @@ void LoginScreen::Click(int button, void *pUserData, int buttonID)
 
 		case 2:
 		{
-			pScreen->state = 1;
-			pInputManager->PopReceiver(pScreen);
-			pInputManager->PushReceiver(pScreen);
-			pInputManager->PushReceiver(pScreen->pUsername);
-			pInputManager->PushReceiver(pScreen->pPassword);
-			pInputManager->PushReceiver(pScreen->pEmail);
-			pInputManager->PushReceiver(pScreen->pCreate);
-			pInputManager->PushReceiver(pScreen->pReturn);
-			pScreen->pPrompt = "Create Account:";
-			pScreen->pMessage = NULL;
+			state = 1;
+			pInputManager->PopReceiver(this);
+			pInputManager->PushReceiver(this);
+			pInputManager->PushReceiver(pUsername);
+			pInputManager->PushReceiver(pPassword);
+			pInputManager->PushReceiver(pEmail);
+			pInputManager->PushReceiver(pCreate);
+			pInputManager->PushReceiver(pReturn);
+			pPrompt = "Create Account:";
+			pMessage = NULL;
 			break;
 		}
 
@@ -242,9 +245,9 @@ void LoginScreen::Click(int button, void *pUserData, int buttonID)
 		{
 			Session *pSession = new Session();
 
-			const char *pUsername = pScreen->pUsername->GetString();
-			const char *pPassword = pScreen->pPassword->GetString();
-			const char *pEmail = pScreen->pEmail->GetString();
+			const char *pUsername = this->pUsername->GetString();
+			const char *pPassword = this->pPassword->GetString();
+			const char *pEmail = this->pEmail->GetString();
 
 			// create the account
 			uint32 user;
@@ -262,13 +265,13 @@ void LoginScreen::Click(int button, void *pUserData, int buttonID)
 				switch(err)
 				{
 					case SE_CONNECTION_FAILED:
-						pScreen->pMessage = "Couldn't connect to server!";
+						pMessage = "Couldn't connect to server!";
 						break;
 					case SE_INVALID_LOGIN:
-						pScreen->pMessage = "Invalid login!";
+						pMessage = "Invalid login!";
 						break;
 					default:
-						pScreen->pMessage = "Unknown Error!";
+						pMessage = "Unknown Error!";
 						break;
 				}
 				return;
@@ -276,7 +279,7 @@ void LoginScreen::Click(int button, void *pUserData, int buttonID)
 
 			if(pSession->IsActive())
 			{
-				pScreen->pMessage = NULL;
+				pMessage = NULL;
 
 				// set the current session
 				Session::SetCurrent(pSession);
@@ -289,40 +292,37 @@ void LoginScreen::Click(int button, void *pUserData, int buttonID)
 
 		case 4:
 		{
-			pScreen->state = 0;
-			pInputManager->PopReceiver(pScreen);
-			pInputManager->PushReceiver(pScreen);
-			pInputManager->PushReceiver(pScreen->pUsername);
-			pInputManager->PushReceiver(pScreen->pPassword);
-			pInputManager->PushReceiver(pScreen->pLogin);
-			pInputManager->PushReceiver(pScreen->pOffline);
-			pInputManager->PushReceiver(pScreen->pNew);
-			pScreen->pPrompt = "Login:";
-			pScreen->pMessage = NULL;
+			state = 0;
+			pInputManager->PopReceiver(this);
+			pInputManager->PushReceiver(this);
+			pInputManager->PushReceiver(pUsername);
+			pInputManager->PushReceiver(pPassword);
+			pInputManager->PushReceiver(pLogin);
+			pInputManager->PushReceiver(pOffline);
+			pInputManager->PushReceiver(pNew);
+			pPrompt = "Login:";
+			pMessage = NULL;
 			break;
 		}
 	}
 }
 
-void LoginScreen::TabUser(const char *pString, void *pUserData)
+void LoginScreen::TabUser(const char *pString)
 {
-	LoginScreen *pThis = (LoginScreen*)pUserData;
-	pThis->pPassword->Enable(true);
+	pPassword->Enable(true);
 }
 
-void LoginScreen::TabPass(const char *pString, void *pUserData)
+void LoginScreen::TabPass(const char *pString)
 {
-	LoginScreen *pThis = (LoginScreen*)pUserData;
-	if(pThis->state == 0)
-		pThis->pUsername->Enable(true);
-	else if(pThis->state == 1)
-		pThis->pEmail->Enable(true);
+	if(state == 0)
+		pUsername->Enable(true);
+	else if(state == 1)
+		pEmail->Enable(true);
 }
 
-void LoginScreen::TabEmail(const char *pString, void *pUserData)
+void LoginScreen::TabEmail(const char *pString)
 {
-	LoginScreen *pThis = (LoginScreen*)pUserData;
-	pThis->pUsername->Enable(true);
+	pUsername->Enable(true);
 }
 
 void LoginScreen::AutoLogin()

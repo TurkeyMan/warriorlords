@@ -22,13 +22,17 @@ CastleConfig::CastleConfig()
 	button.width = 64.f; button.height = 64.f;
 
 	button.x = units.x + 5.f; button.y = units.y + 5.f;
-	pBuildUnits[0] = Button::Create(NULL, &button, &uvs, MFVector::one, SelectUnit, this, 0);
+	pBuildUnits[0] = Button::Create(NULL, &button, &uvs, MFVector::one, 0);
+	pBuildUnits[0]->SetClickCallback(MakeDelegate(this, &CastleConfig::SelectUnit));
 	button.x = units.x + units.width - 64.f - 5.f; button.y = units.y + 5.f;
-	pBuildUnits[1] = Button::Create(NULL, &button, &uvs, MFVector::one, SelectUnit, this, 1);
+	pBuildUnits[1] = Button::Create(NULL, &button, &uvs, MFVector::one, 1);
+	pBuildUnits[1]->SetClickCallback(MakeDelegate(this, &CastleConfig::SelectUnit));
 	button.x = units.x + 5.f; button.y = units.y + units.height - 64.f - 5.f;
-	pBuildUnits[2] = Button::Create(NULL, &button, &uvs, MFVector::one, SelectUnit, this, 2);
+	pBuildUnits[2] = Button::Create(NULL, &button, &uvs, MFVector::one, 2);
+	pBuildUnits[2]->SetClickCallback(MakeDelegate(this, &CastleConfig::SelectUnit));
 	button.x = units.x + units.width - 64.f - 5.f; button.y = units.y + units.height - 64.f - 5.f;
-	pBuildUnits[3] = Button::Create(NULL, &button, &uvs, MFVector::one, SelectUnit, this, 3);
+	pBuildUnits[3] = Button::Create(NULL, &button, &uvs, MFVector::one, 3);
+	pBuildUnits[3]->SetClickCallback(MakeDelegate(this, &CastleConfig::SelectUnit));
 }
 
 CastleConfig::~CastleConfig()
@@ -206,13 +210,10 @@ void CastleConfig::Hide()
 	Window::Hide();
 }
 
-void CastleConfig::SelectUnit(int button, void *pUserData, int buttonID)
+void CastleConfig::SelectUnit(int button, int buttonID)
 {
-	CastleConfig *pThis = (CastleConfig*)pUserData;
-	Castle *pCastle = pThis->pCastle;
-
-	for(int a=0; a<pThis->numBuildUnits; ++a)
-		pThis->pBuildUnits[a]->SetOutline(true, buttonID == a ? MFVector::blue : MFVector::white);
+	for(int a=0; a<numBuildUnits; ++a)
+		pBuildUnits[a]->SetOutline(true, buttonID == a ? MFVector::blue : MFVector::white);
 
 	pCastle->SetBuildUnit(buttonID);
 }

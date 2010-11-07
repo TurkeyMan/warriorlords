@@ -27,7 +27,8 @@ Window::Window(bool _bCloseButton)
 		MFRect closePos = { 0.f, 0.f, 32.f, 32.f };
 		MFRect closeUVs = { 0.25f + texelCenter, 0.25f + texelCenter, 0.125f, 0.125f };
 
-		pCloseButton = Button::Create(pIcons, &closePos, &closeUVs, MFVector::white, CloseWindow, this);
+		pCloseButton = Button::Create(pIcons, &closePos, &closeUVs, MFVector::white);
+		pCloseButton->SetClickCallback(MakeDelegate(this, &Window::CloseWindow));
 	}
 
 	SetWindowSize(480.f - margin*2.f, 320.f - margin*2.f);
@@ -96,10 +97,9 @@ void Window::Hide()
 	pInputManager->PopReceiver(this);
 }
 
-void Window::CloseWindow(int button, void *pUserData, int buttonID)
+void Window::CloseWindow(int button, int buttonID)
 {
-	Window *pWindow = (Window*)pUserData;
-	pWindow->Hide();
+	Hide();
 }
 
 void Window::SetWindowSize(float width, float height)

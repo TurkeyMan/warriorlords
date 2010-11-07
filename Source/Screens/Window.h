@@ -31,7 +31,7 @@ protected:
 	bool bVisible;
 	bool bCloseButton;
 
-	static void CloseWindow(int button, void *pUserData, int buttonID);
+	void CloseWindow(int button, int buttonID);
 };
 
 #endif
