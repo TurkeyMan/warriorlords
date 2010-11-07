@@ -191,12 +191,20 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 			}
 		}
 
-		// load background
 		Tileset *pTileSet = Game::GetCurrent()->GetMap()->GetTileset();
-		pBackground = MFMaterial_Create(MFStr("Battle-%s-%s", pTileSet->GetTerrainName(t0), pTileSet->GetTerrainName(t1)));
-
 		fg = t0;
 		bg = t1;
+
+		// check for a bridge
+		if((t0 == 1 || t1 == 1) && pTarget->IsRoad())
+		{
+			pBackground = MFMaterial_Create("Battle-Bridge");
+		}
+		else
+		{
+			// load background
+			pBackground = MFMaterial_Create(MFStr("Battle-%s-%s", pTileSet->GetTerrainName(t0), pTileSet->GetTerrainName(t1)));
+		}
 	}
 
 	// init stuff
