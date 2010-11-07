@@ -42,7 +42,19 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 
 	fg = bg = -1;
 
+	// find boat
 	Unit *pBoat = pGroup->GetVehicle();
+	if(!pBoat)
+	{
+		for(int a=0; a<pTarget->GetNumGroups(); ++a)
+		{
+			Group *pTargetGroup = pTarget->GetGroup(a);
+			pBoat = pTargetGroup->GetVehicle();
+			if(pBoat)
+				break;
+		}
+	}
+
 	if(pBoat && pBoat->GetTerrainPenalty(0) == 0 && pBoat->GetTerrainPenalty(1) > 0)
 	{
 		pBackground = MFMaterial_Create("Battle-Ship");

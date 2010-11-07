@@ -330,7 +330,7 @@ void Game::BeginTurn(int player)
 
 					if(!bOnline || (IsMyTurn() && NumPendingActions() <= 1))
 					{
-						pGroup = CreateUnit(buildUnit.unit, pCastle, buildUnit.unit >= 8);
+						pGroup = CreateUnit(buildUnit.unit, pCastle, true);
 						if(pGroup)
 							pMapScreen->ShowCastleConfig(pCastle);
 					}
@@ -365,7 +365,7 @@ void Game::BeginTurn(int player)
 					Group *pGroup = NULL;
 
 					if(!bOnline || (IsMyTurn() && NumPendingActions() <= 1))
-						pGroup = CreateUnit(buildUnit.unit, pCastle, buildUnit.unit >= 8);
+						pGroup = CreateUnit(buildUnit.unit, pCastle, true);
 
 					if(pGroup || bOnline)
 					{
