@@ -453,7 +453,7 @@ public:
 	bool IsEmpty();
 
 	Group *GetMercGroup();
-	void Capture(int player);
+	void Capture(Group *pGroup);
 
 	void SetBuildUnit(int slot);
 	int GetBuildUnit();

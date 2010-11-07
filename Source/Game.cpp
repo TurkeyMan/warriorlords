@@ -329,7 +329,11 @@ void Game::BeginTurn(int player)
 					Group *pGroup = NULL;
 
 					if(!bOnline || (IsMyTurn() && NumPendingActions() <= 1))
+					{
 						pGroup = CreateUnit(buildUnit.unit, pCastle, buildUnit.unit >= 8);
+						if(pGroup)
+							pMapScreen->ShowCastleConfig(pCastle);
+					}
 					else
 						players[currentPlayer].pHero->Revive();
 
@@ -340,8 +344,6 @@ void Game::BeginTurn(int player)
 						// clear the hero from building, and show the build dialog
 						pCastle->building = pCastle->nextBuild = -1;
 						pCastle->buildTime = 0;
-
-						pMapScreen->ShowCastleConfig(pCastle);
 					}
 				}
 			}
@@ -538,7 +540,7 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 		Castle *pCastle = pTarget->GetCastle();
 		if(pCastle && pCastle->IsEmpty())
 		{
-			pCastle->Capture(pGroup->GetPlayer());
+			pCastle->Capture(pGroup);
 			PushCaptureCastle(pGroup, pCastle);
 
 			pMapScreen->ShowCastleConfig(pCastle);

@@ -1075,9 +1075,9 @@ Group *Castle::GetMercGroup()
 	return pGroup;
 }
 
-void Castle::Capture(int _player)
+void Castle::Capture(Group *pGroup)
 {
-	player = _player;
+	player = pGroup->GetPlayer();
 	building = -1;
 	nextBuild = -1;
 	buildTime = 0;
@@ -1088,8 +1088,9 @@ void Castle::Capture(int _player)
 
 		for(int b=0; b<pCastleTile->GetNumGroups(); ++b)
 		{
-			Group *pGroup = pCastleTile->GetGroup(b);
-			pGroup->SetPlayer(_player);
+			Group *pUnit = pCastleTile->GetGroup(b);
+			pGame->PushCaptureUnits(pGroup, pUnit);
+			pGroup->SetPlayer(player);
 		}
 	}
 }

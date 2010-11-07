@@ -187,8 +187,11 @@ bool MapScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 											else
 											{
 												// the castle is empty! claim that shit!
-												pCastle->Capture(pGame->CurrentPlayer());
+												pCastle->Capture(pSelection);
 												pGame->PushCaptureCastle(pSelection, pCastle);
+
+												// show the catle config window
+												ShowCastleConfig(pCastle);
 
 												bCommitActions = true;
 											}
@@ -588,6 +591,11 @@ void MapScreen::SelectGroup(Group *pGroup)
 Group *MapScreen::GetSelected()
 {
 	return pSelection;
+}
+
+void MapScreen::ShowCastleConfig(Castle *pCastle)
+{
+	pShowCastle = pCastle;
 }
 
 void MapScreen::ShowUndoButton()

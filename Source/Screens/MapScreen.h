@@ -36,8 +36,7 @@ public:
 	void SelectGroup(Group *pGroup);
 	Group *GetSelected();
 
-	void ShowCastleConfig(Castle *pCastle) { pShowCastle = pCastle; }
-
+	void ShowCastleConfig(Castle *pCastle);
 	void ShowUndoButton();
 
 protected:
