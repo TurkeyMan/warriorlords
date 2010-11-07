@@ -328,8 +328,10 @@ void Game::BeginTurn(int player)
 				{
 					Group *pGroup = NULL;
 
-					if(!bOnline || (IsMyTurn() && NumPendingActions() <= 1) || buildUnit.unit < 8)
+					if(!bOnline || (IsMyTurn() && NumPendingActions() <= 1))
 						pGroup = CreateUnit(buildUnit.unit, pCastle, buildUnit.unit >= 8);
+					else
+						players[currentPlayer].pHero->Revive();
 
 					if(pGroup || bOnline)
 					{
@@ -356,11 +358,11 @@ void Game::BeginTurn(int player)
 			{
 				BuildUnit &buildUnit = pCastle->details.buildUnits[pCastle->building];
 
-				if(buildUnit.cost <= players[currentPlayer].gold)
+				if(buildUnit.unit >= 8 && buildUnit.cost <= players[currentPlayer].gold)
 				{
 					Group *pGroup = NULL;
 
-					if(!bOnline || (IsMyTurn() && NumPendingActions() <= 1) || buildUnit.unit < 8)
+					if(!bOnline || (IsMyTurn() && NumPendingActions() <= 1))
 						pGroup = CreateUnit(buildUnit.unit, pCastle, buildUnit.unit >= 8);
 
 					if(pGroup || bOnline)
@@ -1388,10 +1390,11 @@ void Game::PushActionArgs(int *pArgs, int numArgs)
 
 ServerError Game::ApplyActions()
 {
-	if(!bOnline)
+	if(!bOnline || numActions == 0)
 		return SE_NO_ERROR;
 
 	ServerError err = WLServ_ApplyActions(gameID, pendingActions, numActions);
+	numServerActions += numActions;
 	serverActionCount += numActions;
 	lastAction += numActions;
 	numActions = numArgs = 0;
