@@ -66,9 +66,9 @@ bool UnitConfig::DrawContent()
 	int height = (int)MFFont_GetFontHeight(pFont);
 	float tWidth = MFFont_GetStringWidth(pFont, pUnit->GetName(), (float)height);
 	MFFont_BlitText(pFont, (int)top.x + ((int)top.width / 2) - (int)(tWidth*0.5f), (int)top.y + 5, MFVector::yellow, pUnit->GetName());
-	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height, MFVector::white, "Type: %s", pDefs->GetArmourClassName(pDetails->defenceClass));
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height, MFVector::white, "Type: %s", pDefs->GetArmourClassName(pDetails->armour));
 	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*2, MFVector::white, "HP: %d/%d", (int)(pUnit->GetMaxHP() * pUnit->GetHealth()), pUnit->GetMaxHP());
-	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*3, MFVector::white, "Atk: %d - %d (%s%s)", (int)pUnit->GetMinDamage(), (int)pUnit->GetMaxDamage(), pUnit->AttackSpeedDescription(), pDefs->GetWeaponClassName(pDetails->attackClass));
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*3, MFVector::white, "Atk: %d - %d (%s%s %s)", (int)pUnit->GetMinDamage(), (int)pUnit->GetMaxDamage(), pUnit->AttackSpeedDescription(), pDefs->GetWeaponClassName(pDetails->attack), pDefs->GetAttackTypeName(pDetails->atkType));
 	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*4, MFVector::white, "Mov: %g/%d%s", pUnit->GetMovement()*0.5f, pUnit->GetMaxMovement(), pDetails->movementClass > 0 ? MFStr(" (%s)", pDefs->GetMovementClassName(pDetails->movementClass)) : "");
 
 	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height, MFVector::white, "Victories: %d", pUnit->GetVictories());

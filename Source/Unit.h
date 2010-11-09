@@ -118,9 +118,9 @@ struct Item
 
 	// personal buffs
 	StatMod user[Mod_UserMax];
-	StatMod userDef[2];
+	StatMod userDef[4];
 	StatMod group[Mod_GroupMax];
-	StatMod groupDef[2];
+	StatMod groupDef[4];
 	StatMod terrain[10];
 	StatMod vehicle[10];
 };
@@ -172,7 +172,8 @@ struct UnitDetails
 
 	// stats
 	int attackMin, attackMax, movement;
-	int attackClass, defenceClass, movementClass;
+	int movementClass;
+	int atkType, attack, armour;
 	float cooldown, attackSpeed;
 	int life;
 	int buildTime, cost;
@@ -210,13 +211,16 @@ public:
 	inline const char *GetSpecialName(int type) { return pSpecials[type].pName; }
 	inline const Special *GetSpecial(int type) { return &pSpecials[type]; }
 
-	int GetNumArmourClasses() { return numArmourClasses; }
-	const char *GetArmourClassName(int armourClass) { return ppArmourClasses[armourClass]; }
+	int GetNumAttackTypes() { return numTypes; }
+	const char *GetAttackTypeName(int type) { return ppTypes[type]; }
 
-	int GetNumWeaponClasses() { return numWeaponClasses; }
-	const char *GetWeaponClassName(int weaponClass) { return pWeaponClasses[weaponClass].pName; }
-	float GetDamageModifier(int weaponClass, int armourClass) { return pWeaponClasses[weaponClass].pAttackModifiers[armourClass]; }
-	bool IsRanged(int weaponClass) { return pWeaponClasses[weaponClass].ranged != 0; }
+	int GetNumArmourClasses() { return numDefenceClasses; }
+	const char *GetArmourClassName(int armourClass) { return pDefenceClasses[armourClass].pName; }
+
+	int GetNumWeaponClasses() { return numAttackClasses; }
+	const char *GetWeaponClassName(int weaponClass) { return ppAttackClasses[weaponClass]; }
+	float GetDamageModifier(int weaponClass, int armourClass) { return pDefenceClasses[armourClass].pDamageMods[weaponClass]; }
+	bool IsRanged(int type) { return type > 0; }
 
 	int GetNumMovementClasses() { return numMovementClasses; }
 	const char *GetMovementClassName(int movementClass) { return pMovementClasses[movementClass].pName; }
@@ -264,6 +268,12 @@ protected:
 		int *pMovementPenalty;
 	};
 
+	struct ArmourClass
+	{
+		const char *pName;
+		float *pDamageMods;
+	};
+
 	Game *pGame;
 
 	MFIni *pUnitDefs;
@@ -291,18 +301,19 @@ protected:
 	Special *pSpecials;
 	int specialCount;
 
-	const char **ppArmourClasses;
-	int numArmourClasses;
-
-	Weapon *pWeapons;
-	int numWeapons;
-
-	WeaponClass *pWeaponClasses;
-	int numWeaponClasses;
+	const char **ppTypes;
+	int numTypes;
+	const char **ppAttackClasses;
+	int numAttackClasses;
+	ArmourClass *pDefenceClasses;
+	int numDefenceClasses;
 
 	MovementClass *pMovementClasses;
 	int numMovementClasses;
 	int numTerrainTypes;
+
+	Weapon *pWeapons;
+	int numWeapons;
 
 	Item *pItems;
 	int numItems;
@@ -367,7 +378,7 @@ public:
 	void AddVictory() { ++victories; UpdateStats(); }
 	void SetKills(int numKills) { kills = numKills; }
 
-	bool IsRanged() { return pUnitDefs->IsRanged(details.attackClass); }
+	bool IsRanged() { return pUnitDefs->IsRanged(details.type); }
 
 	void SetMovement(int _movement) { movement = _movement; }
 	int GetMovement() { return movement; }

@@ -81,10 +81,13 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 	pUnitDefs->unitMapWidth = pUnitDefs->unitMapHeight = 0;
 	pUnitDefs->castleMapWidth = pUnitDefs->castleMapHeight = 0;
 
-	pUnitDefs->numArmourClasses = pUnitDefs->numWeaponClasses = pUnitDefs->numMovementClasses = 0;
-	pUnitDefs->ppArmourClasses = NULL;
-	pUnitDefs->pWeaponClasses = NULL;
+	pUnitDefs->numMovementClasses = 0;
+	pUnitDefs->numTypes = 0;
+	pUnitDefs->numAttackClasses = pUnitDefs->numDefenceClasses = 0;
 	pUnitDefs->pMovementClasses = NULL;
+	pUnitDefs->ppTypes = NULL;
+	pUnitDefs->ppAttackClasses = NULL;
+	pUnitDefs->pDefenceClasses = NULL;
 
 	pUnitDefs->numTerrainTypes = numTerrainTypes;
 
@@ -267,23 +270,25 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 				else if(pUnits->IsString(6, "vehicle"))
 					pUnit->type = UT_Vehicle;
 
-				pUnit->race = pUnits->GetInt(7);
+				int i = 7;
+				pUnit->race = pUnits->GetInt(i++);
 
-				pUnit->attackMin = pUnits->GetInt(8);
-				pUnit->attackMax = pUnits->GetInt(9);
-				pUnit->movement = pUnits->GetInt(10);
+				pUnit->attackMin = pUnits->GetInt(i++);
+				pUnit->attackMax = pUnits->GetInt(i++);
+				pUnit->movement = pUnits->GetInt(i++);
 
-				pUnit->attackClass = pUnits->GetInt(11);
-				pUnit->defenceClass = pUnits->GetInt(12);
-				pUnit->movementClass = pUnits->GetInt(13);
-				pUnit->weapon = pUnits->GetInt(14);
+				pUnit->atkType = pUnits->GetInt(i++);
+				pUnit->attack = pUnits->GetInt(i++);
+				pUnit->armour = pUnits->GetInt(i++);
+				pUnit->movementClass = pUnits->GetInt(i++);
+				pUnit->weapon = pUnits->GetInt(i++);
 
-				pUnit->cooldown = pUnits->GetFloat(15);
-				pUnit->attackSpeed = pUnits->GetFloat(16);
-				pUnit->life = pUnits->GetInt(17);
+				pUnit->cooldown = pUnits->GetFloat(i++);
+				pUnit->attackSpeed = pUnits->GetFloat(i++);
+				pUnit->life = pUnits->GetInt(i++);
 
-				pUnit->buildTime = pUnits->GetInt(18);
-				pUnit->cost = pUnits->GetInt(19);
+				pUnit->buildTime = pUnits->GetInt(i++);
+				pUnit->cost = pUnits->GetInt(i++);
 
 				++pUnit;
 				pUnits = pUnits->Next();
@@ -320,35 +325,13 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 		{
 			MFIniLine *pClasses = pLine->Sub();
 			MFIniLine *pWeaponClasses = NULL;
+			MFIniLine *pArmourClasses = NULL;
 			while(pClasses)
 			{
-				if(pClasses->IsSection("Armour"))
-				{
-					MFIniLine *pArmour = pClasses->Sub();
-					pUnitDefs->numArmourClasses = 0;
-					while(pArmour)
-					{
-						++pUnitDefs->numArmourClasses;
-						pArmour = pArmour->Next();
-					}
-
-					pUnitDefs->ppArmourClasses = (const char **)MFHeap_Alloc(sizeof(const char **)*pUnitDefs->numArmourClasses);
-
-					pArmour = pClasses->Sub();
-					while(pArmour)
-					{
-						pUnitDefs->ppArmourClasses[pArmour->GetInt(0)] = pArmour->GetString(1);
-						pArmour = pArmour->Next();
-					}
-				}
-				else if(pClasses->IsSection("Weapon"))
-				{
-					pWeaponClasses = pClasses->Sub();
-				}
-				else if(pClasses->IsSection("Movement"))
+				if(pClasses->IsSection("Movement"))
 				{
 					MFIniLine *pMovement = pClasses->Sub();
-					pUnitDefs->numWeaponClasses = 0;
+					pUnitDefs->numMovementClasses = 0;
 					while(pMovement)
 					{
 						++pUnitDefs->numMovementClasses;
@@ -373,8 +356,6 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 						{
 							int &penalty = pUnitDefs->pMovementClasses[movClass].pMovementPenalty[a];
 							penalty = pMovement->GetInt(2 + a);
-//							if(penalty == 0)
-//								penalty = 1000;
 						}
 
 						int flagsStart = 2 + numTerrainTypes;
@@ -389,35 +370,77 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 					}
 				}
 
+				else if(pClasses->IsSection("Type"))
+				{
+					MFIniLine *pType = pClasses->Sub();
+					pUnitDefs->numTypes = 0;
+					while(pType)
+					{
+						++pUnitDefs->numTypes;
+						pType = pType->Next();
+					}
+
+					pUnitDefs->ppTypes = (const char **)MFHeap_Alloc(sizeof(const char **)*pUnitDefs->numTypes);
+
+					pType = pClasses->Sub();
+					while(pType)
+					{
+						pUnitDefs->ppTypes[pType->GetInt(0)] = pType->GetString(1);
+						pType = pType->Next();
+					}
+				}
+				else if(pClasses->IsSection("Attack"))
+				{
+					MFIniLine *pAttack = pClasses->Sub();
+					pUnitDefs->numAttackClasses = 0;
+					while(pAttack)
+					{
+						++pUnitDefs->numAttackClasses;
+						pAttack = pAttack->Next();
+					}
+
+					pUnitDefs->ppAttackClasses = (const char **)MFHeap_Alloc(sizeof(const char **)*pUnitDefs->numAttackClasses);
+
+					pAttack = pClasses->Sub();
+					while(pAttack)
+					{
+						pUnitDefs->ppAttackClasses[pAttack->GetInt(0)] = pAttack->GetString(1);
+						pAttack = pAttack->Next();
+					}
+				}
+				else if(pClasses->IsSection("Defence"))
+				{
+					pArmourClasses = pClasses->Sub();
+				}
+
 				pClasses = pClasses->Next();
 			}
 
-			if(pWeaponClasses)
+			if(pArmourClasses)
 			{
-				MFIniLine *pWeapon = pWeaponClasses;
-				pUnitDefs->numWeaponClasses = 0;
-				while(pWeapon)
+				MFIniLine *pArmour = pArmourClasses;
+				pUnitDefs->numDefenceClasses = 0;
+				while(pArmour)
 				{
-					++pUnitDefs->numWeaponClasses;
-					pWeapon = pWeapon->Next();
+					++pUnitDefs->numDefenceClasses;
+					pArmour = pArmour->Next();
 				}
 
-				pUnitDefs->pWeaponClasses = (WeaponClass*)MFHeap_Alloc(sizeof(const char *)*pUnitDefs->numWeaponClasses);
+				pUnitDefs->pDefenceClasses = (ArmourClass*)MFHeap_Alloc(sizeof(const char *)*pUnitDefs->numDefenceClasses);
 
-				pWeapon = pWeaponClasses;
-				while(pWeapon)
+				pArmour = pArmourClasses;
+				while(pArmour)
 				{
-					int weaponClass = pWeapon->GetInt(0);
-					WeaponClass &wpnClass = pUnitDefs->pWeaponClasses[weaponClass];
-					wpnClass.pAttackModifiers = (float*)MFHeap_Alloc(sizeof(float)*pUnitDefs->numArmourClasses);
+					int armourClass = pArmour->GetInt(0);
+					ArmourClass &amrClass = pUnitDefs->pDefenceClasses[armourClass];
+					amrClass.pDamageMods = (float*)MFHeap_Alloc(sizeof(float)*pUnitDefs->numAttackClasses);
 
-					wpnClass.pName = pWeapon->GetString(1);
-					wpnClass.ranged = pWeapon->GetInt(pUnitDefs->numArmourClasses + 2);
+					amrClass.pName = pArmour->GetString(1);
 
-					for(int a=0; a<pUnitDefs->numArmourClasses; ++a)
-						wpnClass.pAttackModifiers[a] = pWeapon->GetFloat(2 + a);
+					for(int a=0; a<pUnitDefs->numAttackClasses; ++a)
+						amrClass.pDamageMods[a] = pArmour->GetFloat(2 + a);
 
-					pWeapon = pWeapon->Next();
+					pArmour = pArmour->Next();
 				}
 			}
 		}
@@ -445,12 +468,12 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 				int param = 4;
 				for(int a=0; a<Item::Mod_GroupMax; ++a)
 					item.user[a].Parse(pItem->GetString(param++));
-				for(int a=0; a<pUnitDefs->numWeaponClasses; ++a)
+				for(int a=0; a<pUnitDefs->numAttackClasses; ++a)
 					item.userDef[a].Parse(pItem->GetString(param++));
 
 				for(int a=0; a<Item::Mod_GroupMax; ++a)
 					item.group[a].Parse(pItem->GetString(param++));
-				for(int a=0; a<pUnitDefs->numWeaponClasses; ++a)
+				for(int a=0; a<pUnitDefs->numAttackClasses; ++a)
 					item.groupDef[a].Parse(pItem->GetString(param++));
 
 				item.user[Item::Mod_Movement].Parse(pItem->GetString(param++));
@@ -889,7 +912,7 @@ float Unit::GetDefence(float damage, int wpnClass)
 	if(player != -1 && pGroup && pGroup->GetTile())
 	{
 		Castle *pCastle = pGroup->GetTile()->GetCastle();
-		if(pCastle)
+		if(pCastle && pCastle->GetPlayer() && GetPlayer())
 			damage *= 0.90f;
 	}
 

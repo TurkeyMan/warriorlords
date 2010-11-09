@@ -356,13 +356,13 @@ int Battle::CalculateDamage(BattleUnit *pUnit, BattleUnit *pTarget)
 	UnitDetails *pTargetDetails = pTarget->pUnit->GetDetails();
 
 	// get armor class multiplier
-	float damageMod = pUnitDefs->GetDamageModifier(pDetails->attackClass, pTargetDetails->defenceClass);
+	float damageMod = pUnitDefs->GetDamageModifier(pDetails->weapon, pTargetDetails->armour);
 
 	// get damage
 	float damage = MFRand_Range(pUnit->pUnit->GetMinDamage(), pUnit->pUnit->GetMaxDamage()) * damageMod;
 
 	// apply unit defence
-	damage = pTarget->pUnit->GetDefence(damage, pDetails->attackClass);
+	damage = pTarget->pUnit->GetDefence(damage, pDetails->weapon);
 
 	return (int)damage;
 }
