@@ -324,7 +324,7 @@ void Game::BeginTurn(int player)
 				BuildUnit &buildUnit = pCastle->details.buildUnits[pCastle->building];
 
 				// if a hero is building here
-				if(buildUnit.unit < 8 && buildUnit.cost <= players[currentPlayer].gold)
+				if(pUnitDefs->GetUnitType(buildUnit.unit) == UT_Hero && buildUnit.cost <= players[currentPlayer].gold)
 				{
 					Group *pGroup = NULL;
 
@@ -360,7 +360,7 @@ void Game::BeginTurn(int player)
 			{
 				BuildUnit &buildUnit = pCastle->details.buildUnits[pCastle->building];
 
-				if(buildUnit.unit >= 8 && buildUnit.cost <= players[currentPlayer].gold)
+				if(pUnitDefs->GetUnitType(buildUnit.unit) != UT_Hero && buildUnit.cost <= players[currentPlayer].gold)
 				{
 					Group *pGroup = NULL;
 
@@ -1472,7 +1472,7 @@ void Game::ReplayAction(GameAction *pAction)
 			int player = pAction->pArgs[0];
 			int unit = pAction->pArgs[1];
 			Unit *pUnit = pUnitDefs->CreateUnit(unit, player);
-			if(unit < 8)
+			if(pUnit->IsHero())
 				players[player].pHero = pUnit;
 			AddUnit(pUnit);
 			break;

@@ -201,6 +201,7 @@ public:
 	MFVector GetRaceColour(int race) const;
 
 	inline int GetNumUnitTypes() { return numUnits; }
+	inline UnitType GetUnitType(int unit) { return pUnits[unit].type; }
 	inline const char *GetUnitTypeName(int unit) { return pUnits[unit].pName; }
 
 	UnitDetails *GetUnitDetails(int unit) { return &pUnits[unit]; }
@@ -378,7 +379,7 @@ public:
 	void AddVictory() { ++victories; UpdateStats(); }
 	void SetKills(int numKills) { kills = numKills; }
 
-	bool IsRanged() { return pUnitDefs->IsRanged(details.type); }
+	bool IsRanged() { return pUnitDefs->IsRanged(details.atkType); }
 
 	void SetMovement(int _movement) { movement = _movement; }
 	int GetMovement() { return movement; }

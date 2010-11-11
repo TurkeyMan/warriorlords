@@ -356,13 +356,13 @@ int Battle::CalculateDamage(BattleUnit *pUnit, BattleUnit *pTarget)
 	UnitDetails *pTargetDetails = pTarget->pUnit->GetDetails();
 
 	// get armor class multiplier
-	float damageMod = pUnitDefs->GetDamageModifier(pDetails->weapon, pTargetDetails->armour);
+	float damageMod = pUnitDefs->GetDamageModifier(pDetails->attack, pTargetDetails->armour);
 
 	// get damage
 	float damage = MFRand_Range(pUnit->pUnit->GetMinDamage(), pUnit->pUnit->GetMaxDamage()) * damageMod;
 
 	// apply unit defence
-	damage = pTarget->pUnit->GetDefence(damage, pDetails->weapon);
+	damage = pTarget->pUnit->GetDefence(damage, pDetails->attack);
 
 	return (int)damage;
 }
@@ -755,10 +755,10 @@ void Battle::Draw()
 				}
 
 				// draw damage indicator with a little bouncey thing...
-				char damage[8];
+				char damage[12];
 				sprintf(damage, "%d", unit.damage);
 
-				float widths[4];
+				float widths[12];
 				float totalWidth = 0.f;
 				int numDigits = MFString_Length(damage);
 
