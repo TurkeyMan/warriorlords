@@ -484,6 +484,11 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 				for(int a=0; a<numTerrainTypes; ++a)
 					item.vehicle[a].Parse(pItem->GetString(param++));
 
+				if(param < pItem->GetStringCount())
+					item.pDescription = pItem->GetString(param);
+				else
+					item.pDescription = "";
+
 				pItem = pItem->Next();
 			}
 		}

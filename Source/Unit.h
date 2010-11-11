@@ -114,6 +114,7 @@ struct Item
 	}
 
 	const char *pName;
+	const char *pDescription;
 	int x, y;
 
 	// personal buffs

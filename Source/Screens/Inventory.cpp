@@ -28,7 +28,8 @@ bool Inventory::DrawContent()
 {
 	Game::GetCurrent()->DrawLine(window.x + 16, window.y + 192, window.x + window.width - 16, window.y + 192);
 
-	float width = MFFont_GetStringWidth(pFont, "Inventory", MFFont_GetFontHeight(pFont));
+	float height = MFFont_GetFontHeight(pFont);
+	float width = MFFont_GetStringWidth(pFont, "Inventory", height);
 	MFFont_BlitText(pFont, (int)(window.x + window.width*0.5f - width*0.5f), (int)window.y + 10, MFVector::yellow, "Inventory");
 
 	for(int a=0; a<numItems; ++a)
@@ -37,8 +38,9 @@ bool Inventory::DrawContent()
 	if(selected != -1)
 	{
 		Item *pItem = pUnit->GetItem(selected);
-		width = MFFont_GetStringWidth(pFont, pItem->pName, MFFont_GetFontHeight(pFont));
+		width = MFFont_GetStringWidth(pFont, pItem->pName, height);
 		MFFont_BlitText(pFont, (int)(window.x + window.width*0.5f - width*0.5f), (int)window.y + 200, MFVector::white, pItem->pName);
+		MFFont_BlitText(pFont, (int)(window.x + window.width*0.5f - width*0.5f), (int)window.y + 210 + (int)height, MFVector::white, pItem->pDescription);
 	}
 
 	return true;
