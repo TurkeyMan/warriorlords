@@ -4,6 +4,8 @@
 
 #include "MFSystem.h"
 
+extern bool gAppHasFocus;
+
 InputManager::InputManager()
 {
 	MFZeroMemory(contacts, sizeof(contacts));
@@ -125,30 +127,33 @@ void InputManager::Update()
 			}
 		}
 
-		for(int b=0; b<Mouse_MaxButtons; ++b)
+		if(gAppHasFocus)
 		{
-			if(mouseButtonContacts[a][b] == -1)
+			for(int b=0; b<Mouse_MaxButtons; ++b)
 			{
-				if(MFInput_Read(Mouse_LeftButton + b, IDD_Mouse, a))
+				if(mouseButtonContacts[a][b] == -1)
 				{
-					for(int c=0; c<MAX_CONTACTS; ++c)
+					if(MFInput_Read(Mouse_LeftButton + b, IDD_Mouse, a))
 					{
-						if(!bCurrentContacts[c])
+						for(int c=0; c<MAX_CONTACTS; ++c)
 						{
-							bCurrentContacts[c] = true;
-							mouseButtonContacts[a][b] = c;
+							if(!bCurrentContacts[c])
+							{
+								bCurrentContacts[c] = true;
+								mouseButtonContacts[a][b] = c;
 
-							contacts[c].Init(IDD_Mouse, a, Mouse_LeftButton + b, contacts[mouseContacts[a]].x, contacts[mouseContacts[a]].y);
-							contacts[c].bState = true;
+								contacts[c].Init(IDD_Mouse, a, Mouse_LeftButton + b, contacts[mouseContacts[a]].x, contacts[mouseContacts[a]].y);
+								contacts[c].bState = true;
 
-							// send the down event
-							InputInfo info;
-							InitEvent(info, IE_Down, c);
-							info.down.x = contacts[c].x;
-							info.down.y = contacts[c].y;
+								// send the down event
+								InputInfo info;
+								InitEvent(info, IE_Down, c);
+								info.down.x = contacts[c].x;
+								info.down.y = contacts[c].y;
 
-							Dispatch(info, contacts[c].pExclusiveReceiver);
-							break;
+								Dispatch(info, contacts[c].pExclusiveReceiver);
+								break;
+							}
 						}
 					}
 				}

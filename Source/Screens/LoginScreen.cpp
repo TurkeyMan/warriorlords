@@ -13,6 +13,8 @@ LoginScreen::LoginScreen()
 	pIcons = MFMaterial_Create("Icons");
 	pFont = MFFont_Create("FranklinGothic");
 
+	createRequest.SetCompleteDelegate(MakeDelegate(this, &LoginScreen::CreateComplete));
+
 	state = 0;
 
 #if defined(_DEBUG)
@@ -179,39 +181,11 @@ void LoginScreen::Click(int button, int buttonID)
 	{
 		case 0:
 		{
-			Session *pSession = new Session();
-
 			// try and login...
-			ServerError err = pSession->Login(pUsername->GetString(), pPassword->GetString());
-			if(err != SE_NO_ERROR)
-			{
-				delete pSession;
-
-				switch(err)
-				{
-					case SE_CONNECTION_FAILED:
-						pMessage = "Couldn't connect to server!";
-						break;
-					case SE_INVALID_LOGIN:
-						pMessage = "Invalid login!";
-						break;
-					default:
-						pMessage = "Unknown Error!";
-						break;
-				}
-				return;
-			}
-
-			if(pSession->IsActive())
-			{
-				pMessage = NULL;
-
-				// set the current session
-				Session::SetCurrent(pSession);
-
-				// and continue
-				Screen::SetNext(pHome);
-			}
+			Session *pSession = new Session();
+			pSession->SetLoginDelegate(MakeDelegate(this, &LoginScreen::OnLogin));
+			pSession->Login(pUsername->GetString(), pPassword->GetString());
+			Session::SetCurrent(pSession);
 			break;
 		}
 
@@ -243,50 +217,12 @@ void LoginScreen::Click(int button, int buttonID)
 
 		case 3:
 		{
-			Session *pSession = new Session();
-
 			const char *pUsername = this->pUsername->GetString();
 			const char *pPassword = this->pPassword->GetString();
 			const char *pEmail = this->pEmail->GetString();
 
 			// create the account
-			uint32 user;
-			ServerError err = WLServ_CreateAccount(pUsername, pPassword, pEmail, &user);
-			if(err == SE_NO_ERROR)
-			{
-				// try and login...
-				err = pSession->Login(pUsername, pPassword);
-			}
-
-			if(err != SE_NO_ERROR)
-			{
-				delete pSession;
-
-				switch(err)
-				{
-					case SE_CONNECTION_FAILED:
-						pMessage = "Couldn't connect to server!";
-						break;
-					case SE_INVALID_LOGIN:
-						pMessage = "Invalid login!";
-						break;
-					default:
-						pMessage = "Unknown Error!";
-						break;
-				}
-				return;
-			}
-
-			if(pSession->IsActive())
-			{
-				pMessage = NULL;
-
-				// set the current session
-				Session::SetCurrent(pSession);
-
-				// and continue
-				Screen::SetNext(pHome);
-			}
+			WLServ_CreateAccount(createRequest, pUsername, pPassword, pEmail);
 			break;
 		}
 
@@ -325,14 +261,48 @@ void LoginScreen::TabEmail(const char *pString)
 	pUsername->Enable(true);
 }
 
-void LoginScreen::AutoLogin()
+void LoginScreen::CreateComplete(HTTPRequest::Status status)
 {
-	Session *pSession = new Session();
-
-	// try and login...
-	ServerError err = pSession->Login("TurkeyMan", "terceS");
+	uint32 user;
+	ServerError err = WLServResult_GetUser(createRequest, &user);
 	if(err != SE_NO_ERROR)
 	{
+		switch(err)
+		{
+			case SE_CONNECTION_FAILED:
+				pMessage = "Couldn't connect to server!";
+				break;
+			case SE_INVALID_LOGIN:
+				pMessage = "Invalid login!";
+				break;
+			default:
+				pMessage = "Unknown Error!";
+				break;
+		}
+		return;
+	}
+
+	// try and login...
+	Session *pSession = new Session();
+	pSession->SetLoginDelegate(MakeDelegate(this, &LoginScreen::OnLogin));
+	pSession->Login(pUsername->GetString(), pPassword->GetString());
+	Session::SetCurrent(pSession);
+}
+
+void LoginScreen::AutoLogin()
+{
+	// try and login...
+	Session *pSession = new Session();
+	pSession->SetLoginDelegate(MakeDelegate(this, &LoginScreen::OnLogin));
+	pSession->Login("Jumprabbit", "fishhead");
+	Session::SetCurrent(pSession);
+}
+
+void LoginScreen::OnLogin(ServerError err, Session *pSession)
+{
+	if(err != SE_NO_ERROR)
+	{
+		Session::SetCurrent(NULL);
 		delete pSession;
 
 		switch(err)
@@ -350,14 +320,8 @@ void LoginScreen::AutoLogin()
 		return;
 	}
 
-	if(pSession->IsActive())
-	{
-		pMessage = NULL;
+	pMessage = NULL;
 
-		// set the current session
-		Session::SetCurrent(pSession);
-
-		// and continue
-		Screen::SetNext(pHome);
-	}
+	// and continue
+	Screen::SetNext(pHome);
 }

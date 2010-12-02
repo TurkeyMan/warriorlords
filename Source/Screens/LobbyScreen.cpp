@@ -3,6 +3,7 @@
 #include "LobbyScreen.h"
 #include "HomeScreen.h"
 
+#include "MFSystem.h"
 #include "MFMaterial.h"
 #include "MFRenderer.h"
 
@@ -13,6 +14,12 @@ LobbyScreen::LobbyScreen()
 {
 	pIcons = MFMaterial_Create("Icons");
 	pFont = MFFont_Create("FranklinGothic");
+
+	request.SetCompleteDelegate(MakeDelegate(this, &LobbyScreen::GetDetails));
+	begin.SetCompleteDelegate(MakeDelegate(this, &LobbyScreen::BeginGame));
+	enter.SetCompleteDelegate(MakeDelegate(this, &LobbyScreen::EnterGame));
+	race.SetCompleteDelegate(MakeDelegate(this, &LobbyScreen::CommitRace));
+	colour.SetCompleteDelegate(MakeDelegate(this, &LobbyScreen::CommitColour));
 
 	bOffline = false;
 
@@ -133,19 +140,41 @@ bool LobbyScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 	return false;
 }
 
+void LobbyScreen::GetDetails(HTTPRequest::Status status)
+{
+	ServerError err = WLServResult_GetGameDetails(request, &details);
+
+	if(Screen::GetCurrent() != this)
+	{
+		if(err != SE_NO_ERROR)
+			return;
+
+		// load the map details and show the lobby screen
+		Map::GetMapDetails(details.map, &map);
+		Screen::SetNext(this);
+	}
+	else
+	{
+		if(err != SE_NO_ERROR)
+		{
+			// the game may have been started...
+			WLServ_GameState(enter, details.id);
+			return;
+		}
+
+		// update the lobby state
+		Select();
+	}
+}
+
 bool LobbyScreen::ShowOnline(uint32 lobbyID)
 {
 	bOffline = false;
 
 	MFZeroMemory(&details, sizeof(details));
 
-	ServerError err = WLServ_GetGameByID(lobbyID, &details);
-	if(err != SE_NO_ERROR)
-		return false;
+	WLServ_GetGameByID(request, lobbyID);
 
-	Map::GetMapDetails(details.map, &map);
-
-	Screen::SetNext(this);
 	return true;
 }
 
@@ -175,12 +204,19 @@ void LobbyScreen::UpdateLobbyState()
 	if(bOffline)
 		return;
 
-	ServerError err = WLServ_GetGameByID(details.id, &details);
-	//...
+	static float timeout = 10.f;
+	timeout -= MFSystem_TimeDelta();
+	if(timeout <= 0.f)
+	{
+		if(!request.RequestPending())
+			WLServ_GetGameByID(request, details.id);
+		timeout = 10.f;
+	}
 }
 
 int LobbyScreen::Update()
 {
+	UpdateLobbyState();
 
 	return 0;
 }
@@ -240,7 +276,6 @@ void LobbyScreen::Click(int button, int buttonID)
 			// begin game...
 
 			// setup game parameters
-			GameParams params;
 			MFZeroMemory(&params, sizeof(params));
 			params.pMap = details.map;
 			params.bOnline = !bOffline;
@@ -270,13 +305,8 @@ void LobbyScreen::Click(int button, int buttonID)
 				for(int a=0; a<params.numPlayers; ++a)
 					players[a] = params.players[a].id;
 
-				ServerError err = WLServ_BeginGame(details.id, players, params.numPlayers, &params.gameID);
-
-				if(err != SE_NO_ERROR)
-				{
-					// set some error message?
-					break;
-				}
+				WLServ_BeginGame(begin, details.id, players, params.numPlayers);
+				break;
 			}
 
 			// start game
@@ -290,7 +320,7 @@ void LobbyScreen::Click(int button, int buttonID)
 			// leave the game
 			Session *pSession = Session::GetCurrent();
 			if(pSession)
-				WLServ_LeaveGame(pSession->GetUserID(), details.id);
+				WLServ_LeaveGame(leave, pSession->GetUserID(), details.id);
 		}
 		case 2:
 		{
@@ -301,39 +331,84 @@ void LobbyScreen::Click(int button, int buttonID)
 	}
 }
 
+void LobbyScreen::BeginGame(HTTPRequest::Status status)
+{
+	WLServResult_GetGame(begin, &params.gameID);
+
+	// start game
+	pGame = new Game(&params);
+	Game::SetCurrent(pGame);
+	pGame->BeginGame();
+}
+
 void LobbyScreen::SetRace(int item, int id)
 {
 	++item;
 	ServerError err = SE_NO_ERROR;
-	
+
+	raceID = id;
+	newRace = item;
+
 	if(!bOffline)
-		err = WLServ_SetRace(details.id, details.players[id].id, item);
+		WLServ_SetRace(race, details.id, details.players[id].id, item);
+	else
+		details.players[id].race = item;
+}
+
+void LobbyScreen::EnterGame(HTTPRequest::Status status)
+{
+	GameState state;
+	ServerError err = WLServResult_GetGameState(enter, &state);
 
 	if(err == SE_NO_ERROR)
-		details.players[id].race = item;
+	{
+		// enter game
+		pGame = new Game(&state);
+		Game::SetCurrent(pGame);
+		return;
+	}
+
+	// the host must have left the game
+	//... display a dialog box?
+
+	Screen::SetNext(pHome);
+}
+
+void LobbyScreen::CommitRace(HTTPRequest::Status status)
+{
+	ServerError err = WLServResult_GetError(race);
+
+	if(err == SE_NO_ERROR)
+		details.players[raceID].race = newRace;
 	else
-		pRaces[id]->SetSelection(details.players[id].race - 1);
+		pRaces[raceID]->SetSelection(details.players[raceID].race - 1);
 }
 
 void LobbyScreen::SetColour(int item, int id)
 {
 	++item;
-	ServerError err = SE_NO_ERROR;
-
-	if(!bOffline)
-		err = WLServ_SetColour(details.id, details.players[id].id, item);
 
 	for(int a=0; a<details.numPlayers; ++a)
 	{
 		if(item == details.players[a].colour)
-		{
-			err = SE_ALREADY_PRESENT;
-			break;
-		}
+			return;
 	}
 
-	if(err == SE_NO_ERROR)
-		details.players[id].colour = item;
+	colourID = id;
+	newColour = item;
+
+	if(!bOffline)
+		WLServ_SetColour(colour, details.id, details.players[id].id, item);
 	else
-		pColours[id]->SetSelection(details.players[id].colour - 1);
+		details.players[id].colour = item;
+}
+
+void LobbyScreen::CommitColour(HTTPRequest::Status status)
+{
+	ServerError err = WLServResult_GetError(colour);
+
+	if(err == SE_NO_ERROR)
+		details.players[colourID].colour = newColour;
+	else
+		pColours[colourID]->SetSelection(details.players[colourID].colour - 1);
 }

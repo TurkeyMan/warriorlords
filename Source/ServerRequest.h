@@ -1,12 +1,15 @@
 #if !defined(_SERVER_H)
 #define _SERVER_H
 
+#include "HTTP.h"
+
 enum ServerError
 {
-	SE_CONNECTION_REFUSED = -4,
-	SE_CANT_FIND_HOST = -3,
-	SE_CONNECTION_FAILED = -2,
-	SE_INVALID_RESPONSE = -1,
+	SE_CONNECTION_REFUSED = -5,
+	SE_CANT_FIND_HOST = -4,
+	SE_CONNECTION_FAILED = -3,
+	SE_INVALID_RESPONSE = -2,
+	SE_PENDING = -1,
 
 	SE_NO_ERROR = 0,
 
@@ -124,33 +127,39 @@ struct GameAction
 
 const char *WLServ_GetActionName(GameActions action);
 
-ServerError WLServ_CreateAccount(const char *pUsername, const char *pPassword, const char *pEmail, uint32 *pUserID);
-ServerError WLServ_Login(const char *pUsername, const char *pPassword, uint32 *pUserID);
+void WLServ_CreateAccount(HTTPRequest &request, const char *pUsername, const char *pPassword, const char *pEmail);
+void WLServ_Login(HTTPRequest &request, const char *pUsername, const char *pPassword);
+ServerError WLServResult_GetUser(HTTPRequest &request, uint32 *pUserID);
 
-ServerError WLServ_GetUserByID(uint32 id, UserDetails *pUser);
-ServerError WLServ_GetUserByName(const char *pUsername, UserDetails *pUser);
+void WLServ_GetUserByID(HTTPRequest &request, uint32 id);
+void WLServ_GetUserByName(HTTPRequest &request, const char *pUsername);
+ServerError WLServResult_GetUserDetails(HTTPRequest &request, UserDetails *pUser);
 
-ServerError WLServ_GetActiveGames(uint32 user, uint32 *pGames, int *pNumGames);
-ServerError WLServ_GetPastGames(uint32 user, uint32 *pGames, int *pNumGames);
-ServerError WLServ_GetPendingGames(uint32 user, uint32 *pGames, int *pNumGames);
+void WLServ_GetActiveGames(HTTPRequest &request, uint32 user);
+void WLServ_GetPastGames(HTTPRequest &request, uint32 user);
+void WLServ_GetPendingGames(HTTPRequest &request, uint32 user);
+ServerError WLServResult_GetGameList(HTTPRequest &request, uint32 *pGames, int *pNumGames);
 
-ServerError WLServ_CreateGame(uint32 user, GameCreateDetails *pDetails, uint32 *pGame);
+void WLServ_CreateGame(HTTPRequest &request, uint32 user, GameCreateDetails *pDetails);
+void WLServ_FindRandomGame(HTTPRequest &request, uint32 user);
+void WLServ_BeginGame(HTTPRequest &request, uint32 game, uint32 *pPlayers, int numPlayers);
+ServerError WLServResult_GetGame(HTTPRequest &request, uint32 *pGame);
 
-ServerError WLServ_GetGameByID(uint32 id, GameDetails *pGame);
-ServerError WLServ_GetGameByName(const char *pName, GameDetails *pGame);
+void WLServ_GetGameByID(HTTPRequest &request, uint32 id);
+void WLServ_GetGameByName(HTTPRequest &request, const char *pName);
+ServerError WLServResult_GetGameDetails(HTTPRequest &request, GameDetails *pGame);
 
-ServerError WLServ_JoinGame(uint32 user, uint32 game);
-ServerError WLServ_FindRandomGame(uint32 user, uint32 *pGame);
-ServerError WLServ_LeaveGame(uint32 user, uint32 game);
+void WLServ_JoinGame(HTTPRequest &request, uint32 user, uint32 game);
+void WLServ_LeaveGame(HTTPRequest &request, uint32 user, uint32 game);
+void WLServ_SetRace(HTTPRequest &request, uint32 game, uint32 user, int race);
+void WLServ_SetColour(HTTPRequest &request, uint32 game, uint32 user, int colour);
+ServerError WLServResult_GetError(HTTPRequest &request);
 
-ServerError WLServ_SetRace(uint32 game, uint32 user, int race);
-ServerError WLServ_SetColour(uint32 game, uint32 user, int colour);
+void WLServ_GameState(HTTPRequest &request, uint32 game);
+ServerError WLServResult_GetGameState(HTTPRequest &request, GameState *pState);
 
-ServerError WLServ_BeginGame(uint32 game, uint32 *pPlayers, int numPlayers, uint32 *pGame);
-
-ServerError WLServ_GameState(uint32 game, GameState *pState);
-
-ServerError WLServ_ApplyActions(uint32 game, GameAction *pActions, int numActions);
-ServerError WLServ_UpdateState(uint32 game, int lastAction, GameAction **ppActions, int *pNumActions, int *pActionCount);
+int WLServ_ApplyActions(HTTPRequest &request, uint32 game, GameAction *pActions, int numActions);
+void WLServ_UpdateState(HTTPRequest &request, uint32 game, int lastAction);
+ServerError WLServResult_GetActions(HTTPRequest &request, GameAction **ppActions, int *pNumActions, int *pActionCount);
 
 #endif

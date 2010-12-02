@@ -32,6 +32,8 @@ JoinGameScreen *pJoinGame = NULL;
 
 MFSystemCallbackFunction pInitFujiFS;
 
+bool gAppHasFocus = true;
+
 /*** Game Functions ***/
 
 void Game_InitFilesystem()
@@ -77,8 +79,11 @@ void Game_Update()
 {
 	MFCALLSTACKc;
 
+	HTTPRequest::UpdateHTTPEvents();
+
 	pInputManager->Update();
 
+	Session::Update();
 	Screen::UpdateScreen();
 }
 
@@ -118,6 +123,16 @@ void Game_Deinit()
 		delete pLogin;
 }
 
+void Game_FocusGained()
+{
+	gAppHasFocus = true;
+}
+
+void Game_FocusLost()
+{
+	gAppHasFocus = false;
+}
+
 int GameMain(MFInitParams *pInitParams)
 {
 	MFRand_Seed((uint32)MFSystem_ReadRTC());
@@ -148,6 +163,9 @@ int GameMain(MFInitParams *pInitParams)
 	MFSystem_RegisterSystemCallback(MFCB_Update, Game_Update);
 	MFSystem_RegisterSystemCallback(MFCB_Draw, Game_Draw);
 	MFSystem_RegisterSystemCallback(MFCB_Deinit, Game_Deinit);
+
+	MFSystem_RegisterSystemCallback(MFCB_GainedFocus, Game_FocusGained);
+	MFSystem_RegisterSystemCallback(MFCB_LostFocus, Game_FocusLost);
 
 	return MFMain(pInitParams);
 }
@@ -217,6 +235,16 @@ void AdjustRect_Margin(MFRect *pRect, float margin, bool bPixels)
 	pRect->y += vMargin;
 	pRect->width -= hMargin*2;
 	pRect->height -= vMargin*2;
+}
+
+void DrawTicker(float x, float y)
+{
+	uint64 t = MFSystem_ReadRTC();
+	uint64 freq = MFSystem_GetRTCFrequency();
+	freq /= 5;
+	int numDots = (int)(t / freq) % 6;
+
+	MFFont_DrawText(MFFont_GetDebugFont(), MakeVector(x, y), 32.f, MFVector::white, ".....", numDots);
 }
 
 #if defined(MF_WINDOWS) || defined(_WINDOWS)

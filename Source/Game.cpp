@@ -16,13 +16,17 @@ Game *Game::pCurrent = NULL;
 
 Game::Game(GameParams *pParams)
 {
+	update.SetCompleteDelegate(MakeDelegate(this, &Game::Update));
+	commit.SetCompleteDelegate(MakeDelegate(this, &Game::Commit));
+
 	Init(pParams->pMap, pParams->bEditMap);
 
 	bOnline = pParams->bOnline;
 	gameID = pParams->gameID;
 
-	numActions = 0;
-	numArgs = 0;
+	lastCommit = lastCommitArg = 0;
+	nextAction = nextArg = 0;
+	attemptCommit = 0;
 
 	lastAction = 0;
 	firstServerAction = numServerActions = serverActionCount = 0;
@@ -63,14 +67,19 @@ Game::Game(GameParams *pParams)
 
 Game::Game(GameState *pState)
 {
+	update.SetCompleteDelegate(MakeDelegate(this, &Game::Update));
+	commit.SetCompleteDelegate(MakeDelegate(this, &Game::Commit));
+
 	Init(pState->map, false);
 
 	bOnline = true;
 	gameID = pState->id;
 
 	// TODO: we should try loading game state and pending actions from disk...
-	numActions = 0;
-	numArgs = 0;
+	lastCommit = lastCommitArg = 0;
+	nextAction = nextArg = 0;
+	attemptCommit = 0;
+
 	currentPlayer = 0;
 	currentTurn = 0;
 
@@ -95,14 +104,8 @@ Game::Game(GameState *pState)
 	// update the game state
 	lastAction = 0;
 	firstServerAction = numServerActions = serverActionCount = 0;
-	do
-	{
-		UpdateGameState();
-		ReplayActions();
-//		UpdateGameState();
-//		ReplayActions(300);
-	}
-	while(lastAction < serverActionCount);
+
+	UpdateGameState();
 
 	// resume the game
 	Screen::SetNext(pMapScreen);
@@ -1357,16 +1360,43 @@ Action *Game::FindFirstDependency(Action *pAction)
 	return pAction;
 }
 
+int Game::GetNumRemainingActions()
+{
+	if(nextAction <= lastCommit)
+		return MAX_PENDING_ACTIONS - lastCommit + nextAction;
+	return MAX_PENDING_ACTIONS - nextAction - lastCommit;
+}
+
+int Game::GetNumRemainingActionArgs()
+{
+	if(nextArg <= lastCommitArg)
+		return MAX_PENDING_ACTION_ARGS - lastCommitArg + nextArg;
+	return MAX_PENDING_ACTION_ARGS - nextArg - lastCommitArg;
+}
+
+int Game::GetNumPendingActions()
+{
+	if(attemptCommit < lastCommit)
+		return MAX_PENDING_ACTIONS - lastCommit + attemptCommit;
+	return attemptCommit - lastCommit;
+}
+
+int Game::GetPrevAction()
+{
+	return nextAction == 0 ? MAX_PENDING_ACTIONS - 1 : nextAction - 1;
+}
 
 void Game::PushAction(GameActions action)
 {
 	if(!bOnline)
 		return;
 
-	pendingActions[numActions].action = action;
-	pendingActions[numActions].pArgs = actionArgs + numArgs;
-	pendingActions[numActions].numArgs = 0;
-	++numActions;
+	MFDebug_Assert(GetNumRemainingActions() > 1, "Not enough commit actions!");
+
+	pendingActions[nextAction].action = action;
+	pendingActions[nextAction].pArgs = actionArgs + nextArg;
+	pendingActions[nextAction].numArgs = 0;
+	nextAction = (nextAction + 1) % MAX_PENDING_ACTIONS;
 }
 
 void Game::PushActionArg(int arg)
@@ -1375,9 +1405,26 @@ void Game::PushActionArg(int arg)
 		return;
 
 	MFDebug_Assert(arg >= -1, "!");
+	MFDebug_Assert(GetNumRemainingActionArgs() > 1, "Not enough commit args!");
 
-	actionArgs[numArgs++] = arg;
-	++pendingActions[numActions-1].numArgs;
+	GameAction &action = pendingActions[GetPrevAction()];
+
+	if(nextArg == 0 && action.numArgs)
+	{
+		MFDebug_Assert(lastCommitArg > action.numArgs + 1, "Not enough commit args!");
+
+		// copy the existing args to the beginning of the circular queue
+		for(int a=0; a<action.numArgs; ++a)
+			actionArgs[a] = action.pArgs[a];
+
+		action.pArgs = actionArgs;
+		nextArg = action.numArgs;
+	}
+
+	actionArgs[nextArg++] = arg;
+	++action.numArgs;
+
+	nextArg = nextArg % MAX_PENDING_ACTION_ARGS;
 }
 
 void Game::PushActionArgs(int *pArgs, int numArgs)
@@ -1385,28 +1432,86 @@ void Game::PushActionArgs(int *pArgs, int numArgs)
 	if(!bOnline)
 		return;
 
+	MFDebug_Assert(GetNumRemainingActionArgs() > numArgs + 1, "Not enough commit args!");
+
+	GameAction &action = pendingActions[GetPrevAction()];
+
+	if(nextArg > MAX_PENDING_ACTION_ARGS - numArgs || nextArg < action.numArgs)
+	{
+		MFDebug_Assert(lastCommitArg > action.numArgs + numArgs, "Not enough commit args!");
+
+		// copy the existing args to the beginning of the circular queue
+		for(int a=0; a<action.numArgs; ++a)
+			actionArgs[a] = action.pArgs[a];
+
+		action.pArgs = actionArgs;
+		nextArg = action.numArgs;
+	}
+
 	for(int a=0; a<numArgs; ++a)
-		actionArgs[numArgs++] = pArgs[a];
-	pendingActions[numActions-1].numArgs += numArgs;
+		actionArgs[nextArg++] = pArgs[a];
+	action.numArgs += numArgs;
+
+	nextArg = nextArg % MAX_PENDING_ACTION_ARGS;
 }
 
-ServerError Game::ApplyActions()
+void Game::ApplyActions()
 {
-	if(!bOnline || numActions == 0)
-		return SE_NO_ERROR;
+	attemptCommit = nextAction;
 
-	ServerError err = WLServ_ApplyActions(gameID, pendingActions, numActions);
-	numServerActions += numActions;
-	serverActionCount += numActions;
-	lastAction += numActions;
-	numActions = numArgs = 0;
-	return err;
+	CommitPending();
+}
+
+void Game::CommitPending()
+{
+	if(!bOnline || lastCommit == attemptCommit || commit.RequestPending())
+		return;
+
+	if(attemptCommit < lastCommit)
+		pendingCommit = MAX_PENDING_ACTIONS - lastCommit;
+	else
+		pendingCommit = attemptCommit - lastCommit;
+
+	pendingCommit = WLServ_ApplyActions(commit, gameID, pendingActions + lastCommit, pendingCommit);
+}
+
+void Game::Commit(HTTPRequest::Status status)
+{
+	ServerError err = WLServResult_GetError(commit);
+	if(err != SE_NO_ERROR)
+		return;
+
+	numServerActions += pendingCommit;
+	serverActionCount += pendingCommit;
+	lastAction += pendingCommit;
+
+	lastCommit = (lastCommit + pendingCommit) % MAX_PENDING_ACTIONS;
+	lastCommitArg = lastCommit == nextAction ? 0 : (int)(pendingActions[lastCommit].pArgs - actionArgs);
+
+	if(lastCommit != attemptCommit)
+		CommitPending();
 }
 
 void Game::UpdateGameState()
 {
-	ServerError err = WLServ_UpdateState(gameID, lastAction, &pServerActions, &numServerActions, &serverActionCount);
+	if(!update.RequestPending())
+		WLServ_UpdateState(update, gameID, lastAction);
+}
+
+void Game::Update(HTTPRequest::Status status)
+{
+	ServerError err = WLServResult_GetActions(update, &pServerActions, &numServerActions, &serverActionCount);
+	if(err != SE_NO_ERROR)
+		return;
+
 	firstServerAction = lastAction;
+	serverActionCount += lastAction;
+
+	ReplayActions();
+
+	// recurse if we don't have all actions yet.
+	if(lastAction < serverActionCount)
+		UpdateGameState();
 }
 
 void Game::ReplayActions(int stopAction)

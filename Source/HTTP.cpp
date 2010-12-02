@@ -14,6 +14,245 @@ static const char *gTransferEncodings[HTTP_TE_Max] =
 	"gzip"
 };
 
+HTTPRequest *HTTPRequest::pUpdateList[MAX_ACTIVE_REQUESTS];
+int HTTPRequest::numLiveRequests = 0;
+
+void HTTPRequest::UpdateHTTPEvents()
+{
+	for(int a=0; a<numLiveRequests; ++a)
+		pUpdateList[a]->UpdateEvents();
+}
+
+HTTPRequest::HTTPRequest()
+{
+	bFinished = bOldFinished = false;
+	status = oldStatus = CS_NotStarted;
+
+	mutex = NULL;
+	transferThread = NULL;
+
+	pResponse = NULL;
+
+	eventDelegate.clear();
+
+	pUpdateList[numLiveRequests++] = this;
+}
+
+HTTPRequest::~HTTPRequest()
+{
+	if(pResponse)
+	{
+		pResponse->Destroy();
+		pResponse = NULL;
+	}
+
+	for(int a=0; a<numLiveRequests; ++a)
+	{
+		if(pUpdateList[a] == this)
+		{
+			--numLiveRequests;
+			for(; a<numLiveRequests; ++a)
+				pUpdateList[a] = pUpdateList[a+1];
+		}
+	}
+}
+
+void HTTPRequest::UpdateEvents()
+{
+	Lock();
+
+	if(status != oldStatus && status != CS_NotStarted)
+	{
+		if(eventDelegate)
+			eventDelegate(status);
+	}
+
+	if(bFinished && !bOldFinished)
+	{
+		if(completeDelegate)
+			completeDelegate(status);
+	}
+
+	oldStatus = status;
+	bOldFinished = bFinished;
+
+	Unlock();
+}
+
+void HTTPRequest::Get(const char *_pServer, int _port, const char *_pResourcePath)
+{
+	if(pResponse)
+	{
+		pResponse->Destroy();
+		pResponse = NULL;
+	}
+
+	pServer = _pServer;
+	pResourcePath = _pResourcePath;
+	port = _port;
+
+	// generate request
+	reqLen = sprintf(requestBuffer, "GET %s HTTP/1.1\nHost: %s:%d\nUser-Agent: WarriorLords Client/1.0\nContent-Type: application/x-www-form-urlencoded\n\n\n", pResourcePath, pServer, port);
+
+	// begin async request
+	CreateConnection();
+}
+
+void HTTPRequest::Post(const char *_pServer, int _port, const char *_pResourcePath, MFFileHTTPRequestArg *pArgs, int numArgs)
+{
+	Reset();
+
+	if(pResponse)
+	{
+		pResponse->Destroy();
+		pResponse = NULL;
+	}
+
+	pServer = _pServer;
+	pResourcePath = _pResourcePath;
+	port = _port;
+
+	// generate request
+	char pArgString[2048];
+	pArgString[0] = 0;
+
+	if(pArgs)
+	{
+		int argLen = 0;
+
+		// build the string from the supplied args
+		for(int a=0; a<numArgs; ++a)
+		{
+			switch(pArgs[a].type)
+			{
+				case MFFileHTTPRequestArg::AT_Int:
+					argLen += sprintf(pArgString + argLen, "%s%s=%d", argLen ? "&" : "", MFStr_URLEncodeString(pArgs[a].pArg), pArgs[a].iValue);
+					break;
+				case MFFileHTTPRequestArg::AT_Float:
+					argLen += sprintf(pArgString + argLen, "%s%s=%g", argLen ? "&" : "", MFStr_URLEncodeString(pArgs[a].pArg), pArgs[a].fValue);
+					break;
+				case MFFileHTTPRequestArg::AT_String:
+					argLen += sprintf(pArgString + argLen, "%s%s=%s", argLen ? "&" : "", MFStr_URLEncodeString(pArgs[a].pArg), MFStr_URLEncodeString(pArgs[a].pValue));
+					break;
+			}
+		}
+		pArgString[argLen] = 0;
+	}
+
+	reqLen = sprintf(requestBuffer, "POST %s HTTP/1.1\nHost: %s:%d\nUser-Agent: WarriorLords Client/1.0\nContent-Type: application/x-www-form-urlencoded\nContent-Length: %d\n\n%s", pResourcePath, pServer, port, MFString_Length(pArgString), pArgString);
+
+	// begin async request
+	CreateConnection();
+}
+
+void HTTPRequest::CreateConnection()
+{
+	SetStatus(CS_ResolvingHost, false);
+
+	mutex = MFThread_CreateMutex("HTTP Mutex");
+	MFDebug_Assert(mutex != NULL, "Too many mutexes!");
+	transferThread = MFThread_CreateThread("HTTP Thread", RequestThread, this);
+	MFDebug_Assert(transferThread != NULL, "Too many threads!");
+}
+
+int HTTPRequest::RequestThread(void *_pRequest)
+{
+	HTTPRequest *pThis = (HTTPRequest*)_pRequest;
+
+	pThis->HandleRequest();
+
+	// clean up the thread
+	MFThread thread = pThis->transferThread;
+	MFMutex mutex = pThis->mutex;
+	MFThread_LockMutex(mutex);
+	pThis->transferThread = NULL;
+	pThis->mutex = NULL;
+	MFThread_ReleaseMutex(mutex);
+	MFThread_DestroyMutex(mutex);
+	MFThread_DestroyThread(thread);
+	return 0;
+}
+
+void HTTPRequest::HandleRequest()
+{
+	MFAddressInfo *pAddrInfo;
+	if(MFSockets_GetAddressInfo(pServer, MFStr("%d", port), NULL, &pAddrInfo) != 0)
+	{
+		SetStatus(CS_CouldntResolveHost, false);
+		return;
+	}
+
+	MFSocket s = MFSockets_CreateSocket(pAddrInfo->pAddress->family, MFSockType_Stream, MFProtocol_TCP);
+
+	SetStatus(CS_WaitingForHost, false);
+
+	int r = MFSockets_Connect(s, *pAddrInfo->pAddress);
+	if(r != 0)
+	{
+		MFSockets_CloseSocket(s);
+
+		SetStatus(CS_CouldntConnect, false);
+		return;
+	}
+
+	SetStatus(CS_Pending, false);
+
+	MFSockets_Send(s, requestBuffer, reqLen, 0);
+	pResponse = HTTPResponse::Create(s);
+	MFSockets_CloseSocket(s);
+
+	SetStatus(CS_Succeeded, true);
+}
+
+void HTTPRequest::SetStatus(Status _status, bool _bFinished)
+{
+	Lock();
+	status = _status;
+	bFinished = _bFinished;
+	Unlock();
+}
+
+bool HTTPRequest::IsFinished()
+{
+	Lock();
+	bool bF = bFinished;
+	Unlock();
+	return bF;
+}
+
+bool HTTPRequest::RequestPending()
+{
+	bool bPending = false;
+	Lock();
+	bPending = status != CS_NotStarted && !bFinished;
+	Unlock();
+	return bPending;
+}
+
+HTTPRequest::Status HTTPRequest::GetStatus()
+{
+	Lock();
+	Status s = status;
+	Unlock();
+	return s;
+}
+
+void HTTPRequest::Reset()
+{
+	Lock();
+	status = CS_NotStarted;
+	bFinished = false;
+	Unlock();
+}
+
+HTTPResponse *HTTPRequest::GetResponse()
+{
+	Lock();
+	HTTPResponse *pR = (status == CS_Succeeded ? pResponse : NULL);
+	Unlock();
+	return pR;
+}
+
 HTTPResponse *HTTP_Get(const char *pServer, int port, const char *pResourcePath)
 {
 	MFAddressInfo *pAddrInfo;
@@ -96,13 +335,13 @@ HTTPResponse *HTTP_Post(const char *pServer, int port, const char *pResourcePath
 
 HTTPResponse *HTTPResponse::Create(MFSocket s)
 {
-	MFDebug_Log(0, "---------------------- Begin Transfer ----------------------");
+//	MFDebug_Log(0, "---------------------- Begin Transfer ----------------------");
 
 	char revcBuffer[2048];
 	int bytes = MFSockets_Recv(s, revcBuffer, sizeof(revcBuffer)-1, 0);
 	revcBuffer[bytes] = 0;
 
-	MFDebug_Log(0, MFStr("Recv: %d", bytes));
+//	MFDebug_Log(0, MFStr("Recv: %d", bytes));
 
 	// parse HTTP header
 	HTTPResponse *pHeader = NULL;
@@ -243,7 +482,7 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 			// while there is still data pending
 			while(receivedData < pHeader->dataSize)
 			{
-				bytes = MFSockets_Recv(s, revcBuffer, MFMin((size_t)(pHeader->dataSize - receivedData), sizeof(revcBuffer)), 0);
+				bytes = MFSockets_Recv(s, revcBuffer, MFMin(pHeader->dataSize - receivedData, (uint32)sizeof(revcBuffer)), 0);
 				MFCopyMemory(pHeader->pData + receivedData, revcBuffer, bytes);
 				receivedData += bytes;
 			}
@@ -260,7 +499,7 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 
 				uint32 numBytes = MFString_AsciiToInteger(pNumBytes, false, 16);
 
-				MFDebug_Log(0, MFStr("ChunkBytes: %d - '%s'", numBytes, pNumBytes));
+//				MFDebug_Log(0, MFStr("ChunkBytes: %d - '%s'", numBytes, pNumBytes));
 
 				// check if we've reached the end of the stream
 				if(numBytes == 0)
@@ -276,7 +515,7 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 					uint32 bytesRemaining = bytes - (uint32)(pPacketData - revcBuffer);
 					uint32 bytesToCopy = MFMin(bytesRemaining, numBytes);
 
-					MFDebug_Log(0, MFStr("CopyBytes: %d", bytesToCopy));
+//					MFDebug_Log(0, MFStr("CopyBytes: %d", bytesToCopy));
 
 					MFCopyMemory(pHeader->pData + pHeader->dataSize, pPacketData, bytesToCopy);
 
@@ -290,7 +529,7 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 						bytes = MFSockets_Recv(s, revcBuffer, sizeof(revcBuffer)-1, 0);
 						revcBuffer[bytes] = 0;
 
-						MFDebug_Log(0, MFStr("Recv: %d", bytes));
+//						MFDebug_Log(0, MFStr("Recv: %d", bytes));
 
 						pPacketData = revcBuffer;
 					}
@@ -305,7 +544,7 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 					break;
 				}
 
-				MFDebug_Log(0, MFStr("RemainingBuffer: %d\n%s", MFString_Length(pPacketData), pPacketData));
+//				MFDebug_Log(0, MFStr("RemainingBuffer: %d\n%s", MFString_Length(pPacketData), pPacketData));
 
 				// check that the server has actually sent the next chunk
 				if(*pPacketData == 0)
@@ -313,7 +552,7 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 					bytes = MFSockets_Recv(s, revcBuffer, sizeof(revcBuffer)-1, 0);
 					revcBuffer[bytes] = 0;
 
-					MFDebug_Log(0, MFStr("Recv: %d", bytes));
+//					MFDebug_Log(0, MFStr("Recv: %d", bytes));
 
 					pPacketData = revcBuffer;
 				}
@@ -327,7 +566,7 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 			break;
 	}
 
-	MFDebug_Log(0, MFStr("Done: %d", pHeader->dataSize));
+//	MFDebug_Log(0, MFStr("Done: %d", pHeader->dataSize));
 
 	pHeader->error = HTTP_OK;
 	return pHeader;

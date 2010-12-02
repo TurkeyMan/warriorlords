@@ -22,6 +22,8 @@ MenuScreen::MenuScreen()
 	pIcons = MFMaterial_Create("Icons");
 	pFont = MFFont_Create("FranklinGothic");
 
+	createRequest.SetCompleteDelegate(MakeDelegate(this, &MenuScreen::Created));
+
 	gameType = 0;
 	pMaps = NULL;
 	pMessage = NULL;
@@ -195,6 +197,9 @@ void MenuScreen::Draw()
 		MFFont_DrawTextf(pFont, MakeVector(280, 100 + offset), 25.f, MFVector::white, "Players: %d", pMap->details.numPlayers);
 		MFFont_DrawTextf(pFont, MakeVector(280, 125 + offset), 25.f, MFVector::white, "Size: %d, %d", pMap->details.width, pMap->details.height);
 	}
+
+	if(createRequest.RequestPending())
+		DrawTicker(10.f, 10.f);
 }
 
 void MenuScreen::Deselect()
@@ -204,6 +209,9 @@ void MenuScreen::Deselect()
 
 void MenuScreen::Click(int button, int buttonID)
 {
+	if(createRequest.RequestPending())
+		return;
+
 	switch(buttonID)
 	{
 		case 0:
@@ -242,28 +250,7 @@ void MenuScreen::Click(int button, int buttonID)
 					details.turnTime = 60*60;
 					details.numPlayers = pMap->details.numPlayers;
 
-					uint32 lobby;
-					ServerError err = WLServ_CreateGame(pSession->GetUserID(), &details, &lobby);
-
-					if(err != SE_NO_ERROR)
-					{
-						switch(err)
-						{
-							case SE_CONNECTION_FAILED:
-								pMessage = "Couldn't connect to server!";
-								break;
-							case SE_INVALID_GAME:
-								pMessage = "Invalid game!";
-								break;
-							default:
-								pMessage = "Unknown Error!";
-								break;
-						}
-					}
-					else
-					{
-						pLobby->ShowOnline(lobby);
-					}
+					WLServ_CreateGame(createRequest, pSession->GetUserID(), &details);
 				}
 				else
 				{
@@ -308,4 +295,29 @@ void MenuScreen::SelectMap(int item)
 		Map::GetMapDetails(pMap->name, &pMap->details);
 		pMap->bDetailsLoaded = true;
 	}
+}
+
+void MenuScreen::Created(HTTPRequest::Status status)
+{
+	uint32 lobby;
+	ServerError err = WLServResult_GetGame(createRequest, &lobby);
+
+	if(err != SE_NO_ERROR)
+	{
+		switch(err)
+		{
+			case SE_CONNECTION_FAILED:
+				pMessage = "Couldn't connect to server!";
+				break;
+			case SE_INVALID_GAME:
+				pMessage = "Invalid game!";
+				break;
+			default:
+				pMessage = "Unknown Error!";
+				break;
+		}
+		return;
+	}
+
+	pLobby->ShowOnline(lobby);
 }

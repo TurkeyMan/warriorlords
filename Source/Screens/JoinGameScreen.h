@@ -30,7 +30,14 @@ protected:
 
 	const char *pMessage;
 
+	GameDetails details;
+
+	HTTPRequest find;
+	HTTPRequest join;
+
 	void Click(int button, int buttonID);
+	void FindGame(HTTPRequest::Status status);
+	void JoinGame(HTTPRequest::Status status);
 };
 
 #endif

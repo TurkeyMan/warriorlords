@@ -37,6 +37,8 @@ protected:
 
 	bool bAutoLogin;
 
+	HTTPRequest createRequest;
+
 	void AutoLogin();
 
 	void Click(int button, int buttonID);
@@ -44,6 +46,8 @@ protected:
 	void TabUser(const char *pString);
 	void TabPass(const char *pString);
 	void TabEmail(const char *pString);
+	void CreateComplete(HTTPRequest::Status status);
+	void LoginScreen::OnLogin(ServerError err, Session *pSession);
 };
 
 #endif

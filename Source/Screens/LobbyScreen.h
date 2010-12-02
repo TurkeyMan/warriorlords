@@ -46,9 +46,25 @@ protected:
 	MapDetails map;
 	bool bOffline;
 
+	GameParams params;
+
+	HTTPRequest request;
+	HTTPRequest begin;
+	HTTPRequest enter;
+	HTTPRequest leave;
+	HTTPRequest race;
+	HTTPRequest colour;
+
+	int raceID, colourID, newRace, newColour;
+
 	void Click(int button, int buttonID);
 	void SetRace(int item, int id);
 	void SetColour(int item, int id);
+	void GetDetails(HTTPRequest::Status status);
+	void BeginGame(HTTPRequest::Status status);
+	void EnterGame(HTTPRequest::Status status);
+	void CommitRace(HTTPRequest::Status status);
+	void CommitColour(HTTPRequest::Status status);
 };
 
 #endif

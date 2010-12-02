@@ -21,6 +21,8 @@ HomeScreen::HomeScreen()
 	pIcons = MFMaterial_Create("Icons");
 	pFont = MFFont_Create("FranklinGothic");
 
+	request.SetCompleteDelegate(MakeDelegate(this, &HomeScreen::Resume));
+
 	pSession = NULL;
 	bOffline = true;
 
@@ -99,19 +101,8 @@ void HomeScreen::Select()
 
 	if(!bOffline)
 	{
+		pSession->SetUpdateDelegate(MakeDelegate(this, &HomeScreen::UpdateSession));
 		pSession->UpdateState();
-
-		for(int a=0; a<pSession->GetNumPendingGames(); ++a)
-		{
-			GameDetails *pGame = pSession->GetPendingGame(a);
-			pWaiting->AddItem(pGame->name, -1, pGame);
-		}
-
-		for(int a=0; a<pSession->GetNumCurrentGames(); ++a)
-		{
-			GameState *pGame = pSession->GetCurrentGame(a);
-			pMyGames->AddItem(pGame->name, -1, pGame);
-		}
 	}
 
 	pInputManager->ClearReceivers();
@@ -151,7 +142,6 @@ bool HomeScreen::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 int HomeScreen::Update()
 {
-
 	return 0;
 }
 
@@ -169,6 +159,8 @@ void HomeScreen::Draw()
 	pFind->Draw();
 	pOffline->Draw();
 	pContinue->Draw();
+
+	DrawTicker(10, 0);
 }
 
 void HomeScreen::Deselect()
@@ -178,24 +170,7 @@ void HomeScreen::Deselect()
 
 void HomeScreen::ResumeGame(uint32 game)
 {
-	// check if the game has begun
-	GameState state;
-	ServerError err = WLServ_GameState(game, &state);
-
-	if(err == SE_NO_ERROR)
-	{
-		// resume game
-		pGame = new Game(&state);
-		Game::SetCurrent(pGame);
-		return;
-	}
-
-	// enter lobby if it still exists
-	if(pLobby->ShowOnline(game))
-		return;
-
-	// game has disappeared >_<
-	//... error string?
+	WLServ_GameState(request, game);
 }
 
 void HomeScreen::CreateGame(int button, int buttonID)
@@ -269,4 +244,40 @@ void HomeScreen::EnterGame(int item)
 
 	GameDetails *pGame = (GameDetails*)pMyGames->GetItemData(item);
 	ResumeGame(pGame->id);
+}
+
+void HomeScreen::Resume(HTTPRequest::Status status)
+{
+	GameState state;
+	ServerError err = WLServResult_GetGameState(request, &state);
+
+	if(err == SE_NO_ERROR)
+	{
+		// resume game
+		pGame = new Game(&state);
+		Game::SetCurrent(pGame);
+		return;
+	}
+
+	// enter lobby if it still exists
+	if(pLobby->ShowOnline(continueGame))
+		return;
+
+	// game has disappeared >_<
+	//... error string?
+}
+
+void HomeScreen::UpdateSession(ServerError error, Session *pSession)
+{
+	for(int a=0; a<pSession->GetNumPendingGames(); ++a)
+	{
+		GameDetails *pGame = pSession->GetPendingGame(a);
+		pWaiting->AddItem(pGame->name, -1, pGame);
+	}
+
+	for(int a=0; a<pSession->GetNumCurrentGames(); ++a)
+	{
+		GameState *pGame = pSession->GetCurrentGame(a);
+		pMyGames->AddItem(pGame->name, -1, pGame);
+	}
 }

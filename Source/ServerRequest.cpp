@@ -39,58 +39,59 @@ const char *WLServ_GetActionName(GameActions action)
 	return gpActions[action];
 }
 
-ServerError WLServ_CreateAccount(const char *pUsername, const char *pPassword, const char *pEmail, uint32 *pUserID)
+static ServerError CheckHTTPError(HTTPRequest::Status status)
 {
-	ServerError err = SE_INVALID_RESPONSE;
+	switch(status)
+	{
+		case HTTPRequest::CS_ResolvingHost:
+		case HTTPRequest::CS_WaitingForHost:
+		case HTTPRequest::CS_Pending:
+			return SE_PENDING;
+		case HTTPRequest::CS_CouldntResolveHost:
+			return SE_CANT_FIND_HOST;
+		case HTTPRequest::CS_CouldntConnect:
+			return SE_CONNECTION_REFUSED;
+		case HTTPRequest::CS_ConnectionLost:
+			return SE_CONNECTION_FAILED;
+		case HTTPRequest::CS_HTTPError:
+			return SE_INVALID_RESPONSE;
+		case HTTPRequest::CS_Succeeded:
+		default:
+			break;
+	}
 
+	return SE_NO_ERROR;
+}
+
+void WLServ_CreateAccount(HTTPRequest &request, const char *pUsername, const char *pPassword, const char *pEmail)
+{
 	MFFileHTTPRequestArg args[4];
 	args[0].SetString("request", "CREATEACCOUNT");
 	args[1].SetString("username", pUsername);
 	args[2].SetString("password", pPassword);
 	args[3].SetString("email", pEmail);
 
-	HTTPResponse *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-
-	if(!pResponse)
-		return SE_CONNECTION_FAILED;
-
-	char *pLine = strtok(pResponse->GetData(), "\n");
-	while(pLine)
-	{
-		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
-		{
-			err = SE_NO_ERROR;
-		}
-		else if(pUserID && !MFString_CaseCmpN(pLine, "USERID", 6) && pLine[6] == '=')
-		{
-			*pUserID = MFString_AsciiToInteger(pLine + 7);
-		}
-		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
-		{
-			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
-		}
-
-		pLine = strtok(NULL, "\n");
-	}
-
-	pResponse->Destroy();
-
-	return err;
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
-ServerError WLServ_Login(const char *pUsername, const char *pPassword, uint32 *pUserID)
+void WLServ_Login(HTTPRequest &request, const char *pUsername, const char *pPassword)
 {
-	ServerError err = SE_INVALID_RESPONSE;
-
 	MFFileHTTPRequestArg args[3];
 	args[0].SetString("request", "LOGIN");
 	args[1].SetString("username", pUsername);
 	args[2].SetString("password", pPassword);
 
-	HTTPResponse *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+}
 
-	if(!pResponse)
-		return SE_CONNECTION_FAILED;
+ServerError WLServResult_GetUser(HTTPRequest &request, uint32 *pUserID)
+{
+	ServerError err = CheckHTTPError(request.GetStatus());
+	if(err != SE_NO_ERROR)
+		return err;
+	err = SE_INVALID_RESPONSE;
+
+	HTTPResponse *pResponse = request.GetResponse();
 
 	char *pLine = strtok(pResponse->GetData(), "\n");
 	while(pLine)
@@ -111,19 +112,35 @@ ServerError WLServ_Login(const char *pUsername, const char *pPassword, uint32 *p
 		pLine = strtok(NULL, "\n");
 	}
 
-	pResponse->Destroy();
-
 	return err;
 }
 
-static ServerError WLServ_GetUser(MFFileHTTPRequestArg *pArgs, UserDetails *pUser)
+void WLServ_GetUserByID(HTTPRequest &request, uint32 id)
 {
-	ServerError err = SE_INVALID_RESPONSE;
+	MFFileHTTPRequestArg args[2];
+	args[0].SetString("request", "GETUSER");
+	args[1].SetInt("playerid", id);
 
-	HTTPResponse *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", pArgs, 2);
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+}
 
-	if(!pResponse)
-		return SE_CONNECTION_FAILED;
+void WLServ_GetUserByName(HTTPRequest &request, const char *pUsername, UserDetails *pUser)
+{
+	MFFileHTTPRequestArg args[2];
+	args[0].SetString("request", "GETUSER");
+	args[1].SetString("username", pUsername);
+
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+}
+
+ServerError WLServResult_GetUserDetails(HTTPRequest &request, UserDetails *pUser)
+{
+	ServerError err = CheckHTTPError(request.GetStatus());
+	if(err != SE_NO_ERROR)
+		return err;
+	err = SE_INVALID_RESPONSE;
+
+	HTTPResponse *pResponse = request.GetResponse();
 
 	char *pLine = strtok(pResponse->GetData(), "\n");
 	while(pLine)
@@ -164,41 +181,41 @@ static ServerError WLServ_GetUser(MFFileHTTPRequestArg *pArgs, UserDetails *pUse
 		pLine = strtok(NULL, "\n");
 	}
 
-	pResponse->Destroy();
-
 	return err;
 }
 
-ServerError WLServ_GetUserByID(uint32 id, UserDetails *pUser)
+static void WLServ_GetGames(HTTPRequest &request, const char *pRequest, uint32 user)
 {
-	MFFileHTTPRequestArg args[2];
-	args[0].SetString("request", "GETUSER");
-	args[1].SetInt("playerid", id);
-
-	return WLServ_GetUser(args, pUser);
-}
-
-ServerError WLServ_GetUserByName(const char *pUsername, UserDetails *pUser)
-{
-	MFFileHTTPRequestArg args[2];
-	args[0].SetString("request", "GETUSER");
-	args[1].SetString("username", pUsername);
-
-	return WLServ_GetUser(args, pUser);
-}
-
-static ServerError WLServ_GetGames(const char *pRequest, uint32 user, uint32 *pGames, int *pNumGames)
-{
-	ServerError err = SE_INVALID_RESPONSE;
-
 	MFFileHTTPRequestArg args[2];
 	args[0].SetString("request", pRequest);
 	args[1].SetInt("playerid", user);
 
-	HTTPResponse *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+}
 
-	if(!pResponse)
-		return SE_CONNECTION_FAILED;
+void WLServ_GetActiveGames(HTTPRequest &request, uint32 user)
+{
+	return WLServ_GetGames(request, "GETACTIVEGAMES", user);
+}
+
+void WLServ_GetPastGames(HTTPRequest &request, uint32 user)
+{
+	return WLServ_GetGames(request, "GETPASTGAMES", user);
+}
+
+void WLServ_GetPendingGames(HTTPRequest &request, uint32 user)
+{
+	return WLServ_GetGames(request, "GETWAITINGGAMES", user);
+}
+
+ServerError WLServResult_GetGameList(HTTPRequest &request, uint32 *pGames, int *pNumGames)
+{
+	ServerError err = CheckHTTPError(request.GetStatus());
+	if(err != SE_NO_ERROR)
+		return err;
+	err = SE_INVALID_RESPONSE;
+
+	HTTPResponse *pResponse = request.GetResponse();
 
 	int maxGames = *pNumGames;
 	*pNumGames = 0;
@@ -228,30 +245,11 @@ static ServerError WLServ_GetGames(const char *pRequest, uint32 user, uint32 *pG
 		pLine = strtok(NULL, "\n");
 	}
 
-	pResponse->Destroy();
-
 	return err;
 }
 
-ServerError WLServ_GetActiveGames(uint32 user, uint32 *pGames, int *pNumGames)
+void WLServ_CreateGame(HTTPRequest &request, uint32 user, GameCreateDetails *pDetails)
 {
-	return WLServ_GetGames("GETACTIVEGAMES", user, pGames, pNumGames);
-}
-
-ServerError WLServ_GetPastGames(uint32 user, uint32 *pGames, int *pNumGames)
-{
-	return WLServ_GetGames("GETPASTGAMES", user, pGames, pNumGames);
-}
-
-ServerError WLServ_GetPendingGames(uint32 user, uint32 *pGames, int *pNumGames)
-{
-	return WLServ_GetGames("GETWAITINGGAMES", user, pGames, pNumGames);
-}
-
-ServerError WLServ_CreateGame(uint32 user, GameCreateDetails *pDetails, uint32 *pGame)
-{
-	ServerError err = SE_INVALID_RESPONSE;
-
 	MFFileHTTPRequestArg args[6];
 	args[0].SetString("request", "CREATEGAME");
 	args[1].SetString("name", pDetails->pName);
@@ -260,10 +258,41 @@ ServerError WLServ_CreateGame(uint32 user, GameCreateDetails *pDetails, uint32 *
 	args[4].SetInt("creator", user);
 	args[5].SetInt("turntime", pDetails->turnTime);
 
-	HTTPResponse *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+}
 
-	if(!pResponse)
-		return SE_CONNECTION_FAILED;
+void WLServ_FindRandomGame(HTTPRequest &request, uint32 user, uint32 *pGame)
+{
+	MFFileHTTPRequestArg args[2];
+	args[0].SetString("request", "FINDGAME");
+	args[2].SetInt("playerid", user);
+
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+}
+
+void WLServ_BeginGame(HTTPRequest &request, uint32 game, uint32 *pPlayers, int numPlayers)
+{
+	MFFileHTTPRequestArg args[3];
+	args[0].SetString("request", "BEGINGAME");
+	args[1].SetInt("game", game);
+
+	char players[256] = "";
+	int len = 0;
+	for(int a=0; a<numPlayers; ++a)
+		len += sprintf(players + len, a > 0 ? ",%d" : "%d", pPlayers[a]);
+	args[2].SetString("players", players);
+
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+}
+
+ServerError WLServResult_GetGame(HTTPRequest &request, uint32 *pGame)
+{
+	ServerError err = CheckHTTPError(request.GetStatus());
+	if(err != SE_NO_ERROR)
+		return err;
+	err = SE_INVALID_RESPONSE;
+
+	HTTPResponse *pResponse = request.GetResponse();
 
 	char *pLine = strtok(pResponse->GetData(), "\n");
 	while(pLine)
@@ -284,21 +313,35 @@ ServerError WLServ_CreateGame(uint32 user, GameCreateDetails *pDetails, uint32 *
 		pLine = strtok(NULL, "\n");
 	}
 
-	pResponse->Destroy();
-
 	return err;
 }
 
-static ServerError WLServ_GetGame(MFFileHTTPRequestArg *pArgs, GameDetails *pGame)
+void WLServ_GetGameByID(HTTPRequest &request, uint32 id)
 {
-	MFZeroMemory(pGame, sizeof(GameDetails));
+	MFFileHTTPRequestArg args[2];
+	args[0].SetString("request", "GETGAME");
+	args[1].SetInt("gameid", id);
 
-	ServerError err = SE_INVALID_RESPONSE;
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+}
 
-	HTTPResponse *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", pArgs, 2);
+void WLServ_GetGameByName(HTTPRequest &request, const char *pName)
+{
+	MFFileHTTPRequestArg args[2];
+	args[0].SetString("request", "GETGAME");
+	args[1].SetString("gamename", pName);
 
-	if(!pResponse)
-		return SE_CONNECTION_FAILED;
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+}
+
+ServerError WLServResult_GetGameDetails(HTTPRequest &request, GameDetails *pGame)
+{
+	ServerError err = CheckHTTPError(request.GetStatus());
+	if(err != SE_NO_ERROR)
+		return err;
+	err = SE_INVALID_RESPONSE;
+
+	HTTPResponse *pResponse = request.GetResponse();
 
 	char *pLine = strtok(pResponse->GetData(), "\n");
 	while(pLine)
@@ -374,183 +417,59 @@ static ServerError WLServ_GetGame(MFFileHTTPRequestArg *pArgs, GameDetails *pGam
 		pLine = strtok(NULL, "\n");
 	}
 
-	pResponse->Destroy();
-
 	return err;
 }
 
-ServerError WLServ_GetGameByID(uint32 id, GameDetails *pGame)
+void WLServ_JoinGame(HTTPRequest &request, uint32 user, uint32 game)
 {
-	MFFileHTTPRequestArg args[2];
-	args[0].SetString("request", "GETGAME");
-	args[1].SetInt("gameid", id);
-
-	return WLServ_GetGame(args, pGame);
-}
-
-ServerError WLServ_GetGameByName(const char *pName, GameDetails *pGame)
-{
-	MFFileHTTPRequestArg args[2];
-	args[0].SetString("request", "GETGAME");
-	args[1].SetString("gamename", pName);
-
-	return WLServ_GetGame(args, pGame);
-}
-
-ServerError WLServ_JoinGame(uint32 user, uint32 game)
-{
-	ServerError err = SE_INVALID_RESPONSE;
-
 	MFFileHTTPRequestArg args[3];
 	args[0].SetString("request", "JOINGAME");
 	args[1].SetInt("game", game);
 	args[2].SetInt("playerid", user);
 
-	HTTPResponse *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-
-	if(!pResponse)
-		return SE_CONNECTION_FAILED;
-
-	char *pLine = strtok(pResponse->GetData(), "\n");
-	while(pLine)
-	{
-		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
-		{
-			err = SE_NO_ERROR;
-		}
-		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
-		{
-			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
-		}
-
-		pLine = strtok(NULL, "\n");
-	}
-
-	pResponse->Destroy();
-
-	return err;
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
-ServerError WLServ_FindRandomGame(uint32 user, uint32 *pGame)
+void WLServ_LeaveGame(HTTPRequest &request, uint32 user, uint32 game)
 {
-	ServerError err = SE_INVALID_RESPONSE;
-
-	MFFileHTTPRequestArg args[2];
-	args[0].SetString("request", "FINDGAME");
-	args[2].SetInt("playerid", user);
-
-	HTTPResponse *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-
-	if(!pResponse)
-		return SE_CONNECTION_FAILED;
-
-	char *pLine = strtok(pResponse->GetData(), "\n");
-	while(pLine)
-	{
-		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
-		{
-			err = SE_NO_ERROR;
-		}
-		else if(pGame && !MFString_CaseCmpN(pLine, "GAMEID", 6) && pLine[6] == '=')
-		{
-			*pGame = MFString_AsciiToInteger(pLine + 7);
-		}
-		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
-		{
-			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
-		}
-
-		pLine = strtok(NULL, "\n");
-	}
-
-	pResponse->Destroy();
-
-	return err;
-}
-
-ServerError WLServ_LeaveGame(uint32 user, uint32 game)
-{
-	ServerError err = SE_INVALID_RESPONSE;
-
 	MFFileHTTPRequestArg args[3];
 	args[0].SetString("request", "LEAVEGAME");
 	args[1].SetInt("gameid", game);
 	args[2].SetInt("playerid", user);
 
-	HTTPResponse *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-
-	if(!pResponse)
-		return SE_CONNECTION_FAILED;
-
-	char *pLine = strtok(pResponse->GetData(), "\n");
-	while(pLine)
-	{
-		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
-		{
-			err = SE_NO_ERROR;
-		}
-		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
-		{
-			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
-		}
-
-		pLine = strtok(NULL, "\n");
-	}
-
-	pResponse->Destroy();
-
-	return err;
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
-ServerError WLServ_SetRace(uint32 game, uint32 user, int race)
+void WLServ_SetRace(HTTPRequest &request, uint32 game, uint32 user, int race)
 {
-	ServerError err = SE_INVALID_RESPONSE;
-
 	MFFileHTTPRequestArg args[4];
 	args[0].SetString("request", "SETRACE");
 	args[1].SetInt("gameid", game);
 	args[2].SetInt("playerid", user);
 	args[3].SetInt("race", race);
 
-	HTTPResponse *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-
-	if(!pResponse)
-		return SE_CONNECTION_FAILED;
-
-	char *pLine = strtok(pResponse->GetData(), "\n");
-	while(pLine)
-	{
-		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
-		{
-			err = SE_NO_ERROR;
-		}
-		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
-		{
-			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
-		}
-
-		pLine = strtok(NULL, "\n");
-	}
-
-	pResponse->Destroy();
-
-	return err;
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
-ServerError WLServ_SetColour(uint32 game, uint32 user, int colour)
+void WLServ_SetColour(HTTPRequest &request, uint32 game, uint32 user, int colour)
 {
-	ServerError err = SE_INVALID_RESPONSE;
-
 	MFFileHTTPRequestArg args[4];
 	args[0].SetString("request", "SETCOLOUR");
 	args[1].SetInt("gameid", game);
 	args[2].SetInt("playerid", user);
 	args[3].SetInt("colour", colour);
 
-	HTTPResponse *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+}
 
-	if(!pResponse)
-		return SE_CONNECTION_FAILED;
+ServerError WLServResult_GetError(HTTPRequest &request)
+{
+	ServerError err = CheckHTTPError(request.GetStatus());
+	if(err != SE_NO_ERROR)
+		return err;
+	err = SE_INVALID_RESPONSE;
+
+	HTTPResponse *pResponse = request.GetResponse();
 
 	char *pLine = strtok(pResponse->GetData(), "\n");
 	while(pLine)
@@ -567,66 +486,26 @@ ServerError WLServ_SetColour(uint32 game, uint32 user, int colour)
 		pLine = strtok(NULL, "\n");
 	}
 
-	pResponse->Destroy();
-
 	return err;
 }
 
-ServerError WLServ_BeginGame(uint32 game, uint32 *pPlayers, int numPlayers, uint32 *pGame)
+void WLServ_GameState(HTTPRequest &request, uint32 game)
 {
-	ServerError err = SE_INVALID_RESPONSE;
-
-	MFFileHTTPRequestArg args[3];
-	args[0].SetString("request", "BEGINGAME");
-	args[1].SetInt("game", game);
-
-	char players[256] = "";
-	int len = 0;
-	for(int a=0; a<numPlayers; ++a)
-		len += sprintf(players + len, a > 0 ? ",%d" : "%d", pPlayers[a]);
-	args[2].SetString("players", players);
-
-	HTTPResponse *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-
-	if(!pResponse)
-		return SE_CONNECTION_FAILED;
-
-	char *pLine = strtok(pResponse->GetData(), "\n");
-	while(pLine)
-	{
-		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
-		{
-			err = SE_NO_ERROR;
-		}
-		else if(pGame && !MFString_CaseCmpN(pLine, "GAMEID", 6) && pLine[6] == '=')
-		{
-			*pGame = MFString_AsciiToInteger(pLine + 7);
-		}
-		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
-		{
-			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
-		}
-
-		pLine = strtok(NULL, "\n");
-	}
-
-	pResponse->Destroy();
-
-	return err;
-}
-
-ServerError WLServ_GameState(uint32 game, GameState *pState)
-{
-	ServerError err = SE_INVALID_RESPONSE;
-
 	MFFileHTTPRequestArg args[2];
 	args[0].SetString("request", "GETGAMEDETAILS");
 	args[1].SetInt("game", game);
 
-	HTTPResponse *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+}
 
-	if(!pResponse)
-		return SE_CONNECTION_FAILED;
+ServerError WLServResult_GetGameState(HTTPRequest &request, GameState *pState)
+{
+	ServerError err = CheckHTTPError(request.GetStatus());
+	if(err != SE_NO_ERROR)
+		return err;
+	err = SE_INVALID_RESPONSE;
+
+	HTTPResponse *pResponse = request.GetResponse();
 
 	char *pLine = strtok(pResponse->GetData(), "\n");
 	while(pLine)
@@ -729,34 +608,26 @@ ServerError WLServ_GameState(uint32 game, GameState *pState)
 		pLine = strtok(NULL, "\n");
 	}
 
-	pResponse->Destroy();
-
 	return err;
 }
 
-ServerError WLServ_ApplyActions(uint32 game, GameAction *pActions, int numActions)
+int WLServ_ApplyActions(HTTPRequest &request, uint32 game, GameAction *pActions, int numActions)
 {
 	if(numActions == 0)
-		return SE_NO_ERROR;
-
-	ServerError err = SE_INVALID_RESPONSE;
-
-	GameAction *pRemainingActions = NULL;
-	int remainingActions = 0;
+		return 0;
 
 	MFFileHTTPRequestArg args[3];
 	args[0].SetString("request", "APPLYACTIONS");
 	args[1].SetInt("game", game);
 
 	// build the actions list
-	char actionList[1024] = "";
+	char actionList[1024 * 64] = "";
 	int len = 0;
 	for(int a=0; a<numActions; ++a)
 	{
 		if(len > sizeof(actionList)-128)
 		{
-			pRemainingActions = pActions + a;
-			remainingActions = numActions - a;
+			numActions = a;
 			break;
 		}
 
@@ -775,42 +646,30 @@ ServerError WLServ_ApplyActions(uint32 game, GameAction *pActions, int numAction
 	MFDebug_Log(3, actionList);
 
 	// send the request
-	HTTPResponse *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 
-	if(!pResponse)
-		return SE_CONNECTION_FAILED;
-
-	char *pLine = strtok(pResponse->GetData(), "\n");
-	while(pLine)
-	{
-		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
-		{
-			err = SE_NO_ERROR;
-		}
-		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
-		{
-			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
-		}
-
-		pLine = strtok(NULL, "\n");
-	}
-
-	pResponse->Destroy();
-
-	// if we couldn't fit them all in this packet, we'll send another...
-	if(remainingActions)
-		return WLServ_ApplyActions(game, pRemainingActions, remainingActions);
-	return err;
+	// return the number of actions actually submitted
+	return numActions;
 }
 
-ServerError WLServ_UpdateState(uint32 game, int lastAction, GameAction **ppActions, int *pNumActions, int *pActionCount)
+void WLServ_UpdateState(HTTPRequest &request, uint32 game, int lastAction)
 {
-	ServerError err = SE_INVALID_RESPONSE;
-
 	MFFileHTTPRequestArg args[3];
 	args[0].SetString("request", "UPDATE");
 	args[1].SetInt("game", game);
 	args[2].SetInt("firstaction", lastAction);
+
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+}
+
+ServerError WLServResult_GetActions(HTTPRequest &request, GameAction **ppActions, int *pNumActions, int *pActionCount)
+{
+	ServerError err = CheckHTTPError(request.GetStatus());
+	if(err != SE_NO_ERROR)
+		return err;
+	err = SE_INVALID_RESPONSE;
+
+	HTTPResponse *pResponse = request.GetResponse();
 
 	const int maxActions = 256;
 	static GameAction actions[maxActions];
@@ -820,12 +679,6 @@ ServerError WLServ_UpdateState(uint32 game, int lastAction, GameAction **ppActio
 	int numArgs = 0;
 
 	*ppActions = actions;
-
-	// send the request
-	HTTPResponse *pResponse = HTTP_Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-
-	if(!pResponse)
-		return SE_CONNECTION_FAILED;
 
 	char *pLine = strtok(pResponse->GetData(), "\n");
 	while(pLine)
@@ -880,10 +733,8 @@ ServerError WLServ_UpdateState(uint32 game, int lastAction, GameAction **ppActio
 		pLine = strtok(NULL, "\n");
 	}
 
-	*pActionCount = lastAction + *pNumActions;
+	*pActionCount = *pNumActions;
 	*pNumActions = numActions;
-
-	pResponse->Destroy();
 
 	return err;
 }

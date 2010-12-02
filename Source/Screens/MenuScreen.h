@@ -41,12 +41,15 @@ protected:
 
 	Button *pStart, *pEdit, *pReturn;
 
+	HTTPRequest createRequest;
+
 	int gameType;
 
 	const char *pMessage;
 
 	void Click(int button, int buttonID);
 	void SelectMap(int item);
+	void Created(HTTPRequest::Status status);
 };
 
 #endif

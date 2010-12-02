@@ -15,6 +15,9 @@ JoinGameScreen::JoinGameScreen()
 	pIcons = MFMaterial_Create("Icons");
 	pFont = MFFont_Create("FranklinGothic");
 
+	find.SetCompleteDelegate(MakeDelegate(this, &JoinGameScreen::FindGame));
+	join.SetCompleteDelegate(MakeDelegate(this, &JoinGameScreen::JoinGame));
+
 	pMessage = NULL;
 
 	// start buttons
@@ -108,35 +111,7 @@ void JoinGameScreen::Click(int button, int buttonID)
 	{
 		case 0:
 		{
-			GameDetails details;
-			ServerError err = WLServ_GetGameByName(pGame->GetString(), &details);
-
-			if(err == SE_NO_ERROR)
-			{
-				Session *pCurrent = Session::GetCurrent();
-				if(pCurrent)
-				{
-					err = WLServ_JoinGame(pCurrent->GetUserID(), details.id);
-					if(err == SE_NO_ERROR)
-					{
-						// enter lobby
-						pLobby->ShowOnline(details.id);
-					}
-					else
-					{
-						// couldn't join game
-						pMessage = "Couldn't join game!";
-					}
-				}
-				else
-				{
-					pMessage = "Invalid session!";
-				}
-			}
-			else
-			{
-				pMessage = "Invalid game!";
-			}
+			WLServ_GetGameByName(find, pGame->GetString());
 			break;
 		}
 
@@ -145,5 +120,41 @@ void JoinGameScreen::Click(int button, int buttonID)
 			Screen::SetNext(pHome);
 			break;
 		}
+	}
+}
+
+void JoinGameScreen::FindGame(HTTPRequest::Status status)
+{
+	ServerError err = WLServResult_GetGameDetails(find, &details);
+
+	if(err != SE_NO_ERROR)
+	{
+		pMessage = "Invalid game!";
+		return;
+	}
+
+	Session *pCurrent = Session::GetCurrent();
+	if(!pCurrent)
+	{
+		pMessage = "Invalid session!";
+		return;
+	}
+
+	WLServ_JoinGame(join, pCurrent->GetUserID(), details.id);
+}
+
+void JoinGameScreen::JoinGame(HTTPRequest::Status status)
+{
+	ServerError err = WLServResult_GetError(join);
+
+	if(err == SE_NO_ERROR)
+	{
+		// enter lobby
+		pLobby->ShowOnline(details.id);
+	}
+	else
+	{
+		// couldn't join game
+		pMessage = "Couldn't join game!";
 	}
 }

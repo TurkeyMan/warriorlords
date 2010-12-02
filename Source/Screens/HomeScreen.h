@@ -36,6 +36,8 @@ protected:
 
 	uint32 continueGame;
 
+	HTTPRequest request;
+
 	void CreateGame(int button, int buttonID);
 	void JoinGame(int button, int buttonID);
 	void FindGame(int button, int buttonID);
@@ -46,6 +48,9 @@ protected:
 
 	void EnterGame(int item);
 	void EnterPending(int item);
+
+	void Resume(HTTPRequest::Status status);
+	void UpdateSession(ServerError error, Session *pSession);
 };
 
 #endif

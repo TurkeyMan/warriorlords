@@ -172,7 +172,10 @@ public:
 	void PushActionArg(int arg);
 	void PushActionArgs(int *pArgs, int numArgs);
 
-	ServerError ApplyActions();
+	void ApplyActions();
+
+	bool IsCommitPending() { return GetNumPendingActions() > 0; }
+	void CommitPending();
 
 	void AddUnit(Unit *pUnit, bool bCommitUnit = false);
 	void AddGroup(Group *pGroup, bool bCommitGroup = false);
@@ -192,6 +195,9 @@ protected:
 	Action *FindFirstDependency(Action *pAction);
 
 	void ReplayAction(GameAction *pAction);
+
+	void Commit(HTTPRequest::Status status);
+	void Update(HTTPRequest::Status status);
 
 	MFPoolHeapExpanding units;
 	MFPoolHeapExpanding groups;
@@ -236,16 +242,31 @@ protected:
 	int currentPlayer;
 	int currentTurn;
 
-	GameAction pendingActions[256];
-	int actionArgs[2048];
-	int numActions, numArgs;
+	// commit queue
+	static const int MAX_PENDING_ACTIONS = 256;
+	static const int MAX_PENDING_ACTION_ARGS = 2048;
 
+	GameAction pendingActions[MAX_PENDING_ACTIONS];
+	int actionArgs[MAX_PENDING_ACTION_ARGS];
+	int lastCommit, lastCommitArg;
+	int nextAction, nextArg;
+	int attemptCommit, pendingCommit;
+
+	int GetNumRemainingActions();
+	int GetNumRemainingActionArgs();
+	int GetNumPendingActions();
+	int GetPrevAction();
+
+	// undo history
 	Action **ppActionHistory;
 	int numTopActions;
 
 	// server actions
 	GameAction *pServerActions;
 	int firstServerAction, numServerActions, serverActionCount;
+
+	HTTPRequest update;
+	HTTPRequest commit;
 
 	static Game *pCurrent;
 };

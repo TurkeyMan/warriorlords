@@ -1,6 +1,7 @@
 #if !defined(_HTTP_H)
 #define _HTTP_H
 
+#include "MFThread.h"
 #include "MFSockets.h"
 #include "FileSystem/MFFileSystemHTTP.h"
 
@@ -65,6 +66,80 @@ private:
 
 	uint32 dataSize;
 	char *pData;
+};
+
+class HTTPRequest
+{
+public:
+	enum Status
+	{
+		CS_ResolvingHost = -4,
+		CS_WaitingForHost = -3,
+		CS_Pending = -2,
+		CS_NotStarted = -1,
+
+		CS_Succeeded = 0,
+		CS_CouldntResolveHost = 1,
+		CS_CouldntConnect = 2,
+		CS_ConnectionLost = 3,
+		CS_HTTPError = 4
+	};
+
+	typedef FastDelegate1<Status> HTTPEventDelegate;
+
+	HTTPRequest();
+	~HTTPRequest();
+
+	static void UpdateHTTPEvents();
+
+	void Get(const char *pServer, int port, const char *pResourcePath);
+	void Post(const char *pServer, int port, const char *pResourcePath, MFFileHTTPRequestArg *pArgs = NULL, int numArgs = 0);
+
+	void Lock() { if(mutex) MFThread_ReleaseMutex(mutex); }
+	void Unlock() { if(mutex) MFThread_LockMutex(mutex); }
+
+	bool IsFinished();
+	bool RequestPending();
+	Status GetStatus();
+	void Reset();
+
+	void SetEventDelegate(HTTPEventDelegate handler) { eventDelegate = handler; }
+	void SetCompleteDelegate(HTTPEventDelegate handler) { completeDelegate = handler; }
+
+	HTTPResponse *GetResponse();
+
+protected:
+	void CreateConnection();
+	void SetStatus(Status status, bool bFinished = false);
+
+	MFThread transferThread;
+	MFMutex mutex;
+
+	HTTPResponse *pResponse;
+
+	const char *pServer;
+	int port;
+	const char *pResourcePath;
+
+	bool bFinished;
+	Status status;
+	bool bOldFinished;
+	Status oldStatus;
+
+	char requestBuffer[2048];
+	int reqLen;
+
+	HTTPEventDelegate eventDelegate;
+	HTTPEventDelegate completeDelegate;
+
+private:
+	static int RequestThread(void *pRequest);
+	void HandleRequest();
+	void UpdateEvents();
+
+	static const int MAX_ACTIVE_REQUESTS = 1024;
+	static HTTPRequest *pUpdateList[MAX_ACTIVE_REQUESTS];
+	static int numLiveRequests;
 };
 
 HTTPResponse *HTTP_Get(const char *pServer, int port, const char *pResourcePath);

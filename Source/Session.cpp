@@ -11,14 +11,28 @@ Session::Session()
 	pCurrentGames = NULL;
 	pPendingGames = NULL;
 	pPastGames = NULL;
+
+	updating = -1;
 }
 
 Session::~Session()
 {
 }
 
-ServerError Session::UpdateState()
+void Session::Update()
 {
+	Session *pSession = GetCurrent();
+	if(!pSession)
+		return;
+}
+
+void Session::UpdateState()
+{
+	if(updating > 0)
+		return;
+
+	updating = 3;
+
 	// clear the old cache...
 	numCurrentGames = numPendingGames = numPastGames = 0;
 
@@ -38,57 +52,170 @@ ServerError Session::UpdateState()
 		pPastGames = NULL;
 	}
 
-	uint32 games[1024];
-
-	// get current games
-	numCurrentGames = sizeof(games)/sizeof(games[0]);
-	ServerError err = WLServ_GetActiveGames(user.id, games, &numCurrentGames);
-	if(err != SE_NO_ERROR)
-		return err;
-
-	if(numCurrentGames)
-	{
-		pCurrentGames = (GameState*)MFHeap_AllocAndZero(sizeof(GameState) * numCurrentGames);
-		for(int a=0; a<numCurrentGames; ++a)
-			WLServ_GameState(games[a], &pCurrentGames[a]);
-	}
-
-	// get pending games
-	numPendingGames = sizeof(games)/sizeof(games[0]);
-	err = WLServ_GetPendingGames(user.id, games, &numPendingGames);
-	if(err != SE_NO_ERROR)
-		return err;
-
-	if(numPendingGames)
-	{
-		pPendingGames = (GameDetails*)MFHeap_AllocAndZero(sizeof(GameDetails) * numPendingGames);
-		for(int a=0; a<numPendingGames; ++a)
-			WLServ_GetGameByID(games[a], &pPendingGames[a]);
-	}
-
-	// get past games
-	numPastGames = sizeof(pastGames)/sizeof(pastGames[0]);
-	err = WLServ_GetPastGames(user.id, pastGames, &numPastGames);
-	if(err != SE_NO_ERROR)
-		return err;
-
 	// don't fetch the past games until they are requested (user views history)
 	pPastGames = NULL;
 
-	return SE_NO_ERROR;
+	getCurrent.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetCurrent));
+	getPending.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetPending));
+	getPast.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetPast));
+
+	// get games
+	WLServ_GetActiveGames(getCurrent, user.id);
+	WLServ_GetPendingGames(getPending, user.id);
+	WLServ_GetPastGames(getPast, user.id);
 }
 
-ServerError Session::Login(const char *pUsername, const char *pPassword)
+void Session::OnGetCurrent(HTTPRequest::Status status)
 {
-	// try and login...
-	uint32 id;
-	ServerError err = WLServ_Login(pUsername, pPassword, &id);
+	// get current games
+	numCurrentGames = sizeof(currentGames)/sizeof(currentGames[0]);
+	ServerError err = WLServResult_GetGameList(getCurrent, currentGames, &numCurrentGames);
 	if(err != SE_NO_ERROR)
-		return err;
+	{
+		if(updateHandler)
+			updateHandler(err, this);
+		updating = 0;
+		return;
+	}
 
-	err = WLServ_GetUserByID(id, &user);
+	getCurrent.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetCurrentGame));
+
+	numCurrent = 0;
+	if(numCurrentGames)
+	{
+		pCurrentGames = (GameState*)MFHeap_AllocAndZero(sizeof(GameState) * numCurrentGames);
+		WLServ_GameState(getCurrent, currentGames[0]);
+	}
+	else
+	{
+		if(--updating == 0 && updateHandler)
+			updateHandler(SE_NO_ERROR, this);
+	}
+}
+
+void Session::OnGetCurrentGame(HTTPRequest::Status status)
+{
+	ServerError err = WLServResult_GetGameState(getCurrent, &pCurrentGames[numCurrent]);
+	if(0)//err != SE_NO_ERROR)
+	{
+		if(updateHandler)
+			updateHandler(err, this);
+		updating = 0;
+		return;
+	}
+
+	if(++numCurrent < numCurrentGames)
+	{
+		WLServ_GameState(getCurrent, currentGames[numCurrent]);
+		return;
+	}
+
+	if(--updating == 0 && updateHandler)
+		updateHandler(SE_NO_ERROR, this);
+}
+
+void Session::OnGetPending(HTTPRequest::Status status)
+{
+	// get pending games
+	numPendingGames = sizeof(pendingGames)/sizeof(pendingGames[0]);
+	ServerError err = WLServResult_GetGameList(getPending, pendingGames, &numPendingGames);
 	if(err != SE_NO_ERROR)
-		return err;
+	{
+		if(updateHandler)
+			updateHandler(err, this);
+		updating = 0;
+		return;
+	}
+
+	getPending.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetPendingGame));
+
+	numPending = 0;
+	if(numPendingGames)
+	{
+		pPendingGames = (GameDetails*)MFHeap_AllocAndZero(sizeof(GameDetails) * numPendingGames);
+		WLServ_GetGameByID(getPending, pendingGames[0]);
+	}
+	else
+	{
+		if(--updating == 0 && updateHandler)
+			updateHandler(SE_NO_ERROR, this);
+	}
+}
+
+void Session::OnGetPendingGame(HTTPRequest::Status status)
+{
+	ServerError err = WLServResult_GetGameDetails(getPending, &pPendingGames[numPending]);
+	if(0)//err != SE_NO_ERROR)
+	{
+		if(updateHandler)
+			updateHandler(err, this);
+		updating = 0;
+		return;
+	}
+
+	if(++numPending < numPendingGames)
+	{
+		WLServ_GetGameByID(getPending, pendingGames[numPending]);
+		return;
+	}
+
+	if(--updating == 0 && updateHandler)
+		updateHandler(SE_NO_ERROR, this);
+}
+
+void Session::OnGetPast(HTTPRequest::Status status)
+{
+	// get past games
+	numPastGames = sizeof(pastGames)/sizeof(pastGames[0]);
+	ServerError err = WLServResult_GetGameList(getPast, pastGames, &numPastGames);
+	if(err != SE_NO_ERROR)
+	{
+		if(updateHandler)
+			updateHandler(err, this);
+		updating = 0;
+		return;
+	}
+
+	if(--updating == 0 && updateHandler)
+		updateHandler(SE_NO_ERROR, this);
+}
+
+void Session::Login(const char *pUsername, const char *pPassword)
+{
+	login.SetCompleteDelegate(MakeDelegate(this, &Session::OnLogin));
+	WLServ_Login(login, pUsername, pPassword);
+}
+
+void Session::BeginOffline()
+{
+	bOffline = true;
+	bLoggedIn = false;
+}
+
+void Session::OnLogin(HTTPRequest::Status status)
+{
+	uint32 id;
+	ServerError err = WLServResult_GetUser(login, &id);
+	if(err != SE_NO_ERROR)
+	{
+		if(loginHandler)
+			loginHandler(err, this);
+		return;
+	}
+
+	login.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetUser));
+	WLServ_GetUserByID(login, id);
+}
+
+void Session::OnGetUser(HTTPRequest::Status status)
+{
+	ServerError err = WLServResult_GetUserDetails(login, &user);
+	if(err != SE_NO_ERROR)
+	{
+		if(loginHandler)
+			loginHandler(err, this);
+		return;
+	}
 
 	// we're logged in!
 	bLoggedIn = true;
@@ -97,11 +224,6 @@ ServerError Session::Login(const char *pUsername, const char *pPassword)
 	// reset the game cache
 	numCurrentGames = numPendingGames = numPastGames = 0;
 
-	return SE_NO_ERROR;
-}
-
-void Session::BeginOffline()
-{
-	bOffline = true;
-	bLoggedIn = false;
+	if(loginHandler)
+		loginHandler(SE_NO_ERROR, this);
 }
