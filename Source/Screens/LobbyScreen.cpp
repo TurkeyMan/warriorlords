@@ -296,23 +296,24 @@ void LobbyScreen::Click(int button, int buttonID)
 				params.players[p].id = details.players[a].id;
 				params.players[p].race = details.players[a].race;
 				params.players[p].colour = details.players[a].colour;
+				params.players[p].hero = details.players[a].hero;
 			}
 
-			// create the game
-			if(!bOffline)
+			if(bOffline)
 			{
-				uint32 players[16];
-				for(int a=0; a<params.numPlayers; ++a)
-					players[a] = params.players[a].id;
-
-				WLServ_BeginGame(begin, details.id, players, params.numPlayers);
+				// start game
+				pGame = new Game(&params);
+				Game::SetCurrent(pGame);
+				pGame->BeginGame();
 				break;
 			}
 
-			// start game
-			pGame = new Game(&params);
-			Game::SetCurrent(pGame);
-			pGame->BeginGame();
+			// create the game
+			uint32 players[16];
+			for(int a=0; a<params.numPlayers; ++a)
+				players[a] = params.players[a].id;
+
+			WLServ_BeginGame(begin, details.id, players, params.numPlayers);
 			break;
 		}
 		case 1:

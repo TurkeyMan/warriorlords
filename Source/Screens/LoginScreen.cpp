@@ -294,7 +294,7 @@ void LoginScreen::AutoLogin()
 	// try and login...
 	Session *pSession = new Session();
 	pSession->SetLoginDelegate(MakeDelegate(this, &LoginScreen::OnLogin));
-	pSession->Login("Jumprabbit", "fishhead");
+	pSession->Login("TurkeyMan", "terceS");
 	Session::SetCurrent(pSession);
 }
 

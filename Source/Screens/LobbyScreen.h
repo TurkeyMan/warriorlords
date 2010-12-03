@@ -41,6 +41,7 @@ protected:
 
 	SelectBox *pRaces[8];
 	SelectBox *pColours[8];
+	SelectBox *pHero[8];
 
 	GameDetails details;
 	MapDetails map;

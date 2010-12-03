@@ -1505,7 +1505,6 @@ void Game::Update(HTTPRequest::Status status)
 		return;
 
 	firstServerAction = lastAction;
-	serverActionCount += lastAction;
 
 	ReplayActions();
 

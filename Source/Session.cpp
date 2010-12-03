@@ -69,7 +69,7 @@ void Session::OnGetCurrent(HTTPRequest::Status status)
 {
 	// get current games
 	numCurrentGames = sizeof(currentGames)/sizeof(currentGames[0]);
-	ServerError err = WLServResult_GetGameList(getCurrent, currentGames, &numCurrentGames);
+	ServerError err = WLServResult_GetGameList(getCurrent, "activeGames", currentGames, &numCurrentGames);
 	if(err != SE_NO_ERROR)
 	{
 		if(updateHandler)
@@ -118,7 +118,7 @@ void Session::OnGetPending(HTTPRequest::Status status)
 {
 	// get pending games
 	numPendingGames = sizeof(pendingGames)/sizeof(pendingGames[0]);
-	ServerError err = WLServResult_GetGameList(getPending, pendingGames, &numPendingGames);
+	ServerError err = WLServResult_GetGameList(getPending, "gamesWaiting", pendingGames, &numPendingGames);
 	if(err != SE_NO_ERROR)
 	{
 		if(updateHandler)
@@ -167,7 +167,7 @@ void Session::OnGetPast(HTTPRequest::Status status)
 {
 	// get past games
 	numPastGames = sizeof(pastGames)/sizeof(pastGames[0]);
-	ServerError err = WLServResult_GetGameList(getPast, pastGames, &numPastGames);
+	ServerError err = WLServResult_GetGameList(getPast, "pastGames", pastGames, &numPastGames);
 	if(err != SE_NO_ERROR)
 	{
 		if(updateHandler)

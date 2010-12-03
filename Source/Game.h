@@ -37,6 +37,7 @@ struct GameParams
 	{
 		uint32 id;
 		int race;
+		int hero;
 		uint32 colour;
 	} players[16];
 	int numPlayers;

@@ -74,6 +74,7 @@ struct GameDetails
 		char name[52];
 		int race;
 		int colour;
+		int hero;
 	};
 
 	uint32 id;
@@ -96,6 +97,7 @@ struct GameState
 		int team;
 		int race;
 		int colour;
+		int hero;
 		int lastAction;
 	};
 
@@ -138,7 +140,7 @@ ServerError WLServResult_GetUserDetails(HTTPRequest &request, UserDetails *pUser
 void WLServ_GetActiveGames(HTTPRequest &request, uint32 user);
 void WLServ_GetPastGames(HTTPRequest &request, uint32 user);
 void WLServ_GetPendingGames(HTTPRequest &request, uint32 user);
-ServerError WLServResult_GetGameList(HTTPRequest &request, uint32 *pGames, int *pNumGames);
+ServerError WLServResult_GetGameList(HTTPRequest &request, const char *pList, uint32 *pGames, int *pNumGames);
 
 void WLServ_CreateGame(HTTPRequest &request, uint32 user, GameCreateDetails *pDetails);
 void WLServ_FindRandomGame(HTTPRequest &request, uint32 user);
@@ -153,6 +155,7 @@ void WLServ_JoinGame(HTTPRequest &request, uint32 user, uint32 game);
 void WLServ_LeaveGame(HTTPRequest &request, uint32 user, uint32 game);
 void WLServ_SetRace(HTTPRequest &request, uint32 game, uint32 user, int race);
 void WLServ_SetColour(HTTPRequest &request, uint32 game, uint32 user, int colour);
+void WLServ_SetHero(HTTPRequest &request, uint32 game, uint32 user, int hero);
 ServerError WLServResult_GetError(HTTPRequest &request);
 
 void WLServ_GameState(HTTPRequest &request, uint32 game);

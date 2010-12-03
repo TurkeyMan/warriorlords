@@ -5,8 +5,10 @@
 #include "string.h"
 #include "stdio.h"
 
+#include <../Fuji/Middleware/libjson/libjson.h>
+
 #if 0//defined(_DEBUG)
-	const char *pHostname = "10.0.0.10";
+	const char *pHostname = "10.0.0.27";
 	const int port = 8888;
 #else
 	const char *pHostname = "warriorlordsserv.appspot.com";
@@ -63,6 +65,107 @@ static ServerError CheckHTTPError(HTTPRequest::Status status)
 	return SE_NO_ERROR;
 }
 
+class Result
+{
+public:
+	class Item
+	{
+	public:
+		Item(JSONNODE *_pNode)
+		{
+			pNode = _pNode;
+			pArray = NULL;
+		}
+
+		JSONNODE *pNode;
+		JSONNODE *pArray;
+
+		bool AsBool()
+		{
+			return !!json_as_bool(pNode);
+		}
+
+		int AsInt()
+		{
+			return json_as_int(pNode);
+		}
+
+		float AsFloat()
+		{
+			return json_as_float(pNode);
+		}
+
+		const char *AsString()
+		{
+			return json_as_string(pNode);
+		}
+
+		Item Get(const char *pField)
+		{
+			return Item(json_get(pNode, pField));
+		}
+
+		int Size()
+		{
+			if(!pArray)
+				pArray = json_as_array(pNode);
+
+			return json_size(pArray);
+		}
+
+		Item operator [](int index)
+		{
+			if(!pArray)
+				pArray = json_as_array(pNode);
+
+			return Item(json_at(pArray, index));
+		}
+	};
+
+	Result(const char *pJson)
+	: data(NULL)
+	{
+		error = SE_INVALID_RESPONSE;
+
+		pRoot = json_parse(pJson);
+		if(!pRoot)
+			return;
+
+		JSONNODE *pReq = json_get(pRoot, "request");
+		JSONNODE *pErr = json_get(pRoot, "error");
+
+		if(pReq != NULL && pErr != NULL)
+		{
+			pRequest = json_as_string(pReq);
+
+			error = (ServerError)json_as_int(pErr);
+			pErrorMessage = json_as_string(json_get(pRoot, "message"));
+		}
+
+		data.pNode = json_get(pRoot, "response");
+	}
+
+	~Result()
+	{
+		json_delete(pRoot);
+	}
+
+	const char *pRequest;
+
+	ServerError error;
+	const char *pErrorMessage;
+
+	JSONNODE *pRoot;
+	Item data;
+
+	Item Data(const char *pField = NULL)
+	{
+		if(!pField)
+			return data;
+		return data.Get(pField);
+	}
+};
+
 void WLServ_CreateAccount(HTTPRequest &request, const char *pUsername, const char *pPassword, const char *pEmail)
 {
 	MFFileHTTPRequestArg args[4];
@@ -89,30 +192,16 @@ ServerError WLServResult_GetUser(HTTPRequest &request, uint32 *pUserID)
 	ServerError err = CheckHTTPError(request.GetStatus());
 	if(err != SE_NO_ERROR)
 		return err;
-	err = SE_INVALID_RESPONSE;
 
 	HTTPResponse *pResponse = request.GetResponse();
+	Result result(pResponse->GetData());
 
-	char *pLine = strtok(pResponse->GetData(), "\n");
-	while(pLine)
+	if(result.error == SE_NO_ERROR)
 	{
-		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
-		{
-			err = SE_NO_ERROR;
-		}
-		else if(pUserID && !MFString_CaseCmpN(pLine, "USERID", 6) && pLine[6] == '=')
-		{
-			*pUserID = MFString_AsciiToInteger(pLine + 7);
-		}
-		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
-		{
-			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
-		}
-
-		pLine = strtok(NULL, "\n");
+		*pUserID = result.Data("id").AsInt();
 	}
 
-	return err;
+	return result.error;
 }
 
 void WLServ_GetUserByID(HTTPRequest &request, uint32 id)
@@ -138,50 +227,23 @@ ServerError WLServResult_GetUserDetails(HTTPRequest &request, UserDetails *pUser
 	ServerError err = CheckHTTPError(request.GetStatus());
 	if(err != SE_NO_ERROR)
 		return err;
-	err = SE_INVALID_RESPONSE;
 
 	HTTPResponse *pResponse = request.GetResponse();
+	Result result(pResponse->GetData());
 
-	char *pLine = strtok(pResponse->GetData(), "\n");
-	while(pLine)
+	if(result.error == SE_NO_ERROR)
 	{
-		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
-		{
-			err = SE_NO_ERROR;
-		}
-		else if(!MFString_CaseCmpN(pLine, "ID", 2) && pLine[2] == '=')
-		{
-			pUser->id = MFString_AsciiToInteger(pLine + 3);
-		}
-		else if(!MFString_CaseCmpN(pLine, "USERNAME", 8) && pLine[8] == '=')
-		{
-			MFString_Copy(pUser->userName, pLine + 9);
-		}
-		else if(!MFString_CaseCmpN(pLine, "CREATION", 8) && pLine[8] == '=')
-		{
-			pUser->creationDate = MFString_AsciiToInteger(pLine + 9);
-		}
-		else if(!MFString_CaseCmpN(pLine, "PLAYED", 6) && pLine[6] == '=')
-		{
-			pUser->played = MFString_AsciiToInteger(pLine + 7);
-		}
-		else if(!MFString_CaseCmpN(pLine, "WON", 3) && pLine[3] == '=')
-		{
-			pUser->won = MFString_AsciiToInteger(pLine + 4);
-		}
-		else if(!MFString_CaseCmpN(pLine, "LOST", 4) && pLine[4] == '=')
-		{
-			pUser->lost = MFString_AsciiToInteger(pLine + 5);
-		}
-		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
-		{
-			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
-		}
+		pUser->id = result.Data("id").AsInt();
+		MFString_Copy(pUser->userName, result.Data("accountName").AsString());
 
-		pLine = strtok(NULL, "\n");
+		pUser->creationDate = 0; // result.Data("dateCreated").AsString();
+
+		pUser->played = result.Data("gamesPlayed").AsInt();
+		pUser->won = result.Data("gamesWon").AsInt();
+		pUser->lost = result.Data("gamesLost").AsInt();
 	}
 
-	return err;
+	return result.error;
 }
 
 static void WLServ_GetGames(HTTPRequest &request, const char *pRequest, uint32 user)
@@ -208,44 +270,25 @@ void WLServ_GetPendingGames(HTTPRequest &request, uint32 user)
 	return WLServ_GetGames(request, "GETWAITINGGAMES", user);
 }
 
-ServerError WLServResult_GetGameList(HTTPRequest &request, uint32 *pGames, int *pNumGames)
+ServerError WLServResult_GetGameList(HTTPRequest &request, const char *pList, uint32 *pGames, int *pNumGames)
 {
 	ServerError err = CheckHTTPError(request.GetStatus());
 	if(err != SE_NO_ERROR)
 		return err;
-	err = SE_INVALID_RESPONSE;
 
 	HTTPResponse *pResponse = request.GetResponse();
+	Result result(pResponse->GetData());
 
-	int maxGames = *pNumGames;
-	*pNumGames = 0;
-
-	char *pLine = strtok(pResponse->GetData(), "\n");
-	while(pLine)
+	if(result.error == SE_NO_ERROR)
 	{
-		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
-		{
-			err = SE_NO_ERROR;
-		}
-		else if(!MFString_CaseCmpN(pLine, "GAME", 4))
-		{
-			int index = MFString_AsciiToInteger(pLine + 4);
-			const char *pGame = MFString_Chr(pLine + 5, '=');
-			if(pGame && index < maxGames)
-			{
-				pGames[index] = MFString_AsciiToInteger(pGame + 1);
-				*pNumGames = index + 1;
-			}
-		}
-		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
-		{
-			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
-		}
+		Result::Item games = result.Data(pList);
 
-		pLine = strtok(NULL, "\n");
+		*pNumGames = games.Size();
+		for(int a=0; a<*pNumGames; ++a)
+			pGames[a] = games[a].AsInt();
 	}
 
-	return err;
+	return result.error;
 }
 
 void WLServ_CreateGame(HTTPRequest &request, uint32 user, GameCreateDetails *pDetails)
@@ -290,30 +333,16 @@ ServerError WLServResult_GetGame(HTTPRequest &request, uint32 *pGame)
 	ServerError err = CheckHTTPError(request.GetStatus());
 	if(err != SE_NO_ERROR)
 		return err;
-	err = SE_INVALID_RESPONSE;
 
 	HTTPResponse *pResponse = request.GetResponse();
+	Result result(pResponse->GetData());
 
-	char *pLine = strtok(pResponse->GetData(), "\n");
-	while(pLine)
+	if(result.error == SE_NO_ERROR)
 	{
-		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
-		{
-			err = SE_NO_ERROR;
-		}
-		else if(pGame && !MFString_CaseCmpN(pLine, "GAMEID", 6) && pLine[6] == '=')
-		{
-			*pGame = MFString_AsciiToInteger(pLine + 7);
-		}
-		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
-		{
-			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
-		}
-
-		pLine = strtok(NULL, "\n");
+		*pGame = result.Data("id").AsInt();
 	}
 
-	return err;
+	return result.error;
 }
 
 void WLServ_GetGameByID(HTTPRequest &request, uint32 id)
@@ -339,85 +368,35 @@ ServerError WLServResult_GetGameDetails(HTTPRequest &request, GameDetails *pGame
 	ServerError err = CheckHTTPError(request.GetStatus());
 	if(err != SE_NO_ERROR)
 		return err;
-	err = SE_INVALID_RESPONSE;
 
 	HTTPResponse *pResponse = request.GetResponse();
+	Result result(pResponse->GetData());
 
-	char *pLine = strtok(pResponse->GetData(), "\n");
-	while(pLine)
+	if(result.error == SE_NO_ERROR)
 	{
-		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
-		{
-			err = SE_NO_ERROR;
-		}
-		else if(!MFString_CaseCmpN(pLine, "ID", 2) && pLine[2] == '=')
-		{
-			pGame->id = MFString_AsciiToInteger(pLine + 3);
-		}
-		else if(!MFString_CaseCmpN(pLine, "NAME", 4) && pLine[4] == '=')
-		{
-			MFString_Copy(pGame->name, pLine + 5);
-		}
-		else if(!MFString_CaseCmpN(pLine, "MAP", 3) && pLine[3] == '=')
-		{
-			MFString_Copy(pGame->map, pLine + 4);
-		}
-		else if(!MFString_CaseCmpN(pLine, "CREATION", 8) && pLine[8] == '=')
-		{
-			pGame->creationDate = MFString_AsciiToInteger(pLine + 9);
-		}
-		else if(!MFString_CaseCmpN(pLine, "TURNTIME", 8) && pLine[8] == '=')
-		{
-			pGame->turnTime = MFString_AsciiToInteger(pLine + 9);
-		}
-		else if(!MFString_CaseCmpN(pLine, "MAXPLAYERS", 10) && pLine[10] == '=')
-		{
-			pGame->maxPlayers = MFString_AsciiToInteger(pLine + 11);
-		}
-		else if(!MFString_CaseCmpN(pLine, "NUMPLAYERS", 10) && pLine[10] == '=')
-		{
-			pGame->numPlayers = MFString_AsciiToInteger(pLine + 11);
-		}
-		else if(!MFString_CaseCmpN(pLine, "PLAYER", 6))
-		{
-			int index = MFString_AsciiToInteger(pLine + 6);
-			const char *pPlayer = MFString_Chr(pLine + 7, '=');
-			if(pPlayer && index < pGame->numPlayers)
-				pGame->players[index].id = MFString_AsciiToInteger(pPlayer + 1);
-		}
-		else if(!MFString_CaseCmpN(pLine, "RACE", 4))
-		{
-			int index = MFString_AsciiToInteger(pLine + 4);
-			const char *pRace = MFString_Chr(pLine + 5, '=');
-			if(pRace && index < pGame->numPlayers)
-				pGame->players[index].race = MFString_AsciiToInteger(pRace + 1);
-		}
-		else if(!MFString_CaseCmpN(pLine, "COLOUR", 6))
-		{
-			int index = MFString_AsciiToInteger(pLine + 6);
-			const char *pColour = MFString_Chr(pLine + 7, '=');
-			if(pColour && index < pGame->numPlayers)
-				pGame->players[index].colour = MFString_AsciiToInteger(pColour + 1);
-		}
-		else if(!MFString_CaseCmpN(pLine, "USERNAME", 8))
-		{
-			int index = MFString_AsciiToInteger(pLine + 8);
-			const char *pName = MFString_Chr(pLine + 9, '=');
-			if(pName && index < pGame->numPlayers)
-			{
-				MFString_CopyN(pGame->players[index].name, pName + 1, sizeof(pGame->players[index].name));
-				pGame->players[index].name[sizeof(pGame->players[index].name) - 1] = 0;
-			}
-		}
-		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
-		{
-			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
-		}
+		pGame->id = result.Data("id").AsInt();
+		MFString_Copy(pGame->name, result.Data("name").AsString());
+		MFString_Copy(pGame->map, result.Data("map").AsString());
+		pGame->creationDate = 0; //result.Data("dateCreated").AsString();
+		pGame->turnTime = result.Data("turnTime").AsInt();
+		pGame->maxPlayers = result.Data("maxPlayers").AsInt();
 
-		pLine = strtok(NULL, "\n");
+		Result::Item players = result.Data("players");
+
+		pGame->numPlayers = players.Size();
+		for(int a=0; a<pGame->numPlayers; ++a)
+		{
+			Result::Item player = players[a];
+
+			pGame->players[a].id = player.Get("id").AsInt();
+			pGame->players[a].race = player.Get("race").AsInt();
+			pGame->players[a].colour = player.Get("colour").AsInt();
+			pGame->players[a].hero = player.Get("hero").AsInt();
+			MFString_CopyN(pGame->players[a].name, player.Get("name").AsString(), sizeof(pGame->players[a].name));
+		}
 	}
 
-	return err;
+	return result.error;
 }
 
 void WLServ_JoinGame(HTTPRequest &request, uint32 user, uint32 game)
@@ -462,31 +441,27 @@ void WLServ_SetColour(HTTPRequest &request, uint32 game, uint32 user, int colour
 	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
+void WLServ_SetHero(HTTPRequest &request, uint32 game, uint32 user, int hero)
+{
+	MFFileHTTPRequestArg args[4];
+	args[0].SetString("request", "SETHERO");
+	args[1].SetInt("gameid", game);
+	args[2].SetInt("playerid", user);
+	args[3].SetInt("hero", hero);
+
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+}
+
 ServerError WLServResult_GetError(HTTPRequest &request)
 {
 	ServerError err = CheckHTTPError(request.GetStatus());
 	if(err != SE_NO_ERROR)
 		return err;
-	err = SE_INVALID_RESPONSE;
 
 	HTTPResponse *pResponse = request.GetResponse();
+	Result result(pResponse->GetData());
 
-	char *pLine = strtok(pResponse->GetData(), "\n");
-	while(pLine)
-	{
-		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
-		{
-			err = SE_NO_ERROR;
-		}
-		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
-		{
-			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
-		}
-
-		pLine = strtok(NULL, "\n");
-	}
-
-	return err;
+	return result.error;
 }
 
 void WLServ_GameState(HTTPRequest &request, uint32 game)
@@ -503,112 +478,41 @@ ServerError WLServResult_GetGameState(HTTPRequest &request, GameState *pState)
 	ServerError err = CheckHTTPError(request.GetStatus());
 	if(err != SE_NO_ERROR)
 		return err;
-	err = SE_INVALID_RESPONSE;
 
 	HTTPResponse *pResponse = request.GetResponse();
+	Result result(pResponse->GetData());
 
-	char *pLine = strtok(pResponse->GetData(), "\n");
-	while(pLine)
+	if(result.error == SE_NO_ERROR)
 	{
-		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
-		{
-			err = SE_NO_ERROR;
-		}
-		else if(!MFString_CaseCmpN(pLine, "ID", 2) && pLine[2] == '=')
-		{
-			pState->id = MFString_AsciiToInteger(pLine + 3);
-		}
-		else if(!MFString_CaseCmpN(pLine, "NAME", 4) && pLine[4] == '=')
-		{
-			MFString_Copy(pState->name, pLine + 5);
-		}
-		else if(!MFString_CaseCmpN(pLine, "MAP", 3) && pLine[3] == '=')
-		{
-			MFString_Copy(pState->map, pLine + 4);
-		}
-		else if(!MFString_CaseCmpN(pLine, "TURNTIME", 8) && pLine[8] == '=')
-		{
-			pState->turnTime = MFString_AsciiToInteger(pLine + 9);
-		}
-		else if(!MFString_CaseCmpN(pLine, "STARTTIME", 9) && pLine[9] == '=')
-		{
-			pState->startDate = MFString_AsciiToInteger(pLine + 10);
-		}
-		else if(!MFString_CaseCmpN(pLine, "ENDTIME", 7) && pLine[7] == '=')
-		{
-			pState->endDate = MFString_AsciiToInteger(pLine + 8);
-		}
-		else if(!MFString_CaseCmpN(pLine, "STATE", 5) && pLine[5] == '=')
-		{
-			pState->state = MFString_AsciiToInteger(pLine + 6);
-		}
-		else if(!MFString_CaseCmpN(pLine, "CURRENTPLAYER", 13) && pLine[13] == '=')
-		{
-			pState->currentPlayer = MFString_AsciiToInteger(pLine + 14);
-		}
-		else if(!MFString_CaseCmpN(pLine, "CURRENTTURN", 11) && pLine[11] == '=')
-		{
-			pState->currentTurn = MFString_AsciiToInteger(pLine + 12);
-		}
-		else if(!MFString_CaseCmpN(pLine, "TIMEREMAINING", 13) && pLine[13] == '=')
-		{
-			pState->timeRemaining = MFString_AsciiToInteger(pLine + 14);
-		}
-		else if(!MFString_CaseCmpN(pLine, "WINNER", 6) && pLine[6] == '=')
-		{
-			pState->winner = MFString_AsciiToInteger(pLine + 7);
-		}
-		else if(!MFString_CaseCmpN(pLine, "NUMPLAYERS", 10) && pLine[10] == '=')
-		{
-			pState->numPlayers = MFString_AsciiToInteger(pLine + 11);
-		}
-		else if(!MFString_CaseCmpN(pLine, "PLAYER", 6))
-		{
-			int index = MFString_AsciiToInteger(pLine + 6);
-			const char *pPlayer = MFString_Chr(pLine + 7, '=');
-			if(pPlayer && index < pState->numPlayers)
-				pState->players[index].id = MFString_AsciiToInteger(pPlayer + 1);
-		}
-		else if(!MFString_CaseCmpN(pLine, "TEAM", 4))
-		{
-			int index = MFString_AsciiToInteger(pLine + 4);
-			const char *pTeam = MFString_Chr(pLine + 5, '=');
-			if(pTeam && index < pState->numPlayers)
-				pState->players[index].team = MFString_AsciiToInteger(pTeam + 1);
-		}
-		else if(!MFString_CaseCmpN(pLine, "RACE", 4))
-		{
-			int index = MFString_AsciiToInteger(pLine + 4);
-			const char *pRace = MFString_Chr(pLine + 5, '=');
-			if(pRace && index < pState->numPlayers)
-				pState->players[index].race = MFString_AsciiToInteger(pRace + 1);
-		}
-		else if(!MFString_CaseCmpN(pLine, "COLOUR", 6))
-		{
-			int index = MFString_AsciiToInteger(pLine + 6);
-			const char *pColour = MFString_Chr(pLine + 7, '=');
-			if(pColour && index < pState->numPlayers)
-				pState->players[index].colour = MFString_AsciiToInteger(pColour + 1);
-		}
-		else if(!MFString_CaseCmpN(pLine, "USERNAME", 8))
-		{
-			int index = MFString_AsciiToInteger(pLine + 8);
-			const char *pName = MFString_Chr(pLine + 9, '=');
-			if(pName && index < pState->numPlayers)
-			{
-				MFString_CopyN(pState->players[index].name, pName + 1, sizeof(pState->players[index].name));
-				pState->players[index].name[sizeof(pState->players[index].name) - 1] = 0;
-			}
-		}
-		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
-		{
-			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
-		}
+		pState->id = result.Data("id").AsInt();
+		MFString_Copy(pState->name, result.Data("name").AsString());
+		MFString_Copy(pState->map, result.Data("map").AsString());
+		pState->turnTime = result.Data("turnTime").AsInt();
+		pState->startDate = 0;//result.Data("startTime").AsString();
+		pState->endDate = 0;//result.Data("endTime").AsString();
+		pState->state = 0;//result.Data("state").AsString();
+		pState->currentPlayer = result.Data("currentPlayer").AsInt();
+		pState->currentTurn = result.Data("currentTurn").AsInt();
+		pState->timeRemaining = result.Data("timeRemaining").AsInt();
+		pState->winner = result.Data("winner").AsInt();
 
-		pLine = strtok(NULL, "\n");
+		Result::Item players = result.Data("players");
+
+		pState->numPlayers = players.Size();
+		for(int a=0; a<pState->numPlayers; ++a)
+		{
+			Result::Item player = players[a];
+
+			pState->players[a].id = player.Get("id").AsInt();
+			pState->players[a].team = player.Get("team").AsInt();
+			pState->players[a].race = player.Get("race").AsInt();
+			pState->players[a].colour = player.Get("colour").AsInt();
+			pState->players[a].hero = player.Get("hero").AsInt();
+			MFString_CopyN(pState->players[a].name, player.Get("name").AsString(), sizeof(pState->players[a].name));
+		}
 	}
 
-	return err;
+	return result.error;
 }
 
 int WLServ_ApplyActions(HTTPRequest &request, uint32 game, GameAction *pActions, int numActions)
@@ -667,74 +571,53 @@ ServerError WLServResult_GetActions(HTTPRequest &request, GameAction **ppActions
 	ServerError err = CheckHTTPError(request.GetStatus());
 	if(err != SE_NO_ERROR)
 		return err;
-	err = SE_INVALID_RESPONSE;
 
 	HTTPResponse *pResponse = request.GetResponse();
+	Result result(pResponse->GetData());
 
 	const int maxActions = 256;
 	static GameAction actions[maxActions];
 	static int actionArgs[maxActions*10];
-
-	int numActions = 0;
 	int numArgs = 0;
 
 	*ppActions = actions;
 
-	char *pLine = strtok(pResponse->GetData(), "\n");
-	while(pLine)
+	if(result.error == SE_NO_ERROR)
 	{
-		if(!MFString_CaseCmpN(pLine, "REQUEST", 7))
+		*pActionCount = result.Data("totalActions").AsInt();
+
+		Result::Item actionList = result.Data("actions");
+
+		int numActions = actionList.Size();
+		*pNumActions = numActions;
+		for(int a=0; a<numActions; ++a)
 		{
-			err = SE_NO_ERROR;
-		}
-		else if(!MFString_CaseCmpN(pLine, "COUNT", 5) && pLine[5] == '=')
-		{
-			*pNumActions = MFString_AsciiToInteger(pLine + 6);
-		}
-		else if(!MFString_CaseCmpN(pLine, "ACTION", 6) && pLine[6] == '=')
-		{
-			if(numActions < maxActions && numArgs < maxActions*10 - 20)
+			Result::Item action = actionList[a];
+
+			actions[a].action = GA_UNKNOWN_ACTION;
+			const char *pAction = action.Get("type").AsString();
+			for(int b=0; b<GA_MAX; ++b)
 			{
-				actions[numActions].action = GA_UNKNOWN_ACTION;
-				actions[numActions].numArgs = 0;
-				actions[numActions].pArgs = &actionArgs[numArgs];
-
-				char *pArgs = MFString_Chr(pLine + 7, ':');
-				if(pArgs)
-					*pArgs++ = 0;
-				for(int a=0; a<GA_MAX; ++a)
+				if(!MFString_Compare(pAction, gpActions[b]))
 				{
-					if(!MFString_Compare(pLine + 7, gpActions[a]))
-					{
-						actions[numActions].action = (GameActions)a;
-						break;
-					}
-				}
-
-				if(actions[numActions].action != GA_UNKNOWN_ACTION)
-				{
-					while(pArgs)
-					{
-						actions[numActions].pArgs[actions[numActions].numArgs++] = MFString_AsciiToInteger(pArgs);
-						pArgs = MFString_Chr(pArgs, ',');
-						pArgs = pArgs ? pArgs + 1 : NULL;
-					}
-
-					numArgs += actions[numActions].numArgs;
-					++numActions;
+					actions[a].action = (GameActions)b;
+					break;
 				}
 			}
-		}
-		else if(!MFString_CaseCmpN(pLine, "ERROR", 5) && pLine[5] == '=')
-		{
-			err = (ServerError)MFString_AsciiToInteger(pLine + 6);
-		}
 
-		pLine = strtok(NULL, "\n");
+			if(actions[a].action != GA_UNKNOWN_ACTION)
+			{
+				Result::Item args = action.Get("args");
+				actions[a].numArgs = args.Size();
+				actions[a].pArgs = &actionArgs[numArgs];
+
+				for(int b=0; b<actions[a].numArgs; ++b)
+					actions[a].pArgs[b] = args[b].AsInt();
+
+				numArgs += actions[a].numArgs;
+			}
+		}
 	}
 
-	*pActionCount = *pNumActions;
-	*pNumActions = numActions;
-
-	return err;
+	return result.error;
 }
