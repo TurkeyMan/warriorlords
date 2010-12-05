@@ -163,6 +163,14 @@ struct UnitSetDetails
 	int numRaces;
 	char races[16][64];
 	uint32 colours[16];
+
+	struct Unit
+	{
+		char name[64];
+		UnitType type;
+		int race;
+	} units[256];
+	int numUnits;
 };
 
 struct UnitDetails
@@ -200,10 +208,12 @@ public:
 	inline int GetNumRaces() { return raceCount; }
 	inline const char *GetRaceName(int race) { return pRaces[race].pName; }
 	MFVector GetRaceColour(int race) const;
+	int FindRace(const char *pName);
 
 	inline int GetNumUnitTypes() { return numUnits; }
 	inline UnitType GetUnitType(int unit) { return pUnits[unit].type; }
 	inline const char *GetUnitTypeName(int unit) { return pUnits[unit].pName; }
+	int FindUnit(const char *pName);
 
 	UnitDetails *GetUnitDetails(int unit) { return &pUnits[unit]; }
 	class Unit *CreateUnit(int unit, int player);

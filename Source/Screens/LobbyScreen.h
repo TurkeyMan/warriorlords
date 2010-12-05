@@ -41,7 +41,7 @@ protected:
 
 	SelectBox *pRaces[8];
 	SelectBox *pColours[8];
-	SelectBox *pHero[8];
+	SelectBox *pHeroes[8];
 
 	GameDetails details;
 	MapDetails map;
@@ -55,17 +55,21 @@ protected:
 	HTTPRequest leave;
 	HTTPRequest race;
 	HTTPRequest colour;
+	HTTPRequest hero;
 
-	int raceID, colourID, newRace, newColour;
+	int raceID, colourID, newRace, newColour, heroID, newHero;
 
+	void SetHeroes(int player);
 	void Click(int button, int buttonID);
 	void SetRace(int item, int id);
 	void SetColour(int item, int id);
+	void SetHero(int item, int id);
 	void GetDetails(HTTPRequest::Status status);
 	void BeginGame(HTTPRequest::Status status);
 	void EnterGame(HTTPRequest::Status status);
 	void CommitRace(HTTPRequest::Status status);
 	void CommitColour(HTTPRequest::Status status);
+	void CommitHero(HTTPRequest::Status status);
 };
 
 #endif

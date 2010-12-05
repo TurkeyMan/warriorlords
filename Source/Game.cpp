@@ -16,20 +16,14 @@ Game *Game::pCurrent = NULL;
 
 Game::Game(GameParams *pParams)
 {
-	update.SetCompleteDelegate(MakeDelegate(this, &Game::Update));
-	commit.SetCompleteDelegate(MakeDelegate(this, &Game::Commit));
-
-	Init(pParams->pMap, pParams->bEditMap);
-
 	bOnline = pParams->bOnline;
 	gameID = pParams->gameID;
 
-	lastCommit = lastCommitArg = 0;
-	nextAction = nextArg = 0;
-	attemptCommit = 0;
+	pActionList = bOnline ? new ActionList(gameID) : NULL;
+
+	Init(pParams->pMap, pParams->bEditMap);
 
 	lastAction = 0;
-	firstServerAction = numServerActions = serverActionCount = 0;
 
 	currentPlayer = 0;
 	currentTurn = 0;
@@ -67,19 +61,14 @@ Game::Game(GameParams *pParams)
 
 Game::Game(GameState *pState)
 {
-	update.SetCompleteDelegate(MakeDelegate(this, &Game::Update));
-	commit.SetCompleteDelegate(MakeDelegate(this, &Game::Commit));
-
-	Init(pState->map, false);
-
 	bOnline = true;
 	gameID = pState->id;
 
-	// TODO: we should try loading game state and pending actions from disk...
-	lastCommit = lastCommitArg = 0;
-	nextAction = nextArg = 0;
-	attemptCommit = 0;
+	pActionList = new ActionList(pState->id);
 
+	Init(pState->map, false);
+
+	// TODO: we should try loading game state and pending actions from disk...
 	currentPlayer = 0;
 	currentTurn = 0;
 
@@ -103,9 +92,6 @@ Game::Game(GameState *pState)
 
 	// update the game state
 	lastAction = 0;
-	firstServerAction = numServerActions = serverActionCount = 0;
-
-	UpdateGameState();
 
 	// resume the game
 	Screen::SetNext(pMapScreen);
@@ -176,6 +162,9 @@ Game::~Game()
 
 	actionCache.Destroy();
 	actionList.Destroy();
+
+	if(pActionList)
+		delete pActionList;
 }
 
 bool Game::IsCurrentPlayer(int player)
@@ -201,24 +190,24 @@ void Game::BeginGame()
 		int numCastles = pMap->GetNumCastles();
 		if(numCastles)
 		{
-			PushAction(GA_ADDCASTLES);
+			GameAction *pAction = pActionList->SubmitAction(GA_ADDCASTLES, numCastles);
 
 			for(int a=0; a<numCastles; ++a)
 			{
 				Castle *pCastle = pMap->GetCastle(a);
-				PushActionArg(pCastle->GetPlayer());
+				pAction->pArgs[a] = pCastle->GetPlayer();
 			}
 		}
 
 		int numRuins = pMap->GetNumRuins();
 		if(numRuins)
 		{
-			PushAction(GA_ADDRUINS);
+			GameAction *pAction = pActionList->SubmitAction(GA_ADDRUINS, numRuins);
 
 			for(int a=0; a<numRuins; ++a)
 			{
 				Ruin *pRuin = pMap->GetRuin(a);
-				PushActionArg(pRuin->item);
+				pAction->pArgs[a] = pRuin->item;
 			}
 		}
 	}
@@ -238,8 +227,10 @@ void Game::BeginGame()
 			players[pCastle->player].pHero = pGroup->GetUnit(0);
 
 			// pirates also start with a galleon
-			if(players[pCastle->player].race == 3)
-				CreateUnit(38, pCastle, true);
+			int pirateID = pUnitDefs->FindRace("Pirates");
+			int galleonID = pUnitDefs->FindUnit("Skeleton");
+			if(players[pCastle->player].race == pirateID && galleonID >= 0)
+				CreateUnit(galleonID, pCastle, true);
 		}
 	}
 
@@ -392,9 +383,7 @@ void Game::BeginTurn(int player)
 		if(bOnline)
 		{
 			// victory!!
-			PushAction(GA_VICTORY);
-			PushActionArg(currentPlayer);
-			ApplyActions();
+			pActionList->SubmitActionArgs(GA_VICTORY, 1, currentPlayer);
 		}
 
 		// show victory prompt
@@ -425,10 +414,7 @@ void Game::EndTurn()
 
 			if(!bUpdating && IsMyTurn())
 			{
-				PushAction(GA_SETBUILDING);
-				PushActionArg(pCastle->id);
-				PushActionArg(pCastle->building);
-				PushActionArg(pCastle->buildTime);
+				pActionList->SubmitActionArgs(GA_SETBUILDING, 3, pCastle->id, pCastle->building, pCastle->buildTime);
 			}
 		}
 	}
@@ -436,9 +422,7 @@ void Game::EndTurn()
 	// end the turn
 	if(!bUpdating && IsMyTurn())
 	{
-		PushAction(GA_ENDTURN);
-		PushActionArg(currentPlayer);
-		ApplyActions();
+		pActionList->SubmitActionArgs(GA_ENDTURN, 1, currentPlayer);
 	}
 
 	// begin the next players turn
@@ -460,11 +444,10 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 	pBattle->End();
 
 	// destroy dead units
-	if(bOnline)
-	{
-		PushAction(GA_BATTLE);
-		PushActionArg(pGroup->GetID());
-	}
+	int battleArgs[32];
+	int numArgs = 0;
+
+	battleArgs[numArgs++] = pGroup->GetID();
 
 	for(int a=0; a<pGroup->GetNumUnits(); ++a)
 	{
@@ -472,8 +455,8 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 
 		if(bOnline)
 		{
-			PushActionArg(pUnit->GetHP());
-			PushActionArg(pUnit->GetKills());
+			battleArgs[numArgs++] = pUnit->GetHP();
+			battleArgs[numArgs++] = pUnit->GetKills();
 		}
 
 		if(pUnit->IsDead())
@@ -483,6 +466,13 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 				pUnit->Destroy();
 			--a;
 		}
+	}
+
+	if(bOnline)
+	{
+		GameAction *pNew = pActionList->SubmitAction(GA_BATTLE, numArgs);
+		for(int a=0; a<numArgs; ++a)
+			pNew->pArgs[a] = battleArgs[a];
 	}
 
 	// if all units in the group were destroyed
@@ -500,11 +490,8 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 		Group *pG = pTarget->GetGroup(a);
 		bool bIsMercGroup = pG->GetPlayer() == -1;
 
-		if(bOnline && !bIsMercGroup)
-		{
-			PushAction(GA_BATTLE);
-			PushActionArg(pG->GetID());
-		}
+		numArgs = 0;
+		battleArgs[numArgs++] = pG->GetID();
 
 		for(int b=0; b<pG->GetNumUnits(); ++b)
 		{
@@ -512,8 +499,8 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 
 			if(bOnline && !bIsMercGroup)
 			{
-				PushActionArg(pUnit->GetHP());
-				PushActionArg(pUnit->GetKills());
+				battleArgs[numArgs++] = pUnit->GetHP();
+				battleArgs[numArgs++] = pUnit->GetKills();
 			}
 
 			if(pUnit->IsDead() || bIsMercGroup)
@@ -523,6 +510,13 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 					pUnit->Destroy();
 				--b;
 			}
+		}
+
+		if(bOnline && !bIsMercGroup)
+		{
+			GameAction *pNew = pActionList->SubmitAction(GA_BATTLE, numArgs);
+			for(int a=0; a<numArgs; ++a)
+				pNew->pArgs[a] = battleArgs[a];
 		}
 
 		if(pG->GetNumUnits() == 0)
@@ -676,7 +670,8 @@ Group *Game::CreateUnit(int unit, Castle *pCastle, bool bCommitUnit)
 		pTile->AddGroup(pGroup);
 
 		// HACK: Skeletons build 2 at a time!
-		if(unit == 14)
+		int skeletonID = pUnitDefs->FindUnit("Skeleton");
+		if(unit == skeletonID)
 		{
 			if(pGroup->GetTile()->GetNumUnits() < 10)
 			{
@@ -753,11 +748,7 @@ void Game::AddUnit(Unit *pUnit, bool bCommitUnit)
 	// notify the server of the new unit
 	if(bOnline && bCommitUnit)
 	{
-		PushAction(GA_CREATEUNIT);
-		PushActionArg(pUnit->GetPlayer());
-		PushActionArg(pUnit->GetType());
-		PushActionArg(pUnit->GetMaxMovement());
-		PushActionArg(pUnit->GetMaxHP());
+		pActionList->SubmitActionArgs(GA_CREATEUNIT, 4, pUnit->GetPlayer(), pUnit->GetType(), pUnit->GetMaxMovement(), pUnit->GetMaxHP());
 	}
 }
 
@@ -769,11 +760,10 @@ void Game::AddGroup(Group *pGroup, bool bCommitGroup)
 	// notify the server of the new group
 	if(bOnline && (!bUpdating || bCommitGroup))
 	{
-		PushAction(GA_CREATEGROUP);
-		PushActionArg(pGroup->GetPlayer());
-
-		PushActionArg(pGroup->x);
-		PushActionArg(pGroup->y);
+		GameAction *pNew = pActionList->SubmitAction(GA_CREATEGROUP, 14);
+		pNew->pArgs[0] = pGroup->GetPlayer();
+		pNew->pArgs[1] = pGroup->x;
+		pNew->pArgs[2] = pGroup->y;
 
 		// add front units
 		int forwardUnits = pGroup->GetNumForwardUnits();
@@ -782,7 +772,7 @@ void Game::AddGroup(Group *pGroup, bool bCommitGroup)
 			Unit *pUnit = NULL;
 			if(a < forwardUnits)
 				pUnit = pGroup->GetForwardUnit(a);
-			PushActionArg(pUnit ? pUnit->GetID() : -1);
+			pNew->pArgs[3 + a] = pUnit ? pUnit->GetID() : -1;
 		}
 
 		// add rear units
@@ -792,12 +782,12 @@ void Game::AddGroup(Group *pGroup, bool bCommitGroup)
 			Unit *pUnit = NULL;
 			if(a < rearUnits)
 				pUnit = pGroup->GetRearUnit(a);
-			PushActionArg(pUnit ? pUnit->GetID() : -1);
+			pNew->pArgs[8 + a] = pUnit ? pUnit->GetID() : -1;
 		}
 
 		// add vehicle
 		Unit *pVehicle = pGroup->GetVehicle();
-		PushActionArg(pVehicle ? pVehicle->GetID() : -1);
+		pNew->pArgs[13] = pVehicle ? pVehicle->GetID() : -1;
 	}
 }
 
@@ -1070,24 +1060,26 @@ void Game::CommitAction(Action *pAction)
 	{
 		case Action::AT_Move:
 		{
-			PushAction(GA_MOVEGROUP);
-			PushActionArg(pAction->pGroup->GetID());
-			PushActionArg(pAction->prop.move.destX);
-			PushActionArg(pAction->prop.move.destY);
+			GameAction *pNew = pActionList->SubmitAction(GA_MOVEGROUP, 3 + numUnits);
+			pNew->pArgs[0] = pAction->pGroup->GetID();
+			pNew->pArgs[1] = pAction->prop.move.destX;
+			pNew->pArgs[2] = pAction->prop.move.destY;
 			int numUnits = pAction->pGroup->GetNumUnits() + (pAction->pGroup->pVehicle ? 1 : 0);
 			for(int a=0; a<numUnits; ++a)
-				PushActionArg(pAction->prop.move.destMove[a]);
+				pNew->pArgs[3 + a] = pAction->prop.move.destMove[a];
 			break;
 		}
 		case Action::AT_Rearrange:
-			PushAction(GA_REARRANGEGROUP);
-			PushActionArg(pAction->pGroup->GetID());
+		{
+			GameAction *pNew = pActionList->SubmitAction(GA_REARRANGEGROUP, 11);
+			pNew->pArgs[0] = pAction->pGroup->GetID();
 			for(int a=0; a<10; ++a)
 			{
 				Unit *pUnit = pAction->prop.rearrange.pAfter[a];
-				PushActionArg(pUnit ? pUnit->GetID() : -1);
+				pNew->pArgs[1 + a] = pUnit ? pUnit->GetID() : -1;
 			}
 			break;
+		}
 		case Action::AT_Regroup:
 			for(int a=0; a<pAction->prop.regroup.numBefore; ++a)
 			{
@@ -1110,8 +1102,7 @@ void Game::CommitAction(Action *pAction)
 					CommitAction(pBefore->pLastAction);
 				}
 
-				PushAction(GA_DESTROYGROUP);
-				PushActionArg(pBefore->GetID());
+				pActionList->SubmitActionArgs(GA_DESTROYGROUP, 1, pBefore->GetID());
 
 				pBefore->Destroy();
 			}
@@ -1127,19 +1118,13 @@ void Game::CommitAction(Action *pAction)
 			}
 			break;
 		case Action::AT_Search:
-			PushAction(GA_SEARCH);
-			PushActionArg(pAction->prop.search.pUnit->GetID());
-			PushActionArg(pAction->prop.search.pRuin->id);
+			pActionList->SubmitActionArgs(GA_SEARCH, 2, pAction->prop.search.pUnit->GetID(), pAction->prop.search.pRuin->id);
 			break;
 		case Action::AT_CaptureCastle:
-			PushAction(GA_CLAIMCASTLE);
-			PushActionArg(pAction->prop.captureCastle.pCastle->id);
-			PushActionArg(pAction->pGroup->GetPlayer());
+			pActionList->SubmitActionArgs(GA_CLAIMCASTLE, 2, pAction->prop.captureCastle.pCastle->id, pAction->pGroup->GetPlayer());
 			break;
 		case Action::AT_CaptureUnits:
-			PushAction(GA_CAPTUREUNITS);
-			PushActionArg(pAction->prop.captureUnits.pUnits->GetID());
-			PushActionArg(pAction->pGroup->GetPlayer());
+			pActionList->SubmitActionArgs(GA_CAPTUREUNITS, 2, pAction->prop.captureUnits.pUnits->GetID(), pAction->pGroup->GetPlayer());
 			break;
 	}
 
@@ -1360,197 +1345,57 @@ Action *Game::FindFirstDependency(Action *pAction)
 	return pAction;
 }
 
-int Game::GetNumRemainingActions()
-{
-	if(nextAction <= lastCommit)
-		return MAX_PENDING_ACTIONS - lastCommit + nextAction;
-	return MAX_PENDING_ACTIONS - nextAction - lastCommit;
-}
-
-int Game::GetNumRemainingActionArgs()
-{
-	if(nextArg <= lastCommitArg)
-		return MAX_PENDING_ACTION_ARGS - lastCommitArg + nextArg;
-	return MAX_PENDING_ACTION_ARGS - nextArg - lastCommitArg;
-}
-
-int Game::GetNumPendingActions()
-{
-	if(attemptCommit < lastCommit)
-		return MAX_PENDING_ACTIONS - lastCommit + attemptCommit;
-	return attemptCommit - lastCommit;
-}
-
-int Game::GetPrevAction()
-{
-	return nextAction == 0 ? MAX_PENDING_ACTIONS - 1 : nextAction - 1;
-}
-
-void Game::PushAction(GameActions action)
-{
-	if(!bOnline)
-		return;
-
-	MFDebug_Assert(GetNumRemainingActions() > 1, "Not enough commit actions!");
-
-	pendingActions[nextAction].action = action;
-	pendingActions[nextAction].pArgs = actionArgs + nextArg;
-	pendingActions[nextAction].numArgs = 0;
-	nextAction = (nextAction + 1) % MAX_PENDING_ACTIONS;
-}
-
-void Game::PushActionArg(int arg)
-{
-	if(!bOnline)
-		return;
-
-	MFDebug_Assert(arg >= -1, "!");
-	MFDebug_Assert(GetNumRemainingActionArgs() > 1, "Not enough commit args!");
-
-	GameAction &action = pendingActions[GetPrevAction()];
-
-	if(nextArg == 0 && action.numArgs)
-	{
-		MFDebug_Assert(lastCommitArg > action.numArgs + 1, "Not enough commit args!");
-
-		// copy the existing args to the beginning of the circular queue
-		for(int a=0; a<action.numArgs; ++a)
-			actionArgs[a] = action.pArgs[a];
-
-		action.pArgs = actionArgs;
-		nextArg = action.numArgs;
-	}
-
-	actionArgs[nextArg++] = arg;
-	++action.numArgs;
-
-	nextArg = nextArg % MAX_PENDING_ACTION_ARGS;
-}
-
-void Game::PushActionArgs(int *pArgs, int numArgs)
-{
-	if(!bOnline)
-		return;
-
-	MFDebug_Assert(GetNumRemainingActionArgs() > numArgs + 1, "Not enough commit args!");
-
-	GameAction &action = pendingActions[GetPrevAction()];
-
-	if(nextArg > MAX_PENDING_ACTION_ARGS - numArgs || nextArg < action.numArgs)
-	{
-		MFDebug_Assert(lastCommitArg > action.numArgs + numArgs, "Not enough commit args!");
-
-		// copy the existing args to the beginning of the circular queue
-		for(int a=0; a<action.numArgs; ++a)
-			actionArgs[a] = action.pArgs[a];
-
-		action.pArgs = actionArgs;
-		nextArg = action.numArgs;
-	}
-
-	for(int a=0; a<numArgs; ++a)
-		actionArgs[nextArg++] = pArgs[a];
-	action.numArgs += numArgs;
-
-	nextArg = nextArg % MAX_PENDING_ACTION_ARGS;
-}
-
 void Game::ApplyActions()
 {
-	attemptCommit = nextAction;
-
-	CommitPending();
-}
-
-void Game::CommitPending()
-{
-	if(!bOnline || lastCommit == attemptCommit || commit.RequestPending())
-		return;
-
-	if(attemptCommit < lastCommit)
-		pendingCommit = MAX_PENDING_ACTIONS - lastCommit;
-	else
-		pendingCommit = attemptCommit - lastCommit;
-
-	pendingCommit = WLServ_ApplyActions(commit, gameID, pendingActions + lastCommit, pendingCommit);
-}
-
-void Game::Commit(HTTPRequest::Status status)
-{
-	ServerError err = WLServResult_GetError(commit);
-	if(err != SE_NO_ERROR)
-		return;
-
-	numServerActions += pendingCommit;
-	serverActionCount += pendingCommit;
-	lastAction += pendingCommit;
-
-	lastCommit = (lastCommit + pendingCommit) % MAX_PENDING_ACTIONS;
-	lastCommitArg = lastCommit == nextAction ? 0 : (int)(pendingActions[lastCommit].pArgs - actionArgs);
-
-	if(lastCommit != attemptCommit)
-		CommitPending();
+	if(pActionList)
+		pActionList->Sync();
 }
 
 void Game::UpdateGameState()
 {
-	if(!update.RequestPending())
-		WLServ_UpdateState(update, gameID, lastAction);
-}
+	if(pActionList)
+		pActionList->Update();
 
-void Game::Update(HTTPRequest::Status status)
-{
-	ServerError err = WLServResult_GetActions(update, &pServerActions, &numServerActions, &serverActionCount);
-	if(err != SE_NO_ERROR)
-		return;
-
-	firstServerAction = lastAction;
-
-	ReplayActions();
-
-	// recurse if we don't have all actions yet.
-	if(lastAction < serverActionCount)
-		UpdateGameState();
+	if(NumPendingActions() > 0)
+		ReplayActions();
+//		ReplayActions(303);
 }
 
 void Game::ReplayActions(int stopAction)
 {
-	if(lastAction < firstServerAction)
+	if(!pActionList)
 		return;
 
 	uint32 stop = (uint32)stopAction;
+	int numActions = pActionList->GetNumActions();
 
-	while((uint32)lastAction < stop && lastAction - firstServerAction < numServerActions)
+	while((uint32)lastAction < stop && lastAction < numActions)
 		ReplayNextAction();
 }
 
 void Game::ReplayNextAction()
 {
-	int serverAction = lastAction - firstServerAction;
-	if(serverAction < 0 || serverAction >= numServerActions)
+	if(!pActionList)
 		return;
 
-	ReplayAction(&pServerActions[serverAction]);
-	++lastAction;
+	GameAction *pAction = pActionList->GetAction(lastAction++);
+	ReplayAction(pAction);
 }
 
 int Game::NumPendingActions()
 {
-	int action = lastAction - firstServerAction;
-	return numServerActions - action;
+	return pActionList ? pActionList->GetNumActions() - lastAction : 0;
 }
+
 
 const char *Game::GetNextActionDesc()
 {
-	if(!pServerActions || numServerActions == 0)
+	if(!pActionList || lastAction >= pActionList->GetNumActions())
 		return "";
 
-	int a = lastAction - firstServerAction;
-	const char *pDesc = MFStr("%d - %s: ", lastAction, WLServ_GetActionName(pServerActions[a].action));
+	GameAction *pAction = pActionList->GetAction(lastAction);
 
-	for(int b=0; b<pServerActions[a].numArgs; ++b)
-		pDesc = MFStr(b > 0 ? "%s, %d" : "%s%d", pDesc, pServerActions[a].pArgs[b]);
-	return pDesc;
+	return MFStr("%d - %s", lastAction, pAction->GetString());
 }
 
 void Game::ReplayAction(GameAction *pAction)
@@ -1689,7 +1534,7 @@ void Game::ReplayAction(GameAction *pAction)
 		case GA_SEARCH:
 		{
 			Unit *pUnit = ppUnits[pAction->pArgs[0]];
-			Ruin *pRuin = pMap->GetRuin(pAction->pArgs[0]);
+			Ruin *pRuin = pMap->GetRuin(pAction->pArgs[1]);
 			pUnit->AddItem(pRuin->item);
 			pRuin->bHasSearched = true;
 			break;

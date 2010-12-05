@@ -120,11 +120,50 @@ struct GameState
 	Player players[16];
 };
 
-struct GameAction
+class GameAction
 {
+public:
 	GameActions action;
 	int *pArgs;
 	int numArgs;
+
+	static GameAction *Create(GameActions action, int numArgs);
+
+	bool operator ==(GameAction &action);
+	const char *GetString();
+};
+
+class ActionList
+{
+public:
+	ActionList(uint32 game);
+	~ActionList();
+
+	void Update();
+
+	int GetNumActions() { return numActions; }
+	GameAction *GetAction(int action) { return ppActionList[action]; }
+
+	GameAction *SubmitAction(GameActions action, int numArgs);
+	GameAction *SubmitActionArgs(GameActions action, int numArgs, ...);
+
+	void Sync();
+
+	GameAction **ppActionList;
+	int numServerActions;
+	int numActions;
+	int numAllocated;
+	int commitPending;
+
+	float timeout;
+
+	uint32 game;
+
+	HTTPRequest update;
+
+protected:
+	void Grow(int minItems);
+	void RequestCallback(HTTPRequest::Status status);
 };
 
 const char *WLServ_GetActionName(GameActions action);
@@ -161,8 +200,8 @@ ServerError WLServResult_GetError(HTTPRequest &request);
 void WLServ_GameState(HTTPRequest &request, uint32 game);
 ServerError WLServResult_GetGameState(HTTPRequest &request, GameState *pState);
 
-int WLServ_ApplyActions(HTTPRequest &request, uint32 game, GameAction *pActions, int numActions);
+int WLServ_ApplyActions(HTTPRequest &request, uint32 game, GameAction **ppActions, int numActions);
 void WLServ_UpdateState(HTTPRequest &request, uint32 game, int lastAction);
-ServerError WLServResult_GetActions(HTTPRequest &request, GameAction **ppActions, int *pNumActions, int *pActionCount);
+ServerError WLServResult_GetActions(HTTPRequest &request);
 
 #endif

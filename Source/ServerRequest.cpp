@@ -2,8 +2,11 @@
 #include "HTTP.h"
 #include "ServerRequest.h"
 
-#include "string.h"
-#include "stdio.h"
+#include "MFSystem.h"
+
+#include <string.h>
+#include <stdio.h>
+#include <stdarg.h>
 
 #include <../Fuji/Middleware/libjson/libjson.h>
 
@@ -35,6 +38,10 @@ static const char *gpActions[GA_MAX] =
 	"VICTORY",
 	"CAPTUREUNITS"
 };
+
+static GameAction **gppActionList = NULL;
+static int gNumActions = 0;
+static int gNumAllocated = 0;
 
 const char *WLServ_GetActionName(GameActions action)
 {
@@ -515,7 +522,7 @@ ServerError WLServResult_GetGameState(HTTPRequest &request, GameState *pState)
 	return result.error;
 }
 
-int WLServ_ApplyActions(HTTPRequest &request, uint32 game, GameAction *pActions, int numActions)
+int WLServ_ApplyActions(HTTPRequest &request, uint32 game, GameAction **ppActions, int numActions)
 {
 	if(numActions == 0)
 		return 0;
@@ -538,7 +545,7 @@ int WLServ_ApplyActions(HTTPRequest &request, uint32 game, GameAction *pActions,
 		if(len > 0)
 			len += sprintf(actionList + len, "\n");
 
-		GameAction &action = pActions[a];
+		GameAction &action = *ppActions[a];
 		len += sprintf(actionList + len, gpActions[action.action]);
 
 		for(int b=0; b<action.numArgs; ++b)
@@ -566,7 +573,7 @@ void WLServ_UpdateState(HTTPRequest &request, uint32 game, int lastAction)
 	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
-ServerError WLServResult_GetActions(HTTPRequest &request, GameAction **ppActions, int *pNumActions, int *pActionCount)
+ServerError WLServResult_GetActions(HTTPRequest &request)
 {
 	ServerError err = CheckHTTPError(request.GetStatus());
 	if(err != SE_NO_ERROR)
@@ -575,49 +582,271 @@ ServerError WLServResult_GetActions(HTTPRequest &request, GameAction **ppActions
 	HTTPResponse *pResponse = request.GetResponse();
 	Result result(pResponse->GetData());
 
-	const int maxActions = 256;
-	static GameAction actions[maxActions];
-	static int actionArgs[maxActions*10];
-	int numArgs = 0;
-
-	*ppActions = actions;
-
 	if(result.error == SE_NO_ERROR)
 	{
-		*pActionCount = result.Data("totalActions").AsInt();
+		int firstAction = result.Data("firstAction").AsInt();
+		int totalActions = result.Data("totalActions").AsInt();
 
 		Result::Item actionList = result.Data("actions");
-
 		int numActions = actionList.Size();
-		*pNumActions = numActions;
+
+		while(gNumActions + numActions > gNumAllocated)
+		{
+			gNumAllocated = gNumAllocated ? gNumAllocated * 2 : 1024;
+			gppActionList = (GameAction**)MFHeap_Realloc(gppActionList, sizeof(GameAction*) * gNumAllocated);
+		}
+
+		// process the actions
 		for(int a=0; a<numActions; ++a)
 		{
+			MFDebug_Assert(firstAction + a <= gNumActions, "Trying to load future actions!!");
+
+			if(firstAction + a < gNumActions)
+			{
+				// compare the action that already exists is the same as the one the server's just given us...
+				continue;
+			}
+
 			Result::Item action = actionList[a];
 
-			actions[a].action = GA_UNKNOWN_ACTION;
+			// get action type
+			GameActions type = GA_UNKNOWN_ACTION;
 			const char *pAction = action.Get("type").AsString();
 			for(int b=0; b<GA_MAX; ++b)
 			{
 				if(!MFString_Compare(pAction, gpActions[b]))
 				{
-					actions[a].action = (GameActions)b;
+					type = (GameActions)b;
 					break;
 				}
 			}
 
-			if(actions[a].action != GA_UNKNOWN_ACTION)
-			{
-				Result::Item args = action.Get("args");
-				actions[a].numArgs = args.Size();
-				actions[a].pArgs = &actionArgs[numArgs];
+			MFDebug_Assert(type != GA_UNKNOWN_ACTION, "Unknown action!");
 
-				for(int b=0; b<actions[a].numArgs; ++b)
-					actions[a].pArgs[b] = args[b].AsInt();
+			// read args
+			Result::Item args = action.Get("args");
+			int numArgs = args.Size();
 
-				numArgs += actions[a].numArgs;
-			}
+			GameAction *pNew = GameAction::Create(type, numArgs);
+
+			for(int b=0; b<numArgs; ++b)
+				pNew->pArgs[b] = args[b].AsInt();
+
+			// append to the back of the action list
+			gppActionList[gNumActions++] = pNew;
 		}
 	}
 
 	return result.error;
+}
+
+GameAction *GameAction::Create(GameActions action, int numArgs)
+{
+	int bytes = sizeof(GameAction) + sizeof(int)*numArgs;
+	GameAction *pAction = (GameAction*)MFHeap_Alloc(bytes);
+	pAction->action = action;
+	pAction->pArgs = (int*)((char*)pAction + sizeof(GameAction));
+	pAction->numArgs = numArgs;
+	return pAction;
+}
+
+bool GameAction::operator ==(GameAction &action)
+{
+	if(this->action != action.action || numArgs != action.numArgs)
+		return false;
+	for(int a=0; a<numArgs; ++a)
+		if(pArgs[a] != action.pArgs[a])
+			return false;
+	return true;
+}
+
+const char *GameAction::GetString()
+{
+	const char *pDesc = MFStr("%s: ", gpActions[action]);
+	for(int b=0; b<numArgs; ++b)
+		pDesc = MFStr(b > 0 ? "%s, %d" : "%s%d", pDesc, pArgs[b]);
+	return pDesc;
+}
+
+ActionList::ActionList(uint32 _game)
+{
+	ppActionList = NULL;
+	numServerActions = 0;
+	numActions = 0;
+	numAllocated = 0;
+	commitPending = 0;
+
+	game = _game;
+
+	timeout = 10.f;
+
+	Grow(1024);
+
+	update.SetCompleteDelegate(MakeDelegate(this, &ActionList::RequestCallback));
+
+	Sync();
+}
+
+ActionList::~ActionList()
+{
+	if(ppActionList)
+	{
+		for(int a=0; a<numActions; ++a)
+			MFHeap_Free(ppActionList[a]);
+		MFHeap_Free(ppActionList);
+	}
+}
+
+void ActionList::Update()
+{
+	timeout -= MFSystem_TimeDelta();
+	if(timeout <= 0.f)
+	{
+		Sync();
+		timeout = 10.f;
+	}
+}
+
+GameAction *ActionList::SubmitAction(GameActions action, int numArgs)
+{
+	Grow(numActions + 1);
+
+	GameAction *pNew = GameAction::Create(action, numArgs);
+	ppActionList[numActions++] = pNew;
+
+	return pNew;
+}
+
+GameAction *ActionList::SubmitActionArgs(GameActions action, int numArgs, ...)
+{
+	Grow(numActions + 1);
+
+	GameAction *pNew = GameAction::Create(action, numArgs);
+	ppActionList[numActions++] = pNew;
+
+	if(numArgs)
+	{
+		va_list args;
+		va_start(args, numArgs);
+
+		for(int a=0; a<numArgs; ++a)
+			pNew->pArgs[a] = va_arg(args, int);
+
+		va_end(args);
+	}
+
+	return pNew;
+}
+
+void ActionList::Sync()
+{
+	if(update.RequestPending())
+		return;
+
+	if(numActions > numServerActions)
+	{
+		// commit pending actions
+		commitPending = WLServ_ApplyActions(update, game, ppActionList + numServerActions, numActions - numServerActions);
+	}
+	else
+	{
+		// check for updates from the server
+		WLServ_UpdateState(update, game, numActions);
+	}
+
+	timeout = 10.f;
+}
+
+void ActionList::Grow(int minItems)
+{
+	// assure there's enough memory
+	if(minItems < numAllocated)
+		return;
+
+	while(minItems > numAllocated)
+		numAllocated = numAllocated ? numAllocated * 2 : 1024;
+
+	ppActionList = (GameAction**)MFHeap_Realloc(ppActionList, sizeof(GameAction*) * numAllocated);
+}
+
+void ActionList::RequestCallback(HTTPRequest::Status status)
+{
+	if(commitPending)
+	{
+		// finalise a commit
+		ServerError err = WLServResult_GetError(update);
+		if(err != SE_NO_ERROR)
+			return;
+
+		numServerActions += commitPending;
+		commitPending = 0;
+	}
+	else
+	{
+		// finalise an update
+		ServerError err = CheckHTTPError(update.GetStatus());
+		if(err != SE_NO_ERROR)
+			return;
+
+		HTTPResponse *pResponse = update.GetResponse();
+		Result result(pResponse->GetData());
+
+		if(result.error != SE_NO_ERROR)
+			return;
+
+		numServerActions = result.Data("totalActions").AsInt();
+		int firstAction = result.Data("firstAction").AsInt();
+
+		MFDebug_Assert(firstAction  <= numActions, "Trying to load future actions!!");
+
+		Result::Item actionList = result.Data("actions");
+		int actionCount = actionList.Size();
+
+		Grow(numActions + actionCount);
+
+		// process the actions
+		for(int a=0; a<actionCount; ++a)
+		{
+			Result::Item action = actionList[a];
+
+			// get action type
+			GameActions type = GA_UNKNOWN_ACTION;
+			const char *pAction = action.Get("type").AsString();
+			for(int b=0; b<GA_MAX; ++b)
+			{
+				if(!MFString_Compare(pAction, gpActions[b]))
+				{
+					type = (GameActions)b;
+					break;
+				}
+			}
+
+			MFDebug_Assert(type != GA_UNKNOWN_ACTION, "Unknown action!");
+
+			// read args
+			Result::Item args = action.Get("args");
+			int numArgs = args.Size();
+
+			GameAction *pNew = GameAction::Create(type, numArgs);
+
+			for(int b=0; b<numArgs; ++b)
+				pNew->pArgs[b] = args[b].AsInt();
+
+			if(firstAction + a < numActions)
+			{
+				// compare the action that already exists is the same as the one the server's just given us...
+				MFDebug_Assert(*pNew == *ppActionList[firstAction + a], "The server record is different than the runtime!");
+				delete pNew;
+			}
+			else
+			{
+				// append to the back of the action list
+				ppActionList[numActions++] = pNew;
+			}
+		}
+	}
+
+	// just in case we didn't get eveything...
+	if(numActions != numServerActions)
+		Sync();
 }

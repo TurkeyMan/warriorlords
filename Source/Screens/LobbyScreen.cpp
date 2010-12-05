@@ -20,6 +20,7 @@ LobbyScreen::LobbyScreen()
 	enter.SetCompleteDelegate(MakeDelegate(this, &LobbyScreen::EnterGame));
 	race.SetCompleteDelegate(MakeDelegate(this, &LobbyScreen::CommitRace));
 	colour.SetCompleteDelegate(MakeDelegate(this, &LobbyScreen::CommitColour));
+	hero.SetCompleteDelegate(MakeDelegate(this, &LobbyScreen::CommitHero));
 
 	bOffline = false;
 
@@ -66,6 +67,11 @@ LobbyScreen::LobbyScreen()
 		rect.width = 30.f;
 		pColours[a] = SelectBox::Create(&rect, pFont);
 		pColours[a]->SetSelectCallback(MakeDelegate(this, &LobbyScreen::SetColour), a);
+
+		rect.x += 40.f;
+		rect.width = 160.f;
+		pHeroes[a] = SelectBox::Create(&rect, pFont);
+		pHeroes[a]->SetSelectCallback(MakeDelegate(this, &LobbyScreen::SetHero), a);
 	}
 }
 
@@ -79,6 +85,7 @@ LobbyScreen::~LobbyScreen()
 	{
 		pRaces[a]->Destroy();
 		pColours[a]->Destroy();
+		pHeroes[a]->Destroy();
 	}
 
 	MFMaterial_Destroy(pIcons);
@@ -116,10 +123,14 @@ void LobbyScreen::Select()
 		}
 		pColours[a]->SetSelection(details.players[a].colour - 1);
 
+		// populate the box with heroes
+		SetHeroes(a);
+
 		if(bOffline || (pSession && details.players[a].id == pSession->GetUserID()))
 		{
 			pInputManager->PushReceiver(pRaces[a]);
 			pInputManager->PushReceiver(pColours[a]);
+			pInputManager->PushReceiver(pHeroes[a]);
 		}
 	}
 }
@@ -192,6 +203,7 @@ void LobbyScreen::ShowOffline(const MapDetails *pMap)
 	{
 		details.players[a].race = 1;
 		details.players[a].colour = 1 + a;
+		details.players[a].hero = 0;
 	}
 
 	Map::GetMapDetails(pMap->filename, &map);
@@ -245,6 +257,7 @@ void LobbyScreen::Draw()
 		{
 			pRaces[a]->Draw();
 			pColours[a]->Draw();
+			pHeroes[a]->Draw();
 		}
 		else
 		{
@@ -342,20 +355,6 @@ void LobbyScreen::BeginGame(HTTPRequest::Status status)
 	pGame->BeginGame();
 }
 
-void LobbyScreen::SetRace(int item, int id)
-{
-	++item;
-	ServerError err = SE_NO_ERROR;
-
-	raceID = id;
-	newRace = item;
-
-	if(!bOffline)
-		WLServ_SetRace(race, details.id, details.players[id].id, item);
-	else
-		details.players[id].race = item;
-}
-
 void LobbyScreen::EnterGame(HTTPRequest::Status status)
 {
 	GameState state;
@@ -375,14 +374,53 @@ void LobbyScreen::EnterGame(HTTPRequest::Status status)
 	Screen::SetNext(pHome);
 }
 
+void LobbyScreen::SetHeroes(int player)
+{
+	// populate the box with heroes
+	pHeroes[player]->Clear();
+
+	for(int b=0; b<map.unitSetDetails.numUnits; ++b)
+	{
+		if(map.unitSetDetails.units[b].race == details.players[player].race && map.unitSetDetails.units[b].type == UT_Hero)
+			pHeroes[player]->AddItem(map.unitSetDetails.units[b].name);
+	}
+
+	details.players[player].hero = 0;
+	pHeroes[player]->SetSelection(0);
+}
+
+void LobbyScreen::SetRace(int item, int id)
+{
+	++item;
+	ServerError err = SE_NO_ERROR;
+
+	raceID = id;
+	newRace = item;
+
+	if(!bOffline)
+	{
+		WLServ_SetRace(race, details.id, details.players[id].id, item);
+	}
+	else
+	{
+		details.players[id].race = item;
+		SetHeroes(id);
+	}
+}
+
 void LobbyScreen::CommitRace(HTTPRequest::Status status)
 {
 	ServerError err = WLServResult_GetError(race);
 
 	if(err == SE_NO_ERROR)
+	{
 		details.players[raceID].race = newRace;
+		SetHeroes(raceID);
+	}
 	else
+	{
 		pRaces[raceID]->SetSelection(details.players[raceID].race - 1);
+	}
 }
 
 void LobbyScreen::SetColour(int item, int id)
@@ -412,4 +450,33 @@ void LobbyScreen::CommitColour(HTTPRequest::Status status)
 		details.players[colourID].colour = newColour;
 	else
 		pColours[colourID]->SetSelection(details.players[colourID].colour - 1);
+}
+
+void LobbyScreen::SetHero(int item, int id)
+{
+	++item;
+
+	for(int a=0; a<details.numPlayers; ++a)
+	{
+		if(item == details.players[a].hero)
+			return;
+	}
+
+	heroID = id;
+	newHero = item;
+
+	if(!bOffline)
+		WLServ_SetHero(hero, details.id, details.players[id].id, item);
+	else
+		details.players[id].hero = item;
+}
+
+void LobbyScreen::CommitHero(HTTPRequest::Status status)
+{
+	ServerError err = WLServResult_GetError(hero);
+
+	if(err == SE_NO_ERROR)
+		details.players[heroID].hero = newHero;
+	else
+		pHeroes[heroID]->SetSelection(details.players[colourID].hero - 1);
 }

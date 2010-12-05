@@ -51,6 +51,28 @@ bool UnitDefinitions::GetDetails(const char *pUnitSetName, UnitSetDetails *pDeta
 				pRace = pRace->Next();
 			}
 		}
+		else if(pLine->IsSection("Units"))
+		{
+			MFIniLine *pUnit = pLine->Sub();
+			while(pUnit)
+			{
+				MFString_CopyN(pDetails->units[pDetails->numUnits].name, pUnit->GetString(5), 63);
+				pDetails->units[pDetails->numUnits].race = pUnit->GetInt(7);
+				pDetails->units[pDetails->numUnits].type = UT_Unknown;
+
+				const char *pUnitType = pUnit->GetString(6);
+				if(!MFString_CaseCmp(pUnitType, "hero"))
+					pDetails->units[pDetails->numUnits].type = UT_Hero;
+				else if(!MFString_CaseCmp(pUnitType, "unit"))
+					pDetails->units[pDetails->numUnits].type = UT_Unit;
+				else if(!MFString_CaseCmp(pUnitType, "vehicle"))
+					pDetails->units[pDetails->numUnits].type = UT_Vehicle;
+
+				++pDetails->numUnits;
+
+				pUnit = pUnit->Next();
+			}
+		}
 
 		pLine = pLine->Next();
 	}
@@ -529,6 +551,26 @@ MFVector UnitDefinitions::GetRaceColour(int race) const
 {
 	uint32 c = pRaces[race].colour;
 	return MakeVector(((c >> 16) & 0xFF) * (1.f/255.f), ((c >> 8) & 0xFF) * (1.f/255.f), (c & 0xFF) * (1.f/255.f));
+}
+
+int UnitDefinitions::FindRace(const char *pName)
+{
+	for(int a=0; a<raceCount; ++a)
+	{
+		if(!MFString_CaseCmp(pRaces[a].pName, pName))
+			return a;
+	}
+	return -1;
+}
+
+int UnitDefinitions::FindUnit(const char *pName)
+{
+	for(int a=0; a<numUnits; ++a)
+	{
+		if(!MFString_CaseCmp(pUnits[a].pName, pName))
+			return a;
+	}
+	return -1;
 }
 
 Unit *UnitDefinitions::CreateUnit(int unit, int player)

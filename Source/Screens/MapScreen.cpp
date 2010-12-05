@@ -378,24 +378,7 @@ int MapScreen::Update()
 		}
 	}
 
-	if(pGame->IsOnline())
-	{
-		lastUpdateTime += MFSystem_TimeDelta();
-		if(lastUpdateTime > 10.f)
-		{
-			if(pGame->IsCommitPending())
-			{
-				pGame->CommitPending();
-			}
-			else if(!pGame->IsMyTurn() && pGame->NumPendingActions() == 0)
-			{
-				pGame->UpdateGameState();
-			}
-
-			while(lastUpdateTime > 10.f)
-				lastUpdateTime -= 10.f;
-		}
-	}
+	pGame->UpdateGameState();
 
 #if defined(_DEBUG)
 	int w, h;
