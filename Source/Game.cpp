@@ -228,7 +228,7 @@ void Game::BeginGame()
 
 			// pirates also start with a galleon
 			int pirateID = pUnitDefs->FindRace("Pirates");
-			int galleonID = pUnitDefs->FindUnit("Skeleton");
+			int galleonID = pUnitDefs->FindUnit("Galleon");
 			if(players[pCastle->player].race == pirateID && galleonID >= 0)
 				CreateUnit(galleonID, pCastle, true);
 		}
@@ -412,7 +412,7 @@ void Game::EndTurn()
 			pCastle->building = pCastle->nextBuild;
 			pCastle->buildTime = pCastle->nextBuild > -1 ? pCastle->details.buildUnits[pCastle->nextBuild].buildTime : 0;
 
-			if(!bUpdating && IsMyTurn())
+			if(bOnline && !bUpdating && IsMyTurn())
 			{
 				pActionList->SubmitActionArgs(GA_SETBUILDING, 3, pCastle->id, pCastle->building, pCastle->buildTime);
 			}
@@ -420,7 +420,7 @@ void Game::EndTurn()
 	}
 
 	// end the turn
-	if(!bUpdating && IsMyTurn())
+	if(bOnline && !bUpdating && IsMyTurn())
 	{
 		pActionList->SubmitActionArgs(GA_ENDTURN, 1, currentPlayer);
 	}
