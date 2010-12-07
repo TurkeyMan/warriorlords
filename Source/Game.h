@@ -182,6 +182,9 @@ public:
 
 	const char *GetNextActionDesc();
 
+	GameAction *SubmitAction(GameActions action, int numArgs);
+	GameAction *SubmitActionArgs(GameActions action, int numArgs, ...);
+
 protected:
 	void Init(const char *pMap, bool bEdit);
 

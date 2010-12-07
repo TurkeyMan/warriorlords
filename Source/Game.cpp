@@ -12,6 +12,8 @@
 #include "MFTexture.h"
 #include "MFRenderer.h"
 
+#include <stdarg.h>
+
 Game *Game::pCurrent = NULL;
 
 Game::Game(GameParams *pParams)
@@ -192,7 +194,7 @@ void Game::BeginGame()
 		int numCastles = pMap->GetNumCastles();
 		if(numCastles)
 		{
-			GameAction *pAction = pActionList->SubmitAction(GA_ADDCASTLES, numCastles);
+			GameAction *pAction = SubmitAction(GA_ADDCASTLES, numCastles);
 
 			for(int a=0; a<numCastles; ++a)
 			{
@@ -204,7 +206,7 @@ void Game::BeginGame()
 		int numRuins = pMap->GetNumRuins();
 		if(numRuins)
 		{
-			GameAction *pAction = pActionList->SubmitAction(GA_ADDRUINS, numRuins);
+			GameAction *pAction = SubmitAction(GA_ADDRUINS, numRuins);
 
 			for(int a=0; a<numRuins; ++a)
 			{
@@ -399,7 +401,7 @@ void Game::BeginTurn(int player)
 		if(bOnline)
 		{
 			// victory!!
-			pActionList->SubmitActionArgs(GA_VICTORY, 1, currentPlayer);
+			SubmitActionArgs(GA_VICTORY, 1, currentPlayer);
 		}
 
 		// show victory prompt
@@ -430,7 +432,7 @@ void Game::EndTurn()
 
 			if(bOnline && !bUpdating && IsMyTurn())
 			{
-				pActionList->SubmitActionArgs(GA_SETBUILDING, 3, pCastle->id, pCastle->building, pCastle->buildTime);
+				SubmitActionArgs(GA_SETBUILDING, 3, pCastle->id, pCastle->building, pCastle->buildTime);
 			}
 		}
 	}
@@ -438,7 +440,7 @@ void Game::EndTurn()
 	// end the turn
 	if(bOnline && !bUpdating && IsMyTurn())
 	{
-		pActionList->SubmitActionArgs(GA_ENDTURN, 1, currentPlayer);
+		SubmitActionArgs(GA_ENDTURN, 1, currentPlayer);
 	}
 
 	// begin the next players turn
@@ -486,7 +488,7 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 
 	if(bOnline)
 	{
-		GameAction *pNew = pActionList->SubmitAction(GA_BATTLE, numArgs);
+		GameAction *pNew = SubmitAction(GA_BATTLE, numArgs);
 		for(int a=0; a<numArgs; ++a)
 			pNew->pArgs[a] = battleArgs[a];
 	}
@@ -530,7 +532,7 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 
 		if(bOnline && !bIsMercGroup)
 		{
-			GameAction *pNew = pActionList->SubmitAction(GA_BATTLE, numArgs);
+			GameAction *pNew = SubmitAction(GA_BATTLE, numArgs);
 			for(int a=0; a<numArgs; ++a)
 				pNew->pArgs[a] = battleArgs[a];
 		}
@@ -764,7 +766,7 @@ void Game::AddUnit(Unit *pUnit, bool bCommitUnit)
 	// notify the server of the new unit
 	if(bOnline && bCommitUnit)
 	{
-		pActionList->SubmitActionArgs(GA_CREATEUNIT, 4, pUnit->GetPlayer(), pUnit->GetType(), pUnit->GetMaxMovement(), pUnit->GetMaxHP());
+		SubmitActionArgs(GA_CREATEUNIT, 4, pUnit->GetPlayer(), pUnit->GetType(), pUnit->GetMaxMovement(), pUnit->GetMaxHP());
 	}
 }
 
@@ -776,7 +778,7 @@ void Game::AddGroup(Group *pGroup, bool bCommitGroup)
 	// notify the server of the new group
 	if(bOnline && (!bUpdating || bCommitGroup))
 	{
-		GameAction *pNew = pActionList->SubmitAction(GA_CREATEGROUP, 14);
+		GameAction *pNew = SubmitAction(GA_CREATEGROUP, 14);
 		pNew->pArgs[0] = pGroup->GetPlayer();
 		pNew->pArgs[1] = pGroup->x;
 		pNew->pArgs[2] = pGroup->y;
@@ -1077,11 +1079,13 @@ void Game::CommitAction(Action *pAction)
 		case Action::AT_Move:
 			if(pActionList)
 			{
-				GameAction *pNew = pActionList->SubmitAction(GA_MOVEGROUP, 3 + numUnits);
+				int numUnits = pAction->pGroup->GetNumUnits() + (pAction->pGroup->pVehicle ? 1 : 0);
+
+				GameAction *pNew = SubmitAction(GA_MOVEGROUP, 3 + numUnits);
 				pNew->pArgs[0] = pAction->pGroup->GetID();
 				pNew->pArgs[1] = pAction->prop.move.destX;
 				pNew->pArgs[2] = pAction->prop.move.destY;
-				int numUnits = pAction->pGroup->GetNumUnits() + (pAction->pGroup->pVehicle ? 1 : 0);
+
 				for(int a=0; a<numUnits; ++a)
 					pNew->pArgs[3 + a] = pAction->prop.move.destMove[a];
 			}
@@ -1090,7 +1094,7 @@ void Game::CommitAction(Action *pAction)
 		case Action::AT_Rearrange:
 			if(pActionList)
 			{
-				GameAction *pNew = pActionList->SubmitAction(GA_REARRANGEGROUP, 11);
+				GameAction *pNew = SubmitAction(GA_REARRANGEGROUP, 11);
 				pNew->pArgs[0] = pAction->pGroup->GetID();
 				for(int a=0; a<10; ++a)
 				{
@@ -1122,8 +1126,7 @@ void Game::CommitAction(Action *pAction)
 					CommitAction(pBefore->pLastAction);
 				}
 
-				if(pActionList)
-					pActionList->SubmitActionArgs(GA_DESTROYGROUP, 1, pBefore->GetID());
+				SubmitActionArgs(GA_DESTROYGROUP, 1, pBefore->GetID());
 
 				pBefore->Destroy();
 			}
@@ -1139,16 +1142,13 @@ void Game::CommitAction(Action *pAction)
 			}
 			break;
 		case Action::AT_Search:
-			if(pActionList)
-				pActionList->SubmitActionArgs(GA_SEARCH, 2, pAction->prop.search.pUnit->GetID(), pAction->prop.search.pRuin->id);
+			SubmitActionArgs(GA_SEARCH, 2, pAction->prop.search.pUnit->GetID(), pAction->prop.search.pRuin->id);
 			break;
 		case Action::AT_CaptureCastle:
-			if(pActionList)
-				pActionList->SubmitActionArgs(GA_CLAIMCASTLE, 2, pAction->prop.captureCastle.pCastle->id, pAction->pGroup->GetPlayer());
+			SubmitActionArgs(GA_CLAIMCASTLE, 2, pAction->prop.captureCastle.pCastle->id, pAction->pGroup->GetPlayer());
 			break;
 		case Action::AT_CaptureUnits:
-			if(pActionList)
-				pActionList->SubmitActionArgs(GA_CAPTUREUNITS, 2, pAction->prop.captureUnits.pUnits->GetID(), pAction->pGroup->GetPlayer());
+			SubmitActionArgs(GA_CAPTUREUNITS, 2, pAction->prop.captureUnits.pUnits->GetID(), pAction->pGroup->GetPlayer());
 			break;
 	}
 
@@ -1420,6 +1420,30 @@ const char *Game::GetNextActionDesc()
 	GameAction *pAction = pActionList->GetAction(lastAction);
 
 	return MFStr("%d - %s", lastAction, pAction->GetString());
+}
+
+GameAction *Game::SubmitAction(GameActions action, int numArgs)
+{
+	if(pActionList)
+	{
+		++lastAction;
+		return pActionList->SubmitAction(action, numArgs);
+	}
+	return NULL;
+}
+
+GameAction *Game::SubmitActionArgs(GameActions action, int numArgs, ...)
+{
+	GameAction *pReturn = NULL;
+	if(pActionList)
+	{
+		++lastAction;
+		va_list args;
+		va_start(args, numArgs);
+		pReturn = pActionList->SubmitActionArgs(action, numArgs, args);
+		va_end(args);
+	}
+	return pReturn;
 }
 
 void Game::ReplayAction(GameAction *pAction)

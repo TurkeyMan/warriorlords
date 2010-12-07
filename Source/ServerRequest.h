@@ -145,7 +145,7 @@ public:
 	GameAction *GetAction(int action) { return ppActionList[action]; }
 
 	GameAction *SubmitAction(GameActions action, int numArgs);
-	GameAction *SubmitActionArgs(GameActions action, int numArgs, ...);
+	GameAction *SubmitActionArgs(GameActions action, int numArgs, va_list args);
 
 	void Sync();
 

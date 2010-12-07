@@ -717,7 +717,7 @@ GameAction *ActionList::SubmitAction(GameActions action, int numArgs)
 	return pNew;
 }
 
-GameAction *ActionList::SubmitActionArgs(GameActions action, int numArgs, ...)
+GameAction *ActionList::SubmitActionArgs(GameActions action, int numArgs, va_list args)
 {
 	Grow(numActions + 1);
 
@@ -726,13 +726,8 @@ GameAction *ActionList::SubmitActionArgs(GameActions action, int numArgs, ...)
 
 	if(numArgs)
 	{
-		va_list args;
-		va_start(args, numArgs);
-
 		for(int a=0; a<numArgs; ++a)
 			pNew->pArgs[a] = va_arg(args, int);
-
-		va_end(args);
 	}
 
 	return pNew;
