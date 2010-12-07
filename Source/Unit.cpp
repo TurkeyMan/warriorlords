@@ -968,11 +968,12 @@ float Unit::GetDefence(float damage, int wpnClass)
 
 void Unit::UpdateStats()
 {
-	int newLifeMax = ModStatInt(details.life, Item::MT_User, Item::Mod_HP) + (victories & ~1);
+	int newLifeMax = ModStatInt(details.life + (victories & ~1), Item::MT_User, Item::Mod_HP);
 	int newMoveMax = ModStatInt(details.movement, Item::MT_User, Item::Mod_Movement);
-	maxAtk = ModStatFloat((float)details.attackMax, Item::MT_User, Item::Mod_MaxAtk) + (float)(victories / 2);
-	minAtk = MFMin(ModStatFloat((float)details.attackMin, Item::MT_User, Item::Mod_MinAtk) + (float)(victories / 2), maxAtk);
+	maxAtk = ModStatFloat((float)(details.attackMax + victories / 2), Item::MT_User, Item::Mod_MaxAtk);
+	minAtk = MFMin(ModStatFloat((float)(details.attackMin + victories / 2), Item::MT_User, Item::Mod_MinAtk), maxAtk);
 
+	// galleon gives combat advantages
 	if(pGroup && pGroup->GetVehicle())
 	{
 		Unit *pVehicle = pGroup->GetVehicle();
@@ -981,6 +982,24 @@ void Unit::UpdateStats()
 			// units in a galleon kick more arse
 			minAtk *= 1.3f;
 			maxAtk *= 1.3f;
+		}
+	}
+
+	// HACK: human queen has movement advantages when paired with knights...
+	if(!MFString_CaseCmp(pName, "Queen Karen") && pGroup)
+	{
+		// find knights in the group...
+		int numUnits = pGroup->GetNumUnits();
+		for(int a=0; a<numUnits; ++a)
+		{
+			Unit *pPotential = pGroup->GetUnit(a);
+			if(!MFString_CaseCmp(pPotential->GetName(), "Knight"))
+			{
+				UnitDetails *pQueen = pUnitDefs->GetUnitDetails(type);
+				UnitDetails *pKnight = pUnitDefs->GetUnitDetails(pPotential->type);
+				newMoveMax += pKnight->movement - pQueen->movement;
+				break;
+			}
 		}
 	}
 

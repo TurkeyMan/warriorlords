@@ -17,6 +17,7 @@ class Battle;
 
 struct Player
 {
+	int startingHero;
 	MFVector colour;
 	int race;
 	int gold;

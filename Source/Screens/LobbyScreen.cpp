@@ -454,13 +454,8 @@ void LobbyScreen::CommitColour(HTTPRequest::Status status)
 
 void LobbyScreen::SetHero(int item, int id)
 {
-	++item;
-
-	for(int a=0; a<details.numPlayers; ++a)
-	{
-		if(item == details.players[a].hero)
-			return;
-	}
+	if(item == details.players[id].hero)
+		return;
 
 	heroID = id;
 	newHero = item;
@@ -478,5 +473,5 @@ void LobbyScreen::CommitHero(HTTPRequest::Status status)
 	if(err == SE_NO_ERROR)
 		details.players[heroID].hero = newHero;
 	else
-		pHeroes[heroID]->SetSelection(details.players[colourID].hero - 1);
+		pHeroes[heroID]->SetSelection(details.players[heroID].hero);
 }

@@ -48,6 +48,7 @@ Game::Game(GameParams *pParams)
 			players[a].playerID = pParams->players[a].id;
 			players[a].race = pParams->players[a].race;
 			players[a].colour = pUnitDefs->GetRaceColour(pParams->players[a].colour);
+			players[a].startingHero = pParams->players[a].hero;
 			players[a].gold = 0;
 			players[a].cursorX = 0;
 			players[a].cursorY = 0;
@@ -79,6 +80,7 @@ Game::Game(GameState *pState)
 
 		players[a].race = pState->players[a].race;
 		players[a].colour = pUnitDefs->GetRaceColour(pState->players[a].colour);
+		players[a].startingHero = pState->players[a].hero;
 
 		// TODO: we need to fetch these from the server!
 		players[a].gold = 0;
@@ -222,8 +224,22 @@ void Game::BeginGame()
 			players[pCastle->player].cursorX = pCastle->details.x;
 			players[pCastle->player].cursorY = pCastle->details.y;
 
-			// produce starting hero (or flag that hero wants to join on the first turn)
-			Group *pGroup = CreateUnit(players[pCastle->player].race - 1, pCastle, true);
+			// produce starting hero
+			int numTypes = pUnitDefs->GetNumUnitTypes();
+			int hero = players[pCastle->player].startingHero;
+			int heroID = players[pCastle->player].race - 1;
+
+			for(int u=0; u<numTypes; ++u)
+			{
+				UnitDetails *pUnit = pUnitDefs->GetUnitDetails(u);
+				if(pUnit->type == UT_Hero && pUnit->race == players[pCastle->player].race)
+				{
+					if(hero-- == 0)
+						heroID = u;
+				}
+			}
+
+			Group *pGroup = CreateUnit(heroID, pCastle, true);
 			players[pCastle->player].pHero = pGroup->GetUnit(0);
 
 			// pirates also start with a galleon
@@ -1059,27 +1075,31 @@ void Game::CommitAction(Action *pAction)
 	switch(pAction->type)
 	{
 		case Action::AT_Move:
-		{
-			GameAction *pNew = pActionList->SubmitAction(GA_MOVEGROUP, 3 + numUnits);
-			pNew->pArgs[0] = pAction->pGroup->GetID();
-			pNew->pArgs[1] = pAction->prop.move.destX;
-			pNew->pArgs[2] = pAction->prop.move.destY;
-			int numUnits = pAction->pGroup->GetNumUnits() + (pAction->pGroup->pVehicle ? 1 : 0);
-			for(int a=0; a<numUnits; ++a)
-				pNew->pArgs[3 + a] = pAction->prop.move.destMove[a];
-			break;
-		}
-		case Action::AT_Rearrange:
-		{
-			GameAction *pNew = pActionList->SubmitAction(GA_REARRANGEGROUP, 11);
-			pNew->pArgs[0] = pAction->pGroup->GetID();
-			for(int a=0; a<10; ++a)
+			if(pActionList)
 			{
-				Unit *pUnit = pAction->prop.rearrange.pAfter[a];
-				pNew->pArgs[1 + a] = pUnit ? pUnit->GetID() : -1;
+				GameAction *pNew = pActionList->SubmitAction(GA_MOVEGROUP, 3 + numUnits);
+				pNew->pArgs[0] = pAction->pGroup->GetID();
+				pNew->pArgs[1] = pAction->prop.move.destX;
+				pNew->pArgs[2] = pAction->prop.move.destY;
+				int numUnits = pAction->pGroup->GetNumUnits() + (pAction->pGroup->pVehicle ? 1 : 0);
+				for(int a=0; a<numUnits; ++a)
+					pNew->pArgs[3 + a] = pAction->prop.move.destMove[a];
 			}
 			break;
-		}
+
+		case Action::AT_Rearrange:
+			if(pActionList)
+			{
+				GameAction *pNew = pActionList->SubmitAction(GA_REARRANGEGROUP, 11);
+				pNew->pArgs[0] = pAction->pGroup->GetID();
+				for(int a=0; a<10; ++a)
+				{
+					Unit *pUnit = pAction->prop.rearrange.pAfter[a];
+					pNew->pArgs[1 + a] = pUnit ? pUnit->GetID() : -1;
+				}
+			}
+			break;
+
 		case Action::AT_Regroup:
 			for(int a=0; a<pAction->prop.regroup.numBefore; ++a)
 			{
@@ -1102,7 +1122,8 @@ void Game::CommitAction(Action *pAction)
 					CommitAction(pBefore->pLastAction);
 				}
 
-				pActionList->SubmitActionArgs(GA_DESTROYGROUP, 1, pBefore->GetID());
+				if(pActionList)
+					pActionList->SubmitActionArgs(GA_DESTROYGROUP, 1, pBefore->GetID());
 
 				pBefore->Destroy();
 			}
@@ -1118,13 +1139,16 @@ void Game::CommitAction(Action *pAction)
 			}
 			break;
 		case Action::AT_Search:
-			pActionList->SubmitActionArgs(GA_SEARCH, 2, pAction->prop.search.pUnit->GetID(), pAction->prop.search.pRuin->id);
+			if(pActionList)
+				pActionList->SubmitActionArgs(GA_SEARCH, 2, pAction->prop.search.pUnit->GetID(), pAction->prop.search.pRuin->id);
 			break;
 		case Action::AT_CaptureCastle:
-			pActionList->SubmitActionArgs(GA_CLAIMCASTLE, 2, pAction->prop.captureCastle.pCastle->id, pAction->pGroup->GetPlayer());
+			if(pActionList)
+				pActionList->SubmitActionArgs(GA_CLAIMCASTLE, 2, pAction->prop.captureCastle.pCastle->id, pAction->pGroup->GetPlayer());
 			break;
 		case Action::AT_CaptureUnits:
-			pActionList->SubmitActionArgs(GA_CAPTUREUNITS, 2, pAction->prop.captureUnits.pUnits->GetID(), pAction->pGroup->GetPlayer());
+			if(pActionList)
+				pActionList->SubmitActionArgs(GA_CAPTUREUNITS, 2, pAction->prop.captureUnits.pUnits->GetID(), pAction->pGroup->GetPlayer());
 			break;
 	}
 
