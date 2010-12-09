@@ -263,7 +263,7 @@ void LoginScreen::TabEmail(const char *pString)
 
 void LoginScreen::CreateComplete(HTTPRequest::Status status)
 {
-	uint32 user;
+	UserDetails user;
 	ServerError err = WLServResult_GetUser(createRequest, &user);
 	if(err != SE_NO_ERROR)
 	{

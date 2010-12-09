@@ -77,7 +77,6 @@ protected:
 	static Session *pCurrent;
 
 	void OnLogin(HTTPRequest::Status status);
-	void OnGetUser(HTTPRequest::Status status);
 	void OnGetCurrent(HTTPRequest::Status status);
 	void OnGetPending(HTTPRequest::Status status);
 	void OnGetPast(HTTPRequest::Status status);

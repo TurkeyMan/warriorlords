@@ -54,6 +54,7 @@ struct UserDetails
 {
 	uint32 id;
 	char userName[64];
+	char channelToken[256];
 	uint32 creationDate;
 	int played, won, lost;
 };
@@ -170,11 +171,9 @@ const char *WLServ_GetActionName(GameActions action);
 
 void WLServ_CreateAccount(HTTPRequest &request, const char *pUsername, const char *pPassword, const char *pEmail);
 void WLServ_Login(HTTPRequest &request, const char *pUsername, const char *pPassword);
-ServerError WLServResult_GetUser(HTTPRequest &request, uint32 *pUserID);
-
 void WLServ_GetUserByID(HTTPRequest &request, uint32 id);
 void WLServ_GetUserByName(HTTPRequest &request, const char *pUsername);
-ServerError WLServResult_GetUserDetails(HTTPRequest &request, UserDetails *pUser);
+ServerError WLServResult_GetUser(HTTPRequest &request, UserDetails *pUser);
 
 void WLServ_GetActiveGames(HTTPRequest &request, uint32 user);
 void WLServ_GetPastGames(HTTPRequest &request, uint32 user);

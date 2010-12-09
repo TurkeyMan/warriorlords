@@ -700,7 +700,7 @@ void GroupConfig::Hide()
 				if(pUnit)
 				{
 					Group *pG = pUnit->GetGroup();
-					if(pUnit && !ContainsGroup(pG, regroup.pSourceGroups, regroup.numSourceGroups))
+					if(!ContainsGroup(pG, regroup.pSourceGroups, regroup.numSourceGroups))
 						regroup.pSourceGroups[regroup.numSourceGroups++] = pG;
 				}
 			}
@@ -776,6 +776,9 @@ void GroupConfig::Hide()
 			pNewGroup->pVehicle = pGroup->pVehicle;
 			if(pNewGroup->pVehicle)
 				pNewGroup->pVehicle->SetGroup(pNewGroup);
+
+			// update the groups stats
+			pNewGroup->UpdateGroupStats();
 
 			// and add the group to the map
 			pTile->AddGroup(pNewGroup);

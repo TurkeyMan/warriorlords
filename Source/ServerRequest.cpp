@@ -194,23 +194,6 @@ void WLServ_Login(HTTPRequest &request, const char *pUsername, const char *pPass
 	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
-ServerError WLServResult_GetUser(HTTPRequest &request, uint32 *pUserID)
-{
-	ServerError err = CheckHTTPError(request.GetStatus());
-	if(err != SE_NO_ERROR)
-		return err;
-
-	HTTPResponse *pResponse = request.GetResponse();
-	Result result(pResponse->GetData());
-
-	if(result.error == SE_NO_ERROR)
-	{
-		*pUserID = result.Data("id").AsInt();
-	}
-
-	return result.error;
-}
-
 void WLServ_GetUserByID(HTTPRequest &request, uint32 id)
 {
 	MFFileHTTPRequestArg args[2];
@@ -229,7 +212,7 @@ void WLServ_GetUserByName(HTTPRequest &request, const char *pUsername, UserDetai
 	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
-ServerError WLServResult_GetUserDetails(HTTPRequest &request, UserDetails *pUser)
+ServerError WLServResult_GetUser(HTTPRequest &request, UserDetails *pUser)
 {
 	ServerError err = CheckHTTPError(request.GetStatus());
 	if(err != SE_NO_ERROR)
@@ -248,6 +231,8 @@ ServerError WLServResult_GetUserDetails(HTTPRequest &request, UserDetails *pUser
 		pUser->played = result.Data("gamesPlayed").AsInt();
 		pUser->won = result.Data("gamesWon").AsInt();
 		pUser->lost = result.Data("gamesLost").AsInt();
+
+		MFString_Copy(pUser->channelToken, result.Data("channelToken").AsString());
 	}
 
 	return result.error;

@@ -18,6 +18,8 @@
 
 #include <stdio.h>
 
+const float Battle::introLength = 4.f;
+
 Battle::Battle(Game *_pGame)
 {
 	pGame = _pGame;
@@ -41,6 +43,14 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 	MFDebug_Log(0, "\nBattle Begins:");
 
 	fg = bg = -1;
+
+	// load portraits
+	int left = pGame->GetPlayerRace(pGroup->GetPlayer());
+	int right = pGame->GetPlayerRace(pTarget->GetPlayer());
+	pPortraits[0] = MFMaterial_Create(MFStr("BattlePortrait-%s", pUnitDefs->GetRaceName(left)));
+	pPortraits[1] = MFMaterial_Create(MFStr("BattlePortrait-%s", pUnitDefs->GetRaceName(right)));
+
+	introTime = 0.f;
 
 	// find boat
 	Unit *pBoat = pGroup->GetVehicle();
@@ -73,7 +83,7 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 			t0 = t1 = DecodeTL(pC->GetTile()->GetTerrain());
 
 			// load castle
-			int race = Game::GetCurrent()->GetPlayerRace(pC->GetPlayer());
+			int race = pGame->GetPlayerRace(pC->GetPlayer());
 			pCastle = MFMaterial_Create(MFStr("Castle-%s", pUnitDefs->GetRaceName(race)));
 		}
 		else
@@ -398,6 +408,8 @@ void Battle::HitTarget(BattleUnit *pUnit, BattleUnit *pTarget)
 
 int Battle::Update()
 {
+	introTime += MFSystem_TimeDelta();
+
 	for(int a=0; a<2; ++a)
 	{
 		for(int b=0; b<armies[a].numUnits; ++b)
@@ -675,12 +687,6 @@ void Battle::Draw()
 	MFMaterial_SetMaterial(pBackground);
 	MFPrimitive_DrawQuad(0, 0, 1, 1, MFVector::white, 0.f + (.5f/800.f), 0.f + (0.5f/480.f), 1 + (.5f/800.f), 1 + (0.5f/480.f));
 
-	if(pCastle)
-	{
-//		MFMaterial_SetMaterial(pCastle);
-//		MFPrimitive_DrawQuad(0, 0, 1, 0.5, MFVector::one, 0, 0, 1, 1);
-	}
-
 	// render units
 	GetOrthoMatrix(&orthoMat);
 	MFView_SetCustomProjection(orthoMat, false);
@@ -701,6 +707,19 @@ void Battle::Draw()
 
 	MFEnd();
 
+	// draw the castle
+	if(pCastle)
+	{
+		float w = (1.f / orthoMat.m[0]) * 2.f;
+		float h = (1.f / -orthoMat.m[5]) * 2.f;
+
+		MFMaterial_SetMaterial(pCastle);
+		float hx = (1.f/512.f)*texelCenter;
+		float hy = (1.f/256.f)*texelCenter;
+		MFPrimitive_DrawQuad(w*0.5f - 256.f, h*0.5f - 256.f, 512.f, 256.f, MFVector::one, 0+hx, 0+hy, 1+hx, 1+hy);
+	}
+
+	// draw units
 	for(int a=0; a<2; ++a)
 	{
 		for(int b=0; b<armies[a].numUnits; ++b)
@@ -803,6 +822,29 @@ void Battle::Draw()
 			}
 #endif
 		}
+	}
+
+	// draw intro
+	if(introTime < introLength)
+	{
+		MFView_Push();
+		GetOrthoMatrix(&orthoMat, true);
+		MFView_SetCustomProjection(orthoMat, false);
+
+		const float slideTime = 0.5f;
+
+		const float slideLength = introLength - 1.f;
+
+		float t = MFMax(introTime > slideLength*0.5f ? slideLength - introTime : introTime, 0.f);
+		float slide = MFMin(t, slideTime) / slideTime;
+
+		const float halfTexel = 1.f/512.f * texelCenter;
+		MFMaterial_SetMaterial(pPortraits[0]);
+		MFPrimitive_DrawQuad((-448.f + slide*448.f) * (1.f/800.f), (480.f - 512.f) * (1.f/480.f), 448.f * (1.f/800.f), 512.f * (1.f/480.f), MFVector::one, 0.f+halfTexel, 0.f+halfTexel, 0.875f+halfTexel, 1.f+halfTexel);
+		MFMaterial_SetMaterial(pPortraits[1]);
+		MFPrimitive_DrawQuad((800.f - slide*448.f) * (1.f/800.f), (480.f - 512.f) * (1.f/480.f), 448.f * (1.f/800.f), 512.f * (1.f/480.f), MFVector::one, 0.875f-halfTexel, 0.f+halfTexel, 0.f-halfTexel, 1.f+halfTexel);
+
+		MFView_Pop();
 	}
 
 	// timeline

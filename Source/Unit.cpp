@@ -1009,7 +1009,7 @@ void Unit::UpdateStats()
 
 	// adjust current stats
 	life = life ? MFMax(life + lifeDiff, 1) : 0;
-	movement += moveDiff;
+	movement += moveDiff * 2;
 
 	// update current
 	lifeMax = newLifeMax;

@@ -109,11 +109,16 @@ protected:
 
 	MFMaterial *pIcons;
 	MFMaterial *pAttack;
-	MFMaterial *pBackground;
-	MFMaterial *pCastle;
 	MFMaterial *pCloud;
 
+	MFMaterial *pPortraits[2];
+	MFMaterial *pBackground;
+	MFMaterial *pCastle;
+
 	int fg, bg;
+
+	static const float introLength;
+	float introTime;
 
 	static const int numClouds = 4;
 	struct Cloud

@@ -194,22 +194,7 @@ void Session::BeginOffline()
 
 void Session::OnLogin(HTTPRequest::Status status)
 {
-	uint32 id;
-	ServerError err = WLServResult_GetUser(login, &id);
-	if(err != SE_NO_ERROR)
-	{
-		if(loginHandler)
-			loginHandler(err, this);
-		return;
-	}
-
-	login.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetUser));
-	WLServ_GetUserByID(login, id);
-}
-
-void Session::OnGetUser(HTTPRequest::Status status)
-{
-	ServerError err = WLServResult_GetUserDetails(login, &user);
+	ServerError err = WLServResult_GetUser(login, &user);
 	if(err != SE_NO_ERROR)
 	{
 		if(loginHandler)
