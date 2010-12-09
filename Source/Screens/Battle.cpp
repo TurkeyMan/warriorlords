@@ -24,6 +24,7 @@ Battle::Battle(Game *_pGame)
 {
 	pGame = _pGame;
 	pUnitDefs = pGame->GetUnitDefs();
+	pTileSet = pGame->GetMap()->GetTileset();
 
 	// load lots of battle related stuff
 	pIcons = MFMaterial_Create("BattleIcons");
@@ -47,8 +48,8 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 	// load portraits
 	int left = pGame->GetPlayerRace(pGroup->GetPlayer());
 	int right = pGame->GetPlayerRace(pTarget->GetPlayer());
-	pPortraits[0] = MFMaterial_Create(MFStr("BattlePortrait-%s", pUnitDefs->GetRaceName(left)));
-	pPortraits[1] = MFMaterial_Create(MFStr("BattlePortrait-%s", pUnitDefs->GetRaceName(right)));
+	pPortraits[0] = MFMaterial_Create(MFStr("Portrait-%s", pUnitDefs->GetRaceName(left)));
+	pPortraits[1] = MFMaterial_Create(MFStr("Portrait-%s", pUnitDefs->GetRaceName(right)));
 
 	introTime = 0.f;
 
@@ -352,6 +353,14 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 void Battle::End()
 {
 	MFMaterial_Destroy(pBackground);
+	MFMaterial_Destroy(pPortraits[0]);
+	MFMaterial_Destroy(pPortraits[1]);
+
+	if(pCastle)
+	{
+		MFMaterial_Destroy(pCastle);
+		pCastle = NULL;
+	}
 }
 
 void Battle::Select()
@@ -659,8 +668,9 @@ void DrawHealthBar(int x, int y, int maxHealth, float currentHealth)
 void Battle::Draw()
 {
 	MFView_Push();
-	MFMatrix orthoMat;
+	MFMatrix orthoMat, screenMat;
 	GetOrthoMatrix(&orthoMat, true);
+	GetOrthoMatrix(&screenMat);
 	MFView_SetCustomProjection(orthoMat, false);
 
 	// calculate the offsets
@@ -683,13 +693,46 @@ void Battle::Draw()
 	float xTileScale = 32.f / fTexWidth;
 	float yTileScale = 32.f / fTexHeight;
 
+	float screenWidth = (1.f / screenMat.m[0]) * 2.f;
+	float screenHeight = (1.f / -screenMat.m[5]) * 2.f;
+
+	// draw the water
+	float waterW = 64.f/screenWidth;
+	float waterH = 64.f/screenHeight;
+	int waterX = (int)(screenWidth * (1.f/64.f)) + 1;
+	int waterY = (int)(screenWidth * (0.75f/64.f)) + 1;
+	float waterOffset = texelCenter / 64.f;
+
+	int numWaterTiles = waterX * waterY;
+
+	MFMaterial_SetMaterial(pTileSet->GetWaterMaterial());
+
+	MFPrimitive(PT_QuadList);
+	MFBegin(numWaterTiles*2);
+
+	float wy = 0.25f;
+	for(int a=0; a<waterY; ++a)
+	{
+		float wx = 0.f;
+		for(int b=0; b<waterX; ++b)
+		{
+			MFSetTexCoord1(0 + waterOffset, 0 + waterOffset);
+			MFSetPosition(wx, wy, 0);
+			MFSetTexCoord1(1 + waterOffset, 1 + waterOffset);
+			MFSetPosition(wx + waterW, wy + waterH, 0);
+			wx += waterW;
+		}
+		wy += waterH;
+	}
+
+	MFEnd();
+
 	// draw background+foreground
 	MFMaterial_SetMaterial(pBackground);
 	MFPrimitive_DrawQuad(0, 0, 1, 1, MFVector::white, 0.f + (.5f/800.f), 0.f + (0.5f/480.f), 1 + (.5f/800.f), 1 + (0.5f/480.f));
 
 	// render units
-	GetOrthoMatrix(&orthoMat);
-	MFView_SetCustomProjection(orthoMat, false);
+	MFView_SetCustomProjection(screenMat, false);
 
 	// draw clouds
 	MFMaterial_SetMaterial(pCloud);
@@ -710,13 +753,11 @@ void Battle::Draw()
 	// draw the castle
 	if(pCastle)
 	{
-		float w = (1.f / orthoMat.m[0]) * 2.f;
-		float h = (1.f / -orthoMat.m[5]) * 2.f;
-
-		MFMaterial_SetMaterial(pCastle);
 		float hx = (1.f/512.f)*texelCenter;
 		float hy = (1.f/256.f)*texelCenter;
-		MFPrimitive_DrawQuad(w*0.5f - 256.f, h*0.5f - 256.f, 512.f, 256.f, MFVector::one, 0+hx, 0+hy, 1+hx, 1+hy);
+
+		MFMaterial_SetMaterial(pCastle);
+		MFPrimitive_DrawQuad(screenWidth*0.5f - 256.f, screenHeight*0.5f - 256.f, 512.f, 256.f, MFVector::one, 0+hx, 0+hy, 1+hx, 1+hy);
 	}
 
 	// draw units
@@ -838,11 +879,14 @@ void Battle::Draw()
 		float t = MFMax(introTime > slideLength*0.5f ? slideLength - introTime : introTime, 0.f);
 		float slide = MFMin(t, slideTime) / slideTime;
 
+		MFVector c0 = pGame->GetPlayerColour(armies[0].player);
+		MFVector c1 = armies[1].player > 0 ? pGame->GetPlayerColour(armies[1].player) : MFVector::white;
+
 		const float halfTexel = 1.f/512.f * texelCenter;
 		MFMaterial_SetMaterial(pPortraits[0]);
-		MFPrimitive_DrawQuad((-448.f + slide*448.f) * (1.f/800.f), (480.f - 512.f) * (1.f/480.f), 448.f * (1.f/800.f), 512.f * (1.f/480.f), MFVector::one, 0.f+halfTexel, 0.f+halfTexel, 0.875f+halfTexel, 1.f+halfTexel);
+		MFPrimitive_DrawQuad((-448.f + slide*448.f) * (1.f/800.f), (480.f - 512.f) * (1.f/480.f), 448.f * (1.f/800.f), 512.f * (1.f/480.f), c0, 0.f+halfTexel, 0.f+halfTexel, 0.875f+halfTexel, 1.f+halfTexel);
 		MFMaterial_SetMaterial(pPortraits[1]);
-		MFPrimitive_DrawQuad((800.f - slide*448.f) * (1.f/800.f), (480.f - 512.f) * (1.f/480.f), 448.f * (1.f/800.f), 512.f * (1.f/480.f), MFVector::one, 0.875f-halfTexel, 0.f+halfTexel, 0.f-halfTexel, 1.f+halfTexel);
+		MFPrimitive_DrawQuad((800.f - slide*448.f) * (1.f/800.f), (480.f - 512.f) * (1.f/480.f), 448.f * (1.f/800.f), 512.f * (1.f/480.f), c1, 0.875f-halfTexel, 0.f+halfTexel, 0.f-halfTexel, 1.f+halfTexel);
 
 		MFView_Pop();
 	}
