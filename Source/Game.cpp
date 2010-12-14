@@ -33,7 +33,8 @@ Game::Game(GameParams *pParams)
 	if(pParams->bEditMap)
 	{
 		// init the players
-		for(int a=0; a<8; ++a)
+		int numRaces = pUnitDefs->GetNumRaces() - 1;
+		for(int a=0; a<numRaces; ++a)
 		{
 			players[a].race = a + 1;
 			players[a].colour = pUnitDefs->GetRaceColour(a + 1);

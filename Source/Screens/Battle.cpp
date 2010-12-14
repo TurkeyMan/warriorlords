@@ -599,7 +599,7 @@ int Battle::Update()
 							{
 								pTarget = &t;
 								targetHP = maxHP;
-								bTargetIsRanged = t.pUnit->IsRanged();
+			 					bTargetIsRanged = t.pUnit->IsRanged();
 							}
 						}
 					}

@@ -33,13 +33,26 @@ Tileset *Tileset::Create(const char *pFilename)
 				}
 				else if(pTilemap->IsString(0, "tilemap"))
 				{
-					pNew->pTileMap = MFMaterial_Create(MFStr_TruncateExtension(pTilemap->GetString(1)));
+					pNew->pTileMap[0] = MFMaterial_Create(MFStr_TruncateExtension(pTilemap->GetString(1)));
 
-					if(pNew->pTileMap)
+					if(pNew->pTileMap[0])
 					{
 						MFTexture *pTex;
-						int diffuse = MFMaterial_GetParameterIndexFromName(pNew->pTileMap, "diffuseMap");
-						MFMaterial_GetParameter(pNew->pTileMap, diffuse, 0, &pTex);
+						int diffuse = MFMaterial_GetParameterIndexFromName(pNew->pTileMap[0], "diffuseMap");
+						MFMaterial_GetParameter(pNew->pTileMap[0], diffuse, 0, &pTex);
+						if(pTex)
+							MFTexture_GetTextureDimensions(pTex, &pNew->imageWidth, &pNew->imageHeight);
+					}
+				}
+				else if(pTilemap->IsString(0, "tilemap2"))
+				{
+					pNew->pTileMap[1] = MFMaterial_Create(MFStr_TruncateExtension(pTilemap->GetString(1)));
+
+					if(pNew->pTileMap[1])
+					{
+						MFTexture *pTex;
+						int diffuse = MFMaterial_GetParameterIndexFromName(pNew->pTileMap[1], "diffuseMap");
+						MFMaterial_GetParameter(pNew->pTileMap[1], diffuse, 0, &pTex);
 						if(pTex)
 							MFTexture_GetTextureDimensions(pTex, &pNew->imageWidth, &pNew->imageHeight);
 					}
@@ -77,7 +90,7 @@ Tileset *Tileset::Create(const char *pFilename)
 					while(pTerrain)
 					{
 						if(!pTerrain->IsString(0, "section"))
-							pNew->terrainCount = MFMax(pNew->terrainCount, pTerrain->GetInt(0) + 1);
+							pNew->terrainCount = MFMax(pNew->terrainCount, pTerrain->GetInt(0, 16) + 1);
 
 						pTerrain = pTerrain->Next();
 					}
@@ -88,7 +101,7 @@ Tileset *Tileset::Create(const char *pFilename)
 					while(pTerrain)
 					{
 						if(!pTerrain->IsString(0, "section"))
-							MFString_Copy(pNew->pTerrainTypes[pTerrain->GetInt(0)].name, pTerrain->GetString(1));
+							MFString_Copy(pNew->pTerrainTypes[pTerrain->GetInt(0, 16)].name, pTerrain->GetString(1));
 						else if(pTerrain->IsSection("Transitions"))
 						{
 							MFIniLine *pTransitions = pTerrain->Sub();
@@ -97,7 +110,7 @@ Tileset *Tileset::Create(const char *pFilename)
 							{
 								MFDebug_Assert(pTransitions->GetStringCount()-1 == pNew->terrainCount, "Invalid transition table dimensions!");
 								for(int a=0; a<pNew->terrainCount; ++a)
-									pNew->terrainTransitions[pTransitions->GetInt(0)][a] = pTransitions->GetInt(a + 1);
+									pNew->terrainTransitions[pTransitions->GetInt(0, 16)][a] = pTransitions->GetInt(a + 1);
 
 								pTransitions = pTransitions->Next();
 							}
@@ -109,7 +122,7 @@ Tileset *Tileset::Create(const char *pFilename)
 							while(pColours)
 							{
 								uint32 colour = MFString_AsciiToInteger(pColours->GetString(1), true) | 0xFF000000;
-								pNew->pTerrainTypes[pColours->GetInt(0)].mapColour.Set(((colour >> 16) & 0xFF) * (1.f/255.f), ((colour >> 8) & 0xFF) * (1.f/255.f), (colour & 0xFF) * (1.f/255.f));
+								pNew->pTerrainTypes[pColours->GetInt(0, 16)].mapColour.Set(((colour >> 16) & 0xFF) * (1.f/255.f), ((colour >> 8) & 0xFF) * (1.f/255.f), (colour & 0xFF) * (1.f/255.f));
 								pColours = pColours->Next();
 							}
 						}
@@ -117,8 +130,11 @@ Tileset *Tileset::Create(const char *pFilename)
 						pTerrain = pTerrain->Next();
 					}
 				}
-				else if(pTilemap->IsSection("Tiles"))
+				else if(pTilemap->IsSection("Tiles1") || pTilemap->IsSection("Tiles2"))
 				{
+					const char *pPage = pTilemap->GetString(1) + 5;
+					int page = MFString_AsciiToInteger(pPage, false, 16) - 1;
+
 					MFIniLine *pTile = pTilemap->Sub();
 					while(pTile)
 					{
@@ -128,11 +144,11 @@ Tileset *Tileset::Create(const char *pFilename)
 						MFDebug_Assert(pTile->IsString(2, "="), "Expected '='.");
 
 						int i = (x & 0xF) | ((y & 0xF) << 4);
-						Tile &t = pNew->tiles[i];
+						Tile &t = pNew->tiles[page][i];
 
 						t.x = x;
 						t.y = y;
-						t.terrain = EncodeTile(pTile->GetInt(3), pTile->GetInt(4), pTile->GetInt(5), pTile->GetInt(6));
+						t.terrain = EncodeTile(pTile->GetInt(3, 16), pTile->GetInt(4, 16), pTile->GetInt(5, 16), pTile->GetInt(6, 16));
 						t.bias = 255;
 						t.canBuild = 0;
 
@@ -178,7 +194,7 @@ Tileset *Tileset::Create(const char *pFilename)
 						road.x = x;
 						road.y = y;
 						road.directions = (pRoad->GetInt(3) << 3) | (pRoad->GetInt(4) << 2) | (pRoad->GetInt(5) << 1) | pRoad->GetInt(6);
-						road.terrain = EncodeTile(pRoad->GetInt(7), pRoad->GetInt(8), pRoad->GetInt(9), pRoad->GetInt(10));
+						road.terrain = EncodeTile(pRoad->GetInt(7, 16), pRoad->GetInt(8, 16), pRoad->GetInt(9, 16), pRoad->GetInt(10, 16));
 
 						pRoad = pRoad->Next();
 					}
@@ -198,7 +214,8 @@ Tileset *Tileset::Create(const char *pFilename)
 
 void Tileset::Destroy()
 {
-	MFMaterial_Destroy(pTileMap);
+	MFMaterial_Destroy(pTileMap[0]);
+	MFMaterial_Destroy(pTileMap[1]);
 	MFMaterial_Destroy(pWater);
 	MFMaterial_Destroy(pRoadMap);
 	MFHeap_Free(pTerrainTypes);
@@ -206,8 +223,10 @@ void Tileset::Destroy()
 	MFHeap_Free(this);
 }
 
-void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride, float texelOffset)
+void Tileset::DrawMap(int xTiles, int yTiles, uint16 *pTileData, int stride, int lineStride, float texelOffset)
 {
+	stride /= sizeof(*pTileData);
+
 	float xScale = (1.f / imageWidth) * tileWidth;
 	float yScale = (1.f / imageHeight) * tileHeight;
 	float halfX = texelOffset / imageWidth;
@@ -217,10 +236,10 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 	struct RenderTile
 	{
 		uint8 x, y, tx, ty, flags;
-	} renderTiles[1024];
+	} renderTiles[2][1024];
 
-	int numTiles = 0;
-	int numTerrainTiles = 0;
+	int numTiles[2] = { 0, 0 };
+	int numTerrainTiles[2] = { 0, 0 };
 	int numWaterTiles = 0;
 
 	// count the tiles to render
@@ -228,24 +247,28 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 	{
 		for(int x=0; x<xTiles; ++x)
 		{
-			renderTiles[numTiles].x = x;
-			renderTiles[numTiles].y = y;
+			int tile = pTileData[x*stride] & 0xFF;
+			int page = pTileData[x*stride] >> 8;
 
-			Tile &t = tiles[pTileData[x*stride]];
-			renderTiles[numTiles].tx = t.x;
-			renderTiles[numTiles].ty = t.y;
+			RenderTile &rt = renderTiles[page][numTiles[page]];
+			++numTiles[page];
+
+			rt.x = x;
+			rt.y = y;
+
+			Tile &t = tiles[page][tile];
+			rt.tx = t.x;
+			rt.ty = t.y;
 
 			int water = (int)TileContains(t.terrain, 1);
-			renderTiles[numTiles].flags = water;
+			rt.flags = water;
 			numWaterTiles += water;
 
 			if(t.terrain != 0x01010101)
 			{
-				++numTerrainTiles;
-				renderTiles[numTiles].flags |= 2;
+				++numTerrainTiles[page];
+				rt.flags |= 2;
 			}
-
-			++numTiles;
 		}
 		pTileData += lineStride*stride;
 	}
@@ -258,14 +281,18 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 		MFPrimitive(PT_QuadList);
 		MFBegin(numWaterTiles*2);
 
-		for(int a=0; a<numTiles; ++a)
+		for(int p = 0; p < 2; ++p)
 		{
-			if(renderTiles[a].flags & 1)
+			for(int a=0; a<numTiles[p]; ++a)
 			{
-				MFSetTexCoord1(0 + waterOffset, 0 + waterOffset);
-				MFSetPosition((float)renderTiles[a].x, (float)renderTiles[a].y, 0);
-				MFSetTexCoord1(1 + waterOffset, 1 + waterOffset);
-				MFSetPosition((float)renderTiles[a].x + 1.f, (float)renderTiles[a].y + 1.f, 0);
+				RenderTile &rt = renderTiles[p][a];
+				if(rt.flags & 1)
+				{
+					MFSetTexCoord1(0 + waterOffset, 0 + waterOffset);
+					MFSetPosition((float)rt.x, (float)rt.y, 0);
+					MFSetTexCoord1(1 + waterOffset, 1 + waterOffset);
+					MFSetPosition((float)rt.x + 1.f, (float)rt.y + 1.f, 0);
+				}
 			}
 		}
 
@@ -273,25 +300,29 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int 
 	}
 
 	// render any terrain tiles
-	if(numTerrainTiles)
+	for(int p = 0; p < 2; ++p)
 	{
-		MFMaterial_SetMaterial(pTileMap);
-
-		MFPrimitive(PT_QuadList);
-		MFBegin(numTerrainTiles*2);
-
-		for(int a=0; a<numTiles; ++a)
+		if(numTerrainTiles[p])
 		{
-			if(renderTiles[a].flags & 2)
-			{
-				MFSetTexCoord1(renderTiles[a].tx*xScale + halfX, renderTiles[a].ty*xScale + halfX);
-				MFSetPosition((float)renderTiles[a].x, (float)renderTiles[a].y, 0);
-				MFSetTexCoord1(((float)renderTiles[a].tx + 1.f)*xScale + halfX, ((float)renderTiles[a].ty + 1.f)*xScale + halfX);
-				MFSetPosition((float)renderTiles[a].x + 1.f, (float)renderTiles[a].y + 1.f, 0);
-			}
-		}
+			MFMaterial_SetMaterial(pTileMap[p]);
 
-		MFEnd();
+			MFPrimitive(PT_QuadList);
+			MFBegin(numTerrainTiles[p]*2);
+
+			for(int a=0; a<numTiles[p]; ++a)
+			{
+				RenderTile &rt = renderTiles[p][a];
+				if(rt.flags & 2)
+				{
+					MFSetTexCoord1(rt.tx*xScale + halfX, rt.ty*xScale + halfX);
+					MFSetPosition((float)rt.x, (float)rt.y, 0);
+					MFSetTexCoord1(((float)rt.tx + 1.f)*xScale + halfX, ((float)rt.ty + 1.f)*xScale + halfX);
+					MFSetPosition((float)rt.x + 1.f, (float)rt.y + 1.f, 0);
+				}
+			}
+
+			MFEnd();
+		}
 	}
 }
 
@@ -301,19 +332,22 @@ int Tileset::FindBestTiles(int *pTiles, uint32 tile, uint32 mask, int maxMatches
 
 	int found = 0;
 	int error = 256;
-	for(int a=0; a<256; ++a)
+	for(int p=0; p<2; ++p)
 	{
-		if((tiles[a].terrain & mask) == maskedTile)
+		for(int a=0; a<256; ++a)
 		{
-			int e = GetTileError(tiles[a].terrain, tile);
-			if(e < error)
+			if((tiles[p][a].terrain & mask) == maskedTile)
 			{
-				error = e;
-				pTiles[0] = a;
-				found = 1;
+				int e = GetTileError(tiles[p][a].terrain, tile);
+				if(e < error)
+				{
+					error = e;
+					pTiles[0] = a | (p << 8);
+					found = 1;
+				}
+				else if(e == error && found < maxMatches)
+					pTiles[found++] = a | (p << 8);
 			}
-			else if(e == error && found < maxMatches)
-				pTiles[found++] = a;
 		}
 	}
 
@@ -359,7 +393,7 @@ void Tileset::GetTileUVs(int tile, MFRect *pUVs, float texelOffset)
 	float halfX = texelOffset / fWidth;
 	float halfY = texelOffset / fHeight;
 
-	Tile &t = tiles[tile];
+	Tile &t = tiles[tile >> 8][tile & 0xFF];
 	pUVs->x = t.x*xScale + halfX;
 	pUVs->y = t.y*yScale + halfY;
 	pUVs->width = xScale;

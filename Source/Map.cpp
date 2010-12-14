@@ -1020,7 +1020,7 @@ void Map::Save()
 
 			for(int b=0; b<mapWidth; ++b)
 			{
-				offset += sprintf(&buffer[offset], "%02x", mapTemplate[r].pMap[a*mapWidth + b].terrain);
+				offset += sprintf(&buffer[offset], "%03x", mapTemplate[r].pMap[a*mapWidth + b].terrain);
 				buffer[offset++] = b < mapWidth-1 ? ',' : '\n';
 			}
 

@@ -41,7 +41,9 @@ Editor::Editor(Game *pGame)
 	Tileset *pTiles = pMap->GetTileset();
 	UnitDefinitions *pUnits = pMap->GetUnitDefinitions();
 
-	MFMaterial *pTileMat = pTiles->GetTileMaterial();
+	MFMaterial *pTileMat[2];
+	pTileMat[0] = pTiles->GetTileMaterial(0);
+	pTileMat[1] = pTiles->GetTileMaterial(1);
 	MFMaterial *pWater = pTiles->GetWaterMaterial();
 	MFMaterial *pRoadMat = pTiles->GetRoadMaterial();
 	MFMaterial *pCastleMat = pUnits->GetCastleMaterial();
@@ -80,7 +82,7 @@ Editor::Editor(Game *pGame)
 			pTiles->FindBestTiles(&tile, EncodeTile(brushIndex[a], brushIndex[a], brushIndex[a], brushIndex[a]), 0xFFFFFFFF, 1);
 			pTiles->GetTileUVs(tile, &uvs, texelOffset);
 
-			pBrushButton[a] = Button::Create(pTileMat, &pos, &uvs, MFVector::one, a, true);
+			pBrushButton[a] = Button::Create(pTileMat[tile >> 8], &pos, &uvs, MFVector::one, a, true);
 			pBrushButton[a]->SetClickCallback(MakeDelegate(this, &Editor::BrushSelect));
 		}
 		else
@@ -113,7 +115,7 @@ Editor::Editor(Game *pGame)
 
 			pTiles->GetTileUVs(tile, &uvs, texelOffset);
 
-			brushSelect.AddButton(0, pTileMat, &uvs, MFVector::one, (OT_Terrain << 16) | a, MakeDelegate(this, &Editor::ChooseBrush));
+			brushSelect.AddButton(0, pTileMat[tile >> 8], &uvs, MFVector::one, (OT_Terrain << 16) | a, MakeDelegate(this, &Editor::ChooseBrush));
 		}
 	}
 
@@ -132,11 +134,11 @@ Editor::Editor(Game *pGame)
 
 	// add the merc flag
 	pUnits->GetFlagUVs(0, &uvs, texelOffset);
-	brushSelect.AddButton(1, pCastleMat, &uvs, pGame->GetPlayerColour(-1), OT_Flag << 16, MakeDelegate(this, &Editor::ChooseBrush));
+	brushSelect.AddButton(2, pCastleMat, &uvs, pGame->GetPlayerColour(-1), OT_Flag << 16, MakeDelegate(this, &Editor::ChooseBrush));
 
 	// add the road
 	pTiles->GetRoadUVs(0, &uvs, texelOffset);
-	brushSelect.AddButton(1, pRoadMat, &uvs, MFVector::one, OT_Road << 16, MakeDelegate(this, &Editor::ChooseBrush));
+	brushSelect.AddButton(2, pRoadMat, &uvs, MFVector::one, OT_Road << 16, MakeDelegate(this, &Editor::ChooseBrush));
 
 	// special buttons
 	int specialCount = pUnits->GetNumSpecials();
@@ -150,7 +152,7 @@ Editor::Editor(Game *pGame)
 	}
 
 	// region buttons
-	for(int a=0; a<8; ++a)
+	for(int a=0; a<10; ++a)
 	{
 		pUnits->GetFlagUVs(a+1, &uvs, texelOffset);
 
@@ -351,9 +353,15 @@ int Editor::Update()
 		}
 	}
 
-	for(int a=0; a<8; ++a)
+	UnitDefinitions *pUnits = pMap->GetUnitDefinitions();
+	int maxRace = pUnits->GetNumRaces() - 1;
+
+	MFDebug_Assert(maxRace <= 12, "Too many races!!");
+
+	MFKeyboardButton keys[12] = { Key_1, Key_2, Key_3, Key_4, Key_5, Key_6, Key_7, Key_8, Key_9, Key_0, Key_Hyphen, Key_Equals };
+	for(int a=0; a<maxRace; ++a)
 	{
-		if(MFInput_WasPressed(Key_1 + a, IDD_Keyboard))
+		if(MFInput_WasPressed(keys[a], IDD_Keyboard))
 		{
 			if(bChangeRace)
 			{
@@ -736,8 +744,12 @@ CastleEdit::CastleEdit()
 	int numUnits = pDefs->GetNumUnitTypes();
 
 	int addedCount = 1;
-	for(int a=8; a<numUnits; ++a)
+	for(int a=0; a<numUnits; ++a)
 	{
+		// don't show heroes
+		if(pDefs->GetUnitType(a) == UT_Hero)
+			continue;
+
 		pDefs->GetUnitUVs(a, false, &rect, texelOffset);
 		Button *pButton = unitSelect.AddButton(addedCount / 11, pUnitMat, &rect, Game::GetCurrent()->GetPlayerColour(-1), a, MakeDelegate(this, &CastleEdit::SetUnit));
 		++addedCount;

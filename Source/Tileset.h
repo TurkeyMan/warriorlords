@@ -35,15 +35,15 @@ public:
 	uint32 GetRoadConnections(int road) const { return pRoads[road].directions; }
 
 	inline void GetTileSize(int *pWidth, int *pHeight) const { *pWidth = tileWidth; *pHeight = tileHeight; }
-	inline const Tile *GetTile(int tile) const { return &tiles[tile]; }
+	inline const Tile *GetTile(int tile) const { return &tiles[tile >> 8][tile & 0xFF]; }
 
-	void DrawMap(int xTiles, int yTiles, uint8 *pTileData, int stride, int lineStride, float texelOffset);
+	void DrawMap(int xTiles, int yTiles, uint16 *pTileData, int stride, int lineStride, float texelOffset);
 
 	void GetTileUVs(int tile, MFRect *pUVs, float texelOffset);
 	void GetRoadUVs(int index, MFRect *pUVs, float texelOffset);
 	void GetWaterUVs(MFRect *pUVs, float texelOffset);
 
-	inline MFMaterial *GetTileMaterial() const { return pTileMap; }
+	inline MFMaterial *GetTileMaterial(int page = 0) const { return pTileMap[page]; }
 	inline MFMaterial *GetWaterMaterial() const { return pWater; }
 	inline MFMaterial *GetRoadMaterial() const { return pRoadMap; }
 
@@ -68,7 +68,7 @@ protected:
 	int imageWidth, imageHeight;
 	int roadWidth, roadHeight;
 
-	MFMaterial *pTileMap;
+	MFMaterial *pTileMap[2];
 	MFMaterial *pWater;
 	MFMaterial *pRoadMap;
 
@@ -78,7 +78,7 @@ protected:
 	Road *pRoads;
 	int roadCount;
 
-	Tile tiles[256];
+	Tile tiles[2][256];
 
 	// editor stuff
 	uint8 terrainTransitions[16][16];

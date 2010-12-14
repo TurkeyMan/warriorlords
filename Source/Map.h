@@ -88,8 +88,8 @@ protected:
 	void *pObject;
 
 	uint16 x, y;
+	uint16 terrain;			// terrain tile
 
-	uint8 terrain;			// terrain tile
 	uint8 type;				// type of detail on tile
 	uint8 index;			// index of item on tile
 	uint8 castleTile : 2;	// castle square: 0 = top left, 1 = top right, 2 = bottom left, 3 = bottom right
@@ -226,7 +226,7 @@ protected:
 	{
 		struct TileDetails
 		{
-			uint8 terrain;
+			uint16 terrain;
 			uint8 type;
 			uint8 index;
 		};

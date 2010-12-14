@@ -211,7 +211,7 @@ protected:
 	Map *pMap;
 	UnitDefinitions *pUnitDefs;
 
-	Player players[8];
+	Player players[12];
 	int numPlayers;
 
 	Unit **ppUnits;
