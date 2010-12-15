@@ -296,7 +296,7 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 				// check if we're swapping vehicles
 				int unit = GetUnitFromPoint(info.up.x, info.up.y);
-				if(unit == 10 -1 && pDragGroup->pVehicle && pDragGroup->totalUnits == 1)
+				if(unit == 10 && pDragGroup->pVehicle && pDragGroup->totalUnits == 1)
 				{
 					// swap vehicles
 					Unit *pSwap = pGroups[0]->pVehicle;
