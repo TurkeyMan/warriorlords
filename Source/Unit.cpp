@@ -1179,7 +1179,7 @@ void Castle::Capture(Group *pGroup)
 		{
 			Group *pUnit = pCastleTile->GetGroup(b);
 			pGame->PushCaptureUnits(pGroup, pUnit);
-			pGroup->SetPlayer(player);
+			pUnit->SetPlayer(player);
 		}
 	}
 }
