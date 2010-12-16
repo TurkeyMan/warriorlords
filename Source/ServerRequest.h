@@ -50,6 +50,12 @@ enum GameActions
 	GA_MAX
 };
 
+struct GameLobby
+{
+	uint32 id;
+	char name[64];
+};
+
 struct UserDetails
 {
 	uint32 id;
@@ -181,9 +187,11 @@ void WLServ_GetPendingGames(HTTPRequest &request, uint32 user);
 ServerError WLServResult_GetGameList(HTTPRequest &request, const char *pList, uint32 *pGames, int *pNumGames);
 
 void WLServ_CreateGame(HTTPRequest &request, uint32 user, GameCreateDetails *pDetails);
+void WLServ_FindGames(HTTPRequest &request, uint32 user);
 void WLServ_FindRandomGame(HTTPRequest &request, uint32 user);
 void WLServ_BeginGame(HTTPRequest &request, uint32 game, uint32 *pPlayers, int numPlayers);
 ServerError WLServResult_GetGame(HTTPRequest &request, uint32 *pGame);
+ServerError WLServResult_GetLobbies(HTTPRequest &request, GameLobby *pGames, int *pLumLobbies);
 
 void WLServ_GetGameByID(HTTPRequest &request, uint32 id);
 void WLServ_GetGameByName(HTTPRequest &request, const char *pName);

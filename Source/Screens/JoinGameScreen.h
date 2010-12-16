@@ -4,6 +4,7 @@
 #include "Screen.h"
 #include "Button.h"
 #include "StringBox.h"
+#include "ListBox.h"
 
 #include "MFFont.h"
 
@@ -21,6 +22,8 @@ public:
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 
 protected:
+	static const int MaxGames = 20;
+
 	MFMaterial *pIcons;
 	MFFont *pFont;
 
@@ -28,14 +31,24 @@ protected:
 
 	Button *pJoin, *pReturn;
 
+	ListBox *pGames;
+
 	const char *pMessage;
+
+	GameLobby games[MaxGames];
+	int numGames;
 
 	GameDetails details;
 
+	HTTPRequest search;
 	HTTPRequest find;
 	HTTPRequest join;
 
+	void Change(const char *pName);
 	void Click(int button, int buttonID);
+	void SelectGame(int item);
+	void Join(int item);
+	void PopulateGames(HTTPRequest::Status status);
 	void FindGame(HTTPRequest::Status status);
 	void JoinGame(HTTPRequest::Status status);
 };

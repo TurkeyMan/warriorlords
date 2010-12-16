@@ -296,11 +296,20 @@ void WLServ_CreateGame(HTTPRequest &request, uint32 user, GameCreateDetails *pDe
 	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
+void WLServ_FindGames(HTTPRequest &request, uint32 user)
+{
+	MFFileHTTPRequestArg args[2];
+	args[0].SetString("request", "SEARCHGAMES");
+	args[1].SetInt("playerid", user);
+
+	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+}
+
 void WLServ_FindRandomGame(HTTPRequest &request, uint32 user, uint32 *pGame)
 {
 	MFFileHTTPRequestArg args[2];
 	args[0].SetString("request", "FINDGAME");
-	args[2].SetInt("playerid", user);
+	args[1].SetInt("playerid", user);
 
 	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
@@ -332,6 +341,32 @@ ServerError WLServResult_GetGame(HTTPRequest &request, uint32 *pGame)
 	if(result.error == SE_NO_ERROR)
 	{
 		*pGame = result.Data("id").AsInt();
+	}
+
+	return result.error;
+}
+
+ServerError WLServResult_GetLobbies(HTTPRequest &request, GameLobby *pGames, int *pLumLobbies)
+{
+	ServerError err = CheckHTTPError(request.GetStatus());
+	if(err != SE_NO_ERROR)
+		return err;
+
+	HTTPResponse *pResponse = request.GetResponse();
+	Result result(pResponse->GetData());
+
+	if(result.error == SE_NO_ERROR)
+	{
+		*pLumLobbies = MFMin(*pLumLobbies, result.Data("numGames").AsInt());
+
+		Result::Item games = result.Data("games");
+
+		for(int a=0; a<*pLumLobbies; ++a)
+		{
+			Result::Item game = games[a];
+			pGames[a].id = game.Get("id").AsInt();
+			MFString_Copy(pGames[a].name, game.Get("name").AsString());
+		}
 	}
 
 	return result.error;

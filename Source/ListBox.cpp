@@ -66,7 +66,7 @@ bool ListBox::HandleInputEvent(InputEvent ev, InputInfo &info)
 				if(selection < 0 || selection >= numItems)
 					selection = -1;
 
-				if(selectCallback)
+				if(selection > -1 && selectCallback)
 					selectCallback(selection);
 			}
 			return true;

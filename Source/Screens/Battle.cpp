@@ -756,8 +756,10 @@ void Battle::Draw()
 		float hx = (1.f/512.f)*texelCenter;
 		float hy = (1.f/256.f)*texelCenter;
 
+		MFVector castleColour = armies[1].player > 0 ? pGame->GetPlayerColour(armies[1].player) : MFVector::white;
+
 		MFMaterial_SetMaterial(pCastle);
-		MFPrimitive_DrawQuad(screenWidth*0.5f - 256.f, screenHeight*0.5f - 256.f, 512.f, 256.f, MFVector::one, 0+hx, 0+hy, 1+hx, 1+hy);
+		MFPrimitive_DrawQuad(screenWidth*0.5f - 256.f, screenHeight*0.5f - 256.f, 512.f, 256.f, castleColour, 0+hx, 0+hy, 1+hx, 1+hy);
 	}
 
 	// draw units

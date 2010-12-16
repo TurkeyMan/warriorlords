@@ -15,17 +15,26 @@ JoinGameScreen::JoinGameScreen()
 	pIcons = MFMaterial_Create("Icons");
 	pFont = MFFont_Create("FranklinGothic");
 
+	search.SetCompleteDelegate(MakeDelegate(this, &JoinGameScreen::PopulateGames));
 	find.SetCompleteDelegate(MakeDelegate(this, &JoinGameScreen::FindGame));
 	join.SetCompleteDelegate(MakeDelegate(this, &JoinGameScreen::JoinGame));
 
 	pMessage = NULL;
+	numGames = 0;
 
 	// start buttons
 	MFRect uvs, pos = { 0, 0, 64.f, 64.f };
 	float texelCenterOffset = MFRenderer_GetTexelCenterOffset() / 256.f;
 
-	MFRect stringPos = { 140, 80, 256, MFFont_GetFontHeight(pFont) };
+	MFRect stringPos = { 64, 64, 256, MFFont_GetFontHeight(pFont) };
 	pGame = StringBox::Create(pFont, &stringPos);
+	pGame->SetChangeCallback(MakeDelegate(this, &JoinGameScreen::Change));
+
+	// populate the game list
+	MFRect rect = { 32.f, 112.f, 320.f, 160.f };
+	pGames = ListBox::Create(&rect, pFont);
+	pGames->SetSelectCallback(MakeDelegate(this, &JoinGameScreen::SelectGame));
+	pGames->SetDblClickCallback(MakeDelegate(this, &JoinGameScreen::Join));
 
 	// login button
 	MFRect display;
@@ -47,6 +56,7 @@ JoinGameScreen::JoinGameScreen()
 JoinGameScreen::~JoinGameScreen()
 {
 	pGame->Destroy();
+	pGames->Destroy();
 	pJoin->Destroy();
 	pReturn->Destroy();
 
@@ -56,11 +66,17 @@ JoinGameScreen::~JoinGameScreen()
 
 void JoinGameScreen::Select()
 {
+	pGame->SetString("");
+	pGames->Clear();
+
 	pInputManager->ClearReceivers();
 	pInputManager->PushReceiver(this);
 	pInputManager->PushReceiver(pJoin);
+	pInputManager->PushReceiver(pGames);
 	pInputManager->PushReceiver(pReturn);
 	pInputManager->PushReceiver(pGame);
+
+	WLServ_FindGames(search, Session::GetCurrent()->GetUserID());
 
 	pMessage = NULL;
 }
@@ -90,9 +106,10 @@ int JoinGameScreen::Update()
 
 void JoinGameScreen::Draw()
 {
-	MFFont_DrawText(pFont, MakeVector(32, 32), 32.f, MFVector::yellow, "Join a game...");
+	MFFont_DrawText(pFont, MakeVector(16, 16), 32.f, MFVector::yellow, "Join a game...");
 
 	pGame->Draw();
+	pGames->Draw();
 	pJoin->Draw();
 	pReturn->Draw();
 
@@ -121,6 +138,41 @@ void JoinGameScreen::Click(int button, int buttonID)
 			break;
 		}
 	}
+}
+
+void JoinGameScreen::Change(const char *pName)
+{
+	pGames->SetSelection(-1);
+}
+
+void JoinGameScreen::SelectGame(int item)
+{
+	const char *pName = pGames->GetItemText(item);
+	pGame->SetString(pName);
+	pGames->SetSelection(item);
+}
+
+void JoinGameScreen::Join(int item)
+{
+	const char *pName = pGames->GetItemText(item);
+	WLServ_GetGameByName(find, pName);
+}
+
+void JoinGameScreen::PopulateGames(HTTPRequest::Status status)
+{
+	numGames = MaxGames;
+	ServerError err = WLServResult_GetLobbies(search, games, &numGames);
+
+	if(err != SE_NO_ERROR)
+	{
+		// nothing?
+	}
+
+	// populate list...
+	pGames->Clear();
+
+	for(int a=0; a<numGames; ++a)
+		pGames->AddItem(games[a].name);
 }
 
 void JoinGameScreen::FindGame(HTTPRequest::Status status)

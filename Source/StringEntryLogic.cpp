@@ -343,6 +343,9 @@ void StringEntryLogic::SetString(const char *pString)
 	int len = MFString_Length(pString);
 	if(len < bufferLen-1)
 	{
+		if(!MFString_Compare(pBuffer, pString))
+			return;
+
 		MFString_Copy(pBuffer, pString);
 		selectionStart = selectionEnd = cursorPos = stringLen = len;
 
