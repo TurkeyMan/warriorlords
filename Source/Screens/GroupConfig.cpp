@@ -64,11 +64,24 @@ bool GroupConfig::DrawContent()
 
 	pDefs->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset(), false, true);
 
+	// get the font
+	MFFont *pFont = Game::GetCurrent()->GetSmallNumbersFont();
+	float height = MFFont_GetFontHeight(pFont);
+
+	// detail the units
+	int offset = 0;
 	for(int g = 0; g < numGroups; ++g)
 	{
+		char uuu[16];
+		sprintf(uuu, "%d-%d-%d%s", pGroups[g]->totalUnits, pGroups[g]->numForward, pGroups[g]->numRear, pGroups[g]->pVehicle ? "-*" : "");
+		float moveWidth = MFFont_GetStringWidth(pFont, uuu, height);
+
+		MFFont_BlitText(pFont, (int)window.x, (int)window.y + offset, MFVector::white, uuu);
+		offset += 16;
+
 		for(int a = 10; a >= 0; --a)
 		{
-			Unit *pUnit = pGroups[g]->pForward[a];
+			Unit *pUnit = pGroups[g]->pUnits[a];
 			if(!pUnit)
 				continue;
 
@@ -81,8 +94,6 @@ bool GroupConfig::DrawContent()
 			char move[8];
 			sprintf(move, "%g", pUnit->GetMovement() * 0.5f);
 
-			MFFont *pFont = Game::GetCurrent()->GetSmallNumbersFont();
-			float height = MFFont_GetFontHeight(pFont);
 			float moveWidth = MFFont_GetStringWidth(pFont, move, height);
 
 			MFFont_BlitText(pFont, (int)rect.x + 62 - (int)moveWidth, (int)rect.y + 62 - (int)height, MFVector::white, move);
@@ -336,12 +347,12 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 						// attempt to move each unit into their preferred file
 						for(int unit=0; unit<10; ++unit)
 						{
+							if(pTargetGroup->numForward >= 5 && pTargetGroup->numRear >= 5)
+								break;
+
 							Unit *pUnit = pDragGroup->pUnits[unit];
 							if(!pUnit)
 								continue;
-
-							if(pTargetGroup->numForward >= 5 && pTargetGroup->numRear >= 5)
-								break;
 
 							// add to active group
 							if(pUnit->IsRanged())

@@ -94,6 +94,16 @@ LobbyScreen::~LobbyScreen()
 
 void LobbyScreen::Select()
 {
+	// reset hero selection
+	for(int a=0; a<details.maxPlayers; ++a)
+		details.players[a].hero = 0;
+
+	// refresh the lobby screen
+	Refresh();
+}
+
+void LobbyScreen::Refresh()
+{
 	pInputManager->ClearReceivers();
 	pInputManager->PushReceiver(this);
 	pInputManager->PushReceiver(pReturn);
@@ -174,7 +184,7 @@ void LobbyScreen::GetDetails(HTTPRequest::Status status)
 		}
 
 		// update the lobby state
-		Select();
+		Refresh();
 	}
 }
 
@@ -385,8 +395,7 @@ void LobbyScreen::SetHeroes(int player)
 			pHeroes[player]->AddItem(map.unitSetDetails.units[b].name);
 	}
 
-	details.players[player].hero = 0;
-	pHeroes[player]->SetSelection(0);
+	pHeroes[player]->SetSelection(details.players[player].hero);
 }
 
 void LobbyScreen::SetRace(int item, int id)

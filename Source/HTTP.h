@@ -126,8 +126,8 @@ protected:
 	bool bOldFinished;
 	Status oldStatus;
 
-	char requestBuffer[2048];
-	int reqLen;
+	char *pRequestBuffer;
+	int reqLen, reqAlloc;
 
 	HTTPEventDelegate eventDelegate;
 	HTTPEventDelegate completeDelegate;

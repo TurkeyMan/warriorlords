@@ -1378,7 +1378,7 @@ void Game::ApplyActions()
 
 void Game::UpdateGameState()
 {
-	if(pActionList)
+	if(pActionList && !IsMyTurn())
 		pActionList->Update();
 
 	if(NumPendingActions() > 0)

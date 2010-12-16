@@ -31,6 +31,9 @@ HTTPRequest::HTTPRequest()
 	mutex = NULL;
 	transferThread = NULL;
 
+	reqAlloc = 512;
+	pRequestBuffer = (char*)MFHeap_Alloc(reqAlloc);
+
 	pResponse = NULL;
 
 	eventDelegate.clear();
@@ -40,6 +43,8 @@ HTTPRequest::HTTPRequest()
 
 HTTPRequest::~HTTPRequest()
 {
+	MFHeap_Free(pRequestBuffer);
+
 	if(pResponse)
 	{
 		pResponse->Destroy();
@@ -91,8 +96,11 @@ void HTTPRequest::Get(const char *_pServer, int _port, const char *_pResourcePat
 	pResourcePath = _pResourcePath;
 	port = _port;
 
+	// *** TODO *** 
+	// test to see if there is enough buffer allocated...
+
 	// generate request
-	reqLen = sprintf(requestBuffer, "GET %s HTTP/1.1\nHost: %s:%d\nUser-Agent: WarriorLords Client/1.0\nContent-Type: application/x-www-form-urlencoded\n\n\n", pResourcePath, pServer, port);
+	reqLen = sprintf(pRequestBuffer, "GET %s HTTP/1.1\nHost: %s:%d\nUser-Agent: WarriorLords Client/1.0\nContent-Type: application/x-www-form-urlencoded\n\n\n", pResourcePath, pServer, port);
 
 	// begin async request
 	CreateConnection();
@@ -112,34 +120,55 @@ void HTTPRequest::Post(const char *_pServer, int _port, const char *_pResourcePa
 	pResourcePath = _pResourcePath;
 	port = _port;
 
-	// generate request
-	char pArgString[2048];
-	pArgString[0] = 0;
+	// generate the request template
+	int sizeOffset = sprintf(pRequestBuffer, "POST %s HTTP/1.1\nHost: %s:%d\nUser-Agent: WarriorLords Client/1.0\nContent-Type: application/x-www-form-urlencoded\nContent-Length: ", pResourcePath, pServer, port);
+	int dataOffset = sizeOffset + sprintf(pRequestBuffer + sizeOffset, "        \n\n");
+	reqLen = dataOffset;
 
+	// append args
 	if(pArgs)
 	{
-		int argLen = 0;
-
 		// build the string from the supplied args
 		for(int a=0; a<numArgs; ++a)
 		{
+			// count the num chars to write
+			int numChars = MFString_URLEncode(NULL, pArgs[a].pArg);
+			if(pArgs[a].type == MFFileHTTPRequestArg::AT_String)
+				numChars += MFString_URLEncode(NULL, pArgs[a].pValue);
+
+			// make sure we have enough space in the dest buffer
+			while(reqLen > reqAlloc - numChars - 32)
+			{
+				reqAlloc *= 2;
+				pRequestBuffer = (char*)MFHeap_Realloc(pRequestBuffer, reqAlloc);
+			}
+
+			// separate args with an '&'
+			if(a > 0)
+				pRequestBuffer[reqLen++] = '&';
+
+			// append the arg
+			reqLen += MFString_URLEncode(pRequestBuffer + reqLen, pArgs[a].pArg);
+			pRequestBuffer[reqLen++] = '=';
+
 			switch(pArgs[a].type)
 			{
 				case MFFileHTTPRequestArg::AT_Int:
-					argLen += sprintf(pArgString + argLen, "%s%s=%d", argLen ? "&" : "", MFStr_URLEncodeString(pArgs[a].pArg), pArgs[a].iValue);
+					reqLen += sprintf(pRequestBuffer + reqLen, "%d", pArgs[a].iValue);
 					break;
 				case MFFileHTTPRequestArg::AT_Float:
-					argLen += sprintf(pArgString + argLen, "%s%s=%g", argLen ? "&" : "", MFStr_URLEncodeString(pArgs[a].pArg), pArgs[a].fValue);
+					reqLen += sprintf(pRequestBuffer + reqLen, "%g", pArgs[a].fValue);
 					break;
 				case MFFileHTTPRequestArg::AT_String:
-					argLen += sprintf(pArgString + argLen, "%s%s=%s", argLen ? "&" : "", MFStr_URLEncodeString(pArgs[a].pArg), MFStr_URLEncodeString(pArgs[a].pValue));
+					reqLen += MFString_URLEncode(pRequestBuffer + reqLen, pArgs[a].pValue);
 					break;
 			}
 		}
-		pArgString[argLen] = 0;
 	}
 
-	reqLen = sprintf(requestBuffer, "POST %s HTTP/1.1\nHost: %s:%d\nUser-Agent: WarriorLords Client/1.0\nContent-Type: application/x-www-form-urlencoded\nContent-Length: %d\n\n%s", pResourcePath, pServer, port, MFString_Length(pArgString), pArgString);
+	// write size to the buffer
+	sizeOffset += sprintf(pRequestBuffer + sizeOffset, "%d", reqLen - dataOffset);
+	pRequestBuffer[sizeOffset] = ' ';
 
 	// begin async request
 	CreateConnection();
@@ -197,7 +226,7 @@ void HTTPRequest::HandleRequest()
 
 	SetStatus(CS_Pending, false);
 
-	MFSockets_Send(s, requestBuffer, reqLen, 0);
+	MFSockets_Send(s, pRequestBuffer, reqLen, 0);
 	pResponse = HTTPResponse::Create(s);
 	MFSockets_CloseSocket(s);
 

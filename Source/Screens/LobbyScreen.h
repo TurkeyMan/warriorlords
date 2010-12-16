@@ -34,6 +34,8 @@ public:
 	void UpdateLobbyState();
 
 protected:
+	void Refresh();
+
 	MFMaterial *pIcons;
 	MFFont *pFont;
 
