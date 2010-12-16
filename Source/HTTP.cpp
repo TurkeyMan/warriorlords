@@ -37,6 +37,7 @@ HTTPRequest::HTTPRequest()
 	pResponse = NULL;
 
 	eventDelegate.clear();
+	completeDelegate.clear();
 
 	pUpdateList[numLiveRequests++] = this;
 }
