@@ -23,6 +23,8 @@ protected:
 	MapTile *pTile;
 	UnitDefinitions *pDefs;
 
+	MFMaterial *pMelee, *pRanged;
+
 	MFRect top, rear, front, lower, bottom[4], empty;
 
 	struct UnitGroup

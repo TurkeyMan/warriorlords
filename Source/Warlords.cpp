@@ -32,6 +32,9 @@ JoinGameScreen *pJoinGame = NULL;
 
 MFSystemCallbackFunction pInitFujiFS;
 
+ResourceCache resourceCache;
+ResourceCache *pResourceCache = NULL;
+
 bool gAppHasFocus = true;
 
 /*** Game Functions ***/
@@ -59,6 +62,9 @@ void Game_InitFilesystem()
 void Game_Init()
 {
 	MFCALLSTACK;
+
+	resourceCache.Init();
+	pResourceCache = &resourceCache;
 
 	pInputManager = new InputManager;
 
@@ -121,6 +127,8 @@ void Game_Deinit()
 
 	if(pLogin)
 		delete pLogin;
+
+	resourceCache.Deinit();
 }
 
 void Game_FocusGained()

@@ -813,14 +813,18 @@ void Game::AddGroup(Group *pGroup, bool bCommitGroup)
 void Game::DrawWindow(const MFRect &rect)
 {
 	MFMaterial_SetMaterial(pWindow);
-	MFPrimitive_DrawQuad(rect.x, rect.y, rect.width, rect.height);
+
+	float texelCenterX = MFRenderer_GetTexelCenterOffset() * (1.f/480.f);
+	float texelCenterY = MFRenderer_GetTexelCenterOffset() * (1.f/320.f);
+
+	MFPrimitive_DrawQuad(rect.x, rect.y, rect.width, rect.height, MFVector::one, texelCenterX, texelCenterY, 1.f+texelCenterX, 1.f+texelCenterX);
 }
 
 void Game::DrawLine(float sx, float sy, float dx, float dy)
 {
 	MFMaterial_SetMaterial(pHorizLine);
 
-	float texelCenter = MFRenderer_GetTexelCenterOffset() / 16.f;
+	float texelCenter = MFRenderer_GetTexelCenterOffset() * (1.f/16.f);
 
 	if(sx == dx)
 	{

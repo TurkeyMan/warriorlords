@@ -63,13 +63,15 @@ bool UnitConfig::DrawContent()
 	// do we want to see this?
 //	DrawHealthBar((int)(unit.x + 32.f), (int)(unit.y + 32.f), pUnit->GetMaxHP(), pUnit->GetHealth());
 
+	const char *attackIcon[] = { "¥", "¤" };
+
 	int height = (int)MFFont_GetFontHeight(pFont);
 	float tWidth = MFFont_GetStringWidth(pFont, pUnit->GetName(), (float)height);
 	MFFont_BlitText(pFont, (int)top.x + ((int)top.width / 2) - (int)(tWidth*0.5f), (int)top.y + 5, MFVector::yellow, pUnit->GetName());
 	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height, MFVector::white, "Type: %s", pDefs->GetArmourClassName(pDetails->armour));
 	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*2, MFVector::white, "HP: %d/%d", (int)(pUnit->GetMaxHP() * pUnit->GetHealth()), pUnit->GetMaxHP());
-	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*3, MFVector::white, "Atk: %d - %d (%s%s %s)", (int)pUnit->GetMinDamage(), (int)pUnit->GetMaxDamage(), pUnit->AttackSpeedDescription(), pDefs->GetWeaponClassName(pDetails->attack), pDefs->GetAttackTypeName(pDetails->atkType));
-	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*4, MFVector::white, "Mov: %g/%d%s", pUnit->GetMovement()*0.5f, pUnit->GetMaxMovement(), pDetails->movementClass > 0 ? MFStr(" (%s)", pDefs->GetMovementClassName(pDetails->movementClass)) : "");
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*3, MFVector::white, "Atk: %d - %d %s (%s%s)", (int)pUnit->GetMinDamage(), (int)pUnit->GetMaxDamage(), attackIcon[pDetails->atkType], pUnit->AttackSpeedDescription(), pDefs->GetWeaponClassName(pDetails->attack));
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*4, MFVector::white, "Mov: %g/%d%s%s", pUnit->GetMovement()*0.5f, pUnit->GetMaxMovement(), pDetails->movementClass == 2 ? " £" : "", pDetails->movementClass > 0 ? MFStr(" (%s)", pDefs->GetMovementClassName(pDetails->movementClass)) : "");
 
 	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height, MFVector::white, "Victories: %d", pUnit->GetVictories());
 	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height*2, MFVector::white, "Kills: %d", pUnit->GetKills());

@@ -4,6 +4,7 @@
 
 #include "MFPrimitive.h"
 #include "MFRenderer.h"
+#include "MFMaterial.h"
 #include "MFFont.h"
 
 #include "stdio.h"
@@ -22,6 +23,9 @@ static float gPositions[5][5][2] =
 GroupConfig::GroupConfig()
 : Window(true)
 {
+	pMelee = MFMaterial_Create("Melee");
+	pRanged = MFMaterial_Create("Ranged");
+
 	MFRect center, middle;
 	DivideRect_Vert(window, window.height - 64 - margin*4, 0.f, &center, &lower, true);
 	DivideRect_Vert(center, center.height - 64*2 - margin*8, 0.f, &top, &middle, true);
@@ -30,6 +34,8 @@ GroupConfig::GroupConfig()
 
 GroupConfig::~GroupConfig()
 {
+	MFMaterial_Destroy(pMelee);
+	MFMaterial_Destroy(pRanged);
 }
 
 bool GroupConfig::DrawContent()
@@ -39,6 +45,19 @@ bool GroupConfig::DrawContent()
 
 	if(battleConfig.Draw())
 		return true;
+
+	float texelCenter = MFRenderer_GetTexelCenterOffset();
+
+	// draw backgrounds
+	float tc = texelCenter * (1.f/128.f);
+	float xc = window.x + window.width*0.5f;
+	float yc = window.y + window.height*0.5f;
+
+	MFMaterial_SetMaterial(pRanged);
+	MFPrimitive_DrawQuad(xc - 192.f + 16.f, yc - 80.f, 128.f, 128.f, MFVector::white, tc, tc, 1+tc, 1+tc);
+
+	MFMaterial_SetMaterial(pMelee);
+	MFPrimitive_DrawQuad(xc + 64.f - 16.f, yc - 80.f, 128.f, 128.f, MFVector::white, tc, tc, 1+tc, 1+tc);
 
 	// draw separators
 	Game *pGame = Game::GetCurrent();
