@@ -69,7 +69,6 @@ MapScreen::~MapScreen()
 
 void MapScreen::Select()
 {
-	pInputManager->ClearReceivers();
 	pInputManager->PushReceiver(this);
 	pInputManager->PushReceiver(pGame->GetMap());
 	pInputManager->PushReceiver(pEndTurn);

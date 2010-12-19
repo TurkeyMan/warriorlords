@@ -1,0 +1,53 @@
+# AngelCode Bitmap Font Generator configuration file
+fileVersion=1
+
+# font settings
+fontName=Franklin Gothic Demi Cond
+charSet=0
+fontSize=23
+aa=1
+scaleH=100
+useSmoothing=1
+isBold=0
+isItalic=0
+useUnicode=1
+disableBoxChars=1
+outputInvalidCharGlyph=0
+
+# character alignment
+paddingDown=0
+paddingUp=0
+paddingRight=0
+paddingLeft=0
+spacingHoriz=1
+spacingVert=1
+
+# output file
+outWidth=256
+outHeight=256
+outBitDepth=32
+fontDescFormat=0
+fourChnlPacked=0
+textureFormat=png
+textureCompression=0
+alphaChnl=1
+redChnl=0
+greenChnl=0
+blueChnl=0
+invA=0
+invR=0
+invG=0
+invB=0
+
+# outline
+outlineThickness=1
+
+# selected chars
+chars=32-126,160-161,169-171,174,176-179,181,185-187,191-255,912-929,931-974,1025-1036,1038-1103,1105
+chars=1106-1116,1118-1119,1168-1169,9786-9788,9834-9835
+
+# imported icon images
+icon="D:\Projects\Warlords\Assets\Font\Sword.png",165,0,1,0
+icon="D:\Projects\Warlords\Assets\Font\Bow.png",164,0,1,0
+icon="D:\Projects\Warlords\Assets\Font\Wings.png",163,0,1,0
+icon="D:\Projects\Warlords\Assets\Font\Boot.png",162,0,1,0

@@ -104,7 +104,6 @@ void LobbyScreen::Select()
 
 void LobbyScreen::Refresh()
 {
-	pInputManager->ClearReceivers();
 	pInputManager->PushReceiver(this);
 	pInputManager->PushReceiver(pReturn);
 

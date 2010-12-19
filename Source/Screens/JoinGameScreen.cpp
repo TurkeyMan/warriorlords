@@ -69,7 +69,6 @@ void JoinGameScreen::Select()
 	pGame->SetString("");
 	pGames->Clear();
 
-	pInputManager->ClearReceivers();
 	pInputManager->PushReceiver(this);
 	pInputManager->PushReceiver(pJoin);
 	pInputManager->PushReceiver(pGames);

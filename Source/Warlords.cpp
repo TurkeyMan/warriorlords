@@ -32,9 +32,6 @@ JoinGameScreen *pJoinGame = NULL;
 
 MFSystemCallbackFunction pInitFujiFS;
 
-ResourceCache resourceCache;
-ResourceCache *pResourceCache = NULL;
-
 bool gAppHasFocus = true;
 
 /*** Game Functions ***/
@@ -63,10 +60,10 @@ void Game_Init()
 {
 	MFCALLSTACK;
 
-	resourceCache.Init();
-	pResourceCache = &resourceCache;
-
 	pInputManager = new InputManager;
+
+	GameData::Init();
+	GameData::Get()->GetEntityManager()->LoadRootNode("root");
 
 	pLogin = new LoginScreen;
 	pHome = new HomeScreen;
@@ -91,6 +88,8 @@ void Game_Update()
 
 	Session::Update();
 	Screen::UpdateScreen();
+
+	GameData::Get()->Update();
 }
 
 void Game_Draw()
@@ -108,6 +107,8 @@ void Game_Draw()
 	MFRenderer_ClearScreen();
 
 	Screen::DrawScreen();
+
+	GameData::Get()->Draw();
 
 	MFView_Pop();
 }
@@ -128,7 +129,7 @@ void Game_Deinit()
 	if(pLogin)
 		delete pLogin;
 
-	resourceCache.Deinit();
+	GameData::Deinit();
 }
 
 void Game_FocusGained()

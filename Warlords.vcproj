@@ -290,6 +290,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Source\GameData.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\GameData.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Source\HTTP.cpp"
 				>
 			</File>
@@ -531,22 +539,6 @@
 				<File
 					RelativePath=".\Source\UI\Action.cpp"
 					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath=".\Source\UI\Action.h"
@@ -555,25 +547,41 @@
 				<File
 					RelativePath=".\Source\UI\Entity.cpp"
 					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath=".\Source\UI\Entity.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\UI\ImageProp.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\UI\ImageProp.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\UI\LayoutProp.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\UI\LayoutProp.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\UI\ModelProp.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\UI\ModelProp.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\UI\TextProp.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\UI\TextProp.h"
 					>
 				</File>
 			</Filter>

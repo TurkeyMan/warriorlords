@@ -365,7 +365,6 @@ void Battle::End()
 
 void Battle::Select()
 {
-	pInputManager->ClearReceivers();
 	pInputManager->PushReceiver(this);
 }
 
@@ -929,6 +928,8 @@ void Battle::Draw()
 
 void Battle::Deselect()
 {
+	pInputManager->PopReceiver(this);
+
 	// clean up the battle units?
 }
 

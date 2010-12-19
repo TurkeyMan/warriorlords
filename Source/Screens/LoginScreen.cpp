@@ -97,7 +97,6 @@ void LoginScreen::Select()
 {
 	state = 0;
 
-	pInputManager->ClearReceivers();
 	pInputManager->PushReceiver(this);
 	pInputManager->PushReceiver(pUsername);
 	pInputManager->PushReceiver(pPassword);

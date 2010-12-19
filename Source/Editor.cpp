@@ -171,7 +171,6 @@ Editor::~Editor()
 
 void Editor::Select()
 {
-	pInputManager->ClearReceivers();
 	pInputManager->PushReceiver(this);
 	pInputManager->PushReceiver(pMap);
 
@@ -418,7 +417,7 @@ void Editor::Draw()
 
 void Editor::Deselect()
 {
-
+	pInputManager->PopReceiver(this);
 }
 
 void Editor::BrushSelect(int button, int buttonID)

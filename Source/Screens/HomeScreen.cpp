@@ -105,7 +105,6 @@ void HomeScreen::Select()
 		pSession->UpdateState();
 	}
 
-	pInputManager->ClearReceivers();
 	pInputManager->PushReceiver(this);
 	pInputManager->PushReceiver(pWaiting);
 	pInputManager->PushReceiver(pMyGames);

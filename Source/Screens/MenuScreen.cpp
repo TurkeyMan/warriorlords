@@ -115,7 +115,6 @@ MenuScreen::~MenuScreen()
 
 void MenuScreen::Select()
 {
-	pInputManager->ClearReceivers();
 	pInputManager->PushReceiver(this);
 	pInputManager->PushReceiver(pMapList);
 	pInputManager->PushReceiver(pStart);
