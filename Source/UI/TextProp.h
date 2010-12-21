@@ -30,6 +30,8 @@ protected:
 	MFString text;
 	float textHeight;
 	MFFontJustify justification;
+
+	static const char *gJustifyStrings[MFFontJustify_Max];
 };
 
 #endif

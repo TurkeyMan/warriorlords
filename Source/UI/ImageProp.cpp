@@ -7,8 +7,6 @@
 #include "MFTexture.h"
 #include "MFPrimitive.h"
 
-int GetJustificationFromString(const char *pString);
-
 void uiImageProp::RegisterEntity()
 {
 	FactoryType *pType = uiEntityManager::RegisterEntityType("Image", Create, "Entity");

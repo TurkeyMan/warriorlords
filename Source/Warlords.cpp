@@ -256,6 +256,16 @@ void DrawTicker(float x, float y)
 	MFFont_DrawText(MFFont_GetDebugFont(), MakeVector(x, y), 32.f, MFVector::white, ".....", numDots);
 }
 
+int LookupString(const char *pString, const char *pStrings[])
+{
+	for(int a=0; pStrings[a]; ++a)
+	{
+		if(!MFString_CaseCmp(pString, pStrings[a]))
+			return a;
+	}
+	return -1;
+}
+
 #if defined(MF_WINDOWS) || defined(_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>

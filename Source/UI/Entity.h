@@ -136,7 +136,7 @@ public:
 	void SetVisible(bool bVisible) { this->bVisible = bVisible; }
 	void SetAnchor(Anchor anchor) { this->anchor = anchor; }
 
-	void SignalEvent(const char *pEvent, const char *pParams);
+	bool SignalEvent(const char *pEvent, const char *pParams);
 	void GetPosition(MFVector *pPosition);
 	void GetMatrix(MFMatrix *pMat);
 
@@ -180,6 +180,7 @@ protected:
 	static void SetAnchor(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 
 	static uiDrawState identity;
+	static const char *pAnchorNames[AnchorMax];
 };
 
 class uiEntityManager : public InputReceiver

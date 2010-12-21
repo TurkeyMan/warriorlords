@@ -14,6 +14,19 @@ Factory<uiEntity> uiEntityManager::entityFactory;
 
 uiDrawState uiEntity::identity;
 
+const char *uiEntity::pAnchorNames[AnchorMax] =
+{
+	"topleft",
+	"topcenter",
+	"topright",
+	"centerleft",
+	"center",
+	"centerright",
+	"bottomLeft",
+	"bottomcenter",
+	"bottomright"
+};
+
 static const MFVector anchorOffset[uiEntity::AnchorMax] =
 {
 	{ 0,   0,   0, 0 },
@@ -141,14 +154,11 @@ bool uiEntity::HandleInputEvent(InputEvent ev, const InputInfo &info)
 	switch(ev)
 	{
 		case IE_Down:
-			SignalEvent("down", NULL);
-			return true;
+			return SignalEvent("down", NULL);
 		case IE_Up:
-			SignalEvent("up", NULL);
-			return true;
+			return SignalEvent("up", NULL);
 		case IE_Tap:
-			SignalEvent("tap", NULL);
-			return true;
+			return SignalEvent("tap", NULL);
 	}
 	return false;
 }
@@ -268,14 +278,20 @@ MFVector uiEntity::GetContainerSize()
 	return MakeVector((1.f / screenMat.m[0]) * 2.f, (1.f / -screenMat.m[5]) * 2.f, 1.f, 1.f);
 }
 
-void uiEntity::SignalEvent(const char *pEvent, const char *pParams)
+bool uiEntity::SignalEvent(const char *pEvent, const char *pParams)
 {
+	bool bFound = false;
 	for(int a=0; a<events.size(); ++a)
 	{
 		// *** HASH TABLE?!? ***
 		if(!MFString_CaseCmp(pEvent, events[a].pEvent))
+		{
 			GetActionManager()->RunScript(events[a].pScript, this);
+			bFound = true;
+		}
 	}
+
+	return bFound;
 }
 
 void uiEntity::GetPosition(MFVector *pPosition)
@@ -492,26 +508,7 @@ void uiEntity::SetVisible(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 
 void uiEntity::SetAnchor(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
-	MFString arg = pArguments->GetString(0);
-
-	if(arg == "topleft")
-		pEntity->anchor = TopLeft;
-	else if(arg == "topcenter")
-		pEntity->anchor = TopCenter;
-	else if(arg == "topright")
-		pEntity->anchor = TopRight;
-	else if(arg == "centerleft")
-		pEntity->anchor = CenterLeft;
-	else if(arg == "center")
-		pEntity->anchor = Center;
-	else if(arg == "centerright")
-		pEntity->anchor = CenterRight;
-	else if(arg == "bottomLeft")
-		pEntity->anchor = BottomLeft;
-	else if(arg == "bottomcenter")
-		pEntity->anchor = BottomCenter;
-	else if(arg == "bottomright")
-		pEntity->anchor = BottomRight;
+	pEntity->anchor = (Anchor)LookupString(pArguments->GetString(0).CStr(), pAnchorNames);
 }
 
 void uiAction_Move::Init(uiRuntimeArgs *pParameters)

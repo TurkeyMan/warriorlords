@@ -3,32 +3,21 @@
 #include "Action.h"
 #include "../Tools/ResourceCache.h"
 
-static const char * gJustifyStrings[MFFontJustify_Max] =
+const char *uiTextProp::gJustifyStrings[MFFontJustify_Max] =
 {
-	"top_left",
-	"top_center",
-	"top_right",
-	"top_full",
-	"center_left",
+	"topleft",
+	"topcenter",
+	"topright",
+	"topfull",
+	"centerleft",
 	"center",
-	"center_right",
-	"center_full",
-	"bottom_left",
-	"bottom_center",
-	"bottom_right",
-	"bottom_full"
+	"centerright",
+	"centerfull",
+	"bottomleft",
+	"bottomcenter",
+	"bottomright",
+	"bottomfull"
 };
-
-int GetJustificationFromString(const char *pString)
-{
-	for(int a=0; a<sizeof(gJustifyStrings) / sizeof(gJustifyStrings[0]); ++a)
-	{
-		if(!MFString_CaseCmp(pString, gJustifyStrings[a]))
-			return a;
-	}
-
-	return 0;
-}
 
 void uiTextProp::RegisterEntity()
 {
@@ -47,7 +36,7 @@ void uiTextProp::RegisterEntity()
 
 uiTextProp::uiTextProp()
 {
-	pFont = GameData::Get()->GetResourceCache()->FindFont("text");
+	pFont = MFFont_GetDebugFont();
 	textHeight = MFFont_GetFontHeight(pFont);
 	justification = MFFontJustify_Top_Left;
 	size.x = 0.f;
@@ -76,6 +65,7 @@ void uiTextProp::SetFont(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiTextProp *pTextProp = (uiTextProp*)pEntity;
 	pTextProp->pFont = GameData::Get()->GetResourceCache()->FindFont(pArguments->GetString(0).CStr());
+	pTextProp->textHeight = MFFont_GetFontHeight(pTextProp->pFont);
 
 	pTextProp->UpdateSize();
 }
@@ -106,31 +96,5 @@ void uiTextProp::UpdateSize()
 void uiTextProp::SetJustification(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiTextProp *pTextProp = (uiTextProp*)pEntity;
-	MFString arg = pArguments->GetString(0);
-	const char *pStr = arg.CStr();
-
-	if(!MFString_CaseCmp(pStr, "top_left"))
-		pTextProp->justification = MFFontJustify_Top_Left;
-	else if(!MFString_CaseCmp(pStr, "top_center"))
-		pTextProp->justification = MFFontJustify_Top_Center;
-	else if(!MFString_CaseCmp(pStr, "top_right"))
-		pTextProp->justification = MFFontJustify_Top_Right;
-	else if(!MFString_CaseCmp(pStr, "top_full"))
-		pTextProp->justification = MFFontJustify_Top_Full;
-	else if(!MFString_CaseCmp(pStr, "center_left"))
-		pTextProp->justification = MFFontJustify_Center_Left;
-	else if(!MFString_CaseCmp(pStr, "center"))
-		pTextProp->justification = MFFontJustify_Center;
-	else if(!MFString_CaseCmp(pStr, "center_right"))
-		pTextProp->justification = MFFontJustify_Center_Right;
-	else if(!MFString_CaseCmp(pStr, "center_full"))
-		pTextProp->justification = MFFontJustify_Center_Full;
-	else if(!MFString_CaseCmp(pStr, "bottom_Left"))
-		pTextProp->justification = MFFontJustify_Bottom_Left;
-	else if(!MFString_CaseCmp(pStr, "bottom_center"))
-		pTextProp->justification = MFFontJustify_Bottom_Center;
-	else if(!MFString_CaseCmp(pStr, "bottom_right"))
-		pTextProp->justification = MFFontJustify_Bottom_Right;
-	else if(!MFString_CaseCmp(pStr, "bottom_full"))
-		pTextProp->justification = MFFontJustify_Bottom_Full;
+	pTextProp->justification = (MFFontJustify)LookupString(pArguments->GetString(0).CStr(), gJustifyStrings);
 }

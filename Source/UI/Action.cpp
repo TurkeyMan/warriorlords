@@ -303,6 +303,13 @@ bool uiActionManager::RunAction(const char *pAction, uiRuntimeArgs *pArgs, uiEnt
 {
 	bool bFinished = true;
 
+	uiActionScript *pScript = actions.Find(pAction);
+	if(pScript)
+	{
+		RunScript(pScript, pActionEntity);
+		return true;
+	}
+
 	ActionType *pType = actionRegistry.Find(pAction);
 	if(!pType)
 		return true;

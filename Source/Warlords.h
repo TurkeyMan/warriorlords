@@ -17,4 +17,6 @@ void DivideRect_Quad(const MFRect &rect, float hSplit, float vSplit, float margi
 void AdjustRect_Margin(MFRect *pRect, float margin, bool bPixels = true);
 void DrawTicker(float x, float y);
 
+int LookupString(const char *pString, const char *pStrings[]);
+
 #endif
