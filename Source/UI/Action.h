@@ -1,6 +1,7 @@
 #if !defined(_ACTION_H)
 #define _ACTION_H
 
+#include "MFList.h"
 #include "MFIni.h"
 #include "MFPtrList.h"
 #include "MFObjectPool.h"
@@ -136,11 +137,33 @@ struct uiActionScript_Action
 	bool bWaitComplete;
 };
 
+struct uiExecuteContext;
+
+struct uiActiveAction
+{
+	uiAction *pAction;
+	uiEntity *pEntity;
+	uiActionScript_Action *pNextAction;
+
+	uiExecuteContext *pContext;
+	uiActiveAction *pNext;
+};
+
+struct uiExecuteContext
+{
+	uiActionScript *pScript;
+	uiEntity *pEntity;
+
+	uiRuntimeArgs *pArgs;
+
+	MFList<uiActiveAction> activeList;
+};
+
 class uiActionManager
 {
 public:
-	typedef void (InstantActionHandler)(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	typedef MFString (GetPropertyHandler)(uiEntity *pEntity);
+	typedef void (InstantActionHandler)(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 
 	static void RegisterProperty(const char *pPropertyName, GetPropertyHandler *pGetHandler, InstantActionHandler *pSetHandler, FactoryType *pEntityType);
 	static void RegisterInstantAction(const char *pActionName, InstantActionHandler *pActionHandler, FactoryType *pEntityType);
@@ -165,25 +188,21 @@ public:
 	uiActionMetric *FindMetric(const char *pName);
 	void DestroyMetric(const char *pName);
 
-	void RunScript(uiActionScript *pScript, uiEntity *pEntity);
+	uiExecuteContext *RunScript(uiActionScript *pScript, uiEntity *pEntity, uiRuntimeArgs *pArgs);
 
-	bool RunAction(const char *pAction, uiRuntimeArgs *pArgs, uiEntity *pActionEntity, uiActionScript_Action *pNextAction, uiEntity *pNextEntity);
+	bool RunAction(uiExecuteContext *pContext, const char *pAction, uiRuntimeArgs *pArgs, uiEntity *pActionEntity, uiActionScript_Action *pNextAction, uiEntity *pNextEntity);
 
 	MFString GetEntityProperty(uiEntity *pEntity, const char *pProperty);
 	void SetEntityProperty(uiEntity *pEntity, const char *pProperty, uiRuntimeArgs *pArguments);
 	void SetEntityProperty(uiEntity *pEntity, const char *pProperty, const char *pArgs);
 
+	void DestroyEntity(uiEntity *pEntity);
+
 protected:
 	// internal structures
-	struct ActiveAction
-	{
-		uiAction *pAction;
-		uiEntity *pEntity;
-		uiActionScript_Action *pNext;
-	};
 
 	// private methods
-	void Continue(uiActionScript_Action *pNextData, uiEntity *pEntity);
+	bool Continue(uiExecuteContext *pContext, uiActionScript_Action *pNextData, uiEntity *pEntity);
 
 	void *Lex(const char *pAction, int *pNumTokens, int preBytes = 0);
 	uiActionScript_Action *ParseActions(uiActionScript_Token *pTokens, int numTokens);
@@ -195,7 +214,8 @@ protected:
 	uiRuntimeArgs *CalculateProducts(uiActionScript_Token *&pT, int &remaining, MFVector &containerSize, int arrayIndex);
 
 	// private members
-	MFPtrListDL<ActiveAction> activeDeferredActions;
+	MFPtrListDL<uiExecuteContext> runningActions;
+	MFPtrListDL<uiActiveAction> activeDeferredActions;
 
 	HashList<uiActionScript> actions;
 	HashList<uiActionMetric> metrics;

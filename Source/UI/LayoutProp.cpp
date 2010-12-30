@@ -119,7 +119,7 @@ void uiLayoutProp::LoadLayout(const char *pLayoutDescriptor)
 					MFIniLine *pSub = pMetrics;
 					while(pSub)
 					{
-						GameData::Get()->GetActionManager()->CreateMetric(pSub->GetString(0), pSub->GetString(1));
+						GameData::Get()->GetActionManager()->CreateMetric(pSub->GetString(0), pSub->GetLineData().CStr());
 
 						pSub = pSub->Next();
 					}
@@ -131,7 +131,7 @@ void uiLayoutProp::LoadLayout(const char *pLayoutDescriptor)
 					MFIniLine *pSub = pActions;
 					while(pSub)
 					{
-						GameData::Get()->GetActionManager()->CreateAction(pSub->GetString(0), pSub->GetString(1));
+						GameData::Get()->GetActionManager()->CreateAction(pSub->GetString(0), pSub->GetLineData().CStr());
 
 						pSub = pSub->Next();
 					}
@@ -163,7 +163,7 @@ void uiLayoutProp::LoadLayout(const char *pLayoutDescriptor)
 				else
 				{
 					// must be a property
-					GetActionManager()->SetEntityProperty(this, pSLine->GetString(0), pSLine->GetString(1));
+					GetActionManager()->SetEntityProperty(this, pSLine->GetString(0), pSLine->GetLineData().CStr());
 				}
 
 				pSLine = pSLine->Next();

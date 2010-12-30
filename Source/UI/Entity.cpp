@@ -96,7 +96,7 @@ void uiEntity::Init(MFIniLine *pEntityData)
 			{
 				uiEvent *pEvent = &events.push();
 				pEvent->pEvent = pEvents->GetString(0);
-				pEvent->pScript = pManager->ParseScript(pEvents->GetString(pEvents->GetStringCount()-1));
+				pEvent->pScript = pManager->ParseScript(pEvents->GetLineData().CStr());
 
 				pEvents = pEvents->Next();
 			}
@@ -127,7 +127,7 @@ void uiEntity::Init(MFIniLine *pEntityData)
 		}
 		else
 		{
-			pManager->SetEntityProperty(this, pEntityData->GetString(0), pEntityData->GetString(1));
+			pManager->SetEntityProperty(this, pEntityData->GetString(0), pEntityData->GetLineData().CStr());
 		}
 
 		pEntityData = pEntityData->Next();
@@ -280,13 +280,15 @@ MFVector uiEntity::GetContainerSize()
 
 bool uiEntity::SignalEvent(const char *pEvent, const char *pParams)
 {
+//	MFDebug_Assert(false, "parse params!");
+
 	bool bFound = false;
 	for(int a=0; a<events.size(); ++a)
 	{
 		// *** HASH TABLE?!? ***
 		if(!MFString_CaseCmp(pEvent, events[a].pEvent))
 		{
-			GetActionManager()->RunScript(events[a].pScript, this);
+			GetActionManager()->RunScript(events[a].pScript, this, NULL);
 			bFound = true;
 		}
 	}
@@ -418,6 +420,8 @@ uiEntity *uiEntityManager::Iterate(uiEntity *pLast)
 void uiEntityManager::Destroy(uiEntity *pEntity)
 {
 	// remove any actions from the action list that belong to this entity
+	uiActionManager *pActionManager = GameData::Get()->GetActionManager();
+	pActionManager->DestroyEntity(pEntity);
 
 	// destroy it
 	entityPool.Remove(pEntity);

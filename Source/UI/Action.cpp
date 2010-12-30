@@ -228,11 +228,13 @@ void uiActionManager::Init()
 	metrics.Create(256, 512, 512);
 
 	activeDeferredActions.Init("Deferred Action Pool", 1024);
+	runningActions.Init("Active Actions", 256);
 }
 
 void uiActionManager::Deinit()
 {
 	activeDeferredActions.Deinit();
+	runningActions.Deinit();
 
 	metrics.Destroy();
 	actions.Destroy();
@@ -240,22 +242,41 @@ void uiActionManager::Deinit()
 
 void uiActionManager::Update()
 {
-	ActiveAction **ppI = activeDeferredActions.Begin();
+	uiExecuteContext **ppI = runningActions.Begin();
 	for(; *ppI; ++ppI)
 	{
-		ActiveAction *pActive = *ppI;
-		if(pActive->pAction->Update())
+		uiExecuteContext *pContext = *ppI;
+
+		for(uiActiveAction *pActive = pContext->activeList.head(); pActive; )
 		{
-			delete pActive->pAction;
+			uiActiveAction *pNext = pContext->activeList.next(pActive);
 
-			uiActionScript_Action *pNext = pActive->pNext;
-			uiEntity *pEntity = pActive->pEntity;
-			activeDeferredActions.Destroy(ppI);
+			if(pActive->pAction->Update())
+			{
+				delete pActive->pAction;
 
-			if(pNext)
-				Continue(pNext, pEntity);
+				uiActionScript_Action *pNext = pActive->pNextAction;
+				uiEntity *pEntity = pActive->pEntity;
+
+				pContext->activeList.remove(pActive);
+				activeDeferredActions.Destroy(pActive);
+
+				if(pNext)
+					Continue(pContext, pNext, pEntity);
+			}
+
+			pActive = pNext;
+		}
+
+		if(pContext->activeList.head() == NULL)
+		{
+			if(pContext->pArgs)
+				pContext->pArgs->Release();
+			runningActions.Destroy(ppI);
 		}
 	}
+
+	MFDebug_Log(0, MFStr("Running: %d", runningActions.GetLength()));
 }
 
 void uiActionManager::RegisterProperty(const char *pPropertyName, GetPropertyHandler *pGetHandler, InstantActionHandler *pSetHandler, FactoryType *pEntityType)
@@ -293,20 +314,34 @@ void uiActionManager::RegisterDeferredAction(const char *pActionName, Factory_Cr
 	actionRegistry.Add(pType, pType->pName);
 }
 
-
-void uiActionManager::RunScript(uiActionScript *pScript, uiEntity *pEntity)
+uiExecuteContext *uiActionManager::RunScript(uiActionScript *pScript, uiEntity *pEntity, uiRuntimeArgs *pArgs)
 {
-	Continue(pScript->pAction, pEntity);
+	uiExecuteContext *pContext = new(runningActions.Create()) uiExecuteContext;
+	pContext->pScript = pScript;
+	pContext->pEntity = pEntity;
+	pContext->pArgs = pArgs;
+
+	MFDebug_Assert(pContext->activeList.head() == NULL, "!");
+
+	if(Continue(pContext, pScript->pAction, pEntity))
+	{
+		if(pArgs)
+			pArgs->Release();
+		runningActions.Destroy(pContext);
+		pContext = NULL;
+	}
+
+	return pContext;
 }
 
-bool uiActionManager::RunAction(const char *pAction, uiRuntimeArgs *pArgs, uiEntity *pActionEntity, uiActionScript_Action *pNextAction, uiEntity *pNextEntity)
+bool uiActionManager::RunAction(uiExecuteContext *pContext, const char *pAction, uiRuntimeArgs *pArgs, uiEntity *pActionEntity, uiActionScript_Action *pNextAction, uiEntity *pNextEntity)
 {
 	bool bFinished = true;
 
 	uiActionScript *pScript = actions.Find(pAction);
 	if(pScript)
 	{
-		RunScript(pScript, pActionEntity);
+		RunScript(pScript, pActionEntity, pArgs);
 		return true;
 	}
 
@@ -332,10 +367,12 @@ bool uiActionManager::RunAction(const char *pAction, uiRuntimeArgs *pArgs, uiEnt
 			// if it didn't complete this frame, we'll add it to the active list.
 			if(!bFinished)
 			{
-				ActiveAction *pNew = activeDeferredActions.Create();
+				uiActiveAction *pNew = activeDeferredActions.Create();
 				pNew->pAction = pDeferred;
 				pNew->pEntity = pNextEntity;
-				pNew->pNext = pNextAction;
+				pNew->pNextAction = pNextAction;
+
+				pContext->activeList.insert(pNew);
 			}
 			else
 			{
@@ -343,6 +380,9 @@ bool uiActionManager::RunAction(const char *pAction, uiRuntimeArgs *pArgs, uiEnt
 			}
 		}
 	}
+
+	// release the args
+	pArgs->Release();
 
 	return bFinished;
 }
@@ -369,6 +409,34 @@ void uiActionManager::SetEntityProperty(uiEntity *pEntity, const char *pProperty
 	}
 }
 
+void uiActionManager::DestroyEntity(uiEntity *pEntity)
+{
+	uiExecuteContext **ppI = runningActions.Begin();
+	for(; *ppI; ++ppI)
+	{
+		uiExecuteContext *pContext = *ppI;
+
+		if(pContext->pEntity == pEntity)
+		{
+			for(uiActiveAction *pActive = pContext->activeList.head(); pActive; )
+			{
+				uiActiveAction *pNext = pContext->activeList.next(pActive);
+
+				delete pActive->pAction;
+
+				pContext->activeList.remove(pActive);
+				activeDeferredActions.Destroy(pActive);
+
+				pActive = pNext;
+			}
+
+			if(pContext->pArgs)
+				pContext->pArgs->Release();
+			runningActions.Destroy(ppI);
+		}
+	}
+}
+
 void uiActionManager::SetEntityProperty(uiEntity *pEntity, const char *pProperty, uiRuntimeArgs *pArguments)
 {
 	ActionType *pType = actionRegistry.Find(pProperty);
@@ -376,7 +444,7 @@ void uiActionManager::SetEntityProperty(uiEntity *pEntity, const char *pProperty
 		pType->pSetHandler(pEntity, pArguments);
 }
 
-void uiActionManager::Continue(uiActionScript_Action *pNext, uiEntity *pEntity)
+bool uiActionManager::Continue(uiExecuteContext *pContext, uiActionScript_Action *pNext, uiEntity *pEntity)
 {
 	// check if action specifies an entity
 	uiEntity *pActionEntity = pNext->pEntity ? pEntity->GetEntityManager()->Find(pNext->pEntity) : pEntity;
@@ -387,11 +455,13 @@ void uiActionManager::Continue(uiActionScript_Action *pNext, uiEntity *pEntity)
 		// resolve action parameters
 		uiRuntimeArgs *pArgs = ResolveArguments(pNext->pArgs, pNext->numArgs, pActionEntity->GetContainerSize());
 
-		bFinished = RunAction(pNext->pAction, pArgs, pActionEntity, pNext->bWaitComplete ? pNext->pNext : NULL, pEntity);
+		bFinished = RunAction(pContext, pNext->pAction, pArgs, pActionEntity, pNext->bWaitComplete ? pNext->pNext : NULL, pEntity);
 	}
 
 	if(pNext->pNext && (bFinished || !pNext->bWaitComplete))
-		Continue(pNext->pNext, pEntity);
+		bFinished = Continue(pContext, pNext->pNext, pEntity) && bFinished;
+
+	return bFinished;
 }
 
 void *uiActionManager::Lex(const char *pAction, int *pNumTokens, int preBytes)
@@ -411,10 +481,10 @@ void *uiActionManager::Lex(const char *pAction, int *pNumTokens, int preBytes)
 			pAction = MFSkipWhite(pAction);
 			continue;
 		}
-		else if(*pAction == '\'')
+		else if(*pAction == '"')
 		{
 			// scan for the closing quote character
-			const char *pEndQuote = MFString_Chr(++pAction, '\'');
+			const char *pEndQuote = MFString_Chr(++pAction, '"');
 			if(!pEndQuote)
 				break;
 

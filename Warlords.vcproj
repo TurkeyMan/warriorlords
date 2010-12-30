@@ -545,6 +545,14 @@
 					>
 				</File>
 				<File
+					RelativePath=".\Source\UI\ButtonProp.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\UI\ButtonProp.h"
+					>
+				</File>
+				<File
 					RelativePath=".\Source\UI\Entity.cpp"
 					>
 				</File>
