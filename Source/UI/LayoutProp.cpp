@@ -98,7 +98,7 @@ bool SplitLine(MFIniLine *pLine, MFString &left, MFString &right)
 {
 	MFString line = pLine->GetLine();
 
-	int offset = line.FindChar('=');
+	int offset = line.FindChar(':');
 	if(offset < 0)
 		return false;
 
