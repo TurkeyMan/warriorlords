@@ -275,8 +275,6 @@ void uiActionManager::Update()
 			runningActions.Destroy(ppI);
 		}
 	}
-
-	MFDebug_Log(0, MFStr("Running: %d", runningActions.GetLength()));
 }
 
 void uiActionManager::RegisterProperty(const char *pPropertyName, GetPropertyHandler *pGetHandler, InstantActionHandler *pSetHandler, FactoryType *pEntityType)
@@ -392,7 +390,7 @@ MFString uiActionManager::GetEntityProperty(uiEntity *pEntity, const char *pProp
 	ActionType *pType = actionRegistry.Find(pProperty);
 	if(pType && pType->pGetHandler)
 		return pType->pGetHandler(pEntity);
-	return NULL;
+	return (const char *)NULL;
 }
 
 void uiActionManager::SetEntityProperty(uiEntity *pEntity, const char *pProperty, const char *pArgs)
@@ -400,12 +398,9 @@ void uiActionManager::SetEntityProperty(uiEntity *pEntity, const char *pProperty
 	ActionType *pType = actionRegistry.Find(pProperty);
 	if(pType && pType->pSetHandler)
 	{
-		int numTokens;
-		uiActionScript_Token *pTokens = (uiActionScript_Token*)Lex(pArgs, &numTokens);
-		uiRuntimeArgs *pRuntimeArgs = ResolveArguments(pTokens, numTokens, pEntity->GetContainerSize());
+		uiRuntimeArgs *pRuntimeArgs = ParseArgs(pArgs, pEntity);
 		pType->pSetHandler(pEntity, pRuntimeArgs);
 		pRuntimeArgs->Release();
-		MFHeap_Free(pTokens);
 	}
 }
 
@@ -437,6 +432,22 @@ void uiActionManager::DestroyEntity(uiEntity *pEntity)
 	}
 }
 
+uiRuntimeArgs *uiActionManager::ParseArgs(const char *pArgs, uiEntity *pEntity)
+{
+	// create a dummy context
+	uiExecuteContext context;
+	MFZeroMemory(&context, sizeof(context));
+	context.pEntity = pEntity;
+
+	// resolve the args
+	int numTokens;
+	uiActionScript_Token *pTokens = (uiActionScript_Token*)Lex(pArgs, &numTokens);
+	uiRuntimeArgs *pRuntimeArgs = ResolveArguments(&context, pTokens, numTokens, pEntity->GetContainerSize());
+	MFHeap_Free(pTokens);
+
+	return pRuntimeArgs;
+}
+
 void uiActionManager::SetEntityProperty(uiEntity *pEntity, const char *pProperty, uiRuntimeArgs *pArguments)
 {
 	ActionType *pType = actionRegistry.Find(pProperty);
@@ -453,7 +464,7 @@ bool uiActionManager::Continue(uiExecuteContext *pContext, uiActionScript_Action
 	if(pActionEntity)
 	{
 		// resolve action parameters
-		uiRuntimeArgs *pArgs = ResolveArguments(pNext->pArgs, pNext->numArgs, pActionEntity->GetContainerSize());
+		uiRuntimeArgs *pArgs = ResolveArguments(pContext, pNext->pArgs, pNext->numArgs, pActionEntity->GetContainerSize());
 
 		bFinished = RunAction(pContext, pNext->pAction, pArgs, pActionEntity, pNext->bWaitComplete ? pNext->pNext : NULL, pEntity);
 	}
@@ -552,6 +563,8 @@ void *uiActionManager::Lex(const char *pAction, int *pNumTokens, int preBytes)
 		int stringCacheSize = MFStringCache_GetSize(pStringCache);
 		int bytes = preBytes + sizeof(uiActionScript_Token) * numTokens + stringCacheSize;
 		pData = MFHeap_Alloc(bytes);
+		MFZeroMemory(pData, preBytes);
+
 		uiActionScript_Token *pTokens = (uiActionScript_Token*)((char*)pData + preBytes);
 
 		// copy tokens
@@ -588,8 +601,8 @@ uiActionMetric *uiActionManager::FindMetric(const char *pName)
 
 uiActionScript *uiActionManager::CreateAction(const char *pName, const char *pDescription)
 {
-	uiActionScript *pScript = ParseScript(pDescription);
-	actions.Add(pScript, pName);
+	uiActionScript *pScript = ParseScript(pName, pDescription);
+	actions.Add(pScript, pScript->name.CStr());
 	return pScript;
 }
 
@@ -612,16 +625,55 @@ void uiActionManager::DestroyMetric(const char *pName)
 	MFHeap_Free(pMetric);
 }
 
-uiActionScript* uiActionManager::ParseScript(const char *pScript)
+uiActionScript* uiActionManager::ParseScript(const char *pName, const char *pScript)
 {
+	// count args
+	int numArgs = 0;
+
+	const char *pArgs = MFString_Chr(pName, '(');
+	if(pArgs && pArgs[1] != ')')
+	{
+		numArgs = 1;
+
+		while((pArgs = MFString_Chr(pArgs + 1, ',')) != NULL)
+			++numArgs;
+	}
+
 	// lex the script
 	int numTokens;
-	uiActionScript *pNew = (uiActionScript*)Lex(pScript, &numTokens, sizeof(uiActionScript));
+	uiActionScript *pNew = (uiActionScript*)Lex(pScript, &numTokens, sizeof(uiActionScript) + sizeof(MFString)*numArgs);
 
 	if(pNew)
 	{
+		// parse the args
+		char *pOffset = (char*)pNew + sizeof(uiActionScript);
+		pNew->pArgs = (MFString*)(numArgs ? pOffset : NULL);
+
+		pNew->name = pName;
+		int offset = pNew->name.FindChar('(');
+		if(offset > 0)
+		{
+			MFString arg = pNew->name.SubStr(offset + 1);
+			pNew->name.Truncate(offset);
+
+			offset = arg.FindChar(')');
+			if(offset > -1)
+				arg.Truncate(offset);
+
+			if(arg.NumBytes())
+			{
+				while((offset = arg.FindChar(',')) > -1)
+				{
+					pNew->pArgs[pNew->numArgs++] = arg.SubStr(0, offset).Trim();
+					arg = arg.SubStr(offset + 1);
+				}
+
+				pNew->pArgs[pNew->numArgs++] = arg.Trim();
+			}
+		}
+
 		// set token pointer
-		pNew->pTokens = (uiActionScript_Token*)((char*)pNew + sizeof(uiActionScript));
+		pNew->pTokens = (uiActionScript_Token*)(pOffset + sizeof(MFString)*numArgs);
 
 		// parse the script for actions
 		pNew->pAction = ParseActions(pNew->pTokens, numTokens);
@@ -649,7 +701,7 @@ uiActionMetric* uiActionManager::ParseMetric(const char *pMetric)
 int uiActionScript_Action::ParseAction(uiActionScript_Token *pToken, int numTokens)
 {
 	// first we should expect an action identifier
-	MFDebug_Assert(pToken[0].IsIdentifier() && pToken[1].IsSyntax("("), "Expected: Action.");
+	MFDebug_Assert(pToken[0].IsIdentifier(), "Expected: Action.");
 
 	int t = 0;
 	pAction = pToken->pToken;
@@ -665,23 +717,38 @@ int uiActionScript_Action::ParseAction(uiActionScript_Token *pToken, int numToke
 
 	// we have an action, now find argument list
 	pArgs = pToken + t;
-	int argStart = t, depth = 0;
-	while(t < numTokens && (depth || !pToken[t].IsSyntax(")")))
+	int argStart = t;
+
+	if(pToken[t-1].IsSyntax("="))
 	{
-		if(pToken[t].IsSyntax("("))
-			++depth;
-		if(pToken[t].IsSyntax(")"))
-			--depth;
-		++t;
+		while(t < numTokens && !pToken[t].IsSyntax(";") && !pToken[t].IsSyntax(":"))
+			++t;
+	}
+	else
+	{
+		MFDebug_Assert(pToken[t-1].IsSyntax("("), "Expected: '(' or '='.");
+
+		int depth = 0;
+		while(t < numTokens && (depth || !pToken[t].IsSyntax(")")))
+		{
+			if(pToken[t].IsSyntax("("))
+				++depth;
+			if(pToken[t].IsSyntax(")"))
+				--depth;
+			++t;
+		}
 	}
 
 	numArgs = t - argStart;
 	if(!numArgs)
 		pArgs = NULL;
 
+	if(pToken[t].IsSyntax(")"))
+		++t;
+
 	bWaitComplete = true;
 
-	return t + 1;
+	return t;
 }
 
 uiActionScript_Action *uiActionManager::ParseActions(uiActionScript_Token *pTokens, int numTokens)
@@ -714,7 +781,7 @@ uiActionScript_Action *uiActionManager::ParseActions(uiActionScript_Token *pToke
 	return pFirstAction;
 }
 
-uiRuntimeArgs *uiActionManager::GetNextValue(uiActionScript_Token *&pT, int &remaining, MFVector &containerSize, int arrayIndex)
+uiRuntimeArgs *uiActionManager::GetNextValue(uiExecuteContext *pContext, uiActionScript_Token *&pT, int &remaining, MFVector &containerSize, int arrayIndex)
 {
 	uiRuntimeArgs *pValue = NULL;
 	bool bNeg = false;
@@ -732,7 +799,7 @@ uiRuntimeArgs *uiActionManager::GetNextValue(uiActionScript_Token *&pT, int &rem
 	{
 		int numTokens = 0;
 		pValue = uiRuntimeArgs::Allocate(1);
-		pValue->SetArray(0, ResolveArguments(++pT, --remaining, containerSize, &numTokens));
+		pValue->SetArray(0, ResolveArguments(pContext, ++pT, --remaining, containerSize, &numTokens));
 		pT += numTokens;
 		remaining -= numTokens;
 	}
@@ -742,23 +809,9 @@ uiRuntimeArgs *uiActionManager::GetNextValue(uiActionScript_Token *&pT, int &rem
 		{
 			const char *pIdentifier = pT->pToken;
 
-			const char *pDot = MFString_Chr(pIdentifier, '.');
-			if(pDot && !MFString_CaseCmpN(pT->pToken, "metric", (uint32)(pDot - pT->pToken)))
-				pIdentifier = pDot + 1;
-
-			// see if the identifier is a metric
-			uiActionMetric *pMetric = GameData::Get()->GetActionManager()->FindMetric(pIdentifier);
-			if(pMetric)
-			{
-				pValue = ResolveArguments(pMetric->pTokens, pMetric->numTokens, containerSize);
-				MFDebug_Assert(pValue->GetNumArgs() == 1, "Metrics may only specify a single value.");
-			}
-			else
-			{
-				// resolve the identifier
-				pValue = ResolveIdentifier(pIdentifier);
-				bString = !pValue->IsNumeric(0);
-			}
+			// resolve the identifier
+			pValue = ResolveIdentifier(pContext, pIdentifier, containerSize);
+			bString = !pValue->IsNumeric(0);
 		}
 		else
 		{
@@ -776,7 +829,7 @@ uiRuntimeArgs *uiActionManager::GetNextValue(uiActionScript_Token *&pT, int &rem
 		while(remaining && pT->IsSyntax("["))
 		{
 			int numTokens;
-			uiRuntimeArgs *pIndex = ResolveArguments(++pT, --remaining, containerSize, &numTokens);
+			uiRuntimeArgs *pIndex = ResolveArguments(pContext, ++pT, --remaining, containerSize, &numTokens);
 			pT += numTokens;
 			remaining -= numTokens;
 
@@ -838,9 +891,9 @@ inline MFString DoSum(MFString a, MFString b, bool bAdd, bool bConcatinate)
 	return result;
 }
 
-uiRuntimeArgs *uiActionManager::CalculateProducts(uiActionScript_Token *&pT, int &remaining, MFVector &containerSize, int arrayIndex)
+uiRuntimeArgs *uiActionManager::CalculateProducts(uiExecuteContext *pContext, uiActionScript_Token *&pT, int &remaining, MFVector &containerSize, int arrayIndex)
 {
-	uiRuntimeArgs *pValue = GetNextValue(pT, remaining, containerSize, arrayIndex);
+	uiRuntimeArgs *pValue = GetNextValue(pContext, pT, remaining, containerSize, arrayIndex);
 
 	while(remaining)
 	{
@@ -851,7 +904,7 @@ uiRuntimeArgs *uiActionManager::CalculateProducts(uiActionScript_Token *&pT, int
 		// we should expect another operand
 		MFDebug_Assert(remaining > 1, "Missing: operand");
 
-		uiRuntimeArgs *pOperand = GetNextValue(++pT, --remaining, containerSize, arrayIndex);
+		uiRuntimeArgs *pOperand = GetNextValue(pContext, ++pT, --remaining, containerSize, arrayIndex);
 
 		// perform multiplication
 		MFDebug_Assert(pValue->IsNumeric() && pOperand->IsNumeric(), "Expected: Numeric value");
@@ -899,7 +952,7 @@ uiRuntimeArgs *uiActionManager::CalculateProducts(uiActionScript_Token *&pT, int
 	return pValue;
 }
 
-uiRuntimeArgs *uiActionManager::ResolveArguments(uiActionScript_Token *pTokens, int numTokens, MFVector &containerSize, int *pNumUsed)
+uiRuntimeArgs *uiActionManager::ResolveArguments(uiExecuteContext *pContext, uiActionScript_Token *pTokens, int numTokens, MFVector &containerSize, int *pNumUsed)
 {
 	uiActionScript_Token *pT = pTokens;
 	uiRuntimeArgs *pNew = NULL;
@@ -909,7 +962,7 @@ uiRuntimeArgs *uiActionManager::ResolveArguments(uiActionScript_Token *pTokens, 
 	int index = 0;
 	while(numTokens && !bEndStatement)
 	{
-		uiRuntimeArgs *pValue = CalculateProducts(pT, numTokens, containerSize, index);
+		uiRuntimeArgs *pValue = CalculateProducts(pContext, pT, numTokens, containerSize, index);
 		bool bIsString = !pValue->IsNumeric();
 
 		while(numTokens)
@@ -920,7 +973,7 @@ uiRuntimeArgs *uiActionManager::ResolveArguments(uiActionScript_Token *pTokens, 
 
 			MFDebug_Assert(numTokens > 1, "Missing: Operand");
 
-			uiRuntimeArgs *pOperand = CalculateProducts(++pT, --numTokens, containerSize, index);
+			uiRuntimeArgs *pOperand = CalculateProducts(pContext, ++pT, --numTokens, containerSize, index);
 			bool bConcatinate = bIsString || !pOperand->IsNumeric();
 
 			uiRuntimeArgs *pArray0 = pValue->GetArray(0);
@@ -969,58 +1022,165 @@ uiRuntimeArgs *uiActionManager::ResolveArguments(uiActionScript_Token *pTokens, 
 	return pNew;
 }
 
-uiRuntimeArgs *uiActionManager::ResolveIdentifier(const char *pIdentifier)
+uiRuntimeArgs *uiActionManager::ResolveIdentifier(uiExecuteContext *pContext, const char *_pIdentifier, MFVector &containerSize)
 {
-	uiRuntimeArgs *pValue = uiRuntimeArgs::Allocate(1);
+	enum SearchType
+	{
+		None = 0,
+		Entity,
+		Metric,
+		Option,
+		String
+	};
+
+	const char *pIdentifier = _pIdentifier;
+	uiEntity *pEntity = pContext ? pContext->pEntity : NULL;
+	bool bMemberFollows;
+	int type = None;
+	int depth = 0;
+
+	do
+	{
+		MFString identifier(pIdentifier, true);
+		bMemberFollows = false;
+
+		// check for member syntax
+		const char *pDot = MFString_Chr(pIdentifier, '.');
+		if(pDot)
+		{
+			identifier.Truncate((int)(pDot - pIdentifier));
+			identifier.Trim();
+
+			pIdentifier = MFSkipWhite(pDot + 1);
+
+			bMemberFollows = true;
+			++depth;
+		}
+
+		// check if it is an action argument
+		if(depth == 0 && pContext && pContext->pScript)
+		{
+			int a=0, numArgs = pContext->pScript->numArgs;
+			for(; a<numArgs; ++a)
+			{
+				if(pContext->pScript->pArgs[a].CompareInsensitive(identifier))
+				{
+					uiRuntimeArgs *pValue = uiRuntimeArgs::Allocate(1);
+					pValue->Set(0, pContext->pArgs->Get(a));
+					return pValue;
+				}
+			}
+		}
+
+		// check if it is an entity property
+		if(!bMemberFollows)
+		{
+			if(type == None && pEntity)
+			{
+				MFString value = GetEntityProperty(pEntity, identifier.CStr());
+				if(value)
+				{
+					uiRuntimeArgs *pValue = uiRuntimeArgs::Allocate(1);
+					pValue->SetValue(0, value, false);
+					return pValue;
+				}
+			}
+
+			// check if it is a metric
+			if(depth == 0 || type == Metric)
+			{
+				uiActionMetric *pMetric = GameData::Get()->GetActionManager()->FindMetric(identifier.CStr());
+				if(pMetric)
+				{
+					uiRuntimeArgs *pValue = ResolveArguments(pContext, pMetric->pTokens, pMetric->numTokens, containerSize);
+					MFDebug_Assert(pValue->GetNumArgs() == 1, "Metrics may only specify a single value.");
+					return pValue;
+				}
+			}
+		}
+
+		// check for other stuff
+		if(type != None)
+		{
+			if(type == Entity)
+			{
+				uiEntity *pE = GameData::Get()->GetEntityManager()->Find(identifier.CStr());
+				if(!pE)
+					break;
+
+				pEntity = pE;
+				type = None;
+			}
+			else if(type == Option)
+			{
+				// look up value from the game options
+				//...
+
+				break;
+			}
+			else if(type == String)
+			{
+				// find and return string in string table
+				int stringID = GameData::Get()->FindString(pDot);
+				if(stringID >= 0)
+				{
+					MFString string = GameData::Get()->GetString(stringID);
+
+					uiRuntimeArgs *pValue = uiRuntimeArgs::Allocate(1);
+					pValue->SetValue(0, string, true);
+					return pValue;
+				}
+				break;
+			}
+		}
+		else if(pEntity)
+		{
+			// see if it refers to a child entity
+			uiEntity *pChild = pEntity->FindChild(identifier.CStr());
+			if(pChild)
+			{
+				pEntity = pChild;
+				continue;
+			}
+
+			if(identifier.CompareInsensitive("parent"))
+			{
+				uiEntity *pParent = pEntity->Parent();
+				if(!pParent)
+					break;
+
+				pEntity = pParent;
+				continue;
+			}
+		}
+
+		// check for some special keywords
+		if(depth == 0)
+		{
+			if(identifier.CompareInsensitive("entities"))
+			{
+				type = Entity;
+			}
+			else if(identifier.CompareInsensitive("metrics"))
+			{
+				type = Metric;
+			}
+			else if(identifier.CompareInsensitive("options"))
+			{
+				type = Option;
+			}
+			else if(identifier.CompareInsensitive("strings"))
+			{
+				type = String;
+			}
+		}
+	}
+	while(bMemberFollows);
+
 	MFString value(pIdentifier);
-	bool bString = false;
 
-	char *pDot = MFString_Chr(pIdentifier, '.');
-	if(pDot)
-	{
-		const char *pSource = MFStrN(pIdentifier, pDot - pIdentifier);
-		++pDot;
-
-		if(!MFString_CaseCmp(pSource, "strings"))
-		{
-			// find and return string in string table
-			int stringID = GameData::Get()->FindString(pDot);
-			if(stringID >= 0)
-			{
-				value = GameData::Get()->GetString(stringID);
-				bString = true;
-			}
-		}
-		else if(!MFString_CaseCmp(pSource, "options"))
-		{
-			// look up value from the game options
-			//...
-		}
-		else
-		{
-			// it could be an entity identifier
-			uiEntity *pEntity = GameData::Get()->GetEntityManager()->Find(pSource);
-			if(pEntity)
-			{
-				// which means we must be accessing an entity property
-				value = GetEntityProperty(pEntity, pDot);
-			}
-			else
-			{
-				// nope, don't know what it is...
-				//... error?
-			}
-		}
-	}
-	else
-	{
-		// it could be a property for 'this' entity...
-		// TODO: we don't have a pointer to the current entity
-		//...
-	}
-
-	pValue->SetValue(0, value, bString);
-
+	uiRuntimeArgs *pValue = uiRuntimeArgs::Allocate(1);
+	pValue->SetValue(0, _pIdentifier, true);
 	return pValue;
 }
 

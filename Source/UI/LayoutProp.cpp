@@ -94,6 +94,20 @@ void uiLayoutProp::SetLayout(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 	pLayout->LoadLayout(pArguments->GetString(0).CStr());
 }
 
+bool SplitLine(MFIniLine *pLine, MFString &left, MFString &right)
+{
+	MFString line = pLine->GetLine();
+
+	int offset = line.FindChar('=');
+	if(offset < 0)
+		return false;
+
+	left = line.SubStr(0, offset).Trim();
+	right = line.SubStr(offset + 1).Trim();
+
+	return true;
+}
+
 void uiLayoutProp::LoadLayout(const char *pLayoutDescriptor)
 {
 	pLayoutDesc = MFIni::Create(pLayoutDescriptor);
@@ -131,7 +145,9 @@ void uiLayoutProp::LoadLayout(const char *pLayoutDescriptor)
 					MFIniLine *pSub = pActions;
 					while(pSub)
 					{
-						GameData::Get()->GetActionManager()->CreateAction(pSub->GetString(0), pSub->GetLineData().CStr());
+						MFString left, right;
+						if(SplitLine(pSub, left, right))
+							GameData::Get()->GetActionManager()->CreateAction(left.CStr(), right.CStr());
 
 						pSub = pSub->Next();
 					}

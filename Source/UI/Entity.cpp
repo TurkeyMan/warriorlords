@@ -10,6 +10,8 @@
 
 #include "MFSystem.h"
 
+extern bool SplitLine(MFIniLine *pLine, MFString &left, MFString &right);
+
 Factory<uiEntity> uiEntityManager::entityFactory;
 
 uiDrawState uiEntity::identity;
@@ -94,9 +96,12 @@ void uiEntity::Init(MFIniLine *pEntityData)
 			MFIniLine *pEvents = pEntityData->Sub();
 			while(pEvents)
 			{
-				uiEvent *pEvent = &events.push();
-				pEvent->pEvent = pEvents->GetString(0);
-				pEvent->pScript = pManager->ParseScript(pEvents->GetLineData().CStr());
+				MFString left, right;
+				if(SplitLine(pEvents, left, right))
+				{
+					uiActionScript *pEvent = pManager->ParseScript(left.CStr(), right.CStr());
+					events.push(pEvent);
+				}
 
 				pEvents = pEvents->Next();
 			}
@@ -154,11 +159,11 @@ bool uiEntity::HandleInputEvent(InputEvent ev, const InputInfo &info)
 	switch(ev)
 	{
 		case IE_Down:
-			return SignalEvent("down", NULL);
+			return SignalEvent("down", MFString::Format("%d, {%g, %g}", info.buttonID, info.down.x, info.down.y).CStr());
 		case IE_Up:
-			return SignalEvent("up", NULL);
+			return SignalEvent("up", MFString::Format("%d, {%g, %g}", info.buttonID, info.up.x, info.up.y).CStr());
 		case IE_Tap:
-			return SignalEvent("tap", NULL);
+			return SignalEvent("tap", MFString::Format("%d, {%g, %g}", info.buttonID, info.tap.x, info.tap.y).CStr());
 	}
 	return false;
 }
@@ -278,6 +283,16 @@ MFVector uiEntity::GetContainerSize()
 	return MakeVector((1.f / screenMat.m[0]) * 2.f, (1.f / -screenMat.m[5]) * 2.f, 1.f, 1.f);
 }
 
+uiEntity *uiEntity::FindChild(const char *pName) const
+{
+	for(int a=0; a<children.size(); ++a)
+	{
+		if(children[a]->name.CompareInsensitive(pName))
+			return children[a];
+	}
+	return NULL;
+}
+
 bool uiEntity::SignalEvent(const char *pEvent, const char *pParams)
 {
 //	MFDebug_Assert(false, "parse params!");
@@ -286,9 +301,16 @@ bool uiEntity::SignalEvent(const char *pEvent, const char *pParams)
 	for(int a=0; a<events.size(); ++a)
 	{
 		// *** HASH TABLE?!? ***
-		if(!MFString_CaseCmp(pEvent, events[a].pEvent))
+		if(events[a]->name.CompareInsensitive(pEvent))
 		{
-			GetActionManager()->RunScript(events[a].pScript, this, NULL);
+			uiActionManager *pActionManager = GetActionManager();
+			uiRuntimeArgs *pArgs = pParams ? pActionManager->ParseArgs(pParams, this) : NULL;
+
+			pActionManager->RunScript(events[a], this, pArgs);
+
+			if(pArgs)
+				pArgs->Release();
+
 			bFound = true;
 		}
 	}

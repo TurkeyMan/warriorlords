@@ -7,12 +7,6 @@
 #include "../Tools/HashTable.h"
 #include "Action.h"
 
-struct uiEvent
-{
-	const char *pEvent;
-	uiActionScript *pScript;
-};
-
 struct uiDrawState
 {
 	MFMatrix mat;
@@ -118,6 +112,11 @@ public:
 
 	MFVector GetContainerSize();
 
+	uiEntity *Parent() const { return pParent; }
+
+	uiEntity *GetChild(int index) const { return children[index]; }
+	uiEntity *FindChild(const char *pName) const;
+
 	MFString GetName() { return name; }
 	const MFVector &GetPos() { return pos; }
 	const MFVector &GetSize() { return size; }
@@ -158,7 +157,7 @@ protected:
 	uiEntity *pParent;
 	MFArray<uiEntity*> children;
 
-	MFArray<uiEvent> events;
+	MFArray<uiActionScript*> events;
 
 	// script functions
 	static MFString GetPos(uiEntity *pEntity);

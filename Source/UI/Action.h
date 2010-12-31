@@ -91,6 +91,10 @@ protected:
 
 struct uiActionScript
 {
+	MFString name;
+	MFString *pArgs;
+	int numArgs;
+
 	uiActionScript_Action *pAction;
 	uiActionScript_Token *pTokens;
 };
@@ -179,7 +183,7 @@ public:
 	void Update();
 
 	uiActionScript *CreateAction(const char *pName, const char *pDescription);
-	uiActionScript *ParseScript(const char *pScript);
+	uiActionScript *ParseScript(const char *pName, const char *pScript);
 	uiActionScript *FindAction(const char *pName);
 	void DestroyAction(const char *pName);
 
@@ -198,6 +202,8 @@ public:
 
 	void DestroyEntity(uiEntity *pEntity);
 
+	uiRuntimeArgs *ParseArgs(const char *pArgs, uiEntity *pEntity);
+
 protected:
 	// internal structures
 
@@ -207,11 +213,11 @@ protected:
 	void *Lex(const char *pAction, int *pNumTokens, int preBytes = 0);
 	uiActionScript_Action *ParseActions(uiActionScript_Token *pTokens, int numTokens);
 
-	uiRuntimeArgs *ResolveArguments(uiActionScript_Token *pTokens, int numTokens, MFVector &containerSize, int *pNumUsed = NULL);
+	uiRuntimeArgs *ResolveArguments(uiExecuteContext *pContext, uiActionScript_Token *pTokens, int numTokens, MFVector &containerSize, int *pNumUsed = NULL);
 
-	uiRuntimeArgs *ResolveIdentifier(const char *pIdentifier);
-	uiRuntimeArgs *GetNextValue(uiActionScript_Token *&pT, int &remaining, MFVector &containerSize, int arrayIndex);
-	uiRuntimeArgs *CalculateProducts(uiActionScript_Token *&pT, int &remaining, MFVector &containerSize, int arrayIndex);
+	uiRuntimeArgs *ResolveIdentifier(uiExecuteContext *pContext, const char *pIdentifier, MFVector &containerSize);
+	uiRuntimeArgs *GetNextValue(uiExecuteContext *pContext, uiActionScript_Token *&pT, int &remaining, MFVector &containerSize, int arrayIndex);
+	uiRuntimeArgs *CalculateProducts(uiExecuteContext *pContext, uiActionScript_Token *&pT, int &remaining, MFVector &containerSize, int arrayIndex);
 
 	// private members
 	MFPtrListDL<uiExecuteContext> runningActions;
