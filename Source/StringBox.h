@@ -30,7 +30,7 @@ public:
 	void SetChangeCallback(ChangeCallback handler) { changeCallback = handler; }
 	void SetTabCallback(ChangeCallback handler) { tabCallback = handler; }
 	void SetString(const char *pString) { return stringLogic.SetString(pString); }
-	const char *GetString() { return stringLogic.GetString(); }
+	MFString GetString() { return stringLogic.GetString(); }
 
 protected:
 	void StringChangeCallback(const char *pString);

@@ -90,6 +90,9 @@ void Game_Update()
 	Screen::UpdateScreen();
 
 	GameData::Get()->Update();
+
+	if(MFInput_WasPressed(Key_F1, IDD_Keyboard))
+		MFString_Dump();
 }
 
 void Game_Draw()

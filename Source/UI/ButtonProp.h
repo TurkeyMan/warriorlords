@@ -19,8 +19,8 @@ public:
 
 	enum TriggerMode
 	{
-		TriggerOnDown,
 		TriggerOnClick,
+		TriggerOnDown,
 
 		MaxMode
 	};
@@ -34,25 +34,40 @@ public:
 	virtual void Update();
 	virtual void Draw(const uiDrawState &state);
 
+	virtual bool HandleInputEvent(InputEvent ev, const InputInfo &info);
+
 protected:
 	static void SetState(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static MFString GetState(uiEntity *pEntity);
 
 	static void SetStyle(uiEntity *pEntity, uiRuntimeArgs *pArguments);
-
-	static void SetImage(uiEntity *pEntity, uiRuntimeArgs *pArguments);
-	static void SetText(uiEntity *pEntity, uiRuntimeArgs *pArguments);
-
 	static void SetHoverMessage(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void SetTriggerMode(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 
+	static void SetImage(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+
+	static void SetText(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+	static void SetFont(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+	static void SetTextHeight(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+	static void SetJustification(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+
+	void UpdateTextSize();
+	void UpdateSize();
+
 	MFMaterial *pImage;
-	const MFString text;
+	MFString text;
 
 	Style style;
 	TriggerMode mode;
 
 	int state;
+
+	int id;
+	int button;
+
+	MFFont *pFont;
+	float textHeight;
+	MFFontJustify justification;
 
 	MFVector imageSize;
 	MFVector textSize;

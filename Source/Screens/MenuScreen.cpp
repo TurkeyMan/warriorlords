@@ -234,7 +234,7 @@ void MenuScreen::Click(int button, int buttonID)
 						break;
 					}
 
-					const char *pGameName = this->pGameName->GetString();
+					const char *pGameName = this->pGameName->GetString().CStr();
 
 					if(pGameName[0] == 0)
 					{

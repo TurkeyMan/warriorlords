@@ -169,6 +169,21 @@ public:
 	typedef MFString (GetPropertyHandler)(uiEntity *pEntity);
 	typedef void (InstantActionHandler)(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 
+protected:
+	struct ActionType
+	{
+		MFString GetName() { return MFString::Static(pName); }
+
+		const char *pName;
+		InstantActionHandler *pSetHandler;
+		GetPropertyHandler *pGetHandler;
+		FactoryType *pEntityType;
+	};
+
+public:
+	typedef MFString (GetPropertyHandler)(uiEntity *pEntity);
+	typedef void (InstantActionHandler)(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+
 	static void RegisterProperty(const char *pPropertyName, GetPropertyHandler *pGetHandler, InstantActionHandler *pSetHandler, FactoryType *pEntityType);
 	static void RegisterInstantAction(const char *pActionName, InstantActionHandler *pActionHandler, FactoryType *pEntityType);
 	static void RegisterDeferredAction(const char *pActionName, Factory_CreateFunc *pCreateFunc, FactoryType *pEntityType);
@@ -204,6 +219,8 @@ public:
 
 	uiRuntimeArgs *ParseArgs(const char *pArgs, uiEntity *pEntity);
 
+	ActionType *FindActionType(const char *pName, uiEntity *pEntity);
+
 protected:
 	// internal structures
 
@@ -225,16 +242,6 @@ protected:
 
 	HashList<uiActionScript> actions;
 	HashList<uiActionMetric> metrics;
-
-	////////////////////////////////////////////////////////////////////////////////////
-	// static stuff
-	struct ActionType
-	{
-		const char *pName;
-		InstantActionHandler *pSetHandler;
-		GetPropertyHandler *pGetHandler;
-		FactoryType *pEntityType;
-	};
 
 	// static members
 	static Factory<uiAction> actionFactory;

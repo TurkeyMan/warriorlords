@@ -17,26 +17,14 @@ OnScreenKeyboard *StringEntryLogic::pOSK = NULL;
 
 StringEntryLogic::StringEntryLogic()
 {
-	pBuffer = NULL;;
-	bufferLen = 0;
-	stringLen = 0;
+	buffer.Reserve(16);
+	maxLen = 0;
+	type = ST_Regular;
 	cursorPos = 0;
 	selectionStart = selectionEnd = 0;
 	holdKey = 0;
 	repeatDelay = 0.f;
 	changeCallback.clear();
-}
-
-StringEntryLogic::StringEntryLogic(int bufferSize, StringType type)
-{
-	stringLen = 0;
-	cursorPos = 0;
-	selectionStart = selectionEnd = 0;
-	holdKey = 0;
-	repeatDelay = 0.f;
-	changeCallback.clear();
-
-	Create(bufferSize, type);
 }
 
 void StringEntryLogic::StringCopyOverlap(char *pDest, const char *pSrc)
@@ -67,29 +55,13 @@ void StringEntryLogic::ClearSelection()
 	int selMin = MFMin(selectionStart, selectionEnd);
 	int selMax = MFMax(selectionStart, selectionEnd);
 
-	StringCopyOverlap(&pBuffer[selMin], &pBuffer[selMax]);
+	buffer.ClearRange(selMin, selMax - selMin);
 
 	cursorPos = selMin;
-	stringLen -= selMax - selMin;
-
 	selectionStart = selectionEnd = cursorPos;
 
 	if(changeCallback)
-		changeCallback(pBuffer);
-}
-
-void StringEntryLogic::Create(int bufferSize, StringType _type)
-{
-	pBuffer = (char*)MFHeap_Alloc(bufferSize);
-	pBuffer[0] = 0;
-	bufferLen = bufferSize;
-	type = _type;
-}
-
-void StringEntryLogic::Destroy()
-{
-	if(pBuffer)
-		MFHeap_Free(pBuffer);
+		changeCallback(buffer.CStr());
 }
 
 void StringEntryLogic::Update()
@@ -119,8 +91,7 @@ void StringEntryLogic::Update()
 			HANDLE hData = GlobalAlloc(GMEM_MOVEABLE, numChars + 1);
 			char *pString = (char*)GlobalLock(hData);
 
-			MFString_CopyN(pString, pBuffer + selMin, numChars);
-			pString[numChars] = 0;
+			MFString_Copy(pString, buffer.SubStr(selMin, numChars).CStr());
 
 			GlobalUnlock(hData);
 
@@ -144,8 +115,7 @@ void StringEntryLogic::Update()
 			HANDLE hData = GlobalAlloc(GMEM_MOVEABLE, numChars + 1);
 			char *pString = (char*)GlobalLock(hData);
 
-			MFString_CopyN(pString, pBuffer + selMin, numChars);
-			pString[numChars] = 0;
+			MFString_Copy(pString, buffer.SubStr(selMin, numChars).CStr());
 
 			GlobalUnlock(hData);
 
@@ -163,26 +133,27 @@ void StringEntryLogic::Update()
 
 		if(opened)
 		{
-			ClearSelection();
+			int selMin = MFMin(selectionStart, selectionEnd);
+			int selMax = MFMax(selectionStart, selectionEnd);
+
+			int numChars = selMax-selMin;
 
 			HANDLE hData = GetClipboardData(CF_TEXT);
-			const char *pString = (const char*)GlobalLock(hData);
+			MFString paste((const char*)GlobalLock(hData), true);
 
-			int pasteLen = MFString_Length(pString);
-			MFString_Copy(pBuffer + cursorPos, MFStr("%s%s", pString, pBuffer + cursorPos));
+			buffer.Replace(selMin, numChars, paste);
 
 			GlobalUnlock(hData);
 
-			cursorPos += pasteLen;
+			cursorPos = selMin + paste.NumBytes();
 			selectionStart = selectionEnd = cursorPos;
-			stringLen += pasteLen;
 
 			GlobalUnlock(hData);
 
 			CloseClipboard();
 
-			if(pasteLen && changeCallback)
-				changeCallback(pBuffer);
+			if((numChars || cursorPos != selMin) && changeCallback)
+				changeCallback(buffer.CStr());
 		}
 	}
 	else
@@ -228,20 +199,17 @@ void StringEntryLogic::Update()
 					{
 						if(keyPressed == Key_Backspace && cursorPos > 0)
 						{
-							StringCopyOverlap(&pBuffer[cursorPos-1], &pBuffer[cursorPos]);
-							--cursorPos;
-							--stringLen;
+							buffer.ClearRange(--cursorPos, 1);
 
 							if(changeCallback)
-								changeCallback(pBuffer);
+								changeCallback(buffer.CStr());
 						}
-						else if(keyPressed == Key_Delete && cursorPos < stringLen)
+						else if(keyPressed == Key_Delete && cursorPos < buffer.NumBytes())
 						{
-							StringCopyOverlap(&pBuffer[cursorPos], &pBuffer[cursorPos+1]);
-							--stringLen;
+							buffer.ClearRange(cursorPos, 1);
 
 							if(changeCallback)
-								changeCallback(pBuffer);
+								changeCallback(buffer.CStr());
 						}
 					}
 					break;
@@ -256,51 +224,51 @@ void StringEntryLogic::Update()
 					{
 						if(keyPressed == Key_Left)
 						{
-							while(cursorPos && MFIsWhite(pBuffer[cursorPos-1]))
+							while(cursorPos && MFIsWhite(buffer[cursorPos-1]))
 								--cursorPos;
-							if(MFIsAlphaNumeric(pBuffer[cursorPos-1]))
+							if(MFIsAlphaNumeric(buffer[cursorPos-1]))
 							{
-								while(cursorPos && MFIsAlphaNumeric(pBuffer[cursorPos-1]))
+								while(cursorPos && MFIsAlphaNumeric(buffer[cursorPos-1]))
 									--cursorPos;
 							}
 							else if(cursorPos)
 							{
 								--cursorPos;
-								while(cursorPos && pBuffer[cursorPos-1] == pBuffer[cursorPos])
+								while(cursorPos && buffer[cursorPos-1] == buffer[cursorPos])
 									--cursorPos;
 							}
 						}
 						else if(keyPressed == Key_Right)
 						{
-							while(cursorPos < stringLen && MFIsWhite(pBuffer[cursorPos]))
+							while(cursorPos < buffer.NumBytes() && MFIsWhite(buffer[cursorPos]))
 								++cursorPos;
-							if(MFIsAlphaNumeric(pBuffer[cursorPos]))
+							if(MFIsAlphaNumeric(buffer[cursorPos]))
 							{
-								while(cursorPos < stringLen && MFIsAlphaNumeric(pBuffer[cursorPos]))
+								while(cursorPos < buffer.NumBytes() && MFIsAlphaNumeric(buffer[cursorPos]))
 									++cursorPos;
 							}
-							else if(cursorPos < stringLen)
+							else if(cursorPos < buffer.NumBytes())
 							{
 								++cursorPos;
-								while(cursorPos < stringLen && pBuffer[cursorPos] == pBuffer[cursorPos-1])
+								while(cursorPos < buffer.NumBytes() && buffer[cursorPos] == buffer[cursorPos-1])
 									++cursorPos;
 							}
 						}
 						else if(keyPressed == Key_Home)
 							cursorPos = 0;
 						else if(keyPressed == Key_End)
-							cursorPos = stringLen;
+							cursorPos = buffer.NumBytes();
 					}
 					else
 					{
 						if(keyPressed == Key_Left)
 							cursorPos = (!shift && selectionStart != selectionEnd ? MFMin(selectionStart, selectionEnd) : MFMax(cursorPos-1, 0));
 						else if(keyPressed == Key_Right)
-							cursorPos = (!shift && selectionStart != selectionEnd ? MFMax(selectionStart, selectionEnd) : MFMin(cursorPos+1, stringLen));
+							cursorPos = (!shift && selectionStart != selectionEnd ? MFMax(selectionStart, selectionEnd) : MFMin(cursorPos+1, buffer.NumBytes()));
 						else if(keyPressed == Key_Home)
 							cursorPos = 0;	// TODO: if multiline, go to start of line..
 						else if(keyPressed == Key_End)
-							cursorPos = stringLen;	// TODO: if multiline, go to end of line...
+							cursorPos = buffer.NumBytes();	// TODO: if multiline, go to end of line...
 					}
 
 					if(shift)
@@ -316,20 +284,36 @@ void StringEntryLogic::Update()
 					bool caps = MFInput_GetKeyboardStatusState(KSS_CapsLock);
 					int ascii = MFInput_KeyToAscii(keyPressed, shift, caps);
 
-					if(ascii && stringLen < bufferLen-1)
+					if(ascii && (!maxLen || buffer.NumBytes() < maxLen-1))
 					{
-						// if selection range, delete selection
-						ClearSelection();
+						// check character exclusions
+						if(ascii == '\n' && type != ST_MultiLine)
+							break;
+						if(type == ST_Numeric && !MFIsNumeric(ascii))
+							break;
+						if(include)
+						{
+							if(include.FindChar(ascii) < 0)
+								break;
+						}
+						if(exclude)
+						{
+							if(exclude.FindChar(ascii) >= 0)
+								break;
+						}
 
-						StringCopyOverlap(&pBuffer[cursorPos+1], &pBuffer[cursorPos]);
-						pBuffer[cursorPos] = ascii;
-						++cursorPos;
-						++stringLen;
+						int selMin = MFMin(selectionStart, selectionEnd);
+						int selMax = MFMax(selectionStart, selectionEnd);
+						int selRange = selMax - selMin;
+
+						const char insert[2] = { ascii, 0 };
+						buffer.Replace(selMin, selRange, MFString::Static(insert));
+						cursorPos = selMin + 1;
 
 						selectionStart = selectionEnd = cursorPos;
 
 						if(changeCallback)
-							changeCallback(pBuffer);
+							changeCallback(buffer.CStr());
 					}
 					break;
 				}
@@ -340,16 +324,14 @@ void StringEntryLogic::Update()
 
 void StringEntryLogic::SetString(const char *pString)
 {
-	int len = MFString_Length(pString);
-	if(len < bufferLen-1)
-	{
-		if(!MFString_Compare(pBuffer, pString))
-			return;
+	if(buffer == pString)
+		return;
 
-		MFString_Copy(pBuffer, pString);
-		selectionStart = selectionEnd = cursorPos = stringLen = len;
+	buffer = pString;
+	buffer.Truncate(maxLen);
 
-		if(changeCallback)
-			changeCallback(pBuffer);
-	}
+	selectionStart = selectionEnd = cursorPos = buffer.NumBytes();
+
+	if(changeCallback)
+		changeCallback(buffer.CStr());
 }

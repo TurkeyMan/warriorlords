@@ -154,8 +154,19 @@ uiRuntimeArgs *uiRuntimeArgs::GetArray(int index)
 void uiRuntimeArgs::Set(int index, Argument *pArg)
 {
 	pArgs[index].type = pArg->type;
-	pArgs[index].iValue = pArg->iValue;
-	pArgs[index].string = pArg->string;
+
+	if(pArg->type == AT_Array)
+	{
+		int numItems = pArg->pArray->GetNumArgs();
+		pArgs[index].pArray = uiRuntimeArgs::Allocate(numItems);
+		for(int a=0; a<numItems; ++a)
+			pArgs[index].pArray->Set(a, pArg->pArray->Get(a));
+	}
+	else
+	{
+		pArgs[index].iValue = pArg->iValue;
+		pArgs[index].string = pArg->string;
+	}
 }
 
 void uiRuntimeArgs::SetValue(int index, MFString str, bool bString)
@@ -343,7 +354,7 @@ bool uiActionManager::RunAction(uiExecuteContext *pContext, const char *pAction,
 		return true;
 	}
 
-	ActionType *pType = actionRegistry.Find(pAction);
+	ActionType *pType = FindActionType(pAction, pActionEntity);
 	if(!pType)
 		return true;
 
@@ -387,7 +398,7 @@ bool uiActionManager::RunAction(uiExecuteContext *pContext, const char *pAction,
 
 MFString uiActionManager::GetEntityProperty(uiEntity *pEntity, const char *pProperty)
 {
-	ActionType *pType = actionRegistry.Find(pProperty);
+	ActionType *pType = FindActionType(pProperty, pEntity);
 	if(pType && pType->pGetHandler)
 		return pType->pGetHandler(pEntity);
 	return (const char *)NULL;
@@ -395,7 +406,7 @@ MFString uiActionManager::GetEntityProperty(uiEntity *pEntity, const char *pProp
 
 void uiActionManager::SetEntityProperty(uiEntity *pEntity, const char *pProperty, const char *pArgs)
 {
-	ActionType *pType = actionRegistry.Find(pProperty);
+	ActionType *pType = FindActionType(pProperty, pEntity);
 	if(pType && pType->pSetHandler)
 	{
 		uiRuntimeArgs *pRuntimeArgs = ParseArgs(pArgs, pEntity);
@@ -448,9 +459,35 @@ uiRuntimeArgs *uiActionManager::ParseArgs(const char *pArgs, uiEntity *pEntity)
 	return pRuntimeArgs;
 }
 
+uiActionManager::ActionType *uiActionManager::FindActionType(const char *pName, uiEntity *pEntity)
+{
+	FactoryType *pType = pEntity ? pEntity->GetType() : NULL;
+
+	ActionType *pActionType = actionRegistry.Find(pName);
+	if(!pActionType)
+		return NULL;
+
+	do
+	{
+		ActionType *pT = pActionType;
+		do
+		{
+			if(pT->pEntityType == pType)
+				return pT;
+		}
+		while(pT = actionRegistry.NextMatch(pT));
+
+		if(pType)
+			pType = pType->pParent;
+	}
+	while(pType);
+
+	return NULL;
+}
+
 void uiActionManager::SetEntityProperty(uiEntity *pEntity, const char *pProperty, uiRuntimeArgs *pArguments)
 {
-	ActionType *pType = actionRegistry.Find(pProperty);
+	ActionType *pType = FindActionType(pProperty, pEntity);
 	if(pType && pType->pSetHandler)
 		pType->pSetHandler(pEntity, pArguments);
 }
@@ -974,7 +1011,7 @@ uiRuntimeArgs *uiActionManager::ResolveArguments(uiExecuteContext *pContext, uiA
 			MFDebug_Assert(numTokens > 1, "Missing: Operand");
 
 			uiRuntimeArgs *pOperand = CalculateProducts(pContext, ++pT, --numTokens, containerSize, index);
-			bool bConcatinate = bIsString || !pOperand->IsNumeric();
+			bIsString = bIsString || !pOperand->IsNumeric();
 
 			uiRuntimeArgs *pArray0 = pValue->GetArray(0);
 			if(pArray0)
@@ -984,14 +1021,14 @@ uiRuntimeArgs *uiActionManager::ResolveArguments(uiExecuteContext *pContext, uiA
 				MFDebug_Assert(pArray1 && pArray1->GetNumArgs() == numArgs, "Operand has different number of dimensions.");
 
 				for(int a=0; a<numArgs; ++a)
-					pArray0->SetValue(a, DoSum(pArray0->GetString(a), pArray1->GetString(a), bAdd, bConcatinate), false);
+					pArray0->SetValue(a, DoSum(pArray0->GetString(a), pArray1->GetString(a), bAdd, bIsString), bIsString);
 				pOperand->Release();
 			}
 			else
 			{
 				MFDebug_Assert(!pOperand->GetArray(0), "Operand has different number of dimensions.");
 
-				pValue->SetValue(0, DoSum(pValue->GetString(0), pOperand->GetString(0), bAdd, bConcatinate), false);
+				pValue->SetValue(0, DoSum(pValue->GetString(0), pOperand->GetString(0), bAdd, bIsString), bIsString);
 				pOperand->Release();
 			}
 		}

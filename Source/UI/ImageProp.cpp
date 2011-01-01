@@ -13,9 +13,6 @@ void uiImageProp::RegisterEntity()
 
 	uiActionManager::RegisterProperty("image", NULL, SetImage, pType);
 	uiActionManager::RegisterProperty("orientation", NULL, SetOrientation, pType);
-
-	uiActionManager::RegisterInstantAction("setimage", SetImage, pType);
-	uiActionManager::RegisterInstantAction("setorientation", SetImage, pType);
 }
 
 uiImageProp::uiImageProp()
@@ -29,8 +26,6 @@ uiImageProp::uiImageProp()
 
 uiImageProp::~uiImageProp()
 {
-	if(pImage)
-		MFMaterial_Destroy(pImage);
 }
 
 void uiImageProp::Update()

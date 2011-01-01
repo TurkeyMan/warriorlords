@@ -8,8 +8,6 @@ void uiModelProp::RegisterEntity()
 	FactoryType *pType = uiEntityManager::RegisterEntityType("Model", Create, "Entity");
 
 	uiActionManager::RegisterProperty("model", NULL, SetModel, pType);
-
-	uiActionManager::RegisterInstantAction("setmodel", SetModel, pType);
 }
 
 uiModelProp::uiModelProp()

@@ -29,24 +29,26 @@ public:
 	};
 
 	StringEntryLogic();
-	StringEntryLogic(int bufferSize, StringType type);
-	~StringEntryLogic() { Destroy(); }
-
-	void Create(int bufferSize, StringType type);
-	void Destroy();
+	~StringEntryLogic() { }
 
 	void Update();
 	void Draw() {}
 
-	const char *GetString() { return pBuffer; }
+	MFString GetString() { return buffer; }
 	void SetString(const char *pString);
 
-	int StringLength() { return stringLen; }
+	void SetMaxLength(int maxLength) { maxLen = maxLength; }
+	void SetType(StringType type) { this->type = type; }
+
+	int StringLength() { return buffer.NumBytes(); }
 
 	void SetChangeCallback(StringChangeCallback callback) { changeCallback = callback; }
 
 	int GetCursorPos() { return cursorPos; }
 	void GetSelection(int *pSelStart, int *pSelEnd) { if(pSelStart) *pSelStart = selectionStart; if(pSelEnd) *pSelEnd = selectionEnd; }
+
+	void SetAcceptableCharacters(const char *pCharList) { include = pCharList; }
+	void SetExcludedCharacters(const char *pCharList) { exclude = pCharList; }
 
 	static void SetRepeatParams(float repeatDelay, float repeatRate) { gRepeatDelay = repeatDelay; gRepeatRate = repeatRate; }
 	static void RegisterOnScreenKeyboard(OnScreenKeyboard *pOnScreenKeyboard) { pOSK = pOnScreenKeyboard; }
@@ -55,9 +57,11 @@ private:
 	void StringCopyOverlap(char *pDest, const char *pSrc);
 	void ClearSelection();
 
-	char *pBuffer;
-	int bufferLen;
-	int stringLen;
+	MFString buffer;
+	MFString include;
+	MFString exclude;
+
+	int maxLen;
 	int cursorPos;
 	int selectionStart, selectionEnd;
 	int holdKey;

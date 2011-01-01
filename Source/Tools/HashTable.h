@@ -160,6 +160,31 @@ public:
 		return NULL;
 	}
 
+	T* NextMatch(T *pItem) const
+	{
+		if(!pItem)
+			return NULL;
+
+		uint32 hash = pItem->GetName().GetHash() % tableSize;
+		HashItem *pTemp = ppItems[hash];
+
+		while(pTemp && pTemp->pItem != pItem)
+			pTemp = pTemp->pNext;
+
+		if(pTemp)
+		{
+			pTemp = pTemp->pNext;
+			while(pTemp)
+			{
+				if(pTemp->pItem->GetName() == pItem->GetName())
+					return pTemp->pItem;
+				pTemp = pTemp->pNext;
+			}
+		}
+
+		return NULL;
+	}
+
 protected:
 	MFObjectPool itemPool;
 	HashItem **ppItems;

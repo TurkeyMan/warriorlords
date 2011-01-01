@@ -26,12 +26,10 @@ protected:
 
 	void UpdateSize();
 
-	MFFont *pFont;
 	MFString text;
+	MFFont *pFont;
 	float textHeight;
 	MFFontJustify justification;
-
-	static const char *gJustifyStrings[MFFontJustify_Max];
 };
 
 #endif

@@ -183,7 +183,7 @@ void LoginScreen::Click(int button, int buttonID)
 			// try and login...
 			Session *pSession = new Session();
 			pSession->SetLoginDelegate(MakeDelegate(this, &LoginScreen::OnLogin));
-			pSession->Login(pUsername->GetString(), pPassword->GetString());
+			pSession->Login(pUsername->GetString().CStr(), pPassword->GetString().CStr());
 			Session::SetCurrent(pSession);
 			break;
 		}
@@ -216,9 +216,9 @@ void LoginScreen::Click(int button, int buttonID)
 
 		case 3:
 		{
-			const char *pUsername = this->pUsername->GetString();
-			const char *pPassword = this->pPassword->GetString();
-			const char *pEmail = this->pEmail->GetString();
+			const char *pUsername = this->pUsername->GetString().CStr();
+			const char *pPassword = this->pPassword->GetString().CStr();
+			const char *pEmail = this->pEmail->GetString().CStr();
 
 			// create the account
 			WLServ_CreateAccount(createRequest, pUsername, pPassword, pEmail);
@@ -284,7 +284,7 @@ void LoginScreen::CreateComplete(HTTPRequest::Status status)
 	// try and login...
 	Session *pSession = new Session();
 	pSession->SetLoginDelegate(MakeDelegate(this, &LoginScreen::OnLogin));
-	pSession->Login(pUsername->GetString(), pPassword->GetString());
+	pSession->Login(pUsername->GetString().CStr(), pPassword->GetString().CStr());
 	Session::SetCurrent(pSession);
 }
 

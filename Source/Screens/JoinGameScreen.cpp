@@ -127,7 +127,7 @@ void JoinGameScreen::Click(int button, int buttonID)
 	{
 		case 0:
 		{
-			WLServ_GetGameByName(find, pGame->GetString());
+			WLServ_GetGameByName(find, pGame->GetString().CStr());
 			break;
 		}
 

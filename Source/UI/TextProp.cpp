@@ -3,7 +3,7 @@
 #include "Action.h"
 #include "../Tools/ResourceCache.h"
 
-const char *uiTextProp::gJustifyStrings[MFFontJustify_Max] =
+const char *gJustifyStrings[MFFontJustify_Max] =
 {
 	"topleft",
 	"topcenter",
@@ -27,11 +27,6 @@ void uiTextProp::RegisterEntity()
 	uiActionManager::RegisterProperty("text", NULL, SetText, pType);
 	uiActionManager::RegisterProperty("textheight", NULL, SetTextHeight, pType);
 	uiActionManager::RegisterProperty("justification", NULL, SetJustification, pType);
-
-	uiActionManager::RegisterInstantAction("setfont", SetFont, pType);
-	uiActionManager::RegisterInstantAction("settext", SetText, pType);
-	uiActionManager::RegisterInstantAction("settextheight", SetTextHeight, pType);
-	uiActionManager::RegisterInstantAction("setjustification", SetJustification, pType);
 }
 
 uiTextProp::uiTextProp()

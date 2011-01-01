@@ -10,8 +10,9 @@
 static float gBlinkTime = 0.4f;
 
 StringBox::StringBox(MFRect &rect, StringEntryLogic::StringType type)
-: InputReceiver(rect), stringLogic(256, type)
+: InputReceiver(rect)
 {
+	stringLogic.SetType(type);
 	stringLogic.SetChangeCallback(MakeDelegate(this, &StringBox::StringChangeCallback));
 
 	pFont = NULL;
@@ -88,7 +89,7 @@ void StringBox::Update()
 				Enable(false);
 
 				if(tabCallback)
-					tabCallback(stringLogic.GetString());
+					tabCallback(stringLogic.GetString().CStr());
 			}
 		}
 		else
@@ -105,7 +106,7 @@ void StringBox::Draw()
 	if(!bVisible)
 		return;
 
-	const char *pString = stringLogic.GetString();
+	const char *pString = stringLogic.GetString().CStr();
 	float height = MFFont_GetFontHeight(pFont);
 	int cursorPos = stringLogic.GetCursorPos();
 	int selectionStart, selectionEnd;
@@ -163,5 +164,5 @@ void StringBox::StringChangeCallback(const char *pString)
 	gBlinkTime = 0.4f;
 
 	if(changeCallback)
-		changeCallback(stringLogic.GetString());
+		changeCallback(stringLogic.GetString().CStr());
 }

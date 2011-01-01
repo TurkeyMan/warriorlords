@@ -7,6 +7,7 @@
 #include "ModelProp.h"
 #include "TextProp.h"
 #include "LayoutProp.h"
+#include "ButtonProp.h"
 
 #include "MFSystem.h"
 
@@ -55,14 +56,6 @@ void uiEntity::RegisterEntity()
 	uiActionManager::RegisterProperty("enabled", GetEnabled, SetEnable, pType);
 	uiActionManager::RegisterProperty("visible", GetVisible, SetVisible, pType);
 	uiActionManager::RegisterProperty("anchor", NULL, SetAnchor, pType);
-
-	uiActionManager::RegisterInstantAction("setposition", SetPos, pType);
-	uiActionManager::RegisterInstantAction("setsize", SetSize, pType);
-	uiActionManager::RegisterInstantAction("setrotation", SetRot, pType);
-	uiActionManager::RegisterInstantAction("setscale", SetScale, pType);
-	uiActionManager::RegisterInstantAction("setcolour", SetColour, pType);
-	uiActionManager::RegisterInstantAction("enable", SetEnable, pType);
-	uiActionManager::RegisterInstantAction("show", SetVisible, pType);
 
 	uiActionManager::RegisterDeferredAction("move", uiAction_Move::Create, pType);
 	uiActionManager::RegisterDeferredAction("fade", uiAction_Fade::Create, pType);
@@ -295,8 +288,6 @@ uiEntity *uiEntity::FindChild(const char *pName) const
 
 bool uiEntity::SignalEvent(const char *pEvent, const char *pParams)
 {
-//	MFDebug_Assert(false, "parse params!");
-
 	bool bFound = false;
 	for(int a=0; a<events.size(); ++a)
 	{
@@ -350,6 +341,7 @@ void uiEntityManager::InitManager()
 	uiImageProp::RegisterEntity();
 	uiModelProp::RegisterEntity();
 	uiTextProp::RegisterEntity();
+	uiButtonProp::RegisterEntity();
 }
 
 void uiEntityManager::DeinitManager()
