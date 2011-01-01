@@ -328,7 +328,8 @@ void StringEntryLogic::SetString(const char *pString)
 		return;
 
 	buffer = pString;
-	buffer.Truncate(maxLen);
+	if(maxLen)
+		buffer.Truncate(maxLen);
 
 	selectionStart = selectionEnd = cursorPos = buffer.NumBytes();
 
