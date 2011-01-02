@@ -22,6 +22,7 @@ public:
 	virtual void Draw(const uiDrawState &state);
 
 	virtual bool HandleInputEvent(InputEvent ev, const InputInfo &info);
+	virtual bool ChangeFocus(bool bGainFocus);
 
 	void SetChangeCallback(ChangeCallback handler) { changeCallback = handler; }
 	void SetTabCallback(ChangeCallback handler) { tabCallback = handler; }

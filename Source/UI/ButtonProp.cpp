@@ -71,25 +71,15 @@ bool uiButtonProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 	if(!bEnabled)
 		return false;
 
-	if(info.device == IDD_Mouse && info.deviceID != 0)
-		return false;
-
 	if(info.buttonID != 0)
 		return false;
 
 	switch(ev)
 	{
-		case IE_Hover:
-		{
-			MFRect client = { 0, 0, size.x, size.y };
-			bMouseOver = MFTypes_PointInRect(info.hover.x, info.hover.y, &client);
-			break;
-		}
-
 		case IE_Down:
 			if(button == -1 || info.buttonID == button)
 			{
-				MFRect client = { 0, 0, size.x, size.y };
+				MFRect client = { 0, 0, size.x - 1, size.y - 1 };
 				bMouseOver = MFTypes_PointInRect(info.hover.x, info.hover.y, &client);
 
 				if(mode == TriggerOnDown)
@@ -108,7 +98,7 @@ bool uiButtonProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 			{
 				state = -1;
 
-				MFRect client = { 0, 0, size.x, size.y };
+				MFRect client = { 0, 0, size.x - 1, size.y - 1 };
 				if(MFTypes_PointInRect(info.up.x, info.up.y, &client))
 				{
 					SignalEvent("onclick", MFString::Format("%d, %d", info.buttonID, id).CStr());
@@ -118,9 +108,15 @@ bool uiButtonProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 		case IE_Tap:
 		case IE_Drag:
 			return true;
+		case IE_Hover:
+		{
+			MFRect client = { 0, 0, size.x - 1, size.y - 1 };
+			bMouseOver = MFTypes_PointInRect(info.hover.x, info.hover.y, &client);
+			break;
+		}
 	}
 
-	return false;
+	return uiEntity::HandleInputEvent(ev, info);
 }
 
 void uiButtonProp::Draw(const uiDrawState &state)

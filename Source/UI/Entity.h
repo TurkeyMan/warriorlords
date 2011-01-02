@@ -100,6 +100,7 @@ public:
 	virtual void Draw(const uiDrawState &state);
 
 	virtual bool HandleInputEvent(InputEvent ev, const InputInfo &info);
+	virtual bool ChangeFocus(bool bGainFocus) { return true; }
 
 	void UpdateEntity();
 	void DrawEntity(const uiDrawState &state = identity);
@@ -219,6 +220,8 @@ public:
 	uiEntity *SetExclusiveReceiver(uiEntity *pReceiver);
 	uiEntity *SetExclusiveContactReceiver(int contact, uiEntity *pReceiver);
 
+	void SetHover(uiEntity *pEntity, const MFVector &pos);
+
 private:
 	void ClearContactCallback(int contact);
 
@@ -227,6 +230,9 @@ private:
 
 	uiEntity *pExclusiveReceiver;
 	uiEntity *pContactReceivers[InputManager::MAX_CONTACTS];
+
+	uiEntity *pHover;
+	MFVector hoverPos;
 
 	HashList<uiEntity> entityPool;
 

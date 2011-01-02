@@ -75,6 +75,7 @@ uiEntity::uiEntity()
 	colour = MFVector::one;
 	anchor = TopLeft;
 	bEnabled = bVisible = true;
+	bHasFocus = false;
 }
 
 uiEntity::~uiEntity()
@@ -155,11 +156,17 @@ bool uiEntity::HandleInputEvent(InputEvent ev, const InputInfo &info)
 	switch(ev)
 	{
 		case IE_Down:
-			return SignalEvent("ondown", MFString::Format("%d, {%g, %g}", info.buttonID, info.down.x, info.down.y).CStr());
+			GetEntityManager()->SetFocus(this);
+			SignalEvent("ondown", MFString::Format("%d, {%g, %g}", info.buttonID, info.down.x, info.down.y).CStr());
+			return true;
 		case IE_Up:
-			return SignalEvent("onup", MFString::Format("%d, {%g, %g}", info.buttonID, info.up.x, info.up.y).CStr());
+			SignalEvent("onup", MFString::Format("%d, {%g, %g}", info.buttonID, info.up.x, info.up.y).CStr());
+			return true;
 		case IE_Tap:
-			return SignalEvent("ontap", MFString::Format("%d, {%g, %g}", info.buttonID, info.tap.x, info.tap.y).CStr());
+			SignalEvent("ontap", MFString::Format("%d, {%g, %g}", info.buttonID, info.tap.x, info.tap.y).CStr());
+			return true;
+		case IE_Hover:
+			return true;
 	}
 	return false;
 }
@@ -195,7 +202,7 @@ bool uiEntity::TransformInputInfo(InputInfo &info, bool bCalculateOutside)
 		MFRect rect =
 		{
 			0, 0,
-			size.x, size.y
+			size.x - 1, size.y - 1
 		};
 
 		MFMatrix local;
@@ -241,6 +248,9 @@ bool uiEntity::HandleInput(InputEvent ev, const InputInfo &info)
 	InputInfo localInfo = info;
 	if(!TransformInputInfo(localInfo))
 		return false;
+
+	if(ev == IE_Hover)
+		GetEntityManager()->SetHover(this, MakeVector(localInfo.hover.x, localInfo.hover.y));
 
 	int numChildren = children.size();
 	for(int a=numChildren-1; a>=0; --a)
@@ -382,18 +392,23 @@ FactoryType *uiEntityManager::RegisterEntityType(const char *pEntityTypeName, Fa
 
 uiEntity *uiEntityManager::SetFocus(uiEntity *pNewFocus)
 {
+	if(pFocus == pNewFocus)
+		return pFocus;
+
 	uiEntity *pOld = pFocus;
 	pFocus = pNewFocus;
 
 	if(pOld)
 	{
 		pOld->bHasFocus = false;
+		pOld->ChangeFocus(false);
 		pOld->SignalEvent("onfocuslost", NULL);
 	}
 
 	if(pFocus)
 	{
 		pFocus->bHasFocus = true;
+		pFocus->ChangeFocus(true);
 		pFocus->SignalEvent("onfocus", NULL);
 	}
 
@@ -418,6 +433,12 @@ uiEntity *uiEntityManager::SetExclusiveContactReceiver(int contact, uiEntity *pR
 	return pOld;
 }
 
+void uiEntityManager::SetHover(uiEntity *pEntity, const MFVector &pos)
+{
+	pHover = pEntity;
+	hoverPos = pos;
+}
+
 void uiEntityManager::ClearContactCallback(int contact)
 {
 	pContactReceivers[contact] = NULL;
@@ -425,6 +446,9 @@ void uiEntityManager::ClearContactCallback(int contact)
 
 bool uiEntityManager::HandleInputEvent(InputEvent ev, InputInfo &info)
 {
+	if(info.device == IDD_Mouse && info.deviceID != 0)
+		return false;
+
 	if(pContactReceivers[info.contact])
 	{
 		// transform coordinates into entity space...
@@ -455,6 +479,7 @@ void uiEntityManager::Init()
 	pRoot = NULL;
 	pFocus = NULL;
 	pExclusiveReceiver = NULL;
+	pHover = NULL;
 	MFZeroMemory(pContactReceivers, sizeof(pContactReceivers));
 
 	MFMatrix screenMat;
@@ -489,6 +514,13 @@ void uiEntityManager::Draw()
 	state.colour = MFVector::white;
 
 	pRoot->DrawEntity(state);
+
+#if defined(_DEBUG)
+	if(pHover)
+		MFFont_BlitText(MFFont_GetDebugFont(), 10, 10, MFVector::white, MFStr("%s: %.2f %.2f", pHover->name.CStr(), hoverPos.x, hoverPos.y));
+	if(pFocus)
+		MFFont_BlitText(MFFont_GetDebugFont(), 10, 35, MFVector::white, pFocus->GetName().CStr());
+#endif
 }
 
 uiEntity *uiEntityManager::Create(const char *pTypeName, const char *pName, uiEntity *pParent)

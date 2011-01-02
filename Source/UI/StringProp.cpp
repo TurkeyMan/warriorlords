@@ -43,8 +43,6 @@ uiStringProp::uiStringProp()
 	tabCallback.clear();
 
 	bHandleTab = true;
-
-	bEnabled = false;	// *** use bFocus instead??
 	bFirstFrame = true;
 }
 
@@ -54,52 +52,37 @@ uiStringProp::~uiStringProp()
 
 bool uiStringProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 {
-	if(info.device == IDD_Mouse && info.deviceID != 0)
-		return false;
-
 	switch(ev)
 	{
 		case IE_Down:
 		{
-			MFRect client = { 0, 0, size.x, size.y };
-			if(MFTypes_PointInRect(info.down.x, info.down.y, &client))
-			{
-				if(!bEnabled)
-				{
-					SetEnable(true);
-					GetEntityManager()->SetExclusiveReceiver(this);
-				}
+			// set the cursor pos
+			bool bUpdateSelection = MFInput_Read(Key_LShift, IDD_Keyboard) || MFInput_Read(Key_RShift, IDD_Keyboard);
+			UpdateCursorPos(info.down.x, bUpdateSelection);
 
-				// set the cursor pos
-				bool bUpdateSelection = MFInput_Read(Key_LShift, IDD_Keyboard) || MFInput_Read(Key_RShift, IDD_Keyboard);
-				UpdateCursorPos(info.down.x, bUpdateSelection);
+			// allow proper dragging
+			GetEntityManager()->SetExclusiveContactReceiver(info.contact, this);
 
-				// allow proper dragging
-				GetEntityManager()->SetExclusiveContactReceiver(info.contact, this);
-
-				blinkTime = 0.4f;
-				bFirstFrame = true;
-				return true;
-			}
-			else
-			{
-				SetEnable(false);
-				GetEntityManager()->SetExclusiveReceiver(false);
-				return false;
-			}
+			blinkTime = 0.4f;
+			break;
 		}
 
 		case IE_Drag:
-			if(bEnabled)
-			{
-				// drag text selection
-				UpdateCursorPos(info.drag.x, true);
-				blinkTime = 0.4f;
-				return true;
-			}
+			// drag text selection
+			UpdateCursorPos(info.drag.x, true);
+			blinkTime = 0.4f;
+			return true;
 	}
 
-	return false;
+	return uiEntity::HandleInputEvent(ev, info);
+}
+
+bool uiStringProp::ChangeFocus(bool bGainFocus)
+{
+	if(bGainFocus)
+		bFirstFrame = true;
+
+	return true;
 }
 
 void uiStringProp::UpdateCursorPos(float x, bool bUpdateSelection)
@@ -129,14 +112,12 @@ void uiStringProp::Update()
 {
 	uiEntity::Update();
 
-	if(bEnabled)
+	if(bHasFocus)
 	{
 		if(MFInput_WasPressed(Key_Tab, IDD_Keyboard) && bHandleTab)
 		{
 			if(!bFirstFrame)
 			{
-				SetEnable(false);
-
 				if(tabCallback)
 					tabCallback(stringLogic.GetString().CStr());
 
@@ -164,7 +145,7 @@ void uiStringProp::Draw(const uiDrawState &state)
 	int selectionStart, selectionEnd;
 	stringLogic.GetSelection(&selectionStart, &selectionEnd);
 
-	bool bDrawSelection = bEnabled && selectionStart != selectionEnd;
+	bool bDrawSelection = bHasFocus && selectionStart != selectionEnd;
 
 	// draw the frame and selection
 	MFPrimitive(PT_TriStrip | PT_Prelit | PT_Untextured);
@@ -213,7 +194,7 @@ void uiStringProp::Draw(const uiDrawState &state)
 	// draw text
 	MFFont_DrawText(pFont, 2.f, 2.f, textHeight, state.colour, pString, -1, state.mat);
 
-	if(bEnabled)
+	if(bHasFocus)
 	{
 		// blink cursor
 		blinkTime -= MFSystem_TimeDelta();
