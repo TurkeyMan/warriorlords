@@ -58,6 +58,8 @@ void uiEntity::RegisterEntity()
 	uiActionManager::RegisterProperty("visible", GetVisible, SetVisible, pType);
 	uiActionManager::RegisterProperty("anchor", NULL, SetAnchor, pType);
 
+	uiActionManager::RegisterInstantAction("focus", SetFocus, pType);
+
 	uiActionManager::RegisterDeferredAction("move", uiAction_Move::Create, pType);
 	uiActionManager::RegisterDeferredAction("fade", uiAction_Fade::Create, pType);
 	uiActionManager::RegisterDeferredAction("spin", uiAction_Rotate::Create, pType);
@@ -301,6 +303,15 @@ uiEntity *uiEntity::FindChild(const char *pName) const
 	return NULL;
 }
 
+void uiEntity::SetEnable(bool _bEnabled)
+{
+	if(bEnabled == _bEnabled)
+		return;
+
+	bEnabled = _bEnabled;
+	SignalEvent(_bEnabled ? "onenable" : "ondisable", NULL);
+}
+
 bool uiEntity::SignalEvent(const char *pEvent, const char *pParams)
 {
 	bool bFound = false;
@@ -367,6 +378,26 @@ void uiEntityManager::DeinitManager()
 FactoryType *uiEntityManager::RegisterEntityType(const char *pEntityTypeName, Factory_CreateFunc *pCreateFunc, const char *pParentType)
 {
 	return entityFactory.RegisterType(pEntityTypeName, pCreateFunc, entityFactory.FindType(pParentType));
+}
+
+uiEntity *uiEntityManager::SetFocus(uiEntity *pNewFocus)
+{
+	uiEntity *pOld = pFocus;
+	pFocus = pNewFocus;
+
+	if(pOld)
+	{
+		pOld->bHasFocus = false;
+		pOld->SignalEvent("onfocuslost", NULL);
+	}
+
+	if(pFocus)
+	{
+		pFocus->bHasFocus = true;
+		pFocus->SignalEvent("onfocus", NULL);
+	}
+
+	return pOld;
 }
 
 uiEntity *uiEntityManager::SetExclusiveReceiver(uiEntity *pReceiver)
@@ -506,7 +537,7 @@ void uiEntityManager::Destroy(uiEntity *pEntity)
 
 void uiEntityManager::LoadRootNode(const char *pRootLayout)
 {
-	pRoot = uiLayoutProp::CreateLayout("Root", pRootLayout, NULL);
+	pRoot = uiLayoutProp::CreateLayout("root", pRootLayout, NULL);
 }
 
 MFString uiEntity::GetPos(uiEntity *pEntity)
@@ -521,7 +552,10 @@ MFString uiEntity::GetSize(uiEntity *pEntity)
 
 MFString uiEntity::GetRot(uiEntity *pEntity)
 {
-	return MFString::Format("{%s}", pEntity->rot.ToString3());
+	MFVector t = pEntity->rot;
+	t *= 57.295779513082320876798154814105f; // convert to degrees
+
+	return MFString::Format("{%s}", t.ToString3());
 }
 
 MFString uiEntity::GetScale(uiEntity *pEntity)
@@ -564,6 +598,7 @@ void uiEntity::SetSize(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 void uiEntity::SetRot(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	pEntity->rot = pArguments->GetVector(0);
+	pEntity->rot *= 0.01745329251994329576923690768489f; // convert to radians
 }
 
 void uiEntity::SetScale(uiEntity *pEntity, uiRuntimeArgs *pArguments)
@@ -578,7 +613,7 @@ void uiEntity::SetColour(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 
 void uiEntity::SetEnable(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
-	pEntity->bEnabled = pArguments->GetBool(0);
+	pEntity->SetEnable(pArguments->GetBool(0));
 }
 
 void uiEntity::SetVisible(uiEntity *pEntity, uiRuntimeArgs *pArguments)
@@ -589,6 +624,11 @@ void uiEntity::SetVisible(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 void uiEntity::SetAnchor(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	pEntity->anchor = (Anchor)LookupString(pArguments->GetString(0).CStr(), pAnchorNames);
+}
+
+void uiEntity::SetFocus(uiEntity *pEntity, uiRuntimeArgs *pArguments)
+{
+	pEntity->GetEntityManager()->SetFocus(pEntity);
 }
 
 void uiAction_Move::Init(uiRuntimeArgs *pParameters)
@@ -676,6 +716,8 @@ void uiAction_Rotate::Init(uiRuntimeArgs *pParameters)
 {
 	start = pEntity->rot;
 	target = pParameters->GetVector(0);
+	target *= 0.01745329251994329576923690768489f; // convert to radians
+
 	time = 0.f;
 
 	bTarget = pParameters->GetNumArgs() > 1;

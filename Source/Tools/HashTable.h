@@ -46,7 +46,7 @@ public:
 		uint32 i = GetTableIndex(pItemName);
 
 #if defined(_DEBUG)
-		if(ppItems[i] && MFString_Compare(pItemName, ppItems[i]->pName))
+		if(ppItems[i] && MFString_CaseCmp(pItemName, ppItems[i]->pName))
 			MFDebug_Warn(3, MFStr("Hash collision! 0x%02d: '%s' == '%s'", i, pItemName, ppItems[i]->pName));
 #endif
 
@@ -62,14 +62,14 @@ public:
 
 		HashItem *pTemp = ppItems[i];
 		HashItem *pDel = NULL;
-		if(!MFString_Compare(pTemp->pName, pName))
+		if(!MFString_CaseCmp(pTemp->pName, pName))
 		{
 			pDel = pTemp;
 			ppItems[i] = pTemp->pNext;
 		}
 		else
 		{
-			while(pTemp->pNext && MFString_Compare(pTemp->pName, pName))
+			while(pTemp->pNext && MFString_CaseCmp(pTemp->pName, pName))
 				pTemp = pTemp->pNext;
 			if(pTemp->pNext)
 			{

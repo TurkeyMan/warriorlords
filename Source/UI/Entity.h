@@ -130,7 +130,7 @@ public:
 	void SetRot(MFVector &rotation) { this->rot = rotation; }
 	void SetScale(MFVector &scale) { this->scale = scale; }
 	void SetColour(MFVector &colour) { this->colour = colour; }
-	void SetEnable(bool bEnabled) { this->bEnabled = bEnabled; }
+	void SetEnable(bool bEnabled);
 	void SetVisible(bool bVisible) { this->bVisible = bVisible; }
 	void SetAnchor(Anchor anchor) { this->anchor = anchor; }
 
@@ -155,7 +155,7 @@ protected:
 
 	Anchor anchor;
 
-	bool bEnabled, bVisible;
+	bool bEnabled, bVisible, bHasFocus;
 
 	uiEntity *pParent;
 	MFArray<uiEntity*> children;
@@ -180,6 +180,8 @@ protected:
 	static void SetEnable(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void SetVisible(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void SetAnchor(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+
+	static void SetFocus(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 
 	static uiDrawState identity;
 	static const char *pAnchorNames[AnchorMax];
@@ -212,7 +214,7 @@ public:
 	uiEntity *GetRoot() { return pRoot; }
 
 	uiEntity *GetFocus() { return pFocus; }
-	uiEntity *SetFocus(uiEntity *pNewFocus) { uiEntity *pOld = pFocus; pFocus = pNewFocus; return pOld; }
+	uiEntity *SetFocus(uiEntity *pNewFocus);
 
 	uiEntity *SetExclusiveReceiver(uiEntity *pReceiver);
 	uiEntity *SetExclusiveContactReceiver(int contact, uiEntity *pReceiver);

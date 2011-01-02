@@ -1,0 +1,98 @@
+UI cheat sheet
+--------------
+
+ Shared properties:
+
+  name      - entity name, used to reference this entity
+
+  position  - position, eg: { x, y }
+
+  size      - entity size, eg: { width, height }
+
+  rotation  - orientation, eg: { pitch (rotate about x), yaw (rotate about y), roll (rotate about z) }
+
+  scale     - entity scale, affects the entity size, and also scales all children accordingly
+
+  colour    - entity colour, also multiplied into children
+
+  enabled   - enable state, usually gadgets will be greyed out while disabled
+
+  visible   - entity visiblity, hiding will also hide all children
+
+  anchor    - anchor position relative to the entity: anchor = [anchor point]
+                where [anchor point] is one of:
+                    topleft     topcenter      topright
+                   centerleft     center     centerright
+                   bottomLeft  bottomcenter  bottomright
+
+ Shared events:
+  onfocus()           : triggered when an entity gains focus
+  onfocuslost()       : triggered when an entity loses focus
+  onenable()          : triggered when an entity is enabled
+  ondisable()         : triggered when an entity is disabled
+  ondown(button, pos) : triggered when a finger is placed or a mouse button is pressed down
+  onup(button, pos)   : triggered when a finger is lifted or a mouse button is raised
+  ontap(button, pos)  : triggered when a finger or mouse button is pressed and then lifted without being moved
+
+ Shared actions:
+  focus()              - set the current focus to 'this' entity
+  move(target, time)   - move an entity from one location to another
+  fade(target, time)   - fade from one colour to another
+  spin(target, time)   - spin from one orientation to another
+  resize(target, time) - scale from one size to another
+
+    in each of the above, motion starts from the entities current position, and 'time' is optional.
+      if 'time' is provided:
+        'time' is the number of seconds taken to reach 'target', and 'target' is an absolute destination
+      if 'time' is not provided:
+        'target' is relative, expressed in units-per-second, and is endlessly accumulated
+
+
+[Image]
+-------
+
+ Properties:
+  
+
+ Events:
+  
+
+ Actions:
+  
+
+[Text]
+------
+
+ Properties:
+  
+
+ Events:
+  
+
+ Actions:
+  
+
+[Button]
+--------
+
+ Properties:
+  
+
+ Events:
+  
+
+ Actions:
+  
+
+
+[String]
+--------
+
+ Properties:
+  
+
+ Events:
+  
+
+ Actions:
+  
