@@ -9,6 +9,7 @@
 #include "LayoutProp.h"
 #include "ButtonProp.h"
 #include "StringProp.h"
+#include "ListProp.h"
 
 #include "MFSystem.h"
 
@@ -379,6 +380,7 @@ void uiEntityManager::InitManager()
 	uiTextProp::RegisterEntity();
 	uiButtonProp::RegisterEntity();
 	uiStringProp::RegisterEntity();
+	uiListProp::RegisterEntity();
 }
 
 void uiEntityManager::DeinitManager()

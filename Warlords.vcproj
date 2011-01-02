@@ -577,6 +577,14 @@
 					>
 				</File>
 				<File
+					RelativePath=".\Source\UI\ListProp.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\UI\ListProp.h"
+					>
+				</File>
+				<File
 					RelativePath=".\Source\UI\ModelProp.cpp"
 					>
 				</File>

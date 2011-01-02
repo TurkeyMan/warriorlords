@@ -81,7 +81,6 @@ bool uiStringProp::ChangeFocus(bool bGainFocus)
 {
 	if(bGainFocus)
 		bFirstFrame = true;
-
 	return true;
 }
 

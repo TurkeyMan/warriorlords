@@ -1094,24 +1094,24 @@ uiRuntimeArgs *uiActionManager::ResolveIdentifier(uiExecuteContext *pContext, co
 			++depth;
 		}
 
-		// check if it is an action argument
-		if(depth == 0 && pContext && pContext->pScript)
-		{
-			int a=0, numArgs = pContext->pScript->numArgs;
-			for(; a<numArgs; ++a)
-			{
-				if(pContext->pScript->pArgs[a].CompareInsensitive(identifier))
-				{
-					uiRuntimeArgs *pValue = uiRuntimeArgs::Allocate(1);
-					pValue->Set(0, pContext->pArgs->Get(a));
-					return pValue;
-				}
-			}
-		}
-
-		// check if it is an entity property
 		if(!bMemberFollows)
 		{
+			// check if it is an action argument
+			if(depth == 0 && pContext && pContext->pScript)
+			{
+				int a=0, numArgs = pContext->pScript->numArgs;
+				for(; a<numArgs; ++a)
+				{
+					if(pContext->pScript->pArgs[a].CompareInsensitive(identifier))
+					{
+						uiRuntimeArgs *pValue = uiRuntimeArgs::Allocate(1);
+						pValue->Set(0, pContext->pArgs->Get(a));
+						return pValue;
+					}
+				}
+			}
+
+			// check if it is an entity property
 			if(type == None && pEntity)
 			{
 				MFString value = GetEntityProperty(pEntity, identifier.CStr());
@@ -1146,6 +1146,8 @@ uiRuntimeArgs *uiActionManager::ResolveIdentifier(uiExecuteContext *pContext, co
 			}
 			else if(type == Option)
 			{
+				MFDebug_Assert(!bMemberFollows, "Illegal syntax: options may not have sub-members");
+
 				// look up value from the game options
 				//...
 
@@ -1153,6 +1155,8 @@ uiRuntimeArgs *uiActionManager::ResolveIdentifier(uiExecuteContext *pContext, co
 			}
 			else if(type == String)
 			{
+				MFDebug_Assert(!bMemberFollows, "Illegal syntax: strings may not have sub-members");
+
 				// find and return string in string table
 				int stringID = GameData::Get()->FindString(pDot);
 				if(stringID >= 0)
