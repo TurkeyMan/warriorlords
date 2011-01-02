@@ -48,6 +48,7 @@ uiButtonProp::uiButtonProp()
 	button = 0;
 	id = 0;
 	state = -1;
+	bMouseOver = false;
 
 	pFont = MFFont_GetDebugFont();
 	textHeight = MFFont_GetFontHeight(pFont);
@@ -67,8 +68,6 @@ void uiButtonProp::Update()
 
 bool uiButtonProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 {
-	uiEntity::HandleInputEvent(ev, info);
-
 	if(!bEnabled)
 		return false;
 
@@ -80,17 +79,27 @@ bool uiButtonProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 
 	switch(ev)
 	{
+		case IE_Hover:
+		{
+			MFRect client = { 0, 0, size.x, size.y };
+			bMouseOver = MFTypes_PointInRect(info.hover.x, info.hover.y, &client);
+			break;
+		}
+
 		case IE_Down:
 			if(button == -1 || info.buttonID == button)
 			{
+				MFRect client = { 0, 0, size.x, size.y };
+				bMouseOver = MFTypes_PointInRect(info.hover.x, info.hover.y, &client);
+
 				if(mode == TriggerOnDown)
 				{
-					SignalEvent("click", MFString::Format("%d, %d", info.buttonID, id).CStr());
+					SignalEvent("onclick", MFString::Format("%d, %d", info.buttonID, id).CStr());
 				}
 				else
 				{
 					state = info.contact;
-//					pInputManager->SetExclusiveContactReceiver(info.contact, this);
+					GetEntityManager()->SetExclusiveContactReceiver(info.contact, this);
 				}
 			}
 			return true;
@@ -102,7 +111,7 @@ bool uiButtonProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 				MFRect client = { 0, 0, size.x, size.y };
 				if(MFTypes_PointInRect(info.up.x, info.up.y, &client))
 				{
-					SignalEvent("click", MFString::Format("%d, %d", info.buttonID, id).CStr());
+					SignalEvent("onclick", MFString::Format("%d, %d", info.buttonID, id).CStr());
 				}
 			}
 			return true;
@@ -117,6 +126,10 @@ bool uiButtonProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 void uiButtonProp::Draw(const uiDrawState &state)
 {
 	uiEntity::Draw(state);
+
+	bool bDark = !bEnabled;
+	if(bEnabled && this->state > -1)
+		bDark = bMouseOver;
 
 	if(pImage)
 	{
@@ -136,7 +149,7 @@ void uiButtonProp::Draw(const uiDrawState &state)
 
 		MFBegin(4);
 
-		if(this->state > -1)
+		if(bDark)
 			MFSetColour(state.colour * MakeVector(.5f, .5f, .5f, 1.f));
 		else
 			MFSetColour(state.colour);

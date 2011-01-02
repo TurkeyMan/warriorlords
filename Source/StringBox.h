@@ -29,7 +29,7 @@ public:
 
 	void SetChangeCallback(ChangeCallback handler) { changeCallback = handler; }
 	void SetTabCallback(ChangeCallback handler) { tabCallback = handler; }
-	void SetString(const char *pString) { return stringLogic.SetString(pString); }
+	void SetString(MFString string) { return stringLogic.SetString(string); }
 	MFString GetString() { return stringLogic.GetString(); }
 
 protected:

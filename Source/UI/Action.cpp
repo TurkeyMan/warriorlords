@@ -1116,11 +1116,7 @@ uiRuntimeArgs *uiActionManager::ResolveIdentifier(uiExecuteContext *pContext, co
 			{
 				MFString value = GetEntityProperty(pEntity, identifier.CStr());
 				if(value)
-				{
-					uiRuntimeArgs *pValue = uiRuntimeArgs::Allocate(1);
-					pValue->SetValue(0, value, false);
-					return pValue;
-				}
+					return ParseArgs(value.CStr(), pEntity);
 			}
 
 			// check if it is a metric

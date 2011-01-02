@@ -103,7 +103,6 @@ public:
 
 	void UpdateEntity();
 	void DrawEntity(const uiDrawState &state = identity);
-	bool HandleInput(InputEvent ev, const InputInfo &info);
 
 	bool CalculateDrawState(uiDrawState &output, const uiDrawState &parent);
 
@@ -145,6 +144,10 @@ public:
 	MFString GetProperty(const char *pProperty) { GetActionManager()->GetEntityProperty(this, pProperty); }
 
 protected:
+	bool HandleInput(InputEvent ev, const InputInfo &info);
+	bool TransformInputInfo(InputInfo &info, bool bCalculateOutside = false);
+	bool FullTransformInputInfo(InputInfo &info, bool bCalculateOutside = false);
+
 	FactoryType *pType;
 	MFString name;
 
@@ -180,6 +183,7 @@ protected:
 
 	static uiDrawState identity;
 	static const char *pAnchorNames[AnchorMax];
+	static const MFVector anchorOffset[AnchorMax];
 };
 
 class uiEntityManager : public InputReceiver
@@ -210,9 +214,17 @@ public:
 	uiEntity *GetFocus() { return pFocus; }
 	uiEntity *SetFocus(uiEntity *pNewFocus) { uiEntity *pOld = pFocus; pFocus = pNewFocus; return pOld; }
 
+	uiEntity *SetExclusiveReceiver(uiEntity *pReceiver);
+	uiEntity *SetExclusiveContactReceiver(int contact, uiEntity *pReceiver);
+
 private:
+	void ClearContactCallback(int contact);
+
 	uiEntity *pRoot;
 	uiEntity *pFocus;
+
+	uiEntity *pExclusiveReceiver;
+	uiEntity *pContactReceivers[InputManager::MAX_CONTACTS];
 
 	HashList<uiEntity> entityPool;
 

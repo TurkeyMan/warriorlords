@@ -585,6 +585,14 @@
 					>
 				</File>
 				<File
+					RelativePath=".\Source\UI\StringProp.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\UI\StringProp.h"
+					>
+				</File>
+				<File
 					RelativePath=".\Source\UI\TextProp.cpp"
 					>
 				</File>

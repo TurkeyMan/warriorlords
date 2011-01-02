@@ -4,6 +4,8 @@
 #include "MFHeap.h"
 #include "MFObjectPool.h"
 
+//#define SUPPORT_FLEXIBLE_TABLE_SIZE
+
 template <typename T>
 class HashList
 {
@@ -18,6 +20,9 @@ private:
 public:
 	void Create(int _tableSize, int maxItems, int growItems = 0)
 	{
+#if !defined(SUPPORT_FLEXIBLE_TABLE_SIZE)
+		_tableSize = 256;
+#endif
 		itemPool.Init(sizeof(HashItem), maxItems, growItems);
 		ppItems = (HashItem**)MFHeap_AllocAndZero(sizeof(HashItem*)*_tableSize);
 		tableSize = _tableSize;
@@ -38,24 +43,29 @@ public:
 		pNew->pItem = pItem;
 		pNew->pName = pItemName;
 
-		uint32 hash = MFUtil_HashString(pItemName) % tableSize;
+		uint32 i = GetTableIndex(pItemName);
 
-		pNew->pNext = ppItems[hash];
-		ppItems[hash] = pNew;
+#if defined(_DEBUG)
+		if(ppItems[i] && MFString_Compare(pItemName, ppItems[i]->pName))
+			MFDebug_Warn(3, MFStr("Hash collision! 0x%02d: '%s' == '%s'", i, pItemName, ppItems[i]->pName));
+#endif
+
+		pNew->pNext = ppItems[i];
+		ppItems[i] = pNew;
 
 		++itemCount;
 	}
 
 	T* Remove(const char *pName)
 	{
-		uint32 hash = MFUtil_HashString(pName) % tableSize;
+		uint32 i = GetTableIndex(pName);
 
-		HashItem *pTemp = ppItems[hash];
+		HashItem *pTemp = ppItems[i];
 		HashItem *pDel = NULL;
 		if(!MFString_Compare(pTemp->pName, pName))
 		{
 			pDel = pTemp;
-			ppItems[hash] = pTemp->pNext;
+			ppItems[i] = pTemp->pNext;
 		}
 		else
 		{
@@ -112,8 +122,8 @@ public:
 
 	T* Find(const char *pItemName) const
 	{
-		uint32 hash = MFUtil_HashString(pItemName) % tableSize;
-		HashItem *pItem = ppItems[hash];
+		uint32 i = GetTableIndex(pItemName);
+		HashItem *pItem = ppItems[i];
 
 		while(pItem && MFString_CaseCmp(pItem->pName, pItemName))
 			pItem = pItem->pNext;
@@ -139,8 +149,8 @@ public:
 		if(!pItem)
 			return First();
 
-		uint32 hash = pItem->GetName().GetHash() % tableSize;
-		HashItem *pTemp = ppItems[hash];
+		uint32 i = GetTableIndex(pItem->GetName().CStr());
+		HashItem *pTemp = ppItems[i];
 
 		while(pTemp && pTemp->pItem != pItem)
 			pTemp = pTemp->pNext;
@@ -151,7 +161,7 @@ public:
 			return pTemp->pNext->pItem;
 		else
 		{
-			for(int a=hash+1; a<tableSize; ++a)
+			for(int a=i+1; a<tableSize; ++a)
 			{
 				if(ppItems[a])
 					return ppItems[a]->pItem;
@@ -165,8 +175,8 @@ public:
 		if(!pItem)
 			return NULL;
 
-		uint32 hash = pItem->GetName().GetHash() % tableSize;
-		HashItem *pTemp = ppItems[hash];
+		uint32 i = GetTableIndex(pItem->GetName().CStr());
+		HashItem *pTemp = ppItems[i];
 
 		while(pTemp && pTemp->pItem != pItem)
 			pTemp = pTemp->pNext;
@@ -190,6 +200,17 @@ protected:
 	HashItem **ppItems;
 	int tableSize;
 	int itemCount;
+
+	uint32 GetTableIndex(const char *pString) const
+	{
+		uint32 hash = MFUtil_HashString(pString);
+#if !defined(SUPPORT_FLEXIBLE_TABLE_SIZE)
+		// 8 bit hash folding... we'll just fold the bottom 16 bits :/
+		return ((hash >> 8) ^ hash) & (0xFF);
+#else
+		return hash % tableSize;
+#endif
+	}
 };
 
 #endif

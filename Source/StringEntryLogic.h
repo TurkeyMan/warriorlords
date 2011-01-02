@@ -25,7 +25,8 @@ public:
 
 		ST_Regular,
 		ST_MultiLine,
-		ST_Numeric
+		ST_Numeric,
+		ST_Password
 	};
 
 	StringEntryLogic();
@@ -35,17 +36,19 @@ public:
 	void Draw() {}
 
 	MFString GetString() { return buffer; }
-	void SetString(const char *pString);
+	MFString GetRenderString();
+	void SetString(MFString string);
 
 	void SetMaxLength(int maxLength) { maxLen = maxLength; }
 	void SetType(StringType type) { this->type = type; }
 
-	int StringLength() { return buffer.NumBytes(); }
-
 	void SetChangeCallback(StringChangeCallback callback) { changeCallback = callback; }
 
 	int GetCursorPos() { return cursorPos; }
-	void GetSelection(int *pSelStart, int *pSelEnd) { if(pSelStart) *pSelStart = selectionStart; if(pSelEnd) *pSelEnd = selectionEnd; }
+	void SetCursorPos(int position, bool bUpdateSelection = false);
+
+	void GetSelection(int *pSelStart, int *pSelEnd);
+	void SetSelection(int start, int end);
 
 	void SetAcceptableCharacters(const char *pCharList) { include = pCharList; }
 	void SetExcludedCharacters(const char *pCharList) { exclude = pCharList; }

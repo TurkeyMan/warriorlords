@@ -93,6 +93,10 @@ protected:
 class InputManager
 {
 public:
+	typedef FastDelegate1<int> NewContactCallback;
+
+	static const int MAX_CONTACTS = 16;
+
 	InputManager();
 	~InputManager();
 
@@ -108,10 +112,10 @@ public:
 	InputReceiver *SetExclusiveReceiver(InputReceiver *pReceiver);
 	InputReceiver *SetExclusiveContactReceiver(int contact, InputReceiver *pReceiver);
 
+	void RegisterNewContactCallback(NewContactCallback pCallback) { pNewContactCallback = pCallback; }
+
 protected:
 	bool Dispatch(InputInfo &info, InputReceiver *pExplicitReceiver);
-
-	static const int MAX_CONTACTS = 16;
 
 	struct Contact
 	{
@@ -141,6 +145,8 @@ protected:
 
 	InputReceiver *pInputStack;
 	InputReceiver *pExclusiveReceiver;
+
+	NewContactCallback pNewContactCallback;
 
 	void InitEvent(InputInfo &info, InputEvent ev, int contact);
 };

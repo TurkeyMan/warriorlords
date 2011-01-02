@@ -19,8 +19,8 @@ public:
 	void SetText(const char *pText) { text = pText; UpdateSize(); }
 
 protected:
-	static void SetFont(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void SetText(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+	static void SetFont(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void SetTextHeight(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void SetJustification(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 

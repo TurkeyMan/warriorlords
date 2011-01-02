@@ -50,6 +50,7 @@ public:
 	inline int GetNumArgs() { return numArgs; }
 
 	bool IsNumeric(int index = -1);
+	bool IsString(int index) { return pArgs[index].type == AT_String; }
 
 	Argument *Get(int index);
 	MFString GetString(int index);

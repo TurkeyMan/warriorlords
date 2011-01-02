@@ -91,7 +91,7 @@ void StringEntryLogic::Update()
 			HANDLE hData = GlobalAlloc(GMEM_MOVEABLE, numChars + 1);
 			char *pString = (char*)GlobalLock(hData);
 
-			MFString_Copy(pString, buffer.SubStr(selMin, numChars).CStr());
+			MFString_Copy(pString, GetRenderString().SubStr(selMin, numChars).CStr());
 
 			GlobalUnlock(hData);
 
@@ -115,7 +115,7 @@ void StringEntryLogic::Update()
 			HANDLE hData = GlobalAlloc(GMEM_MOVEABLE, numChars + 1);
 			char *pString = (char*)GlobalLock(hData);
 
-			MFString_Copy(pString, buffer.SubStr(selMin, numChars).CStr());
+			MFString_Copy(pString, GetRenderString().SubStr(selMin, numChars).CStr());
 
 			GlobalUnlock(hData);
 
@@ -322,12 +322,19 @@ void StringEntryLogic::Update()
 	}
 }
 
-void StringEntryLogic::SetString(const char *pString)
+MFString StringEntryLogic::GetRenderString()
 {
-	if(buffer == pString)
+	if(type == ST_Password)
+		return MFString::Static("").PadRight(buffer.NumChars(), "*");
+	return buffer;
+}
+
+void StringEntryLogic::SetString(MFString string)
+{
+	if(buffer == string)
 		return;
 
-	buffer = pString;
+	buffer = string;
 	if(maxLen)
 		buffer.Truncate(maxLen);
 
@@ -335,4 +342,32 @@ void StringEntryLogic::SetString(const char *pString)
 
 	if(changeCallback)
 		changeCallback(buffer.CStr());
+}
+
+void StringEntryLogic::SetCursorPos(int position, bool bUpdateSelection)
+{
+	position = MFClamp(0, position, buffer.NumBytes());
+
+	selectionEnd = cursorPos = position;
+	if(!bUpdateSelection)
+		selectionStart = position;
+}
+
+void StringEntryLogic::GetSelection(int *pSelStart, int *pSelEnd)
+{
+	if(pSelStart)
+		*pSelStart = selectionStart;
+	if(pSelEnd)
+		*pSelEnd = selectionEnd;
+}
+
+void StringEntryLogic::SetSelection(int start, int end)
+{
+	int len = buffer.NumBytes();
+	start = MFClamp(0, start, len);
+	end = MFClamp(0, end, len);
+
+	selectionStart = start;
+	selectionEnd = end;
+	cursorPos = end;
 }

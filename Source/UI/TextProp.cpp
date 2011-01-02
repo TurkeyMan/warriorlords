@@ -23,8 +23,8 @@ void uiTextProp::RegisterEntity()
 {
 	FactoryType *pType = uiEntityManager::RegisterEntityType("Text", Create, "Entity");
 
-	uiActionManager::RegisterProperty("font", NULL, SetFont, pType);
 	uiActionManager::RegisterProperty("text", NULL, SetText, pType);
+	uiActionManager::RegisterProperty("font", NULL, SetFont, pType);
 	uiActionManager::RegisterProperty("textheight", NULL, SetTextHeight, pType);
 	uiActionManager::RegisterProperty("justification", NULL, SetJustification, pType);
 }
@@ -56,19 +56,19 @@ void uiTextProp::Draw(const uiDrawState &state)
 		MFFont_DrawTextAnchored(pFont, text.CStr(), MFVector::zero, justification, size.x, textHeight, state.colour, -1, state.mat);
 }
 
+void uiTextProp::SetText(uiEntity *pEntity, uiRuntimeArgs *pArguments)
+{
+	uiTextProp *pTextProp = (uiTextProp*)pEntity;
+	pTextProp->text = pArguments->GetString(0);
+
+	pTextProp->UpdateSize();
+}
+
 void uiTextProp::SetFont(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiTextProp *pTextProp = (uiTextProp*)pEntity;
 	pTextProp->pFont = GameData::Get()->GetResourceCache()->FindFont(pArguments->GetString(0).CStr());
 	pTextProp->textHeight = MFFont_GetFontHeight(pTextProp->pFont);
-
-	pTextProp->UpdateSize();
-}
-
-void uiTextProp::SetText(uiEntity *pEntity, uiRuntimeArgs *pArguments)
-{
-	uiTextProp *pTextProp = (uiTextProp*)pEntity;
-	pTextProp->text = pArguments->GetString(0);
 
 	pTextProp->UpdateSize();
 }

@@ -8,6 +8,7 @@
 #include "TextProp.h"
 #include "LayoutProp.h"
 #include "ButtonProp.h"
+#include "StringProp.h"
 
 #include "MFSystem.h"
 
@@ -30,7 +31,7 @@ const char *uiEntity::pAnchorNames[AnchorMax] =
 	"bottomright"
 };
 
-static const MFVector anchorOffset[uiEntity::AnchorMax] =
+const MFVector uiEntity::anchorOffset[AnchorMax] =
 {
 	{ 0,   0,   0, 0 },
 	{ 0.5, 0,   0, 0 },
@@ -152,11 +153,11 @@ bool uiEntity::HandleInputEvent(InputEvent ev, const InputInfo &info)
 	switch(ev)
 	{
 		case IE_Down:
-			return SignalEvent("down", MFString::Format("%d, {%g, %g}", info.buttonID, info.down.x, info.down.y).CStr());
+			return SignalEvent("ondown", MFString::Format("%d, {%g, %g}", info.buttonID, info.down.x, info.down.y).CStr());
 		case IE_Up:
-			return SignalEvent("up", MFString::Format("%d, {%g, %g}", info.buttonID, info.up.x, info.up.y).CStr());
+			return SignalEvent("onup", MFString::Format("%d, {%g, %g}", info.buttonID, info.up.x, info.up.y).CStr());
 		case IE_Tap:
-			return SignalEvent("tap", MFString::Format("%d, {%g, %g}", info.buttonID, info.tap.x, info.tap.y).CStr());
+			return SignalEvent("ontap", MFString::Format("%d, {%g, %g}", info.buttonID, info.tap.x, info.tap.y).CStr());
 	}
 	return false;
 }
@@ -185,17 +186,8 @@ void uiEntity::DrawEntity(const uiDrawState &state)
 		children[a]->DrawEntity(drawState);
 }
 
-bool uiEntity::HandleInput(InputEvent ev, const InputInfo &info)
+bool uiEntity::TransformInputInfo(InputInfo &info, bool bCalculateOutside)
 {
-	if(!bEnabled || !bVisible)
-		return false;
-
-	MFMatrix local;
-	GetMatrix(&local);
-	local.Inverse();
-
-	InputInfo localInfo = info;
-
 	if(info.ev < IE_ButtonTriggered)
 	{
 		MFRect rect =
@@ -204,26 +196,49 @@ bool uiEntity::HandleInput(InputEvent ev, const InputInfo &info)
 			size.x, size.y
 		};
 
-		MFVector v = local.TransformVectorH(MakeVector(localInfo.down.x, localInfo.down.y));
-		if(!MFTypes_PointInRect(v.x, v.y, &rect))
+		MFMatrix local;
+		GetMatrix(&local);
+		local.Inverse();
+
+		MFVector v = local.TransformVectorH(MakeVector(info.down.x, info.down.y));
+		if(!bCalculateOutside && !MFTypes_PointInRect(v.x, v.y, &rect))
 			return false;
 
-		localInfo.down.x = v.x;
-		localInfo.down.y = v.y;
+		info.down.x = v.x;
+		info.down.y = v.y;
 
 		switch(info.ev)
 		{
 			case IE_Drag:
-				v = local.TransformVectorH(MakeVector(localInfo.drag.startX, localInfo.drag.startY));
-				localInfo.drag.startX = v.x;
-				localInfo.drag.startY = v.y;
+				v = local.TransformVectorH(MakeVector(info.drag.startX, info.drag.startY));
+				info.drag.startX = v.x;
+				info.drag.startY = v.y;
 			case IE_Hover:
 			case IE_Up:
-				v = local.TransformVectorH(MakeVector(localInfo.hover.deltaX, localInfo.hover.deltaY));
-				localInfo.hover.deltaX = v.x;
-				localInfo.hover.deltaY = v.y;
+				v = local.TransformVectorH(MakeVector(info.hover.deltaX, info.hover.deltaY));
+				info.hover.deltaX = v.x;
+				info.hover.deltaY = v.y;
 		}
 	}
+
+	return true;
+}
+
+bool uiEntity::FullTransformInputInfo(InputInfo &info, bool bCalculateOutside)
+{
+	if(pParent && !pParent->FullTransformInputInfo(info, bCalculateOutside))
+		return false;
+	return TransformInputInfo(info, bCalculateOutside);
+}
+
+bool uiEntity::HandleInput(InputEvent ev, const InputInfo &info)
+{
+	if(!bVisible)
+		return false;
+
+	InputInfo localInfo = info;
+	if(!TransformInputInfo(localInfo))
+		return false;
 
 	int numChildren = children.size();
 	for(int a=numChildren-1; a>=0; --a)
@@ -342,6 +357,7 @@ void uiEntityManager::InitManager()
 	uiModelProp::RegisterEntity();
 	uiTextProp::RegisterEntity();
 	uiButtonProp::RegisterEntity();
+	uiStringProp::RegisterEntity();
 }
 
 void uiEntityManager::DeinitManager()
@@ -353,8 +369,51 @@ FactoryType *uiEntityManager::RegisterEntityType(const char *pEntityTypeName, Fa
 	return entityFactory.RegisterType(pEntityTypeName, pCreateFunc, entityFactory.FindType(pParentType));
 }
 
+uiEntity *uiEntityManager::SetExclusiveReceiver(uiEntity *pReceiver)
+{
+	pInputManager->SetExclusiveReceiver(pReceiver ? this : NULL);
+
+	uiEntity *pOld = pExclusiveReceiver;
+	pExclusiveReceiver = pReceiver;
+	return pOld;
+}
+
+uiEntity *uiEntityManager::SetExclusiveContactReceiver(int contact, uiEntity *pReceiver)
+{
+	pInputManager->SetExclusiveContactReceiver(contact, pReceiver ? this : NULL);
+
+	uiEntity *pOld = pContactReceivers[contact];
+	pContactReceivers[contact] = pReceiver;
+	return pOld;
+}
+
+void uiEntityManager::ClearContactCallback(int contact)
+{
+	pContactReceivers[contact] = NULL;
+}
+
 bool uiEntityManager::HandleInputEvent(InputEvent ev, InputInfo &info)
 {
+	if(pContactReceivers[info.contact])
+	{
+		// transform coordinates into entity space...
+		InputInfo localInfo = info;
+		pContactReceivers[info.contact]->FullTransformInputInfo(localInfo, true);
+
+		if(pContactReceivers[info.contact]->HandleInputEvent(info.ev, localInfo))
+			return true;
+	}
+
+	if(pExclusiveReceiver)
+	{
+		// transform coordinates into entity space...
+		InputInfo localInfo = info;
+		pExclusiveReceiver->FullTransformInputInfo(localInfo, true);
+
+		if(pExclusiveReceiver->HandleInputEvent(info.ev, localInfo))
+			return true;
+	}
+
 	return pRoot->HandleInput(ev, info);
 }
 
@@ -364,12 +423,15 @@ void uiEntityManager::Init()
 
 	pRoot = NULL;
 	pFocus = NULL;
+	pExclusiveReceiver = NULL;
+	MFZeroMemory(pContactReceivers, sizeof(pContactReceivers));
 
 	MFMatrix screenMat;
 	GetOrthoMatrix(&screenMat);
 	MFRect rect = { 0.f, 0.f, (1.f / screenMat.m[0]) * 2.f, (1.f / -screenMat.m[5]) * 2.f };
 	UpdateRect(&rect);
 
+	pInputManager->RegisterNewContactCallback(MakeDelegate(this, &uiEntityManager::ClearContactCallback));
 	pInputManager->PushReceiver(this);
 }
 

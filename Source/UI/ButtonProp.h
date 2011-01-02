@@ -61,6 +61,7 @@ protected:
 	TriggerMode mode;
 
 	int state;
+	bool bMouseOver;
 
 	int id;
 	int button;

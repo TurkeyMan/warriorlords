@@ -122,6 +122,8 @@ void InputManager::Update()
 					MFVector pos = CorrectPosition(MFInput_Read(Mouse_XPos, IDD_Mouse, a), MFInput_Read(Mouse_YPos, IDD_Mouse, a));
 					contacts[c].Init(IDD_Mouse, a, -1, pos.x, pos.y);
 					contacts[c].downX = contacts[c].downY = 0.f;
+
+					pNewContactCallback(c);
 					break;
 				}
 			}
@@ -144,6 +146,8 @@ void InputManager::Update()
 
 								contacts[c].Init(IDD_Mouse, a, Mouse_LeftButton + b, contacts[mouseContacts[a]].x, contacts[mouseContacts[a]].y);
 								contacts[c].bState = true;
+
+								pNewContactCallback(c);
 
 								// send the down event
 								InputInfo info;
@@ -195,6 +199,8 @@ void InputManager::Update()
 						MFVector pos = CorrectPosition((float)pState->contacts[a].x, (float)pState->contacts[a].y);
 						contacts[c].Init(IDD_TouchPanel, 0, a, pos.x, pos.y);
 						contacts[c].bState = true;
+
+						pNewContactCallback(c);
 
 						// send the down event
 						InputInfo info;
