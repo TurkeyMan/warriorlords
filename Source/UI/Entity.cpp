@@ -34,15 +34,15 @@ const char *uiEntity::pAnchorNames[AnchorMax] =
 
 const MFVector uiEntity::anchorOffset[AnchorMax] =
 {
-	{ 0,   0,   0, 0 },
-	{ 0.5, 0,   0, 0 },
-	{ 1,   0,   0, 0 },
-	{ 0,   0.5, 0, 0 },
-	{ 0.5, 0.5, 0, 0 },
-	{ 1,   0.5, 0, 0 },
-	{ 0,   1,   0, 0 },
-	{ 0.5, 1,   0, 0 },
-	{ 1,   1,   0, 0 }
+	MakeVector( 0,   0,   0, 0 ),
+	MakeVector( 0.5, 0,   0, 0 ),
+	MakeVector( 1,   0,   0, 0 ),
+	MakeVector( 0,   0.5, 0, 0 ),
+	MakeVector( 0.5, 0.5, 0, 0 ),
+	MakeVector( 1,   0.5, 0, 0 ),
+	MakeVector( 0,   1,   0, 0 ),
+	MakeVector( 0.5, 1,   0, 0 ),
+	MakeVector( 1,   1,   0, 0 )
 };
 
 void uiEntity::RegisterEntity()
