@@ -18,7 +18,7 @@ LoginScreen::LoginScreen()
 	state = 0;
 
 #if defined(_DEBUG)
-	bAutoLogin = true;
+	bAutoLogin = false;//true;
 #else
 	bAutoLogin = false;
 #endif
@@ -181,18 +181,14 @@ void LoginScreen::Click(int button, int buttonID)
 		case 0:
 		{
 			// try and login...
-			Session *pSession = new Session();
-			pSession->SetLoginDelegate(MakeDelegate(this, &LoginScreen::OnLogin));
-			pSession->Login(pUsername->GetString().CStr(), pPassword->GetString().CStr());
-			Session::SetCurrent(pSession);
+			Session::Get()->SetLoginDelegate(MakeDelegate(this, &LoginScreen::OnLogin));
+			Session::Get()->Login(pUsername->GetString().CStr(), pPassword->GetString().CStr());
 			break;
 		}
 
 		case 1:
 		{
-			Session *pSession = new Session();
-			pSession->BeginOffline();
-			Session::SetCurrent(pSession);
+			Session::Get()->BeginOffline();
 
 			// begin offline
 			Screen::SetNext(pHome);
@@ -282,28 +278,21 @@ void LoginScreen::CreateComplete(HTTPRequest::Status status)
 	}
 
 	// try and login...
-	Session *pSession = new Session();
-	pSession->SetLoginDelegate(MakeDelegate(this, &LoginScreen::OnLogin));
-	pSession->Login(pUsername->GetString().CStr(), pPassword->GetString().CStr());
-	Session::SetCurrent(pSession);
+	Session::Get()->SetLoginDelegate(MakeDelegate(this, &LoginScreen::OnLogin));
+	Session::Get()->Login(pUsername->GetString().CStr(), pPassword->GetString().CStr());
 }
 
 void LoginScreen::AutoLogin()
 {
 	// try and login...
-	Session *pSession = new Session();
-	pSession->SetLoginDelegate(MakeDelegate(this, &LoginScreen::OnLogin));
-	pSession->Login("TurkeyMan", "terceS");
-	Session::SetCurrent(pSession);
+	Session::Get()->SetLoginDelegate(MakeDelegate(this, &LoginScreen::OnLogin));
+	Session::Get()->Login("TurkeyMan", "terceS");
 }
 
 void LoginScreen::OnLogin(ServerError err, Session *pSession)
 {
 	if(err != SE_NO_ERROR)
 	{
-		Session::SetCurrent(NULL);
-		delete pSession;
-
 		switch(err)
 		{
 			case SE_CONNECTION_FAILED:

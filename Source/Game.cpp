@@ -180,7 +180,7 @@ bool Game::IsCurrentPlayer(int player)
 	if(!bOnline)
 		return player == currentPlayer;
 
-	Session *pSession = Session::GetCurrent();
+	Session *pSession = Session::Get();
 	if(!pSession || pSession->IsOffline())
 		return false;
 

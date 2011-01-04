@@ -3,6 +3,22 @@
 
 Session *Session::pCurrent = NULL;
 
+void Session::InitSession()
+{
+	pCurrent = new Session();
+
+	uiActionManager::RegisterProperty("online", GetOnline, NULL, NULL);
+	uiActionManager::RegisterProperty("loggedin", GetLoggedIn, NULL, NULL);
+
+	uiActionManager::RegisterInstantAction("login", LoginAction, NULL);
+}
+
+void Session::DeinitSession()
+{
+	delete pCurrent;
+	pCurrent = NULL;
+}
+
 Session::Session()
 {
 	bLoggedIn = false;
@@ -21,9 +37,10 @@ Session::~Session()
 
 void Session::Update()
 {
-	Session *pSession = GetCurrent();
-	if(!pSession)
+	if(!pCurrent)
 		return;
+
+//	pCurrent->UpdateState();
 }
 
 void Session::UpdateState()
@@ -211,4 +228,51 @@ void Session::OnLogin(HTTPRequest::Status status)
 
 	if(loginHandler)
 		loginHandler(SE_NO_ERROR, this);
+}
+
+void Session::LoginAction(uiEntity *pEntity, uiRuntimeArgs *pArguments)
+{
+	if(pArguments->GetString(0).IsEmpty() || pArguments->GetString(1).IsEmpty())
+	{
+		MFDebug_Warn(2, "Invalid login request");
+		return;
+	}
+
+	Session *pSession = Session::Get();
+
+	pSession->responseAction = NULL;
+	if(pArguments->GetNumArgs() >= 2)
+		pSession->responseAction = pArguments->GetString(2);
+
+	pSession->login.SetCompleteDelegate(MakeDelegate(pSession, &Session::LoginActionComplete));
+	WLServ_Login(pSession->login, pArguments->GetString(0).CStr(), pArguments->GetString(1).CStr());
+}
+
+void Session::LoginActionComplete(HTTPRequest::Status status)
+{
+	OnLogin(status);
+
+	if(responseAction)
+	{
+		uiActionManager *pAM = GameData::Get()->GetActionManager();
+		uiActionScript *pScript = pAM->FindAction(responseAction.CStr());
+
+		uiRuntimeArgs *pArgs = pAM->ParseArgs(MFString::Format("%d", bLoggedIn ? 1 : 0).CStr(), NULL);
+		pAM->RunScript(pScript, NULL, pArgs);
+		pArgs->Release();
+	}
+}
+
+MFString Session::GetOnline(uiEntity *pEntity)
+{
+	Session *pSession = Session::Get();
+
+	return MFString::Format("%d", pSession->bOffline ? 0 : 1);
+}
+
+MFString Session::GetLoggedIn(uiEntity *pEntity)
+{
+	Session *pSession = Session::Get();
+
+	return MFString::Format("%d", pSession->bLoggedIn ? 1 : 0);
 }

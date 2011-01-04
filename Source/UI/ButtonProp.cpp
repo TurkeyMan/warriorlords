@@ -28,8 +28,8 @@ void uiButtonProp::RegisterEntity()
 
 	uiActionManager::RegisterProperty("state", GetState, SetState, pType);
 	uiActionManager::RegisterProperty("style", NULL, SetStyle, pType);
-	uiActionManager::RegisterProperty("hoverMessage", NULL, SetHoverMessage, pType);
-	uiActionManager::RegisterProperty("triggerMode", NULL, SetTriggerMode, pType);
+	uiActionManager::RegisterProperty("hovermessage", NULL, SetHoverMessage, pType);
+	uiActionManager::RegisterProperty("triggermode", NULL, SetTriggerMode, pType);
 
 	uiActionManager::RegisterProperty("image", NULL, SetImage, pType);
 
@@ -92,7 +92,7 @@ bool uiButtonProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 					GetEntityManager()->SetExclusiveContactReceiver(info.contact, this);
 				}
 			}
-			return true;
+			break;
 		case IE_Up:
 			if(button == -1 || info.buttonID == button && info.contact == state)
 			{
@@ -104,7 +104,7 @@ bool uiButtonProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 					SignalEvent("onclick", MFString::Format("%d, %d", info.buttonID, id).CStr());
 				}
 			}
-			return true;
+			break;
 		case IE_Tap:
 		case IE_Drag:
 			return true;

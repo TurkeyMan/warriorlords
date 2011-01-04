@@ -227,7 +227,7 @@ void MenuScreen::Click(int button, int buttonID)
 			{
 				if(gameType == 0)
 				{
-					Session *pSession = Session::GetCurrent();
+					Session *pSession = Session::Get();
 					if(!pSession)
 					{
 						pMessage = "Not logged in!";

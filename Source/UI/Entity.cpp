@@ -59,7 +59,7 @@ void uiEntity::RegisterEntity()
 	uiActionManager::RegisterProperty("visible", GetVisible, SetVisible, pType);
 	uiActionManager::RegisterProperty("anchor", NULL, SetAnchor, pType);
 
-	uiActionManager::RegisterInstantAction("focus", SetFocus, pType);
+	uiActionManager::RegisterInstantAction("setfocus", SetFocus, pType);
 
 	uiActionManager::RegisterDeferredAction("move", uiAction_Move::Create, pType);
 	uiActionManager::RegisterDeferredAction("fade", uiAction_Fade::Create, pType);
@@ -319,6 +319,9 @@ void uiEntity::SetEnable(bool _bEnabled)
 	if(bEnabled == _bEnabled)
 		return;
 
+	if(!_bEnabled && bHasFocus)
+		GetEntityManager()->SetFocus(NULL);
+
 	bEnabled = _bEnabled;
 	SignalEvent(_bEnabled ? "onenable" : "ondisable", NULL);
 }
@@ -398,7 +401,7 @@ uiEntity *uiEntityManager::SetFocus(uiEntity *pNewFocus)
 		return pFocus;
 
 	uiEntity *pOld = pFocus;
-	pFocus = pNewFocus;
+	pFocus = pNewFocus && pNewFocus->bEnabled ? pNewFocus : NULL;
 
 	if(pOld)
 	{

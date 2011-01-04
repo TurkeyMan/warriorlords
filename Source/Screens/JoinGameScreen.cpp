@@ -75,7 +75,7 @@ void JoinGameScreen::Select()
 	pInputManager->PushReceiver(pReturn);
 	pInputManager->PushReceiver(pGame);
 
-	WLServ_FindGames(search, Session::GetCurrent()->GetUserID());
+	WLServ_FindGames(search, Session::Get()->GetUserID());
 
 	pMessage = NULL;
 }
@@ -184,7 +184,7 @@ void JoinGameScreen::FindGame(HTTPRequest::Status status)
 		return;
 	}
 
-	Session *pCurrent = Session::GetCurrent();
+	Session *pCurrent = Session::Get();
 	if(!pCurrent)
 	{
 		pMessage = "Invalid session!";

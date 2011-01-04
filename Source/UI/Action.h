@@ -198,6 +198,8 @@ public:
 
 	void Update();
 
+	ActionType *FindActionType(const char *pName, uiEntity *pEntity);
+
 	uiActionScript *CreateAction(const char *pName, const char *pDescription);
 	uiActionScript *ParseScript(const char *pName, const char *pScript);
 	uiActionScript *FindAction(const char *pName);
@@ -210,22 +212,19 @@ public:
 
 	uiExecuteContext *RunScript(uiActionScript *pScript, uiEntity *pEntity, uiRuntimeArgs *pArgs);
 
-	bool RunAction(uiExecuteContext *pContext, const char *pAction, uiRuntimeArgs *pArgs, uiEntity *pActionEntity, uiActionScript_Action *pNextAction, uiEntity *pNextEntity);
-
 	MFString GetEntityProperty(uiEntity *pEntity, const char *pProperty);
 	void SetEntityProperty(uiEntity *pEntity, const char *pProperty, uiRuntimeArgs *pArguments);
 	void SetEntityProperty(uiEntity *pEntity, const char *pProperty, const char *pArgs);
 
-	void DestroyEntity(uiEntity *pEntity);
-
 	uiRuntimeArgs *ParseArgs(const char *pArgs, uiEntity *pEntity);
 
-	ActionType *FindActionType(const char *pName, uiEntity *pEntity);
+	void DestroyEntity(uiEntity *pEntity);
 
 protected:
 	// internal structures
 
 	// private methods
+	bool RunAction(uiExecuteContext *pContext, const char *pAction, uiRuntimeArgs *pArgs, uiEntity *pActionEntity, uiActionScript_Action *pNextAction, uiEntity *pNextEntity);
 	bool Continue(uiExecuteContext *pContext, uiActionScript_Action *pNextData, uiEntity *pEntity);
 
 	void *Lex(const char *pAction, int *pNumTokens, int preBytes = 0);

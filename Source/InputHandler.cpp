@@ -48,6 +48,15 @@ void InputManager::InitEvent(InputInfo &info, InputEvent ev, int contact)
 
 void InputManager::PushReceiver(InputReceiver *pReceiver)
 {
+#if defined(_DEBUG)
+	InputReceiver *pR = pInputStack;
+	while(pR)
+	{
+		MFDebug_Assert(pR != pReceiver, "Receiver is already on the stack!!");
+		pR = pR->pNext;
+	}
+#endif
+
 	pReceiver->pNext = pInputStack;
 	pInputStack = pReceiver;
 }

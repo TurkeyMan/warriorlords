@@ -358,7 +358,7 @@ bool uiActionManager::RunAction(uiExecuteContext *pContext, const char *pAction,
 	if(!pType)
 		return true;
 
-	MFDebug_Assert(pType->pEntityType && pActionEntity->IsType(pType->pEntityType), MFStr("Can not perform action '%s' on this type of entity!", pAction));
+	MFDebug_Assert(!pType->pEntityType || pActionEntity->IsType(pType->pEntityType), MFStr("Can not perform action '%s' on this type of entity!", pAction));
 
 	if(pType->pSetHandler)
 	{
@@ -391,7 +391,8 @@ bool uiActionManager::RunAction(uiExecuteContext *pContext, const char *pAction,
 	}
 
 	// release the args
-	pArgs->Release();
+	if(pArgs)
+		pArgs->Release();
 
 	return bFinished;
 }
@@ -445,6 +446,13 @@ void uiActionManager::DestroyEntity(uiEntity *pEntity)
 
 uiRuntimeArgs *uiActionManager::ParseArgs(const char *pArgs, uiEntity *pEntity)
 {
+	if(pArgs[0] == 0)
+	{
+		uiRuntimeArgs *pEmpty = uiRuntimeArgs::Allocate(1);
+		pEmpty->SetValue(0, "", true);
+		return pEmpty;
+	}
+
 	// create a dummy context
 	uiExecuteContext context;
 	MFZeroMemory(&context, sizeof(context));
@@ -467,7 +475,7 @@ uiActionManager::ActionType *uiActionManager::FindActionType(const char *pName, 
 	if(!pActionType)
 		return NULL;
 
-	do
+	while(1)
 	{
 		ActionType *pT = pActionType;
 		do
@@ -479,8 +487,8 @@ uiActionManager::ActionType *uiActionManager::FindActionType(const char *pName, 
 
 		if(pType)
 			pType = pType->pParent;
+		else break;
 	}
-	while(pType);
 
 	return NULL;
 }

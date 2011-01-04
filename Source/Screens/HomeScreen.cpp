@@ -93,7 +93,7 @@ HomeScreen::~HomeScreen()
 
 void HomeScreen::Select()
 {
-	pSession = Session::GetCurrent();
+	pSession = Session::Get();
 	bOffline = pSession == NULL || pSession->IsOffline();
 
 	pWaiting->Clear();

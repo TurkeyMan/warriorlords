@@ -104,6 +104,7 @@ void LobbyScreen::Select()
 
 void LobbyScreen::Refresh()
 {
+	pInputManager->PopReceiver(this);
 	pInputManager->PushReceiver(this);
 	pInputManager->PushReceiver(pReturn);
 
@@ -111,7 +112,7 @@ void LobbyScreen::Refresh()
 		pInputManager->PushReceiver(pLeave);
 
 	// only push the start game button if we created the game
-	Session *pSession = Session::GetCurrent();
+	Session *pSession = Session::Get();
 	if(bOffline || (pSession && pSession->GetUserID() == details.players[0].id))
 		pInputManager->PushReceiver(pBegin);
 
@@ -244,7 +245,7 @@ int LobbyScreen::Update()
 
 void LobbyScreen::Draw()
 {
-	Session *pSession = Session::GetCurrent();
+	Session *pSession = Session::Get();
 	pReturn->Draw();
 
 	if(!bOffline)
@@ -341,7 +342,7 @@ void LobbyScreen::Click(int button, int buttonID)
 		case 1:
 		{
 			// leave the game
-			Session *pSession = Session::GetCurrent();
+			Session *pSession = Session::Get();
 			if(pSession)
 				WLServ_LeaveGame(leave, pSession->GetUserID(), details.id);
 		}

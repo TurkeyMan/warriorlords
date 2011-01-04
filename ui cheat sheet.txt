@@ -21,11 +21,12 @@ UI cheat sheet
 
   anchor    - anchor position relative to the entity: anchor = [anchor point]
                 where [anchor point] is one of:
-                    topleft     topcenter      topright
+                   topleft      topcenter       topright
                    centerleft     center     centerright
                    bottomLeft  bottomcenter  bottomright
 
  Shared events:
+  init()              : triggered only once when the entity is loaded
   onfocus()           : triggered when an entity gains focus
   onfocuslost()       : triggered when an entity loses focus
   onenable()          : triggered when an entity is enabled
@@ -35,7 +36,7 @@ UI cheat sheet
   ontap(button, pos)  : triggered when a finger or mouse button is pressed and then lifted without being moved
 
  Shared actions:
-  focus()              - set the current focus to 'this' entity
+  setfocus()           - set the current focus to 'this' entity
   move(target, time)   - move an entity from one location to another
   fade(target, time)   - fade from one colour to another
   spin(target, time)   - spin from one orientation to another
@@ -52,7 +53,8 @@ UI cheat sheet
 -------
 
  Properties:
-  
+  image
+  orientation  - ... eg: orientation = [ normal | rotate_90cw | rotate_180 | rotate_90ccw | hflip | vflip ]
 
  Events:
   
@@ -64,7 +66,14 @@ UI cheat sheet
 ------
 
  Properties:
-  
+  text
+  font
+  textheight
+  justification  - 
+                    where [justify type] is one of:
+                      topleft      topcenter       topright  ----top full----
+                      centerleft     center     centerright  ---centerfull---
+                      bottomLeft  bottomcenter  bottomright  ---buttomfull---
 
  Events:
   
@@ -76,23 +85,53 @@ UI cheat sheet
 --------
 
  Properties:
-  
+  state
+  style          - ... eg: style = [ button | statebutton | checkbox ]
+  hovermessage
+  triggermode    - ... eg: triggermode = [ ondown | onclick ]
+  image
+  text
+  font
+  textheight
+  justification  - 
+                    where [justify type] is one of:
+                      topleft      topcenter       topright  ----top full----
+                      centerleft     center     centerright  ---centerfull---
+                      bottomLeft  bottomcenter  bottomright  ---buttomfull---
 
  Events:
-  
+  onclick(button, id) : 
 
  Actions:
   
-
 
 [String]
 --------
 
  Properties:
-  
+  text        - 
+  font        - 
+  textheight  -
+  type        - ... eg: type = [ regular | multiline | numeric | password ]
 
  Events:
-  
+  onchange() :
+  ontab()    :
 
  Actions:
   
+
+[List]
+--------
+
+ Properties:
+  items
+  selection
+  font
+
+ Events:
+  onselectionchange(selection) : 
+
+ Actions:
+  add
+  remove

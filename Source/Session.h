@@ -7,6 +7,10 @@ class Session
 {
 public:
 	typedef FastDelegate2<ServerError, Session *> SessionDelegate;
+
+	static void InitSession();
+	static void DeinitSession();
+
 	Session();
 	~Session();
 
@@ -26,8 +30,7 @@ public:
 	uint32 GetUserID() { return user.id; }
 	const char *GetUsername() { return user.userName; }
 
-	static Session *SetCurrent(Session *pNew) { Session *pOld = pCurrent; pCurrent = pNew; return pOld; }
-	static Session *GetCurrent() { return pCurrent; }
+	static Session *Get() { return pCurrent; }
 
 	int GetNumCurrentGames() { return numCurrentGames; }
 	int GetNumPendingGames() { return numPendingGames; }
@@ -41,6 +44,12 @@ public:
 	void SetUpdateDelegate(SessionDelegate handler) { updateHandler = handler; }
 
 protected:
+	static MFString GetOnline(uiEntity *pEntity);
+	static MFString GetLoggedIn(uiEntity *pEntity);
+
+	static void LoginAction(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+	void LoginActionComplete(HTTPRequest::Status status);
+
 	UserDetails user;
 
 	bool bLoggedIn;
@@ -73,6 +82,8 @@ protected:
 	HTTPRequest getCurrent;
 	HTTPRequest getPending;
 	HTTPRequest getPast;
+
+	MFString responseAction;
 
 	static Session *pCurrent;
 

@@ -7,6 +7,16 @@
 #include "MFTexture.h"
 #include "MFPrimitive.h"
 
+static const char *gOrientationStrings[MFFontJustify_Max] =
+{
+	"normal",
+	"rotate_90cw",
+	"rotate_180",
+	"rotate_90ccw",
+	"hflip",
+	"vflip"
+};
+
 void uiImageProp::RegisterEntity()
 {
 	FactoryType *pType = uiEntityManager::RegisterEntityType("Image", Create, "Entity");
@@ -148,18 +158,5 @@ void uiImageProp::SetImage(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 void uiImageProp::SetOrientation(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiImageProp *pImageProp = (uiImageProp*)pEntity;
-	MFString arg = pArguments->GetString(0);
-
-	if(arg == "normal")
-		pImageProp->orientation = Normal;
-	else if(arg == "rotate_90cw")
-		pImageProp->orientation = Rotate_90cw;
-	else if(arg == "rotate_180")
-		pImageProp->orientation = Rotate_180;
-	else if(arg == "rotate_90ccw")
-		pImageProp->orientation = Rotate_90ccw;
-	else if(arg == "hflip")
-		pImageProp->orientation = HFlip;
-	else if(arg == "vflip")
-		pImageProp->orientation = VFlip;
+	pImageProp->orientation = (Orientation)LookupString(pArguments->GetString(0).CStr(), gOrientationStrings);
 }

@@ -52,6 +52,9 @@ uiStringProp::~uiStringProp()
 
 bool uiStringProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 {
+	if(!bEnabled)
+		return false;
+
 	switch(ev)
 	{
 		case IE_Down:
@@ -144,7 +147,7 @@ void uiStringProp::Draw(const uiDrawState &state)
 	int selectionStart, selectionEnd;
 	stringLogic.GetSelection(&selectionStart, &selectionEnd);
 
-	bool bDrawSelection = bHasFocus && selectionStart != selectionEnd;
+	bool bDrawSelection = selectionStart != selectionEnd;
 
 	// draw the frame and selection
 	MFPrimitive(PT_TriStrip | PT_Prelit | PT_Untextured);
@@ -181,7 +184,10 @@ void uiStringProp::Draw(const uiDrawState &state)
 		MFSetPosition(size.x-2.f, size.y-2.f, 0);
 		MFSetPosition(2.f+selMinX, 2.f, 0);
 
-		MFSetColour(0, 0, 0.6f, 1);
+		if(bHasFocus)
+			MFSetColour(0, 0, 0.6f, 1);
+		else
+			MFSetColour(0.4f, 0.4f, 0.4f, 1);
 		MFSetPosition(2.f+selMinX, 2.f, 0);
 		MFSetPosition(2.f+selMaxX, 2.f, 0);
 		MFSetPosition(2.f+selMinX, 2.f+textHeight, 0);
@@ -191,7 +197,7 @@ void uiStringProp::Draw(const uiDrawState &state)
 	MFEnd();
 
 	// draw text
-	MFFont_DrawText(pFont, 2.f, 2.f, textHeight, state.colour, pString, -1, state.mat);
+	MFFont_DrawText(pFont, 2.f, 2.f, textHeight, bEnabled ? state.colour : MFVector::grey, pString, -1, state.mat);
 
 	if(bHasFocus)
 	{

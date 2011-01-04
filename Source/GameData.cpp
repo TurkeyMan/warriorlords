@@ -32,10 +32,14 @@ void GameData::Init()
 	uiRuntimeArgs::Init();
 
 	pGameData = new GameData;
+
+	Session::InitSession();
 }
 
 void GameData::Deinit()
 {
+	Session::DeinitSession();
+
 	delete pGameData;
 	pGameData = NULL;
 
