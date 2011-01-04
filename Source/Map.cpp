@@ -566,32 +566,12 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 		pMap->numChanges = 0;
 	}
 
-	int tileWidth, tileHeight;
-	MFRect screen;
-	pMap->pTiles->GetTileSize(&tileWidth, &tileHeight);
-	GetDisplayRect(&screen);
-
-	const int maxZoom = 2;
-	int rtWidth = (int)screen.width*maxZoom+tileWidth*2-1;
-	int rtHeight = (int)screen.height*maxZoom+tileHeight*2-1;
-	rtWidth -= rtWidth%tileWidth;
-	rtHeight -= rtHeight%tileHeight;
-	rtWidth = MFUtil_NextPowerOf2(rtWidth);
-	rtHeight = MFUtil_NextPowerOf2(rtHeight);
-	pMap->pRenderTarget = MFTexture_CreateRenderTarget("MapSurface", rtWidth, rtHeight, TexFmt_SelectFastest_NoAlpha);
-	pMap->pRenderTargetMaterial = MFMaterial_Create("MapSurface");
-
-	screen.width = MFMin(screen.width, 480.f);
-	screen.height = MFMin(screen.height, 320.f);
-
-	int sx = (int)screen.width / (pMap->mapWidth*2);
-	int sy = (int)screen.height / (pMap->mapHeight*2);
-	pMap->minimapPixelScale = MFClamp(1, MFMin(sx, sy), 4);
-
-	pMap->pMiniMapImage = (uint32*)MFHeap_AllocAndZero((pMap->mapWidth*2) * (pMap->mapHeight*2) * sizeof(uint32));
-	pMap->pMinimapMaterial = NULL;
+	pMap->CreateRenderTarget();
 
 	// add some clouds
+	int tileWidth, tileHeight;
+	pMap->pTiles->GetTileSize(&tileWidth, &tileHeight);
+
 	pMap->pCloud = MFMaterial_Create("Cloud");
 
 	for(int a=0; a<numClouds; ++a)
@@ -887,30 +867,7 @@ Map *Map::CreateNew(Game *pGame, const char *pTileset, const char *pUnits)
 
 	pNew->zoom = 1.f;
 
-	int tileWidth, tileHeight;
-	MFRect screen;
-	pNew->pTiles->GetTileSize(&tileWidth, &tileHeight);
-	GetDisplayRect(&screen);
-
-	const int maxZoom = 2;
-	int rtWidth = (int)screen.width*maxZoom+tileWidth*2-1;
-	int rtHeight = (int)screen.height*maxZoom+tileHeight*2-1;
-	rtWidth -= rtWidth%tileWidth;
-	rtHeight -= rtHeight%tileHeight;
-	rtWidth = MFUtil_NextPowerOf2(rtWidth);
-	rtHeight = MFUtil_NextPowerOf2(rtHeight);
-	pNew->pRenderTarget = MFTexture_CreateRenderTarget("MapSurface", rtWidth, rtHeight);
-	pNew->pRenderTargetMaterial = MFMaterial_Create("MapSurface");
-
-	screen.width = MFMin(screen.width, 480.f);
-	screen.height = MFMin(screen.height, 320.f);
-
-	int sx = (int)screen.width / (pNew->mapWidth*2);
-	int sy = (int)screen.height / (pNew->mapHeight*2);
-	pNew->minimapPixelScale = MFClamp(1, MFMin(sx, sy), 4);
-
-	pNew->pMiniMapImage = (uint32*)MFHeap_AllocAndZero((pNew->mapWidth*2) * (pNew->mapHeight*2) * sizeof(uint32));
-	pNew->pMinimapMaterial = NULL;
+	pNew->CreateRenderTarget();
 
 	// editor stuff
 	pNew->pTouched = (uint8*)MFHeap_AllocAndZero(pNew->mapWidth * pNew->mapHeight * sizeof(*pNew->pTouched));
@@ -921,6 +878,43 @@ Map *Map::CreateNew(Game *pGame, const char *pTileset, const char *pUnits)
 	pNew->moveButton = 0;
 
 	return pNew;
+}
+
+void Map::CreateRenderTarget()
+{
+	maxZoom = 2.f;
+
+	int tileWidth, tileHeight;
+	MFRect screen;
+	pTiles->GetTileSize(&tileWidth, &tileHeight);
+	GetDisplayRect(&screen);
+
+try_again:
+	int rtWidth = (int)(screen.width*maxZoom)+tileWidth*2-1;
+	int rtHeight = (int)(screen.height*maxZoom)+tileHeight*2-1;
+	rtWidth -= rtWidth%tileWidth;
+	rtHeight -= rtHeight%tileHeight;
+	rtWidth = MFUtil_NextPowerOf2(rtWidth);
+	rtHeight = MFUtil_NextPowerOf2(rtHeight);
+	pRenderTarget = MFTexture_CreateRenderTarget("MapSurface", rtWidth, rtHeight, TexFmt_SelectFastest_NoAlpha);
+
+	if(!pRenderTarget && maxZoom > 1.f)
+	{
+		maxZoom *= 0.5f;
+		goto try_again;
+	}
+
+	pRenderTargetMaterial = MFMaterial_Create("MapSurface");
+
+	screen.width = MFMin(screen.width, 480.f);
+	screen.height = MFMin(screen.height, 320.f);
+
+	int sx = (int)screen.width / (mapWidth*2);
+	int sy = (int)screen.height / (mapHeight*2);
+	minimapPixelScale = MFClamp(1, MFMin(sx, sy), 4);
+
+	pMiniMapImage = (uint32*)MFHeap_AllocAndZero((mapWidth*2) * (mapHeight*2) * sizeof(uint32));
+	pMinimapMaterial = NULL;
 }
 
 void Map::Destroy()
@@ -1639,7 +1633,7 @@ void Map::SetZoom(float _zoom, float pointX, float pointY)
 	if(pointY < 0.f)
 		pointY = display.height / tileHeight * 0.5f;
 
-	float newZoom = MFClamp(0.5f, _zoom, 1.f);
+	float newZoom = MFClamp(1.f/maxZoom, _zoom, 1.f);
 	float zoomDiff = zoom / newZoom;
 	zoom = newZoom;
 

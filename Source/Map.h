@@ -173,6 +173,8 @@ public:
 	static int GetMovementPenalty(MapTile *pTile, int *pTerrainPenalties, int player, bool bRoadWalk, int *pTerrainType = NULL);
 
 protected:
+	void CreateRenderTarget();
+
 	char filename[32];
 	char name[32];
 	char tileset[32];
@@ -188,7 +190,7 @@ protected:
 
 	// runtime data
 	float xOffset, yOffset;
-	float zoom;
+	float zoom, maxZoom;
 
 	int dragContact;
 	float lastX, lastY;
