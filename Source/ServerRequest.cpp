@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include <../Fuji/Middleware/libjson/libjson.h>
+#include <libjson/libjson.h>
 
 #if 0//defined(_DEBUG)
 	const char *pHostname = "10.0.0.27";
