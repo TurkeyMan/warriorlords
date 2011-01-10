@@ -28,8 +28,9 @@ HTTPRequest::HTTPRequest()
 	bFinished = bOldFinished = false;
 	status = oldStatus = CS_NotStarted;
 
-	mutex = NULL;
 	transferThread = NULL;
+	mutex = MFThread_CreateMutex("HTTP Mutex");
+	MFDebug_Assert(mutex != NULL, "Too many mutexes!");
 
 	reqAlloc = 512;
 	pRequestBuffer = (char*)MFHeap_Alloc(reqAlloc);
@@ -61,6 +62,9 @@ HTTPRequest::~HTTPRequest()
 				pUpdateList[a] = pUpdateList[a+1];
 		}
 	}
+
+	MFThread_DestroyMutex(mutex);
+	mutex = NULL;
 }
 
 void HTTPRequest::UpdateEvents()
@@ -179,10 +183,10 @@ void HTTPRequest::CreateConnection()
 {
 	SetStatus(CS_ResolvingHost, false);
 
-	mutex = MFThread_CreateMutex("HTTP Mutex");
-	MFDebug_Assert(mutex != NULL, "Too many mutexes!");
+	MFThread_LockMutex(mutex);
 	transferThread = MFThread_CreateThread("HTTP Thread", RequestThread, this);
 	MFDebug_Assert(transferThread != NULL, "Too many threads!");
+	MFThread_ReleaseMutex(mutex);
 }
 
 int HTTPRequest::RequestThread(void *_pRequest)
@@ -193,12 +197,9 @@ int HTTPRequest::RequestThread(void *_pRequest)
 
 	// clean up the thread
 	MFThread thread = pThis->transferThread;
-	MFMutex mutex = pThis->mutex;
-	MFThread_LockMutex(mutex);
+	MFThread_LockMutex(pThis->mutex);
 	pThis->transferThread = NULL;
-	pThis->mutex = NULL;
-	MFThread_ReleaseMutex(mutex);
-	MFThread_DestroyMutex(mutex);
+	MFThread_ReleaseMutex(pThis->mutex);
 	MFThread_DestroyThread(thread);
 	return 0;
 }

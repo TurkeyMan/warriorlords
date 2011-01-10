@@ -95,8 +95,8 @@ public:
 	void Get(const char *pServer, int port, const char *pResourcePath);
 	void Post(const char *pServer, int port, const char *pResourcePath, MFFileHTTPRequestArg *pArgs = NULL, int numArgs = 0);
 
-	void Lock() { if(mutex) MFThread_ReleaseMutex(mutex); }
-	void Unlock() { if(mutex) MFThread_LockMutex(mutex); }
+	void Lock() { if(mutex) MFThread_LockMutex(mutex); }
+	void Unlock() { if(mutex) MFThread_ReleaseMutex(mutex); }
 
 	bool IsFinished();
 	bool RequestPending();
