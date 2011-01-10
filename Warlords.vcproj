@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\Fuji\Include\;.\;&quot;$(ProjectDir)Source/&quot;"
+				AdditionalIncludeDirectories="..\Fuji\Include\;..\Fuji\Middleware\;.\;&quot;$(ProjectDir)Source/&quot;"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -119,7 +119,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="..\Fuji\Include\;.\;&quot;$(ProjectDir)Source/&quot;"
+				AdditionalIncludeDirectories="..\Fuji\Include\;..\Fuji\Middleware\;.\;&quot;$(ProjectDir)Source/&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_RELEASE"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
@@ -196,7 +196,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="\Projects\Fuji\Include\;.\;&quot;$(ProjectDir)Source/&quot;"
+				AdditionalIncludeDirectories="..\Fuji\Include\;..\Fuji\Middleware\;.\;&quot;$(ProjectDir)Source/&quot;"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_RETAIL"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
