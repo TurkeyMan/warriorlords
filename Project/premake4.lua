@@ -10,6 +10,7 @@ solution "Warlords"
 		kind "WindowedApp"
 		language "C++"
 		files { "../Source/**.h", "../Source/**.cpp" }
+		files { "../Data/UI/**.ini" }
 
 		includedirs { "../Source/" }
 		objdir "../Build/"
@@ -17,8 +18,8 @@ solution "Warlords"
 
 		flags { "StaticRuntime", "NoExceptions", "NoRTTI" }
 
-		pchheader "Warlords.h"
-		pchsource "Warlords.cpp"
+--		pchheader "Warlords.h"
+--		pchsource "Warlords.cpp"
 
 		links { "Fuji" }
 
