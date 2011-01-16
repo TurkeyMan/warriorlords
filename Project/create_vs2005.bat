@@ -1,1 +1,1 @@
-..\Bin\premake4.exe vs2005
+bin\premake4.exe vs2005

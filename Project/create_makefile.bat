@@ -1,1 +1,1 @@
-..\Bin\premake4.exe gmake
+bin\premake4.exe gmake
