@@ -44,7 +44,7 @@ StringBox *StringBox::Create(MFFont *pFont, MFRect *pPos, StringEntryLogic::Stri
 
 void StringBox::Destroy()
 {
-	StringBox::~StringBox();
+	this->~StringBox();
 	MFHeap_Free(this);
 }
 

@@ -2,7 +2,6 @@
 #define _MAP_H
 
 #include "Tileset.h"
-#include "Castle.h"
 #include "Unit.h"
 #include "InputHandler.h"
 #include "Path.h"

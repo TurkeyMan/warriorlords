@@ -676,10 +676,10 @@ void Battle::Draw()
 	float texelCenter = MFRenderer_GetTexelCenterOffset();
 	float texelOffsetW = 0.f, texelOffsetH = 0.f;
 
-	MFTexture *pTex;
+	
 	int texWidth, texHeight;
 	int diffuse = MFMaterial_GetParameterIndexFromName(pIcons, "diffuseMap");
-	MFMaterial_GetParameter(pIcons, diffuse, 0, &pTex);
+	MFTexture *pTex = MFMaterial_GetParameterT(pIcons, diffuse, 0);
 	if(pTex)
 	{
 		MFTexture_GetTextureDimensions(pTex, &texWidth, &texHeight);

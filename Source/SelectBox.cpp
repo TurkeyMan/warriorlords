@@ -40,7 +40,7 @@ void SelectBox::Destroy()
 {
 	pList->Destroy();
 
-	SelectBox::~SelectBox();
+	this->~SelectBox();
 	MFHeap_Free(this);
 }
 

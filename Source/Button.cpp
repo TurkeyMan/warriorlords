@@ -29,7 +29,7 @@ Button *Button::Create(const MFMaterial *pImage, const MFRect *pPosition, const 
 
 void Button::Destroy()
 {
-	Button::~Button();
+	this->~Button();
 	MFHeap_Free(this);
 }
 
@@ -153,7 +153,7 @@ void CheckBox::Destroy()
 {
 	pButton->Destroy();
 
-	CheckBox::~CheckBox();
+	this->~CheckBox();
 	MFHeap_Free(this);
 }
 

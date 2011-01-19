@@ -1,6 +1,5 @@
 #include "Warlords.h"
 #include "Map.h"
-#include "Castle.h"
 #include "Display.h"
 
 #include "MFRenderer.h"

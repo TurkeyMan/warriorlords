@@ -141,9 +141,8 @@ void uiImageProp::SetImage(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 
 	if(pImageProp->pImage)
 	{
-		MFTexture *pTex;
 		int diffuse = MFMaterial_GetParameterIndexFromName(pImageProp->pImage, "diffuseMap");
-		MFMaterial_GetParameter(pImageProp->pImage, diffuse, 0, &pTex);
+		MFTexture *pTex = MFMaterial_GetParameterT(pImageProp->pImage, diffuse, 0);
 		if(pTex)
 		{
 			int width, height;

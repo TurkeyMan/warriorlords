@@ -127,7 +127,7 @@ void Game::Init(const char *pMapName, bool bEdit)
 	// allocate runtime data
 	const int numSizes = 4;
 	const int numItems[numSizes] = { 1024, 256, 64, 4 };
-	const int sizes[numSizes] = { sizeof(Action*)*1, sizeof(Action*)*6, sizeof(Action*)*MapTile::MaxUnitsOnTile * 2, sizeof(Action*)*256 };
+	const size_t sizes[numSizes] = { sizeof(Action*)*1, sizeof(Action*)*6, sizeof(Action*)*MapTile::MaxUnitsOnTile * 2, sizeof(Action*)*256 };
 	actionList.Init(numSizes, numItems, sizes);
 
 	actionCache.Init(1024, sizeof(Action), 256);
