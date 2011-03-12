@@ -182,9 +182,6 @@ protected:
 	};
 
 public:
-	typedef MFString (GetPropertyHandler)(uiEntity *pEntity);
-	typedef void (InstantActionHandler)(uiEntity *pEntity, uiRuntimeArgs *pArguments);
-
 	static void RegisterProperty(const char *pPropertyName, GetPropertyHandler *pGetHandler, InstantActionHandler *pSetHandler, FactoryType *pEntityType);
 	static void RegisterInstantAction(const char *pActionName, InstantActionHandler *pActionHandler, FactoryType *pEntityType);
 	static void RegisterDeferredAction(const char *pActionName, Factory_CreateFunc *pCreateFunc, FactoryType *pEntityType);

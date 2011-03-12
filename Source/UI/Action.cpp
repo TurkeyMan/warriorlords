@@ -61,7 +61,7 @@ MFString uiRuntimeArgs::GetString(int index)
 			return str;
 		}
 	}
-	return NULL;
+	return (const char *)NULL;
 }
 
 bool uiRuntimeArgs::GetBool(int index)
@@ -461,7 +461,8 @@ uiRuntimeArgs *uiActionManager::ParseArgs(const char *pArgs, uiEntity *pEntity)
 	// resolve the args
 	int numTokens;
 	uiActionScript_Token *pTokens = (uiActionScript_Token*)Lex(pArgs, &numTokens);
-	uiRuntimeArgs *pRuntimeArgs = ResolveArguments(&context, pTokens, numTokens, pEntity->GetContainerSize());
+	MFVector containerSize = pEntity->GetContainerSize();
+	uiRuntimeArgs *pRuntimeArgs = ResolveArguments(&context, pTokens, numTokens, containerSize);
 	MFHeap_Free(pTokens);
 
 	return pRuntimeArgs;
@@ -509,7 +510,8 @@ bool uiActionManager::Continue(uiExecuteContext *pContext, uiActionScript_Action
 	if(pActionEntity)
 	{
 		// resolve action parameters
-		uiRuntimeArgs *pArgs = ResolveArguments(pContext, pNext->pArgs, pNext->numArgs, pActionEntity->GetContainerSize());
+		MFVector containerSize = pActionEntity->GetContainerSize();
+		uiRuntimeArgs *pArgs = ResolveArguments(pContext, pNext->pArgs, pNext->numArgs, containerSize);
 
 		bFinished = RunAction(pContext, pNext->pAction, pArgs, pActionEntity, pNext->bWaitComplete ? pNext->pNext : NULL, pEntity);
 	}

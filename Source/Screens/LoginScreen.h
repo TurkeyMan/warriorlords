@@ -47,7 +47,7 @@ protected:
 	void TabPass(const char *pString);
 	void TabEmail(const char *pString);
 	void CreateComplete(HTTPRequest::Status status);
-	void LoginScreen::OnLogin(ServerError err, Session *pSession);
+	void OnLogin(ServerError err, Session *pSession);
 };
 
 #endif
