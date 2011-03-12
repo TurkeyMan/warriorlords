@@ -60,7 +60,7 @@ solution "Warlords"
 		-- Linux --
 		configuration { "linux" }
 			defines { "_LINUX" }
-			links { "c", "m", "stdc++", "pthread", "GL", "GLU", "Xxf86vm", "ogg", "vorbis", "vorbisfile", "asound", "portaudio" }
+			links { "c", "m", "stdc++", "pthread", "GL", "GLU", "Xxf86vm", "X11", "ogg", "vorbis", "vorbisfile", "asound", "portaudio" }
 			links { "z", "mad", "png", "json" }
 
 		-- OSX --

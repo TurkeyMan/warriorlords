@@ -205,9 +205,8 @@ void uiButtonProp::SetImage(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 
 	if(pButtonProp->pImage)
 	{
-		MFTexture *pTex;
 		int diffuse = MFMaterial_GetParameterIndexFromName(pButtonProp->pImage, "diffuseMap");
-		MFMaterial_GetParameter(pButtonProp->pImage, diffuse, 0, &pTex);
+		MFTexture *pTex = MFMaterial_GetParameterT(pButtonProp->pImage, diffuse, 0);
 		if(pTex)
 		{
 			int width, height;
