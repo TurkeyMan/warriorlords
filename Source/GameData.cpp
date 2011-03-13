@@ -10,6 +10,23 @@ GameData::GameData()
 	resourceCache.Init();
 	actionManager.Init();
 	entityManager.Init();
+
+	MFFindData fd;
+	MFFind *pFind = MFFileSystem_FindFirst("game:Map*.ini", &fd);
+	while(pFind)
+	{
+		// allocate map details
+		MapData &map = maps.push();
+		map.name = fd.pFilename;
+		map.name.TruncateExtension();
+		map.bDetailsLoaded = false;
+
+		if(!MFFileSystem_FindNext(pFind, &fd))
+		{
+			MFFileSystem_FindClose(pFind);
+			pFind = NULL;
+		}
+	}
 }
 
 GameData::~GameData()
@@ -57,4 +74,19 @@ void GameData::Update()
 void GameData::Draw()
 {
 	entityManager.Draw();
+}
+
+MFString GameData::GetMapList()
+{
+	MFString t = "{ \"";
+
+	int numMaps = maps.size();
+	for(int a=0; a<numMaps; ++a)
+	{
+		if(a > 0)
+			t += "\", \"";
+		t += maps[a].name;
+	}
+
+	return t + "\" }";
 }

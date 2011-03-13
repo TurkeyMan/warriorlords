@@ -11,6 +11,9 @@
 #include "StringProp.h"
 #include "ListProp.h"
 
+#include "DataProp.h"
+#include "SessionProp.h"
+
 #include "MFSystem.h"
 
 extern bool SplitLine(MFIniLine *pLine, MFString &left, MFString &right);
@@ -47,6 +50,10 @@ const MFVector uiEntity::anchorOffset[AnchorMax] =
 
 void uiEntity::RegisterEntity()
 {
+	// add some global actions
+	uiActionManager::RegisterInstantAction("if", If, NULL);
+
+	// register base entity
 	FactoryType *pType = uiEntityManager::RegisterEntityType("Entity", Create);
 
 	uiActionManager::RegisterProperty("position", GetPos, SetPos, pType);
@@ -85,53 +92,9 @@ uiEntity::~uiEntity()
 
 void uiEntity::Init(MFIniLine *pEntityData)
 {
-	uiActionManager *pManager = GetActionManager();
-
 	while(pEntityData)
 	{
-		if(pEntityData->IsSection("Events"))
-		{
-			MFIniLine *pEvents = pEntityData->Sub();
-			while(pEvents)
-			{
-				MFString left, right;
-				if(SplitLine(pEvents, left, right))
-				{
-					uiActionScript *pEvent = pManager->ParseScript(left.CStr(), right.CStr());
-					events.push(pEvent);
-				}
-
-				pEvents = pEvents->Next();
-			}
-		}
-		else if(pEntityData->IsSection("Children"))
-		{
-			MFIniLine *pChild = pEntityData->Sub();
-			while(pChild)
-			{
-				if(pChild->IsString(0, "section"))
-				{
-					MFIniLine *pEntity = pChild->Sub();
-					while(pEntity)
-					{
-						if(pEntity->IsString(0, "name"))
-						{
-							uiEntity *pNewEntity = GetEntityManager()->Create(pChild->GetString(1), pEntity->GetString(1), this);
-							pNewEntity->Init(pChild->Sub());
-							break;
-						}
-
-						pEntity = pEntity->Next();
-					}
-				}
-
-				pChild = pChild->Next();
-			}
-		}
-		else
-		{
-			pManager->SetEntityProperty(this, pEntityData->GetString(0), pEntityData->GetLineData().CStr());
-		}
+		InitLine(pEntityData);
 
 		pEntityData = pEntityData->Next();
 	}
@@ -139,8 +102,55 @@ void uiEntity::Init(MFIniLine *pEntityData)
 	// init all the entities
 	int numChildren = children.size();
 	for(int a=0; a<numChildren; ++a)
-	{
 		children[a]->SignalEvent("init", NULL);
+}
+
+void uiEntity::InitLine(MFIniLine *pEntityData)
+{
+	uiActionManager *pManager = GetActionManager();
+
+	if(pEntityData->IsSection("Events"))
+	{
+		MFIniLine *pEvents = pEntityData->Sub();
+		while(pEvents)
+		{
+			MFString left, right;
+			if(SplitLine(pEvents, left, right))
+			{
+				uiActionScript *pEvent = pManager->ParseScript(left.CStr(), right.CStr());
+				events.push(pEvent);
+			}
+
+			pEvents = pEvents->Next();
+		}
+	}
+	else if(pEntityData->IsSection("Children"))
+	{
+		MFIniLine *pChild = pEntityData->Sub();
+		while(pChild)
+		{
+			if(pChild->IsString(0, "section"))
+			{
+				MFIniLine *pEntity = pChild->Sub();
+				while(pEntity)
+				{
+					if(pEntity->IsString(0, "name"))
+					{
+						uiEntity *pNewEntity = GetEntityManager()->Create(pChild->GetString(1), pEntity->GetString(1), this);
+						pNewEntity->Init(pChild->Sub());
+						break;
+					}
+
+					pEntity = pEntity->Next();
+				}
+			}
+
+			pChild = pChild->Next();
+		}
+	}
+	else
+	{
+		pManager->SetEntityProperty(this, pEntityData->GetString(0), pEntityData->GetLineData().CStr());
 	}
 }
 
@@ -323,7 +333,18 @@ void uiEntity::SetEnable(bool _bEnabled)
 		GetEntityManager()->SetFocus(NULL);
 
 	bEnabled = _bEnabled;
+	OnEnable(bEnabled);
 	SignalEvent(_bEnabled ? "onenable" : "ondisable", NULL);
+}
+
+void uiEntity::SetVisible(bool _bVisible)
+{
+//	if(bVisible == _bVisible)
+//		return;
+
+	bVisible = _bVisible;
+	OnShow(bVisible);
+	SignalEvent(_bVisible ? "onshow" : "onhide", NULL);
 }
 
 bool uiEntity::SignalEvent(const char *pEvent, const char *pParams)
@@ -384,6 +405,9 @@ void uiEntityManager::InitManager()
 	uiButtonProp::RegisterEntity();
 	uiStringProp::RegisterEntity();
 	uiListProp::RegisterEntity();
+
+	uiDataProp::RegisterEntity();
+	uiSessionProp::RegisterEntity();
 }
 
 void uiEntityManager::DeinitManager()
@@ -655,7 +679,7 @@ void uiEntity::SetEnable(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 
 void uiEntity::SetVisible(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
-	pEntity->bVisible = pArguments->GetBool(0);
+	pEntity->SetVisible(pArguments->GetBool(0));
 }
 
 void uiEntity::SetAnchor(uiEntity *pEntity, uiRuntimeArgs *pArguments)
@@ -666,6 +690,25 @@ void uiEntity::SetAnchor(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 void uiEntity::SetFocus(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	pEntity->GetEntityManager()->SetFocus(pEntity);
+}
+
+void uiEntity::If(uiEntity *pEntity, uiRuntimeArgs *pArguments)
+{
+	MFString action;
+
+	if(pArguments->GetBool(0))
+		action = pArguments->GetString(1);
+	else if(pArguments->GetNumArgs() > 2)
+		action = pArguments->GetString(2);
+
+	if(action)
+	{
+		uiActionManager *pAM = GameData::Get()->GetActionManager();
+
+		uiActionScript *pScript = pAM->FindAction(action.CStr());
+		if(pScript)
+			pAM->RunScript(pScript, pEntity, NULL);
+	}
 }
 
 void uiAction_Move::Init(uiRuntimeArgs *pParameters)

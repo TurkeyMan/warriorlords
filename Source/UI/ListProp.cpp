@@ -14,9 +14,12 @@ void uiListProp::RegisterEntity()
 	FactoryType *pType = uiEntityManager::RegisterEntityType("List", Create, "Entity");
 
 	uiActionManager::RegisterProperty("items", GetItems, SetItems, pType);
+	uiActionManager::RegisterProperty("isselected", IsSelected, SetSelected, pType);
 	uiActionManager::RegisterProperty("selection", GetSelected, SetSelected, pType);
+	uiActionManager::RegisterProperty("text", GetCurrent, NULL, pType);
 	uiActionManager::RegisterProperty("font", NULL, SetFont, pType);
 
+	uiActionManager::RegisterInstantAction("clear", ClearItems, pType);
 	uiActionManager::RegisterInstantAction("add", AddItem, pType);
 	uiActionManager::RegisterInstantAction("remove", RemoveItem, pType);
 }
@@ -144,7 +147,10 @@ void uiListProp::SetSelection(int item)
 	selection = newSelection;
 	if(selection > -1 && selectCallback)
 		selectCallback(selection);
-	SignalEvent("onselectionchange", MFString::Format("%d", selection).CStr());
+	SignalEvent("onselectionchange");
+
+	if(selection < 0)
+		SignalEvent("onselectionclear");
 }
 
 MFString uiListProp::GetItems(uiEntity *pEntity)
@@ -167,11 +173,20 @@ void uiListProp::SetItems(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 	int count = pItems->GetNumArgs();
 
 	pList->items.clear();
+	pList->selection = -1;
+
 	for(int a=0; a<count; ++a)
 	{
 		ListItem &item = pList->items.push();
 		item.text = pItems->GetString(a);
 	}
+}
+
+void uiListProp::ClearItems(uiEntity *pEntity, uiRuntimeArgs *pArguments)
+{
+	uiListProp *pList = (uiListProp*)pEntity;
+	pList->items.clear();
+	pList->selection = -1;
 }
 
 void uiListProp::AddItem(uiEntity *pEntity, uiRuntimeArgs *pArguments)
@@ -190,6 +205,12 @@ void uiListProp::RemoveItem(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 	//...
 }
 
+MFString uiListProp::IsSelected(uiEntity *pEntity)
+{
+	uiListProp *pList = (uiListProp*)pEntity;
+	return MFString::Static(pList->selection > -1 ? "true" : "false");
+}
+
 MFString uiListProp::GetSelected(uiEntity *pEntity)
 {
 	uiListProp *pList = (uiListProp*)pEntity;
@@ -201,6 +222,12 @@ void uiListProp::SetSelected(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiListProp *pList = (uiListProp*)pEntity;
 	pList->SetSelection(pArguments->GetInt(0));
+}
+
+MFString uiListProp::GetCurrent(uiEntity *pEntity)
+{
+	uiListProp *pList = (uiListProp*)pEntity;
+	return pList->selection >= 0 ? pList->items[pList->selection].text : NULL;
 }
 
 void uiListProp::SetFont(uiEntity *pEntity, uiRuntimeArgs *pArguments)

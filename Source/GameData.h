@@ -26,7 +26,18 @@ public:
 	int FindString(const char *pKey) { return MFTranslation_FindString(pStrings, pKey); }
 	const char *GetString(int string) { return MFTranslation_GetString(pStrings, string); }
 
+	int GetNumMaps() { return maps.size(); }
+	MFString GetMapName(int map) { maps[map].name; }
+	MFString GetMapList();
+
 protected:
+	struct MapData
+	{
+		MFString name;
+		MapDetails details;
+		bool bDetailsLoaded;
+	};
+
 	GameData();
 	~GameData();
 
@@ -35,6 +46,8 @@ protected:
 	uiActionManager actionManager;
 
 	MFStringTable *pStrings;
+
+	MFArray<MapData> maps;
 
 	static GameData *pGameData;
 };

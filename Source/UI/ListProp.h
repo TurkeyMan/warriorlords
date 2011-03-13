@@ -30,10 +30,13 @@ public:
 protected:
 	static MFString GetItems(uiEntity *pEntity);
 	static void SetItems(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+	static void ClearItems(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void AddItem(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void RemoveItem(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+	static MFString IsSelected(uiEntity *pEntity);
 	static MFString GetSelected(uiEntity *pEntity);
 	static void SetSelected(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+	static MFString GetCurrent(uiEntity *pEntity);
 	static void SetFont(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 
 	class ListItem

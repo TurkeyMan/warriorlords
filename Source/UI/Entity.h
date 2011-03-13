@@ -97,12 +97,15 @@ public:
 	virtual ~uiEntity();
 
 	virtual void Init(MFIniLine *pEntityData);
+	void InitLine(MFIniLine *pEntityData);
 
 	virtual void Update();
 	virtual void Draw(const uiDrawState &state);
 
 	virtual bool HandleInputEvent(InputEvent ev, const InputInfo &info);
 	virtual bool ChangeFocus(bool bGainFocus) { return true; }
+	virtual void OnEnable(bool bEnable) { }
+	virtual void OnShow(bool bShow) { }
 
 	void UpdateEntity();
 	void DrawEntity(const uiDrawState &state = identity);
@@ -134,10 +137,10 @@ public:
 	void SetScale(MFVector &scale) { this->scale = scale; }
 	void SetColour(MFVector &colour) { this->colour = colour; }
 	void SetEnable(bool bEnabled);
-	void SetVisible(bool bVisible) { this->bVisible = bVisible; }
+	void SetVisible(bool bVisible);
 	void SetAnchor(Anchor anchor) { this->anchor = anchor; }
 
-	bool SignalEvent(const char *pEvent, const char *pParams);
+	bool SignalEvent(const char *pEvent, const char *pParams = NULL);
 	void GetPosition(MFVector *pPosition);
 	void GetMatrix(MFMatrix *pMat);
 
@@ -185,6 +188,8 @@ protected:
 	static void SetAnchor(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 
 	static void SetFocus(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+
+	static void If(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 
 	static uiDrawState identity;
 	static const char *pAnchorNames[AnchorMax];

@@ -266,6 +266,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Source\CMakeLists.txt"
+				>
+			</File>
+			<File
 				RelativePath=".\Source\Display.cpp"
 				>
 			</File>
@@ -429,6 +433,10 @@
 					>
 				</File>
 				<File
+					RelativePath=".\Source\Screens\CMakeLists.txt"
+					>
+				</File>
+				<File
 					RelativePath=".\Source\Screens\GroupConfig.cpp"
 					>
 				</File>
@@ -529,6 +537,10 @@
 				Name="Middleware"
 				>
 				<File
+					RelativePath=".\Source\Middleware\CMakeLists.txt"
+					>
+				</File>
+				<File
 					RelativePath=".\Source\Middleware\FastDelegate.h"
 					>
 				</File>
@@ -550,6 +562,18 @@
 				</File>
 				<File
 					RelativePath=".\Source\UI\ButtonProp.h"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\UI\CMakeLists.txt"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\UI\DataProp.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\UI\DataProp.h"
 					>
 				</File>
 				<File
@@ -593,6 +617,14 @@
 					>
 				</File>
 				<File
+					RelativePath=".\Source\UI\SessionProp.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\Source\UI\SessionProp.h"
+					>
+				</File>
+				<File
 					RelativePath=".\Source\UI\StringProp.cpp"
 					>
 				</File>
@@ -613,6 +645,10 @@
 				Name="Tools"
 				>
 				<File
+					RelativePath=".\Source\Tools\CMakeLists.txt"
+					>
+				</File>
+				<File
 					RelativePath=".\Source\Tools\Factory.h"
 					>
 				</File>
@@ -630,6 +666,50 @@
 				</File>
 			</Filter>
 		</Filter>
+		<Filter
+			Name="UI"
+			>
+			<File
+				RelativePath=".\Data\UI\create.ini"
+				>
+			</File>
+			<File
+				RelativePath=".\Data\UI\home.ini"
+				>
+			</File>
+			<File
+				RelativePath=".\Data\UI\join.ini"
+				>
+			</File>
+			<File
+				RelativePath=".\Data\UI\lobby.ini"
+				>
+			</File>
+			<File
+				RelativePath=".\Data\UI\login.ini"
+				>
+			</File>
+			<File
+				RelativePath=".\Data\UI\play.ini"
+				>
+			</File>
+			<File
+				RelativePath=".\Data\UI\resume.ini"
+				>
+			</File>
+			<File
+				RelativePath=".\Data\UI\root.ini"
+				>
+			</File>
+			<File
+				RelativePath=".\Data\UI\titlescreen.ini"
+				>
+			</File>
+		</Filter>
+		<File
+			RelativePath=".\CMakeLists.txt"
+			>
+		</File>
 		<File
 			RelativePath=".\Makefile"
 			>

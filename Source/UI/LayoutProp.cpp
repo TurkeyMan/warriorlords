@@ -152,34 +152,10 @@ void uiLayoutProp::LoadLayout(const char *pLayoutDescriptor)
 						pSub = pSub->Next();
 					}
 				}
-				else if(pSLine->IsSection("Entities"))
-				{
-					MFIniLine *pSub = pSLine->Sub();
-					while(pSub)
-					{
-						if(pSub->IsString(0, "section"))
-						{
-							MFIniLine *pEntity = pSub->Sub();
-							while(pEntity)
-							{
-								if(pEntity->IsString(0, "name"))
-								{
-									uiEntity *pNewEntity = GetEntityManager()->Create(pSub->GetString(1), pEntity->GetString(1), this);
-									pNewEntity->Init(pSub->Sub());
-									break;
-								}
-
-								pEntity = pEntity->Next();
-							}
-						}
-
-						pSub = pSub->Next();
-					}
-				}
 				else
 				{
-					// must be a property
-					GetActionManager()->SetEntityProperty(this, pSLine->GetString(0), pSLine->GetLineData().CStr());
+					// it must be a standard entity property
+					InitLine(pSLine);
 				}
 
 				pSLine = pSLine->Next();
@@ -192,7 +168,5 @@ void uiLayoutProp::LoadLayout(const char *pLayoutDescriptor)
 	// init all the entities
 	int numChildren = children.size();
 	for(int a=0; a<numChildren; ++a)
-	{
 		children[a]->SignalEvent("init", NULL);
-	}
 }

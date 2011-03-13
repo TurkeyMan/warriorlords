@@ -24,8 +24,7 @@ public:
 	void LoadSession(uint32 user);
 	void SaveSession();
 
-	bool IsActive() { return bLoggedIn || bOffline; }
-	bool IsOffline() { return bOffline; }
+	bool IsOffline() { return !bLoggedIn; }
 
 	uint32 GetUserID() { return user.id; }
 	const char *GetUsername() { return user.userName; }
@@ -36,6 +35,8 @@ public:
 	int GetNumPendingGames() { return numPendingGames; }
 	int GetNumPastGames() { return numPastGames; }
 
+	void FindGames(MFString callback);
+
 	GameState *GetCurrentGame(int game) { return &pCurrentGames[game]; }
 	GameDetails *GetPendingGame(int game) { return &pPendingGames[game]; }
 	GameDetails *GetPastGame(int game) { return &pPastGames[game]; }
@@ -44,16 +45,9 @@ public:
 	void SetUpdateDelegate(SessionDelegate handler) { updateHandler = handler; }
 
 protected:
-	static MFString GetOnline(uiEntity *pEntity);
-	static MFString GetLoggedIn(uiEntity *pEntity);
-
-	static void LoginAction(uiEntity *pEntity, uiRuntimeArgs *pArguments);
-	void LoginActionComplete(HTTPRequest::Status status);
-
 	UserDetails user;
 
 	bool bLoggedIn;
-	bool bOffline;
 
 	int updating;
 
@@ -73,6 +67,9 @@ protected:
 	GameDetails *pPastGames;
 	int numPastGames;
 
+	// find game callback
+	MFString findEvent;
+
 	// manage these locally
 	uint32 localGames[64];
 	int numLocalGames;
@@ -82,8 +79,7 @@ protected:
 	HTTPRequest getCurrent;
 	HTTPRequest getPending;
 	HTTPRequest getPast;
-
-	MFString responseAction;
+	HTTPRequest search;
 
 	static Session *pCurrent;
 
@@ -93,6 +89,7 @@ protected:
 	void OnGetPast(HTTPRequest::Status status);
 	void OnGetCurrentGame(HTTPRequest::Status status);
 	void OnGetPendingGame(HTTPRequest::Status status);
+	void OnGamesFound(HTTPRequest::Status status);
 };
 
 #endif

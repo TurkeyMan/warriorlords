@@ -6,15 +6,15 @@
 
 Factory<uiAction> uiActionManager::actionFactory;
 MFObjectPool uiActionManager::actionTypePool;
+MFObjectPool uiActionManager::actionPool;
 HashList<uiActionManager::ActionType> uiActionManager::actionRegistry;
 
-const char * const gpDelimeters = " \t;:',()[]{}+-*/%\\|=";
-MFObjectPool gActionPool(sizeof(uiActionScript_Action), 128, 128);
+const char * const gpDelimeters = " \t;:',()[]{}!+-*/%\\|=";
 
 MFObjectPool uiRuntimeArgs::runtimeArgPool;
 uiRuntimeArgs::Argument *uiRuntimeArgs::pArgPool = NULL;
 uiRuntimeArgs::Argument *uiRuntimeArgs::pCurrent = NULL;
-int uiRuntimeArgs::poolSize = 256;
+int uiRuntimeArgs::poolSize = 1024;
 
 bool uiRuntimeArgs::IsNumeric(int index)
 {
@@ -212,6 +212,44 @@ void uiRuntimeArgs::NegateValue(int index)
 	}
 }
 
+void uiRuntimeArgs::NotValue(int index)
+{
+	if(index == -1)
+	{
+		for(int a=0; a<numArgs; ++a)
+			NotValue(a);
+	}
+	else
+	{
+		if(pArgs[index].type == AT_Int)
+			pArgs[index].iValue = !pArgs[index].iValue;
+		else if(pArgs[index].type == AT_Float)
+		{
+			pArgs[index].iValue = pArgs[index].fValue == 0 ? 1 : 0;
+			pArgs[index].type = AT_Int;
+		}
+		else if(pArgs[index].type == AT_String)
+		{
+			if(pArgs[index].string.CompareInsensitive("false"))
+			{
+				pArgs[index].string = "true";
+			}
+			else if(pArgs[index].string.CompareInsensitive("true"))
+			{
+				pArgs[index].string = "false";
+			}
+			else
+			{
+				pArgs[index].iValue = pArgs[index].string.IsEmpty() ? 1 : 0;
+				pArgs[index].string = NULL;
+				pArgs[index].type = AT_Int;
+			}
+		}
+		else if(pArgs[index].type == AT_Array)
+			pArgs[index].pArray->NotValue();
+	}
+}
+
 void uiRuntimeArgs::SetPercentage(int index, float containerSize)
 {
 	if(pArgs[index].type == AT_Int)
@@ -224,12 +262,14 @@ void uiRuntimeArgs::SetPercentage(int index, float containerSize)
 void uiActionManager::InitManager()
 {
 	actionTypePool.Init(sizeof(ActionType), 256, 32);
+	actionPool.Init(sizeof(uiActionScript_Action), 128, 128);
 	actionRegistry.Create(64, 256, 32);
 }
 
 void uiActionManager::DeinitManager()
 {
 	actionRegistry.Destroy();
+	actionPool.Deinit();
 	actionTypePool.Deinit();
 }
 
@@ -461,7 +501,7 @@ uiRuntimeArgs *uiActionManager::ParseArgs(const char *pArgs, uiEntity *pEntity)
 	// resolve the args
 	int numTokens;
 	uiActionScript_Token *pTokens = (uiActionScript_Token*)Lex(pArgs, &numTokens);
-	MFVector containerSize = pEntity->GetContainerSize();
+	MFVector containerSize = pEntity ? pEntity->GetContainerSize() : MFVector::zero;
 	uiRuntimeArgs *pRuntimeArgs = ResolveArguments(&context, pTokens, numTokens, containerSize);
 	MFHeap_Free(pTokens);
 
@@ -506,15 +546,15 @@ bool uiActionManager::Continue(uiExecuteContext *pContext, uiActionScript_Action
 	// check if action specifies an entity
 	uiEntity *pActionEntity = pNext->pEntity ? pEntity->GetEntityManager()->Find(pNext->pEntity) : pEntity;
 
-	bool bFinished = true;
-	if(pActionEntity)
+	// resolve action parameters
+	uiRuntimeArgs *pArgs = NULL;
+	if(pNext->pArgs)
 	{
-		// resolve action parameters
-		MFVector containerSize = pActionEntity->GetContainerSize();
-		uiRuntimeArgs *pArgs = ResolveArguments(pContext, pNext->pArgs, pNext->numArgs, containerSize);
-
-		bFinished = RunAction(pContext, pNext->pAction, pArgs, pActionEntity, pNext->bWaitComplete ? pNext->pNext : NULL, pEntity);
+		MFVector containerSize = pActionEntity ? pActionEntity->GetContainerSize() : MFVector::zero;
+		pArgs = ResolveArguments(pContext, pNext->pArgs, pNext->numArgs, containerSize);
 	}
+
+	bool bFinished = RunAction(pContext, pNext->pAction, pArgs, pActionEntity, pNext->bWaitComplete ? pNext->pNext : NULL, pEntity);
 
 	if(pNext->pNext && (bFinished || !pNext->bWaitComplete))
 		bFinished = Continue(pContext, pNext->pNext, pEntity) && bFinished;
@@ -559,7 +599,7 @@ void *uiActionManager::Lex(const char *pAction, int *pNumTokens, int preBytes)
 			pNewToken = MFStrN(pAction, 1);
 
 			// check if it's an arithmetic operator
-			if(*pAction == '+' || *pAction == '-' || *pAction == '*' || *pAction == '/' || *pAction == '%')
+			if(*pAction == '+' || *pAction == '-' || *pAction == '*' || *pAction == '/' || *pAction == '%' || *pAction == '!')
 				type = uiActionScript_Token::TT_Arithmetic;
 			else
 				type = uiActionScript_Token::TT_Syntax;
@@ -582,7 +622,7 @@ void *uiActionManager::Lex(const char *pAction, int *pNumTokens, int preBytes)
 			token.type = type;
 			while(!(token.pToken = MFStringCache_Add(pStringCache, pNewToken)))
 			{
-				int bytes = MFStringCache_GetSize(pStringCache);
+				size_t bytes = MFStringCache_GetSize(pStringCache);
 				MFStringCache *pNew = MFStringCache_Create(bytes * 2);
 
 				const char *pOldPtr = MFStringCache_GetCache(pStringCache);
@@ -607,8 +647,8 @@ void *uiActionManager::Lex(const char *pAction, int *pNumTokens, int preBytes)
 
 	if(numTokens)
 	{
-		int stringCacheSize = MFStringCache_GetSize(pStringCache);
-		int bytes = preBytes + sizeof(uiActionScript_Token) * numTokens + stringCacheSize;
+		size_t stringCacheSize = MFStringCache_GetSize(pStringCache);
+		size_t bytes = preBytes + sizeof(uiActionScript_Token) * numTokens + stringCacheSize;
 		pData = MFHeap_Alloc(bytes);
 		MFZeroMemory(pData, preBytes);
 
@@ -808,7 +848,7 @@ uiActionScript_Action *uiActionManager::ParseActions(uiActionScript_Token *pToke
 	while(t < numTokens)
 	{
 		// allocate a new action
-		uiActionScript_Action *pAction = (uiActionScript_Action*)gActionPool.AllocAndZero();
+		uiActionScript_Action *pAction = (uiActionScript_Action*)actionPool.AllocAndZero();
 		t += pAction->ParseAction(&pTokens[t], numTokens - t);
 
 		if(t < numTokens)
@@ -828,13 +868,16 @@ uiActionScript_Action *uiActionManager::ParseActions(uiActionScript_Token *pToke
 	return pFirstAction;
 }
 
-uiRuntimeArgs *uiActionManager::GetNextValue(uiExecuteContext *pContext, uiActionScript_Token *&pT, int &remaining, MFVector &containerSize, int arrayIndex)
+uiRuntimeArgs *uiActionManager::GetNextValue(uiExecuteContext *pContext, uiActionScript_Token *&pT, int &remaining, const MFVector &containerSize, int arrayIndex)
 {
 	uiRuntimeArgs *pValue = NULL;
 	bool bNeg = false;
+	bool bNot = false;
 	bool bString = false;
 
 	// check for unary sign operators
+	if(pT->IsOperator("!"))
+		bNot = true, ++pT, --remaining;
 	if(pT->IsOperator("+"))
 		++pT, --remaining;
 	if(pT->IsOperator("-"))
@@ -911,6 +954,11 @@ uiRuntimeArgs *uiActionManager::GetNextValue(uiExecuteContext *pContext, uiActio
 		pValue->NegateValue(0);
 	}
 
+	if(bNot)
+	{
+		pValue->NotValue(0);
+	}
+
 	return pValue;
 }
 
@@ -938,7 +986,7 @@ inline MFString DoSum(MFString a, MFString b, bool bAdd, bool bConcatinate)
 	return result;
 }
 
-uiRuntimeArgs *uiActionManager::CalculateProducts(uiExecuteContext *pContext, uiActionScript_Token *&pT, int &remaining, MFVector &containerSize, int arrayIndex)
+uiRuntimeArgs *uiActionManager::CalculateProducts(uiExecuteContext *pContext, uiActionScript_Token *&pT, int &remaining, const MFVector &containerSize, int arrayIndex)
 {
 	uiRuntimeArgs *pValue = GetNextValue(pContext, pT, remaining, containerSize, arrayIndex);
 
@@ -999,7 +1047,7 @@ uiRuntimeArgs *uiActionManager::CalculateProducts(uiExecuteContext *pContext, ui
 	return pValue;
 }
 
-uiRuntimeArgs *uiActionManager::ResolveArguments(uiExecuteContext *pContext, uiActionScript_Token *pTokens, int numTokens, MFVector &containerSize, int *pNumUsed)
+uiRuntimeArgs *uiActionManager::ResolveArguments(uiExecuteContext *pContext, uiActionScript_Token *pTokens, int numTokens, const MFVector &containerSize, int *pNumUsed)
 {
 	uiActionScript_Token *pT = pTokens;
 	uiRuntimeArgs *pNew = NULL;
@@ -1069,7 +1117,7 @@ uiRuntimeArgs *uiActionManager::ResolveArguments(uiExecuteContext *pContext, uiA
 	return pNew;
 }
 
-uiRuntimeArgs *uiActionManager::ResolveIdentifier(uiExecuteContext *pContext, const char *_pIdentifier, MFVector &containerSize)
+uiRuntimeArgs *uiActionManager::ResolveIdentifier(uiExecuteContext *pContext, const char *_pIdentifier, const MFVector &containerSize)
 {
 	enum SearchType
 	{
@@ -1101,7 +1149,6 @@ uiRuntimeArgs *uiActionManager::ResolveIdentifier(uiExecuteContext *pContext, co
 			pIdentifier = MFSkipWhite(pDot + 1);
 
 			bMemberFollows = true;
-			++depth;
 		}
 
 		if(!bMemberFollows)
@@ -1221,6 +1268,8 @@ uiRuntimeArgs *uiActionManager::ResolveIdentifier(uiExecuteContext *pContext, co
 				type = String;
 			}
 		}
+
+		++depth;
 	}
 	while(bMemberFollows);
 

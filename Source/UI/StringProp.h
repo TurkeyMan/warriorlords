@@ -38,6 +38,7 @@ protected:
 	void UpdateCursorPos(float x, bool bUpdateSelection);
 
 	static MFString GetText(uiEntity *pEntity);
+	static MFString GetEmpty(uiEntity *pEntity);
 	static void SetText(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void SetFont(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void SetTextHeight(uiEntity *pEntity, uiRuntimeArgs *pArguments);

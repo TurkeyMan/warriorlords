@@ -64,6 +64,7 @@ public:
 	void SetValue(int index, MFString str, bool bString);
 	void SetArray(int index, uiRuntimeArgs *pArray);
 	void NegateValue(int index = -1);
+	void NotValue(int index = -1);
 	void SetPercentage(int index, float containerSize);
 
 protected:
@@ -227,11 +228,11 @@ protected:
 	void *Lex(const char *pAction, int *pNumTokens, int preBytes = 0);
 	uiActionScript_Action *ParseActions(uiActionScript_Token *pTokens, int numTokens);
 
-	uiRuntimeArgs *ResolveArguments(uiExecuteContext *pContext, uiActionScript_Token *pTokens, int numTokens, MFVector &containerSize, int *pNumUsed = NULL);
+	uiRuntimeArgs *ResolveArguments(uiExecuteContext *pContext, uiActionScript_Token *pTokens, int numTokens, const MFVector &containerSize, int *pNumUsed = NULL);
 
-	uiRuntimeArgs *ResolveIdentifier(uiExecuteContext *pContext, const char *pIdentifier, MFVector &containerSize);
-	uiRuntimeArgs *GetNextValue(uiExecuteContext *pContext, uiActionScript_Token *&pT, int &remaining, MFVector &containerSize, int arrayIndex);
-	uiRuntimeArgs *CalculateProducts(uiExecuteContext *pContext, uiActionScript_Token *&pT, int &remaining, MFVector &containerSize, int arrayIndex);
+	uiRuntimeArgs *ResolveIdentifier(uiExecuteContext *pContext, const char *pIdentifier, const MFVector &containerSize);
+	uiRuntimeArgs *GetNextValue(uiExecuteContext *pContext, uiActionScript_Token *&pT, int &remaining, const MFVector &containerSize, int arrayIndex);
+	uiRuntimeArgs *CalculateProducts(uiExecuteContext *pContext, uiActionScript_Token *&pT, int &remaining, const MFVector &containerSize, int arrayIndex);
 
 	// private members
 	MFPtrListDL<uiExecuteContext> runningActions;
@@ -244,6 +245,7 @@ protected:
 	static Factory<uiAction> actionFactory;
 
 	static MFObjectPool actionTypePool;
+	static MFObjectPool actionPool;
 	static HashList<ActionType> actionRegistry;
 };
 

@@ -6,11 +6,6 @@ Session *Session::pCurrent = NULL;
 void Session::InitSession()
 {
 	pCurrent = new Session();
-
-	uiActionManager::RegisterProperty("online", GetOnline, NULL, NULL);
-	uiActionManager::RegisterProperty("loggedin", GetLoggedIn, NULL, NULL);
-
-	uiActionManager::RegisterInstantAction("login", LoginAction, NULL);
 }
 
 void Session::DeinitSession()
@@ -22,13 +17,14 @@ void Session::DeinitSession()
 Session::Session()
 {
 	bLoggedIn = false;
-	bOffline = false;
 
 	pCurrentGames = NULL;
 	pPendingGames = NULL;
 	pPastGames = NULL;
 
 	updating = -1;
+
+	search.SetCompleteDelegate(MakeDelegate(this, &Session::OnGamesFound));
 }
 
 Session::~Session()
@@ -80,6 +76,47 @@ void Session::UpdateState()
 	WLServ_GetActiveGames(getCurrent, user.id);
 	WLServ_GetPendingGames(getPending, user.id);
 	WLServ_GetPastGames(getPast, user.id);
+}
+
+void Session::FindGames(MFString callback)
+{
+	findEvent = callback;
+	WLServ_FindGames(search, GetUserID());
+}
+
+void Session::OnGamesFound(HTTPRequest::Status status)
+{
+	const int MaxGames = 20;
+	GameLobby games[MaxGames];
+	int numGames = MaxGames;
+
+	ServerError err = WLServResult_GetLobbies(search, games, &numGames);
+	if(err != SE_NO_ERROR)
+	{
+		// nothing?
+	}
+
+	if(findEvent)
+	{
+		MFString t = "{ \"";
+
+		for(int a=0; a<numGames; ++a)
+		{
+			if(a > 0)
+				t += "\", \"";
+			t += games[a].name;
+		}
+
+		t += "\" }";
+		
+		uiActionManager *pAM = GameData::Get()->GetActionManager();
+		uiActionScript *pScript = pAM->FindAction(findEvent.CStr());
+		if(pScript)
+		{
+			uiRuntimeArgs *pArgs = pAM->ParseArgs(t.CStr(), NULL);
+			pAM->RunScript(pScript, NULL, pArgs);
+		}
+	}
 }
 
 void Session::OnGetCurrent(HTTPRequest::Status status)
@@ -205,74 +242,35 @@ void Session::Login(const char *pUsername, const char *pPassword)
 
 void Session::BeginOffline()
 {
-	bOffline = true;
 	bLoggedIn = false;
 }
 
 void Session::OnLogin(HTTPRequest::Status status)
 {
+	uiActionManager *pAM = GameData::Get()->GetActionManager();
+
 	ServerError err = WLServResult_GetUser(login, &user);
 	if(err != SE_NO_ERROR)
 	{
 		if(loginHandler)
 			loginHandler(err, this);
+
+		uiActionScript *pScript = pAM->FindAction("loginfailed");
+		if(pScript)
+			pAM->RunScript(pScript, NULL, NULL);
 		return;
 	}
 
 	// we're logged in!
 	bLoggedIn = true;
-	bOffline = false;
 
 	// reset the game cache
 	numCurrentGames = numPendingGames = numPastGames = 0;
 
 	if(loginHandler)
 		loginHandler(SE_NO_ERROR, this);
-}
 
-void Session::LoginAction(uiEntity *pEntity, uiRuntimeArgs *pArguments)
-{
-	if(pArguments->GetString(0).IsEmpty() || pArguments->GetString(1).IsEmpty())
-	{
-		MFDebug_Warn(2, "Invalid login request");
-		return;
-	}
-
-	Session *pSession = Session::Get();
-
-	pSession->responseAction = NULL;
-	if(pArguments->GetNumArgs() >= 2)
-		pSession->responseAction = pArguments->GetString(2);
-
-	pSession->login.SetCompleteDelegate(MakeDelegate(pSession, &Session::LoginActionComplete));
-	WLServ_Login(pSession->login, pArguments->GetString(0).CStr(), pArguments->GetString(1).CStr());
-}
-
-void Session::LoginActionComplete(HTTPRequest::Status status)
-{
-	OnLogin(status);
-
-	if(responseAction)
-	{
-		uiActionManager *pAM = GameData::Get()->GetActionManager();
-		uiActionScript *pScript = pAM->FindAction(responseAction.CStr());
-
-		uiRuntimeArgs *pArgs = pAM->ParseArgs(MFString::Format("%d", bLoggedIn ? 1 : 0).CStr(), NULL);
-		pAM->RunScript(pScript, NULL, pArgs);
-		pArgs->Release();
-	}
-}
-
-MFString Session::GetOnline(uiEntity *pEntity)
-{
-	Session *pSession = Session::Get();
-
-	return MFString::Format("%d", pSession->bOffline ? 0 : 1);
-}
-
-MFString Session::GetLoggedIn(uiEntity *pEntity)
-{
-	Session *pSession = Session::Get();
-
-	return MFString::Format("%d", pSession->bLoggedIn ? 1 : 0);
+	uiActionScript *pScript = pAM->FindAction("loginsucceeded");
+	if(pScript)
+		pAM->RunScript(pScript, NULL, NULL);
 }

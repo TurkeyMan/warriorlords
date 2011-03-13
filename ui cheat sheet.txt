@@ -31,6 +31,8 @@ UI cheat sheet
   onfocuslost()       : triggered when an entity loses focus
   onenable()          : triggered when an entity is enabled
   ondisable()         : triggered when an entity is disabled
+  onshow()            : triggered when an entity becomes visible
+  onhide()            : triggered when an entity becomes hidden
   ondown(button, pos) : triggered when a finger is placed or a mouse button is pressed down
   onup(button, pos)   : triggered when a finger is lifted or a mouse button is raised
   ontap(button, pos)  : triggered when a finger or mouse button is pressed and then lifted without being moved

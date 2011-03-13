@@ -25,6 +25,7 @@ void uiStringProp::RegisterEntity()
 	FactoryType *pType = uiEntityManager::RegisterEntityType("String", Create, "Entity");
 
 	uiActionManager::RegisterProperty("text", GetText, SetText, pType);
+	uiActionManager::RegisterProperty("empty", GetEmpty, NULL, pType);
 	uiActionManager::RegisterProperty("font", NULL, SetFont, pType);
 	uiActionManager::RegisterProperty("textheight", NULL, SetTextHeight, pType);
 	uiActionManager::RegisterProperty("type", NULL, SetType, pType);
@@ -235,13 +236,19 @@ void uiStringProp::StringChangeCallback(const char *pString)
 	if(changeCallback)
 		changeCallback(stringLogic.GetString().CStr());
 
-	SignalEvent("onchange", stringLogic.GetString().CStr());
+	SignalEvent("onchange", MFString::Format("\"%s\"", stringLogic.GetString().CStr()).CStr());
 }
 
 void uiStringProp::SetText(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiStringProp *pStringProp = (uiStringProp*)pEntity;
 	pStringProp->SetString(pArguments->GetString(0));
+}
+
+MFString uiStringProp::GetEmpty(uiEntity *pEntity)
+{
+	uiStringProp *pText = (uiStringProp*)pEntity;
+	return pText->stringLogic.GetString().IsEmpty() ? "true" : "false";
 }
 
 MFString uiStringProp::GetText(uiEntity *pEntity)

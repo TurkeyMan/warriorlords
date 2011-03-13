@@ -127,6 +127,10 @@ void uiButtonProp::Draw(const uiDrawState &state)
 	if(bEnabled && this->state > -1)
 		bDark = bMouseOver;
 
+	MFVector colour = state.colour;
+	if(bDark)
+		colour *= MakeVector(.5f, .5f, .5f, 1.f);
+
 	if(pImage)
 	{
 		MFMaterial_SetMaterial(pImage);
@@ -145,10 +149,7 @@ void uiButtonProp::Draw(const uiDrawState &state)
 
 		MFBegin(4);
 
-		if(bDark)
-			MFSetColour(state.colour * MakeVector(.5f, .5f, .5f, 1.f));
-		else
-			MFSetColour(state.colour);
+		MFSetColour(colour);
 
 		MFSetTexCoord1(xc, yc);
 		MFSetPosition(0, 0, 0);
@@ -166,7 +167,7 @@ void uiButtonProp::Draw(const uiDrawState &state)
 	}
 
 	if(text && text.NumBytes() > 0)
-		MFFont_DrawTextAnchored(pFont, text.CStr(), MFVector::zero, justification, textSize.x, textHeight, state.colour, -1, state.mat);
+		MFFont_DrawTextAnchored(pFont, text.CStr(), MFVector::zero, justification, textSize.x, textHeight, colour, -1, state.mat);
 }
 
 void uiButtonProp::SetState(uiEntity *pEntity, uiRuntimeArgs *pArguments)
