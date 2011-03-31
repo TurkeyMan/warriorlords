@@ -71,6 +71,7 @@ protected:
 	MFString findEvent;
 
 	// manage these locally
+	GameDetails offlineGame;
 	uint32 localGames[64];
 	int numLocalGames;
 

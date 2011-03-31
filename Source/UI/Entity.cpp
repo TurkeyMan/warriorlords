@@ -52,6 +52,7 @@ void uiEntity::RegisterEntity()
 {
 	// add some global actions
 	uiActionManager::RegisterInstantAction("if", If, NULL);
+	uiActionManager::RegisterInstantAction("select", Select, NULL);
 
 	// register base entity
 	FactoryType *pType = uiEntityManager::RegisterEntityType("Entity", Create);
@@ -708,6 +709,25 @@ void uiEntity::If(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 		uiActionScript *pScript = pAM->FindAction(action.CStr());
 		if(pScript)
 			pAM->RunScript(pScript, pEntity, NULL);
+	}
+}
+
+void uiEntity::Select(uiEntity *pEntity, uiRuntimeArgs *pArguments)
+{
+	int i = pArguments->GetInt(0);
+
+	if(pArguments->GetNumArgs() > i)
+	{
+		MFString action = pArguments->GetString(i);
+
+		if(action)
+		{
+			uiActionManager *pAM = GameData::Get()->GetActionManager();
+
+			uiActionScript *pScript = pAM->FindAction(action.CStr());
+			if(pScript)
+				pAM->RunScript(pScript, pEntity, NULL);
+		}
 	}
 }
 

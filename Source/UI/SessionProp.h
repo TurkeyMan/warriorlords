@@ -25,6 +25,10 @@ protected:
 
 	static MFString GetCurrentGame(uiEntity *pEntity);
 	static MFString GetCurrentGameOnline(uiEntity *pEntity);
+	static MFString GetCurrentGameMap(uiEntity *pEntity);
+	static MFString GetCurrentGameNumPlayers(uiEntity *pEntity);
+	static MFString GetCurrentGamePlayers(uiEntity *pEntity);
+	static MFString GetCurrentGameRaces(uiEntity *pEntity);
 
 	static void LoginAction(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void LogoutAction(uiEntity *pEntity, uiRuntimeArgs *pArguments);
@@ -38,12 +42,9 @@ protected:
 	static void EnterGame(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 
 	Session *pSession;
+	uint32 currentGame;
 
 	MFString callback;
-
-	MFString gameName;
-	uint32 gameID;
-	bool bOffline;
 };
 
 #endif

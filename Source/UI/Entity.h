@@ -190,6 +190,7 @@ protected:
 	static void SetFocus(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 
 	static void If(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+	static void Select(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 
 	static uiDrawState identity;
 	static const char *pAnchorNames[AnchorMax];

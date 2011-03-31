@@ -10,8 +10,12 @@ void uiSessionProp::RegisterEntity()
 	uiActionManager::RegisterProperty("username", GetUsername, NULL, pType);
 	uiActionManager::RegisterProperty("online", GetOnline, NULL, pType);
 
-	uiActionManager::RegisterProperty("current", GetCurrentGame, NULL, pType);
-	uiActionManager::RegisterProperty("iscurrentonline", GetCurrentGameOnline, NULL, pType);
+	uiActionManager::RegisterProperty("gamename", GetCurrentGame, NULL, pType);
+	uiActionManager::RegisterProperty("isonline", GetCurrentGameOnline, NULL, pType);
+	uiActionManager::RegisterProperty("map", GetCurrentGameMap, NULL, pType);
+	uiActionManager::RegisterProperty("numplayers", GetCurrentGameNumPlayers, NULL, pType);
+	uiActionManager::RegisterProperty("players", GetCurrentGamePlayers, NULL, pType);
+	uiActionManager::RegisterProperty("races", GetCurrentGameRaces, NULL, pType);
 
 	uiActionManager::RegisterInstantAction("login", LoginAction, pType);
 	uiActionManager::RegisterInstantAction("logout", LogoutAction, pType);
@@ -31,6 +35,8 @@ uiSessionProp::uiSessionProp()
 	bVisible = false;
 	size.x = 0.f;
 	size.y = 0.f;
+
+	currentGame = 0;
 }
 
 uiSessionProp::~uiSessionProp()
@@ -88,13 +94,33 @@ MFString uiSessionProp::GetOnline(uiEntity *pEntity)
 MFString uiSessionProp::GetCurrentGame(uiEntity *pEntity)
 {
 	uiSessionProp *pThis = (uiSessionProp*)pEntity;
-	return pThis->gameName;
+	return MFString::Format("\"%s\"", pThis->gameName.CStr());
 }
 
 MFString uiSessionProp::GetCurrentGameOnline(uiEntity *pEntity)
 {
 	uiSessionProp *pThis = (uiSessionProp*)pEntity;
 	return pThis->bOffline ? "false" : "true";
+}
+
+MFString uiSessionProp::GetCurrentGameMap(uiEntity *pEntity)
+{
+	return "";
+}
+
+MFString uiSessionProp::GetCurrentGameNumPlayers(uiEntity *pEntity)
+{
+	return "";
+}
+
+MFString uiSessionProp::GetCurrentGamePlayers(uiEntity *pEntity)
+{
+	return "";
+}
+
+MFString uiSessionProp::GetCurrentGameRaces(uiEntity *pEntity)
+{
+	return "";
 }
 
 void uiSessionProp::LoginAction(uiEntity *pEntity, uiRuntimeArgs *pArguments)

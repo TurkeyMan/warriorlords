@@ -93,6 +93,9 @@ struct GameDetails
 
 	int numPlayers;
 	Player players[16];
+
+	MapDetails mapDetails;
+	bool bMapDetailsLoaded;
 };
 
 struct GameState

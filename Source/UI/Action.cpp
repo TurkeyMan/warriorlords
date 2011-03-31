@@ -969,19 +969,60 @@ inline MFString DoProduct(float a, float b, bool bMul)
 	return result;
 }
 
-inline MFString DoSum(MFString a, MFString b, bool bAdd, bool bConcatinate)
+inline MFString DoSum(MFString a, MFString b, int oper, bool bConcatinate)
 {
 	MFString result;
 	if(bConcatinate)
 	{
-		MFDebug_Assert(bAdd, "Expected: Numeric operands.");
-		result = a + b;
+		switch(oper)
+		{
+			case 0:
+				result = a + b;
+				break;
+			case 6:
+				result = a.CompareInsensitive(b) ? "true" : "false";
+				break;
+			case 7:
+				result = a.CompareInsensitive(b) ? "false" : "true";
+				break;
+			default:
+				MFDebug_Assert(false, "Expected: Numeric operands.");
+				break;
+		}
 	}
 	else
 	{
 		float af = a.ToFloat();
 		float bf = b.ToFloat();
-		result.FromFloat(bAdd ? af+bf : af-bf);
+		switch(oper)
+		{
+			case 0:
+				result.FromFloat(af+bf);
+				break;
+			case 1:
+				result.FromFloat(af-bf);
+				break;
+			case 2:
+				result = af < bf ? "true" : "false";
+				break;
+			case 3:
+				result = af > bf ? "true" : "false";
+				break;
+			case 4:
+				result = af <= bf ? "true" : "false";
+				break;
+			case 5:
+				result = af >= bf ? "true" : "false";
+				break;
+			case 6:
+				result = af == bf ? "true" : "false";
+				break;
+			case 7:
+				result = af != bf ? "true" : "false";
+				break;
+			default:
+				break;
+		}
 	}
 	return result;
 }
@@ -1062,8 +1103,24 @@ uiRuntimeArgs *uiActionManager::ResolveArguments(uiExecuteContext *pContext, uiA
 
 		while(numTokens)
 		{
-			bool bAdd = pT->IsOperator("+");
-			if(!bAdd && !pT->IsOperator("-"))
+			int oper = -1;
+			if(pT->IsOperator("+"))
+				oper = 0;
+			else if(pT->IsOperator("-"))
+				oper = 1;
+			else if(pT->IsOperator("<"))
+				oper = 2;
+			else if(pT->IsOperator(">"))
+				oper = 3;
+			else if(pT->IsOperator("<="))
+				oper = 4;
+			else if(pT->IsOperator(">="))
+				oper = 5;
+			else if(pT->IsOperator("=="))
+				oper = 6;
+			else if(pT->IsOperator("!="))
+				oper = 7;
+			if(oper == -1)
 				break;
 
 			MFDebug_Assert(numTokens > 1, "Missing: Operand");
@@ -1079,14 +1136,14 @@ uiRuntimeArgs *uiActionManager::ResolveArguments(uiExecuteContext *pContext, uiA
 				MFDebug_Assert(pArray1 && pArray1->GetNumArgs() == numArgs, "Operand has different number of dimensions.");
 
 				for(int a=0; a<numArgs; ++a)
-					pArray0->SetValue(a, DoSum(pArray0->GetString(a), pArray1->GetString(a), bAdd, bIsString), bIsString);
+					pArray0->SetValue(a, DoSum(pArray0->GetString(a), pArray1->GetString(a), oper, bIsString), bIsString);
 				pOperand->Release();
 			}
 			else
 			{
 				MFDebug_Assert(!pOperand->GetArray(0), "Operand has different number of dimensions.");
 
-				pValue->SetValue(0, DoSum(pValue->GetString(0), pOperand->GetString(0), bAdd, bIsString), bIsString);
+				pValue->SetValue(0, DoSum(pValue->GetString(0), pOperand->GetString(0), oper, bIsString), bIsString);
 				pOperand->Release();
 			}
 		}
