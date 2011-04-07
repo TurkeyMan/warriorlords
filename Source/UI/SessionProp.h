@@ -16,6 +16,8 @@ public:
 	virtual void Update();
 	virtual void Draw(const uiDrawState &state);
 
+	GameDetails &GetLobby() { return activeLobby; }
+
 protected:
 	void RunScript(const char *pScript, const char *pParams = NULL);
 
@@ -45,6 +47,8 @@ protected:
 	uint32 currentGame;
 
 	MFString callback;
+
+	GameDetails activeLobby;
 };
 
 #endif

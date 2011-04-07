@@ -7,6 +7,7 @@
 
 class uiListProp : public uiEntity
 {
+	friend class uiSelectBoxProp;
 public:
 	typedef FastDelegate1<int> ListCallback;
 
@@ -24,10 +25,19 @@ public:
 	void SetSelectCallback(ListCallback callback) { selectCallback = callback; }
 	void SetDblClickCallback(ListCallback callback) { dblClickCallback = callback; }
 
+	int GetItemCount() { return items.size(); }
+
 	void SetSelection(int item);
 	int GetSelection() { return selection; }
 
+	MFString GetItem(int item) { return selection >= 0 ? items[selection].text : ""; }
+
+	void ClearItems();
+	void AddItem(const char *pItem);
+
 protected:
+	void FollowCursor(bool bFollowCursor);
+
 	static MFString GetItems(uiEntity *pEntity);
 	static void SetItems(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void ClearItems(uiEntity *pEntity, uiRuntimeArgs *pArguments);
@@ -56,6 +66,10 @@ protected:
 
 	float downPos;
 	bool bSelecting;
+
+	float hoverX, hoverY;
+
+	bool bFollowCursor;
 
 	ListCallback selectCallback;
 	ListCallback dblClickCallback;

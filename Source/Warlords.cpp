@@ -30,6 +30,8 @@ MenuScreen *pMenu = NULL;
 LobbyScreen *pLobby = NULL;
 JoinGameScreen *pJoinGame = NULL;
 
+Lobby lobby;
+
 MFSystemCallbackFunction pInitFujiFS;
 
 bool gAppHasFocus = true;
@@ -63,7 +65,12 @@ void Game_Init()
 	pInputManager = new InputManager;
 
 	GameData::Init();
-	GameData::Get()->GetEntityManager()->LoadRootNode("root");
+	uiEntityManager *pEM = GameData::Get()->GetEntityManager();
+	pEM->LoadRootNode("root");
+
+	uiEntity *pLobbyScreen = pEM->Find("lobbyscreen");
+	if(pLobbyScreen)
+		lobby.InitLobby(pLobbyScreen);
 
 	pLogin = new LoginScreen;
 	pHome = new HomeScreen;

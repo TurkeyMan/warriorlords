@@ -3,12 +3,79 @@
 #include "LobbyScreen.h"
 #include "HomeScreen.h"
 
+#include "UI/SessionProp.h"
+#include "UI/TextProp.h"
+#include "UI/SelectBoxProp.h"
+
 #include "MFSystem.h"
 #include "MFMaterial.h"
 #include "MFRenderer.h"
 
 extern HomeScreen *pHome;
 extern Game *pGame;
+
+void Lobby::InitLobby(uiEntity *_pLobby)
+{
+	pLobby = _pLobby;
+
+	pLobby->RegisterAction("lobbyonline", BeginOnline);
+	pLobby->RegisterAction("lobbyoffline", BeginOffline);
+}
+
+void Lobby::BeginOnline(uiEntity *pEntity, uiRuntimeArgs *pArguments)
+{
+	int z=0;
+}
+
+void Lobby::BeginOffline(uiEntity *pEntity, uiRuntimeArgs *pArguments)
+{
+	uiEntityManager *pEM = pEntity->GetEntityManager();
+	uiSessionProp *pSession = (uiSessionProp*)pEM->Find("session");
+
+	GameDetails &game = pSession->GetLobby();
+
+	for(int a=0; a<8; ++a)
+	{
+		uiTextProp *pName = (uiTextProp*)pEM->Find(MFStr("lobby_player%d", a));
+		uiSelectBoxProp *pRace = (uiSelectBoxProp*)pEM->Find(MFStr("lobby_race%d", a));
+		uiSelectBoxProp *pColour = (uiSelectBoxProp*)pEM->Find(MFStr("lobby_colour%d", a));
+		uiSelectBoxProp *pHero = (uiSelectBoxProp*)pEM->Find(MFStr("lobby_hero%d", a));
+
+		pName->SetVisible(a < game.maxPlayers);
+		pRace->SetVisible(a < game.maxPlayers);
+		pColour->SetVisible(a < game.maxPlayers);
+		pHero->SetVisible(a < game.maxPlayers);
+
+		if(a < game.maxPlayers)
+		{
+			// set player name
+			pName->SetText(game.players[a].name);
+
+			// set player race
+			pRace->ClearItems();
+			pColour->ClearItems();
+			for(int b=1; b<game.mapDetails.unitSetDetails.numRaces; ++b)
+			{
+				if(game.mapDetails.bRacePresent[b])
+					pRace->AddItem(game.mapDetails.unitSetDetails.races[b]);
+
+				pColour->AddItem("X");
+			}
+			pRace->SetSelection(game.players[a].race - 1);
+			pColour->SetSelection(game.players[a].colour - 1);
+
+			// set player heroes
+			pHero->ClearItems();
+			for(int b=0; b<game.mapDetails.unitSetDetails.numUnits; ++b)
+			{
+				if(game.mapDetails.unitSetDetails.units[b].type == UT_Hero && game.mapDetails.unitSetDetails.units[b].race == game.players[a].race)
+					pHero->AddItem(game.mapDetails.unitSetDetails.units[b].name);
+			}
+			pHero->SetSelection(game.players[a].hero);
+		}
+	}
+}
+
 
 LobbyScreen::LobbyScreen()
 {

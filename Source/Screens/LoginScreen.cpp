@@ -188,9 +188,7 @@ void LoginScreen::Click(int button, int buttonID)
 
 		case 1:
 		{
-			Session::Get()->BeginOffline();
-
-			// begin offline
+			// return to home screen
 			Screen::SetNext(pHome);
 			break;
 		}

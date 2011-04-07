@@ -240,9 +240,12 @@ void Session::Login(const char *pUsername, const char *pPassword)
 	WLServ_Login(login, pUsername, pPassword);
 }
 
-void Session::BeginOffline()
+void Session::Logout()
 {
 	bLoggedIn = false;
+
+	user.id = 0;
+	user.userName[0] = 0;
 }
 
 void Session::OnLogin(HTTPRequest::Status status)
@@ -273,4 +276,14 @@ void Session::OnLogin(HTTPRequest::Status status)
 	uiActionScript *pScript = pAM->FindAction("loginsucceeded");
 	if(pScript)
 		pAM->RunScript(pScript, NULL, NULL);
+}
+
+GameState *Session::GetActiveGame()
+{
+	return bLocalGame ? &offlineGames[activeGame] : &pCurrentGames[activeGame];
+}
+
+GameDetails *Session::GetActiveLobby()
+{
+	return bLocalGame ? NULL : &pPendingGames[activeGame];
 }

@@ -88,29 +88,31 @@ MFString uiSessionProp::GetOnline(uiEntity *pEntity)
 {
 	uiSessionProp *pThis = (uiSessionProp*)pEntity;
 
-	return MFString::Static(pThis->pSession->IsOffline() ? "false" : "true");
+	return MFString::Static(pThis->pSession->IsLoggedIn() ? "true" : "false");
 }
 
 MFString uiSessionProp::GetCurrentGame(uiEntity *pEntity)
 {
 	uiSessionProp *pThis = (uiSessionProp*)pEntity;
-	return MFString::Format("\"%s\"", pThis->gameName.CStr());
+	return pThis->activeLobby.name;
 }
 
 MFString uiSessionProp::GetCurrentGameOnline(uiEntity *pEntity)
 {
 	uiSessionProp *pThis = (uiSessionProp*)pEntity;
-	return pThis->bOffline ? "false" : "true";
+	return pThis->activeLobby.id == 0 ? "false" : "true";
 }
 
 MFString uiSessionProp::GetCurrentGameMap(uiEntity *pEntity)
 {
-	return "";
+	uiSessionProp *pThis = (uiSessionProp*)pEntity;
+	return pThis->activeLobby.map;
 }
 
 MFString uiSessionProp::GetCurrentGameNumPlayers(uiEntity *pEntity)
 {
-	return "";
+	uiSessionProp *pThis = (uiSessionProp*)pEntity;
+	return pThis->activeLobby.numPlayers;
 }
 
 MFString uiSessionProp::GetCurrentGamePlayers(uiEntity *pEntity)
@@ -141,7 +143,7 @@ void uiSessionProp::LoginAction(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 void uiSessionProp::LogoutAction(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiSessionProp *pThis = (uiSessionProp*)pEntity;
-	pThis->pSession->BeginOffline();
+	pThis->pSession->Logout();
 }
 
 void uiSessionProp::FindGames(uiEntity *pEntity, uiRuntimeArgs *pArguments)
@@ -170,9 +172,24 @@ void uiSessionProp::CreateOffline(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 	pThis->callback = pArguments->GetString(1);
 
 	// create offline game
-	pThis->gameName = "Offline game";
-	pThis->gameID = 0;
-	pThis->bOffline = true;
+	GameDetails &game = pThis->activeLobby;
+	game.id = 0;
+	MFString_Copy(game.name, "Offline game");
+	MFString_Copy(game.map, map.CStr());
+	Map::GetMapDetails(game.map, &game.mapDetails);
+	game.bMapDetailsLoaded = true;
+	game.maxPlayers = game.mapDetails.numPlayers;
+	game.numPlayers = game.maxPlayers;
+	game.turnTime = 0;
+
+	for(int a=0; a<game.numPlayers; ++a)
+	{
+		game.players[a].id = 0;
+		MFString_Copy(game.players[a].name, MFStr("Player %d", a+1));
+		game.players[a].colour = 1 + a;
+		game.players[a].race = 1;
+		game.players[a].hero = 0;
+	}
 
 	if(!pThis->callback.IsEmpty())
 		pThis->RunScript(pThis->callback.CStr(), "");

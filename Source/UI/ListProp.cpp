@@ -14,7 +14,7 @@ void uiListProp::RegisterEntity()
 	FactoryType *pType = uiEntityManager::RegisterEntityType("List", Create, "Entity");
 
 	uiActionManager::RegisterProperty("items", GetItems, SetItems, pType);
-	uiActionManager::RegisterProperty("isselected", IsSelected, SetSelected, pType);
+	uiActionManager::RegisterProperty("isselected", IsSelected, NULL, pType);
 	uiActionManager::RegisterProperty("selection", GetSelected, SetSelected, pType);
 	uiActionManager::RegisterProperty("text", GetCurrent, NULL, pType);
 	uiActionManager::RegisterProperty("font", NULL, SetFont, pType);
@@ -38,6 +38,8 @@ uiListProp::uiListProp()
 	downPos = 0.f;
 	bSelecting = false;
 
+	bFollowCursor = false;
+
 	selectCallback.clear();
 	dblClickCallback.clear();
 }
@@ -50,7 +52,27 @@ bool uiListProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 {
 	switch(ev)
 	{
+		case IE_Hover:
+			hoverX = info.hover.x - 2.f;
+			hoverY = info.hover.y - 2.f;
+			break;
+
 		case IE_Down:
+			if(bFollowCursor)
+			{
+				MFRect rect = { 0, 0, size.x - 1, size.y - 1 };
+				if(!MFTypes_PointInRect(info.up.x, info.up.y, &rect))
+				{
+					GetEntityManager()->SetExclusiveReceiver(NULL);
+					SetVisible(false);
+
+					// disconnect from UI tree
+					if(selection)
+						selectCallback(selection);
+					return true;
+				}
+			}
+
 			downPos = info.down.y;
 			velocity = 0.f;
 			bSelecting = true;
@@ -70,11 +92,27 @@ bool uiListProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 
 				MFRect client = { 2, 2, size.x - 5, size.y - 5 };
 				if(MFTypes_PointInRect(info.up.x, info.up.y, &client))
-					SetSelection((int)((info.tap.y + yOffset) / itemHeight));
+				{
+					if(bFollowCursor)
+					{
+						int newSel = (int)((info.tap.y - yOffset) / itemHeight);
+						if(newSel >= 0 && newSel < items.size())
+							selection = newSel;
+
+						// disconnect from UI tree
+						if(selectCallback)
+							selectCallback(selection);
+					}
+					else
+						SetSelection((int)((info.tap.y - yOffset) / itemHeight));
+				}
 			}
 			return true;
 
 		case IE_Drag:
+			float itemHeight = MFFont_GetFontHeight(pFont);
+			float max = itemHeight * (float)items.size() - size.y;
+			yOffset = MFClamp(-max - 4.f, yOffset + info.drag.y - info.drag.startY, 0.f);
 			return true;
 	}
 
@@ -93,7 +131,20 @@ void uiListProp::Draw(const uiDrawState &state)
 	float texelCenter = MFRenderer_GetTexelCenterOffset();
 	float textHeight = MFFont_GetFontHeight(pFont);
 
-	bool bDrawSelection = selection != -1;
+	int sel = selection;
+	if(bFollowCursor)
+	{
+		// calculate selection
+		sel = (int)((hoverY - yOffset) / textHeight);
+		if(sel >= items.size())
+			sel = -1;
+	}
+
+	bool bDrawSelection = sel != -1;
+
+	MFRect rect = { 0, 0, size.x - 1, size.y - 1 };
+	if(!MFTypes_PointInRect(hoverX, hoverY, &rect))
+		bDrawSelection = false;
 
 	// draw the frame and selection
 	MFPrimitive(PT_TriStrip | PT_Prelit | PT_Untextured);
@@ -121,20 +172,20 @@ void uiListProp::Draw(const uiDrawState &state)
 	{
 		// degen
 		MFSetPosition(size.x-2.f, size.y-2.f, 0);
-		MFSetPosition(2.f, 2.f + selection*textHeight, 0);
+		MFSetPosition(2.f, 2.f + sel*textHeight + yOffset, 0);
 
 		MFSetColour(0, 0, 0.6f, 1);
-		MFSetPosition(2.f, 2.f + selection*textHeight, 0);
-		MFSetPosition(size.x-2.f, 2.f + selection*textHeight, 0);
-		MFSetPosition(2.f, 2.f + (selection+1)*textHeight, 0);
-		MFSetPosition(size.x-2.f, 2.f + (selection+1)*textHeight, 0);
+		MFSetPosition(2.f, 2.f + sel*textHeight + yOffset, 0);
+		MFSetPosition(size.x-2.f, 2.f + sel*textHeight + yOffset, 0);
+		MFSetPosition(2.f, 2.f + (sel+1)*textHeight + yOffset, 0);
+		MFSetPosition(size.x-2.f, 2.f + (sel+1)*textHeight + yOffset, 0);
 	}
 
 	MFEnd();
 
 	// draw items
 	for(int a=0; a<items.size(); ++a)
-		MFFont_DrawText(pFont, 8.f - texelCenter, 2.f + textHeight*(float)a - texelCenter, textHeight, state.colour, items[a].text.CStr(), -1, state.mat);
+		MFFont_DrawText(pFont, 8.f - texelCenter, 2.f + textHeight*(float)a + yOffset - texelCenter, textHeight, state.colour, items[a].text.CStr(), -1, state.mat);
 }
 
 void uiListProp::SetSelection(int item)
@@ -151,6 +202,23 @@ void uiListProp::SetSelection(int item)
 
 	if(selection < 0)
 		SignalEvent("onselectionclear");
+}
+
+void uiListProp::ClearItems()
+{
+	items.clear();
+	selection = -1;
+}
+
+void uiListProp::AddItem(const char *pItem)
+{
+	ListItem &item = items.push();
+	item.text = pItem;
+}
+
+void uiListProp::FollowCursor(bool _bFollowCursor)
+{
+	bFollowCursor = _bFollowCursor;
 }
 
 MFString uiListProp::GetItems(uiEntity *pEntity)

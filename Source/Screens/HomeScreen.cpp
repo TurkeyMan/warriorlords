@@ -94,7 +94,7 @@ HomeScreen::~HomeScreen()
 void HomeScreen::Select()
 {
 	pSession = Session::Get();
-	bOffline = pSession == NULL || pSession->IsOffline();
+	bOffline = pSession == NULL || !pSession->IsLoggedIn();
 
 	pWaiting->Clear();
 	pMyGames->Clear();

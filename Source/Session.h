@@ -19,17 +19,20 @@ public:
 	void UpdateState();
 
 	void Login(const char *pUsername, const char *pPassword);
-	void BeginOffline();
+	void Logout();
 
 	void LoadSession(uint32 user);
 	void SaveSession();
 
-	bool IsOffline() { return !bLoggedIn; }
-
+	bool IsLoggedIn() { return bLoggedIn; }
 	uint32 GetUserID() { return user.id; }
 	const char *GetUsername() { return user.userName; }
 
 	static Session *Get() { return pCurrent; }
+
+	bool IsIngame() { return bIngame; }
+	GameState *GetActiveGame();
+	GameDetails *GetActiveLobby();
 
 	int GetNumCurrentGames() { return numCurrentGames; }
 	int GetNumPendingGames() { return numPendingGames; }
@@ -48,6 +51,10 @@ protected:
 	UserDetails user;
 
 	bool bLoggedIn;
+
+	bool bLocalGame;
+	bool bIngame;
+	uint32 activeGame;
 
 	int updating;
 
@@ -71,7 +78,7 @@ protected:
 	MFString findEvent;
 
 	// manage these locally
-	GameDetails offlineGame;
+	GameState offlineGames[64];
 	uint32 localGames[64];
 	int numLocalGames;
 

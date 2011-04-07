@@ -61,7 +61,7 @@ struct Action
 
 	ActionType type;
 	Group *pGroup;
-	union Properties
+	union U
 	{
 		struct Move
 		{

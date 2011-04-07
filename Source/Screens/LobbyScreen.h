@@ -8,11 +8,16 @@
 
 #include "MFFont.h"
 
-struct Lobby
+class Lobby
 {
-	GameDetails details;
+public:
+	void InitLobby(uiEntity *pLobby);
 
-	bool bOffline;
+protected:
+	static void BeginOnline(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+	static void BeginOffline(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+
+	uiEntity *pLobby;
 };
 
 class LobbyScreen : public Screen

@@ -181,7 +181,7 @@ bool Game::IsCurrentPlayer(int player)
 		return player == currentPlayer;
 
 	Session *pSession = Session::Get();
-	if(!pSession || pSession->IsOffline())
+	if(!pSession || !pSession->IsLoggedIn())
 		return false;
 
 	return player == currentPlayer && players[player].playerID == pSession->GetUserID();

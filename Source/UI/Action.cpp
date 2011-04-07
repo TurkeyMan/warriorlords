@@ -394,38 +394,41 @@ bool uiActionManager::RunAction(uiExecuteContext *pContext, const char *pAction,
 		return true;
 	}
 
-	ActionType *pType = FindActionType(pAction, pActionEntity);
-	if(!pType)
-		return true;
-
-	MFDebug_Assert(!pType->pEntityType || pActionEntity->IsType(pType->pEntityType), MFStr("Can not perform action '%s' on this type of entity!", pAction));
-
-	if(pType->pSetHandler)
+	if(!pActionEntity || !pActionEntity->ExecuteAction(pAction, pArgs))
 	{
-		pType->pSetHandler(pActionEntity, pArgs);
-	}
-	else
-	{
-		uiAction *pDeferred = actionFactory.Create(pAction);
-		if(pDeferred)
+		ActionType *pType = FindActionType(pAction, pActionEntity);
+		if(!pType)
+			return true;
+
+		MFDebug_Assert(!pType->pEntityType || pActionEntity->IsType(pType->pEntityType), MFStr("Can not perform action '%s' on this type of entity!", pAction));
+
+		if(pType->pSetHandler)
 		{
-			pDeferred->pEntity = pActionEntity;
-			pDeferred->Init(pArgs);
-			bFinished = pDeferred->Update();
-
-			// if it didn't complete this frame, we'll add it to the active list.
-			if(!bFinished)
+			pType->pSetHandler(pActionEntity, pArgs);
+		}
+		else
+		{
+			uiAction *pDeferred = actionFactory.Create(pAction);
+			if(pDeferred)
 			{
-				uiActiveAction *pNew = activeDeferredActions.Create();
-				pNew->pAction = pDeferred;
-				pNew->pEntity = pNextEntity;
-				pNew->pNextAction = pNextAction;
+				pDeferred->pEntity = pActionEntity;
+				pDeferred->Init(pArgs);
+				bFinished = pDeferred->Update();
 
-				pContext->activeList.insert(pNew);
-			}
-			else
-			{
-				delete pDeferred;
+				// if it didn't complete this frame, we'll add it to the active list.
+				if(!bFinished)
+				{
+					uiActiveAction *pNew = activeDeferredActions.Create();
+					pNew->pAction = pDeferred;
+					pNew->pEntity = pNextEntity;
+					pNew->pNextAction = pNextAction;
+
+					pContext->activeList.insert(pNew);
+				}
+				else
+				{
+					delete pDeferred;
+				}
 			}
 		}
 	}

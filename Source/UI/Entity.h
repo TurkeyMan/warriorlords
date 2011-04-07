@@ -70,6 +70,7 @@ private:
 class uiEntity
 {
 	friend class uiEntityManager;
+	friend class uiActionManager;
 	friend class uiAction_Move;
 	friend class uiAction_Fade;
 	friend class uiAction_Scale;
@@ -119,6 +120,10 @@ public:
 
 	uiEntity *Parent() const { return pParent; }
 
+	void AddChild(uiEntity *pEntity);
+	void RemoveChild(uiEntity *pEntity);
+
+	int GetNumChildren() { return children.size(); }
 	uiEntity *GetChild(int index) const { return children[index]; }
 	uiEntity *FindChild(const char *pName) const;
 
@@ -131,11 +136,11 @@ public:
 	bool GetEnable() { return bEnabled; }
 	bool GetVisible() { return bVisible; }
 
-	void SetPos(MFVector &position) { this->pos = position; }
-	void SetSize(MFVector &size) { this->size = size; }
-	void SetRot(MFVector &rotation) { this->rot = rotation; }
-	void SetScale(MFVector &scale) { this->scale = scale; }
-	void SetColour(MFVector &colour) { this->colour = colour; }
+	void SetPos(const MFVector &position) { this->pos = position; }
+	void SetSize(const MFVector &size) { this->size = size; }
+	void SetRot(const MFVector &rotation) { this->rot = rotation; }
+	void SetScale(const MFVector &scale) { this->scale = scale; }
+	void SetColour(const MFVector &colour) { this->colour = colour; }
 	void SetEnable(bool bEnabled);
 	void SetVisible(bool bVisible);
 	void SetAnchor(Anchor anchor) { this->anchor = anchor; }
@@ -143,13 +148,23 @@ public:
 	bool SignalEvent(const char *pEvent, const char *pParams = NULL);
 	void GetPosition(MFVector *pPosition);
 	void GetMatrix(MFMatrix *pMat);
+	void GetWorldMatrix(MFMatrix *pMat);
 
 	uiEntityManager *GetEntityManager();
 	uiActionManager *GetActionManager();
 
 	MFString GetProperty(const char *pProperty) { GetActionManager()->GetEntityProperty(this, pProperty); }
 
+	void RegisterAction(const char *pName, uiActionManager::InstantActionHandler *pHandler);
+	bool ExecuteAction(const char *pName, uiRuntimeArgs *pArguments);
+
 protected:
+	struct EntityAction
+	{
+		const char *pActionName;
+		uiActionManager::InstantActionHandler *pHandler;
+	};
+
 	bool HandleInput(InputEvent ev, const InputInfo &info);
 	bool TransformInputInfo(InputInfo &info, bool bCalculateOutside = false);
 	bool FullTransformInputInfo(InputInfo &info, bool bCalculateOutside = false);
@@ -167,6 +182,7 @@ protected:
 	MFArray<uiEntity*> children;
 
 	MFArray<uiActionScript*> events;
+	MFArray<EntityAction> actions;
 
 	// script functions
 	static MFString GetPos(uiEntity *pEntity);

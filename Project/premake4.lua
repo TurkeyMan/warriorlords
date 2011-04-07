@@ -5,7 +5,7 @@ solution "Warlords"
 	platforms { "Native", "x32", "x64" }
 
 	-- include the fuji project...
-	dofile  "../../Fuji/Project/fujiproj.lua"
+	dofile  "../../Fuji/Fuji/Private/Project/fujiproj.lua"
 
 	project "Warlords"
 		kind "WindowedApp"
@@ -24,4 +24,4 @@ solution "Warlords"
 
 		links { "Fuji" }
 
-		dofile "../../Fuji/Project/fujiconfig.lua"
+		dofile "../../Fuji/Fuji/Public/Project/fujiconfig.lua"

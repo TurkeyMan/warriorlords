@@ -10,6 +10,7 @@
 #include "ButtonProp.h"
 #include "StringProp.h"
 #include "ListProp.h"
+#include "SelectBoxProp.h"
 
 #include "DataProp.h"
 #include "SessionProp.h"
@@ -236,7 +237,7 @@ bool uiEntity::TransformInputInfo(InputInfo &info, bool bCalculateOutside)
 				info.drag.startY = v.y;
 			case IE_Hover:
 			case IE_Up:
-				v = local.TransformVectorH(MakeVector(info.hover.deltaX, info.hover.deltaY));
+				v = local.TransformVector3(MakeVector(info.hover.deltaX, info.hover.deltaY));
 				info.hover.deltaX = v.x;
 				info.hover.deltaY = v.y;
 		}
@@ -293,6 +294,27 @@ uiActionManager *uiEntity::GetActionManager()
 	return GameData::Get()->GetActionManager();
 }
 
+void uiEntity::RegisterAction(const char *pName, uiActionManager::InstantActionHandler *pHandler)
+{
+	EntityAction a = { pName, pHandler };
+	actions.push(a);
+}
+
+bool uiEntity::ExecuteAction(const char *pName, uiRuntimeArgs *pArguments)
+{
+	for(int a=0; a<actions.size(); ++a)
+	{
+		if(!MFString_Compare(pName, actions[a].pActionName))
+		{
+			actions[a].pHandler(this, pArguments);
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool uiEntity::IsType(FactoryType *pExpectedType)
 {
 	FactoryType *pT = pType;
@@ -313,6 +335,30 @@ MFVector uiEntity::GetContainerSize()
 	MFMatrix screenMat;
 	GetOrthoMatrix(&screenMat);
 	return MakeVector((1.f / screenMat.m[0]) * 2.f, (1.f / -screenMat.m[5]) * 2.f, 1.f, 1.f);
+}
+
+void uiEntity::AddChild(uiEntity *pEntity)
+{
+	children.push(pEntity);
+	pEntity->pParent = this;
+}
+
+void uiEntity::RemoveChild(uiEntity *pEntity)
+{
+	int a=0;
+	for(; a<children.size(); ++a)
+	{
+		if(children[a] == pEntity)
+			break;
+	}
+
+	for(; a<children.size()-1; ++a)
+		children[a] = children[a + 1];
+
+	if(a < children.size())
+		children.pop();
+
+	pEntity->pParent = NULL;
 }
 
 uiEntity *uiEntity::FindChild(const char *pName) const
@@ -392,6 +438,22 @@ void uiEntity::GetMatrix(MFMatrix *pMat)
 	pMat->SetTrans3(pos - (xAxis*offset.x + yAxis*offset.y + zAxis*offset.z));
 }
 
+void uiEntity::GetWorldMatrix(MFMatrix *pMat)
+{
+	if(pParent)
+	{
+		pParent->GetWorldMatrix(pMat);
+
+		MFMatrix mat;
+		GetMatrix(&mat);
+		pMat->Multiply(mat);
+	}
+	else
+	{
+		GetMatrix(pMat);
+	}
+}
+
 
 void uiEntityManager::InitManager()
 {
@@ -406,6 +468,7 @@ void uiEntityManager::InitManager()
 	uiButtonProp::RegisterEntity();
 	uiStringProp::RegisterEntity();
 	uiListProp::RegisterEntity();
+	uiSelectBoxProp::RegisterEntity();
 
 	uiDataProp::RegisterEntity();
 	uiSessionProp::RegisterEntity();
@@ -709,6 +772,8 @@ void uiEntity::If(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 		uiActionScript *pScript = pAM->FindAction(action.CStr());
 		if(pScript)
 			pAM->RunScript(pScript, pEntity, NULL);
+		else if(pEntity)
+			pEntity->ExecuteAction(action.CStr(), pArguments);
 	}
 }
 
