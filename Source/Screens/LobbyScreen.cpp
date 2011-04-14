@@ -5,6 +5,7 @@
 
 #include "UI/SessionProp.h"
 #include "UI/TextProp.h"
+#include "UI/ButtonProp.h"
 #include "UI/SelectBoxProp.h"
 
 #include "MFSystem.h"
@@ -14,25 +15,25 @@
 extern HomeScreen *pHome;
 extern Game *pGame;
 
+extern Lobby lobby;
+
 void Lobby::InitLobby(uiEntity *_pLobby)
 {
 	pLobby = _pLobby;
 
-	pLobby->RegisterAction("lobbyonline", BeginOnline);
-	pLobby->RegisterAction("lobbyoffline", BeginOffline);
+	pLobby->RegisterAction("showlobby", ShowLobby);
+	pLobby->RegisterAction("startgame", StartGame);
 }
 
-void Lobby::BeginOnline(uiEntity *pEntity, uiRuntimeArgs *pArguments)
-{
-	int z=0;
-}
-
-void Lobby::BeginOffline(uiEntity *pEntity, uiRuntimeArgs *pArguments)
+void Lobby::ShowLobby(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiEntityManager *pEM = pEntity->GetEntityManager();
 	uiSessionProp *pSession = (uiSessionProp*)pEM->Find("session");
 
 	GameDetails &game = pSession->GetLobby();
+
+	uiButtonProp *pStart = (uiButtonProp*)pEM->Find("lobby_continue");
+	pStart->SetEnable(game.numPlayers == game.maxPlayers);
 
 	for(int a=0; a<8; ++a)
 	{
@@ -42,11 +43,15 @@ void Lobby::BeginOffline(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 		uiSelectBoxProp *pHero = (uiSelectBoxProp*)pEM->Find(MFStr("lobby_hero%d", a));
 
 		pName->SetVisible(a < game.maxPlayers);
-		pRace->SetVisible(a < game.maxPlayers);
-		pColour->SetVisible(a < game.maxPlayers);
-		pHero->SetVisible(a < game.maxPlayers);
+		pRace->SetVisible(a < game.numPlayers);
+		pRace->SetChangeCallback(MakeDelegate(&lobby, &Lobby::RepopulateHeroes));
+		pRace->SetUserData((void*)a);
+		pColour->SetVisible(a < game.numPlayers);
+		pColour->SetUserData((void*)a);
+		pHero->SetVisible(a < game.numPlayers);
+		pHero->SetUserData((void*)a);
 
-		if(a < game.maxPlayers)
+		if(a < game.numPlayers)
 		{
 			// set player name
 			pName->SetText(game.players[a].name);
@@ -57,22 +62,115 @@ void Lobby::BeginOffline(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 			for(int b=1; b<game.mapDetails.unitSetDetails.numRaces; ++b)
 			{
 				if(game.mapDetails.bRacePresent[b])
-					pRace->AddItem(game.mapDetails.unitSetDetails.races[b]);
+					pRace->AddItem(game.mapDetails.unitSetDetails.races[b], (void*)b);
 
 				pColour->AddItem("X");
 			}
 			pRace->SetSelection(game.players[a].race - 1);
 			pColour->SetSelection(game.players[a].colour - 1);
 
-			// set player heroes
-			pHero->ClearItems();
-			for(int b=0; b<game.mapDetails.unitSetDetails.numUnits; ++b)
-			{
-				if(game.mapDetails.unitSetDetails.units[b].type == UT_Hero && game.mapDetails.unitSetDetails.units[b].race == game.players[a].race)
-					pHero->AddItem(game.mapDetails.unitSetDetails.units[b].name);
-			}
 			pHero->SetSelection(game.players[a].hero);
 		}
+		else if(a < game.maxPlayers)
+		{
+			// set player name
+			pName->SetText("Waiting for player...");
+		}
+	}
+}
+
+void Lobby::StartGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
+{
+	uiEntityManager *pEM = pEntity->GetEntityManager();
+	uiSessionProp *pSession = (uiSessionProp*)pEM->Find("session");
+
+	GameDetails &game = pSession->GetLobby();
+
+	MFDebug_Assert(game.maxPlayers == game.numPlayers, "Something went wrong?!");
+
+	for(int a=0; a<game.maxPlayers; ++a)
+	{
+		uiSelectBoxProp *pRace = (uiSelectBoxProp*)pEM->Find(MFStr("lobby_race%d", a));
+		uiSelectBoxProp *pColour = (uiSelectBoxProp*)pEM->Find(MFStr("lobby_colour%d", a));
+		uiSelectBoxProp *pHero = (uiSelectBoxProp*)pEM->Find(MFStr("lobby_hero%d", a));
+
+		game.players[a].race = pRace->GetSelection();
+		game.players[a].colour = pColour->GetSelection();
+		game.players[a].hero = pHero->GetSelection();
+	}
+
+	// begin game...
+
+	// setup game parameters
+	GameParams params;
+	MFZeroMemory(&params, sizeof(params));
+	params.bOnline = game.id == 0;
+	params.bEditMap = false;
+	params.gameID = game.id;
+	params.pMap = game.map;
+
+	// set up the players
+	bool bAssigned[16];
+	MFZeroMemory(bAssigned, sizeof(bAssigned));
+	params.numPlayers = game.numPlayers;
+	for(int a=0; a<game.numPlayers; ++a)
+	{
+		// select a random starting position for the player
+		int p = MFRand() % params.numPlayers;
+		while(bAssigned[p])
+			p = MFRand() % params.numPlayers;
+		bAssigned[p] = true;
+
+		params.players[p].id = game.players[a].id;
+		params.players[p].race = game.players[a].race;
+		params.players[p].colour = game.players[a].colour;
+		params.players[p].hero = game.players[a].hero;
+	}
+
+	if(game.id == 0)
+	{
+		// hide the lobby
+		uiEntity *pLobby = pEM->Find("lobbyscreen");
+		pLobby->SetVisible(false);
+
+		// hide the menu backdrop
+		uiEntity *pBG = pEM->Find("background");
+		pBG->SetVisible(false);
+
+		// start game
+		pGame = new Game(&params);
+		Game::SetCurrent(pGame);
+		pGame->BeginGame();
+	}
+	else
+	{
+/*
+		// create the game
+		uint32 players[16];
+		for(int a=0; a<params.numPlayers; ++a)
+			players[a] = params.players[a].id;
+
+		WLServ_BeginGame(begin, details.id, players, params.numPlayers);
+
+*/
+	}
+}
+
+void Lobby::RepopulateHeroes(uiSelectBoxProp *pSelectBox, int item, void *pUserData)
+{
+	uiEntityManager *pEM = pLobby->GetEntityManager();
+	uiSessionProp *pSession = (uiSessionProp*)pEM->Find("session");
+
+	GameDetails &game = pSession->GetLobby();
+
+	int player = (int)(uintp)pSelectBox->GetUserData();
+	uiSelectBoxProp *pHero = (uiSelectBoxProp*)pEM->Find(MFStr("lobby_hero%d", player));
+
+	pHero->ClearItems();
+	for(int b=0; b<game.mapDetails.unitSetDetails.numUnits; ++b)
+	{
+		if(game.mapDetails.unitSetDetails.units[b].type == UT_Hero && game.mapDetails.unitSetDetails.units[b].race == (int)(uintp)pUserData)
+			pHero->AddItem(game.mapDetails.unitSetDetails.units[b].name);
 	}
 }
 

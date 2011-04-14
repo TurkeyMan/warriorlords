@@ -26,6 +26,8 @@ uiSelectBoxProp::uiSelectBoxProp()
 	size.y = MFFont_GetFontHeight(pFont) + 4.f;
 	size.x = 6.f;
 
+	changeCallback.clear();
+
 	list.FollowCursor(true);
 	list.SetSelectCallback(MakeDelegate(this, &uiSelectBoxProp::SelectItem));
 }
@@ -97,14 +99,17 @@ bool uiSelectBoxProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 	return false;
 }
 
-void uiSelectBoxProp::SelectItem(int item)
+void uiSelectBoxProp::SelectItem(uiListProp *pList, int item, void *pUserData)
 {
 	GetEntityManager()->SetExclusiveReceiver(NULL);
 
 	uiEntity *pRoot = GetEntityManager()->GetRoot();
 	pRoot->RemoveChild(&list);
 
-	list.SetVisible(false);
+	pList->SetVisible(false);
+
+	if(changeCallback)
+		changeCallback(this, item, pUserData);
 }
 
 void uiSelectBoxProp::SetSelection(int item)
@@ -117,9 +122,9 @@ int uiSelectBoxProp::GetSelection()
 	return list.GetSelection();
 }
 
-void uiSelectBoxProp::AddItem(const char *pItem)
+void uiSelectBoxProp::AddItem(const char *pItem, void *pUserData)
 {
-	list.AddItem(pItem);
+	list.AddItem(pItem, pUserData);
 	if(list.GetItemCount() == 1)
 		list.SetSelection(0);
 }

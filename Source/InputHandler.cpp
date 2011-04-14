@@ -371,8 +371,12 @@ void InputManager::Update()
 
 				float distX = pos.x - contacts[a].downX;
 				float distY = pos.y - contacts[a].downY;
-				if(MFSqrt(distX*distX + distY*distY) >= dragThreshold)
+				if(!contacts[a].bDrag && MFSqrt(distX*distX + distY*distY) >= dragThreshold)
+				{
 					contacts[a].bDrag = true;
+					info.hover.deltaX = pos.x - contacts[a].downX;
+					info.hover.deltaY = pos.y - contacts[a].downY;
+				}
 
 				if(contacts[a].bDrag && contacts[a].bState)
 				{

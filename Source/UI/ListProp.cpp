@@ -68,7 +68,7 @@ bool uiListProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 
 					// disconnect from UI tree
 					if(selection)
-						selectCallback(selection);
+						selectCallback(this, selection, selection > -1 ? items[selection].pUserData : NULL);
 					return true;
 				}
 			}
@@ -101,7 +101,7 @@ bool uiListProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 
 						// disconnect from UI tree
 						if(selectCallback)
-							selectCallback(selection);
+							selectCallback(this, selection, selection > -1 ? items[selection].pUserData : NULL);
 					}
 					else
 						SetSelection((int)((info.tap.y - yOffset) / itemHeight));
@@ -112,7 +112,7 @@ bool uiListProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 		case IE_Drag:
 			float itemHeight = MFFont_GetFontHeight(pFont);
 			float max = itemHeight * (float)items.size() - size.y;
-			yOffset = MFClamp(-max - 4.f, yOffset + info.drag.y - info.drag.startY, 0.f);
+			yOffset = MFClamp(-max - 4.f, yOffset + info.drag.deltaY, 0.f);
 			return true;
 	}
 
@@ -197,7 +197,7 @@ void uiListProp::SetSelection(int item)
 
 	selection = newSelection;
 	if(selection > -1 && selectCallback)
-		selectCallback(selection);
+		selectCallback(this, selection, selection > -1 ? items[selection].pUserData : NULL);
 	SignalEvent("onselectionchange");
 
 	if(selection < 0)
@@ -210,10 +210,11 @@ void uiListProp::ClearItems()
 	selection = -1;
 }
 
-void uiListProp::AddItem(const char *pItem)
+void uiListProp::AddItem(const char *pItem, void *pUserData)
 {
 	ListItem &item = items.push();
 	item.text = pItem;
+	item.pUserData = pUserData;
 }
 
 void uiListProp::FollowCursor(bool _bFollowCursor)

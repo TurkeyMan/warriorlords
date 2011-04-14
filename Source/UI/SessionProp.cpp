@@ -94,7 +94,7 @@ MFString uiSessionProp::GetOnline(uiEntity *pEntity)
 MFString uiSessionProp::GetCurrentGame(uiEntity *pEntity)
 {
 	uiSessionProp *pThis = (uiSessionProp*)pEntity;
-	return pThis->activeLobby.name;
+	return MFString::Format("\"%s\"", pThis->activeLobby.name);
 }
 
 MFString uiSessionProp::GetCurrentGameOnline(uiEntity *pEntity)

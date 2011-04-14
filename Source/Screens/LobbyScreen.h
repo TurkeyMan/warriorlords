@@ -8,14 +8,18 @@
 
 #include "MFFont.h"
 
+class uiSelectBoxProp;
+
 class Lobby
 {
 public:
 	void InitLobby(uiEntity *pLobby);
 
 protected:
-	static void BeginOnline(uiEntity *pEntity, uiRuntimeArgs *pArguments);
-	static void BeginOffline(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+	static void ShowLobby(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+	static void StartGame(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+
+	void RepopulateHeroes(uiSelectBoxProp *pSelectBox, int item, void *pUserData);
 
 	uiEntity *pLobby;
 };

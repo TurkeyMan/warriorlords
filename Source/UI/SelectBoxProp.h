@@ -9,6 +9,8 @@
 class uiSelectBoxProp : public uiEntity
 {
 public:
+	typedef FastDelegate3<uiSelectBoxProp*, int, void*> ChangeCallback;
+
 	static void RegisterEntity();
 	static void *Create() { return new uiSelectBoxProp; }
 
@@ -20,6 +22,11 @@ public:
 
 	virtual bool HandleInputEvent(InputEvent ev, const InputInfo &info);
 
+	void SetUserData(void *pUserData) { this->pUserData = pUserData; }
+	void *GetUserData() { return pUserData; }
+
+	void SetChangeCallback(ChangeCallback callback) { changeCallback = callback; }
+
 	int GetItemCount() { return list.GetItemCount(); }
 
 	void SetSelection(int item);
@@ -28,10 +35,13 @@ public:
 	MFString GetItem(int item) { return list.GetItem(item); }
 
 	void ClearItems() { list.ClearItems(); }
-	void AddItem(const char *pItem);
+	void AddItem(const char *pItem, void *pUserData = NULL);
+
+	void SetItemUserData(int item, void *pUserData) { list.SetItemUserData(item, pUserData); }
+	void *GetItemUserData(int item) { return list.GetItemUserData(item); }
 
 protected:
-	void SelectItem(int item);
+	void SelectItem(uiListProp *pList, int item, void *pUserData);
 
 	static MFString GetItems(uiEntity *pEntity);
 	static void SetItems(uiEntity *pEntity, uiRuntimeArgs *pArguments);
@@ -46,6 +56,9 @@ protected:
 	uiListProp list;
 
 	MFFont *pFont;
+	void *pUserData;
+
+	ChangeCallback changeCallback;
 };
 
 #endif

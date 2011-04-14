@@ -9,7 +9,7 @@ class uiListProp : public uiEntity
 {
 	friend class uiSelectBoxProp;
 public:
-	typedef FastDelegate1<int> ListCallback;
+	typedef FastDelegate3<uiListProp*, int, void*> ListCallback;
 
 	static void RegisterEntity();
 	static void *Create() { return new uiListProp; }
@@ -22,6 +22,9 @@ public:
 
 	virtual bool HandleInputEvent(InputEvent ev, const InputInfo &info);
 
+	void SetUserData(void *pUserData) { this->pUserData = pUserData; }
+	void *GetUserData() { return pUserData; }
+
 	void SetSelectCallback(ListCallback callback) { selectCallback = callback; }
 	void SetDblClickCallback(ListCallback callback) { dblClickCallback = callback; }
 
@@ -33,7 +36,10 @@ public:
 	MFString GetItem(int item) { return selection >= 0 ? items[selection].text : ""; }
 
 	void ClearItems();
-	void AddItem(const char *pItem);
+	void AddItem(const char *pItem, void *pUserData = NULL);
+
+	void SetItemUserData(int item, void *pUserData) { items[item].pUserData = pUserData; }
+	void *GetItemUserData(int item) { return items[item].pUserData; }
 
 protected:
 	void FollowCursor(bool bFollowCursor);
@@ -53,11 +59,13 @@ protected:
 	{
 	public:
 		MFString text;
+		void *pUserData;
 	};
 
 	MFArray<ListItem> items;
 
 	MFFont *pFont;
+	void *pUserData;
 
 	int selection;
 
