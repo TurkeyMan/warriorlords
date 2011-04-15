@@ -65,12 +65,29 @@ void Game_Init()
 	pInputManager = new InputManager;
 
 	GameData::Init();
+
+	// load the UI
 	uiEntityManager *pEM = GameData::Get()->GetEntityManager();
 	pEM->LoadRootNode("root");
 
+	// setup the complex lobby screen
 	uiEntity *pLobbyScreen = pEM->Find("lobbyscreen");
 	if(pLobbyScreen)
 		lobby.InitLobby(pLobbyScreen);
+
+	// check if we want to run a battle test...
+	if(MFFileSystem_Exists("battle_test.ini"))
+	{
+		void BattleTest();
+		BattleTest();
+		return;
+	}
+
+	// show the titlescreen
+	uiEntity *pBG = pEM->Find("background");
+	uiEntity *pTitle = pEM->Find("titlescreen");
+	pBG->SetVisible(true);
+	pTitle->SetVisible(true);
 
 	pLogin = new LoginScreen;
 	pHome = new HomeScreen;

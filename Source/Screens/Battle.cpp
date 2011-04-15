@@ -20,6 +20,105 @@
 
 const float Battle::introLength = 4.f;
 
+extern Game *pGame;
+static bool gbBattleTest = false;
+static int gTestWins[2] = {0, 0};
+static int gBattle = 0;
+
+void BeginTest()
+{
+	// create groups and an artificial tile to fight on...
+	Group *pGroup1 = Group::Create(0);
+	Group *pGroup2 = Group::Create(1);
+	MapTile tile[2];
+	MFZeroMemory(&tile, sizeof(tile));
+	tile[0].AddGroup(pGroup1);
+	tile[1].AddGroup(pGroup2);
+
+	// load units into the groups from the ini file
+	MFIni *pIni = MFIni::Create("battle_test");
+	MFIniLine *pLine = pIni->GetFirstLine();
+
+	UnitDefinitions *pDefs = pGame->GetUnitDefs();
+	while(pLine)
+	{
+		if(pLine->IsSection("Group1") || pLine->IsSection("Group2"))
+		{
+			Group *pGroup = pLine->IsSection(gBattle ? "Group2" : "Group1") ? pGroup1 : pGroup2;
+
+			MFIniLine *pG = pLine->Sub();
+			while(pG)
+			{
+				if(pG->IsSection("Front") || pG->IsSection("Back"))
+				{
+					bool bFront = pG->IsSection("Front");
+
+					MFIniLine *pUnits = pG->Sub();
+					while(pUnits)
+					{
+						int unit = pDefs->FindUnit(pUnits->GetString(0));
+						if(unit >= 0)
+						{
+							Unit *pUnit = pDefs->CreateUnit(unit, pGroup == pGroup1 ? gBattle : 1-gBattle);
+
+							int levels = pUnits->GetInt(1);
+							for(int a=0; a<levels; ++a)
+							{
+								pUnit->AddVictory();
+								pUnit->AddVictory();
+							}
+
+							if(bFront)
+								pGroup->AddForwardUnit(pUnit);
+							else
+								pGroup->AddRearUnit(pUnit);
+						}
+
+						pUnits = pUnits->Next();
+					}
+				}
+
+				pG = pG->Next();
+			}
+		}
+
+		pLine = pLine->Next();
+	}
+
+
+	pGame->BeginBattle(pGroup1, &tile[1]);
+
+	gBattle = 1 - gBattle;
+}
+
+void BattleTest()
+{
+	gbBattleTest = true;
+
+	// create a game
+	GameParams params;
+	params.bEditMap = false;
+	params.bOnline = false;
+	params.gameID = 0;
+	params.pMap = "Map_50x30x2";
+	params.numPlayers = 2;
+	params.players[0].id = 0;
+	params.players[0].race = 1;
+	params.players[0].colour = 1;
+	params.players[0].hero = 0;
+	params.players[1].id = 0;
+	params.players[1].race = 2;
+	params.players[1].colour = 2;
+	params.players[1].hero = 0;
+
+	// start game
+	pGame = new Game(&params);
+	Game::SetCurrent(pGame);
+	pGame->BeginGame();
+
+	BeginTest();
+}
+
 Battle::Battle(Game *_pGame)
 {
 	pGame = _pGame;
@@ -416,7 +515,11 @@ void Battle::HitTarget(BattleUnit *pUnit, BattleUnit *pTarget)
 
 int Battle::Update()
 {
-	introTime += MFSystem_TimeDelta();
+	float timeDelta = MFSystem_TimeDelta();
+	if(gbBattleTest)
+		timeDelta *= 4;
+
+	introTime += timeDelta;
 
 	for(int a=0; a<2; ++a)
 	{
@@ -424,7 +527,7 @@ int Battle::Update()
 		{
 			BattleUnit &unit = armies[a].units[b];
 
-			unit.damageIndicatorTime -= MFSystem_TimeDelta();
+			unit.damageIndicatorTime -= timeDelta;
 			if(unit.damageIndicatorTime < 0.f)
 				unit.damageIndicatorTime = 0.f;
 
@@ -433,7 +536,7 @@ int Battle::Update()
 				// this will pause the attacking player until their damage indicator disappears
 				// remove this and let units attack while showing damage???
 				if(unit.state != US_Engaging || unit.damageIndicatorTime == 0.f)
-					unit.stateTime -= MFSystem_TimeDelta();
+					unit.stateTime -= timeDelta;
 
 				if(unit.state == US_Engaging)
 				{
@@ -644,13 +747,20 @@ int Battle::Update()
 
 	for(int a=0; a<numClouds; ++a)
 	{
-		clouds[a].x -= MFSystem_TimeDelta() * clouds[a].speed;
+		clouds[a].x -= timeDelta * clouds[a].speed;
 
 		if(clouds[a].x < -64)
 		{
 			clouds[a].x = (float)battleScreenWidth;
 			clouds[a].y = MFRand_Range(60.f, 180.f);
 		}
+	}
+
+	if(gbBattleTest && (armies[0].numUnitsAlive == 0 || armies[1].numUnitsAlive == 0))
+	{
+		int victor = armies[0].numUnitsAlive ? 0 : 1;
+		++gTestWins[victor];
+		BeginTest();
 	}
 
 	return 0;
@@ -867,7 +977,7 @@ void Battle::Draw()
 	}
 
 	// draw intro
-	if(introTime < introLength)
+	if(introTime < introLength && !gbBattleTest)
 	{
 		MFView_Push();
 		GetOrthoMatrix(&orthoMat, true);
@@ -922,6 +1032,9 @@ void Battle::Draw()
 
 	// draw deferred unit heads
 	pUnitDefs->DrawUnits(64.f, texelCenter, true);
+
+	if(gbBattleTest)
+		MFFont_BlitText(MFFont_GetDebugFont(), 10, 100, MFVector::white, MFStr("Wins: %d/%d %g%%", gTestWins[0], gTestWins[1], (float)gTestWins[0] / (float)(gTestWins[0] + gTestWins[1]) * 100.f));
 
 	MFView_Pop();
 }
