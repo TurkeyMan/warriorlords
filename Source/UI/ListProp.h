@@ -34,9 +34,10 @@ public:
 	int GetSelection() { return selection; }
 
 	MFString GetItem(int item) { return selection >= 0 ? items[selection].text : ""; }
+	MFVector GetItemColour(int item) { return selection >= 0 ? items[selection].colour : MFVector::white; }
 
 	void ClearItems();
-	void AddItem(const char *pItem, void *pUserData = NULL);
+	void AddItem(const char *pItem, void *pUserData = NULL, const MFVector &colour = MFVector::white);
 
 	void SetItemUserData(int item, void *pUserData) { items[item].pUserData = pUserData; }
 	void *GetItemUserData(int item) { return items[item].pUserData; }
@@ -58,6 +59,7 @@ protected:
 	class ListItem
 	{
 	public:
+		MFVector colour;
 		MFString text;
 		void *pUserData;
 	};

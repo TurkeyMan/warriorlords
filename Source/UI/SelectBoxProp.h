@@ -35,7 +35,7 @@ public:
 	MFString GetItem(int item) { return list.GetItem(item); }
 
 	void ClearItems() { list.ClearItems(); }
-	void AddItem(const char *pItem, void *pUserData = NULL);
+	void AddItem(const char *pItem, void *pUserData = NULL, const MFVector &colour = MFVector::white);
 
 	void SetItemUserData(int item, void *pUserData) { list.SetItemUserData(item, pUserData); }
 	void *GetItemUserData(int item) { return list.GetItemUserData(item); }

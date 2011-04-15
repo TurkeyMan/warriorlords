@@ -74,7 +74,7 @@ void uiSelectBoxProp::Draw(const uiDrawState &state)
 
 	// draw items
 	if(list.GetSelection() > -1)
-		MFFont_DrawText(pFont, 8.f - texelCenter, 2.f - texelCenter, textHeight, state.colour, list.GetItem(list.GetSelection()).CStr(), -1, state.mat);
+		MFFont_DrawText(pFont, 8.f - texelCenter, 2.f - texelCenter, textHeight, state.colour * list.GetItemColour(list.GetSelection()), list.GetItem(list.GetSelection()).CStr(), -1, state.mat);
 }
 
 bool uiSelectBoxProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
@@ -90,6 +90,9 @@ bool uiSelectBoxProp::HandleInputEvent(InputEvent ev, const InputInfo &info)
 			MFMatrix mat;
 			GetWorldMatrix(&mat);
 			list.SetPos(mat.GetTrans());
+
+			float listHeight = (float)list.GetItemCount()*MFFont_GetFontHeight(pFont) + 4.f;
+			list.SetSize(MakeVector(size.x, listHeight));
 
 			list.SetVisible(true);
 			GetEntityManager()->SetExclusiveReceiver(&list);
@@ -122,9 +125,9 @@ int uiSelectBoxProp::GetSelection()
 	return list.GetSelection();
 }
 
-void uiSelectBoxProp::AddItem(const char *pItem, void *pUserData)
+void uiSelectBoxProp::AddItem(const char *pItem, void *pUserData, const MFVector &colour)
 {
-	list.AddItem(pItem, pUserData);
+	list.AddItem(pItem, pUserData, colour);
 	if(list.GetItemCount() == 1)
 		list.SetSelection(0);
 }

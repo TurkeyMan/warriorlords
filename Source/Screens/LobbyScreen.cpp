@@ -64,7 +64,9 @@ void Lobby::ShowLobby(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 				if(game.mapDetails.bRacePresent[b])
 					pRace->AddItem(game.mapDetails.unitSetDetails.races[b], (void*)b);
 
-				pColour->AddItem("X");
+				MFVector colour;
+				colour.FromPackedColour(game.mapDetails.unitSetDetails.colours[b]);
+				pColour->AddItem("X", 0, colour);
 			}
 			pRace->SetSelection(game.players[a].race - 1);
 			pColour->SetSelection(game.players[a].colour - 1);
@@ -94,8 +96,8 @@ void Lobby::StartGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 		uiSelectBoxProp *pColour = (uiSelectBoxProp*)pEM->Find(MFStr("lobby_colour%d", a));
 		uiSelectBoxProp *pHero = (uiSelectBoxProp*)pEM->Find(MFStr("lobby_hero%d", a));
 
-		game.players[a].race = pRace->GetSelection();
-		game.players[a].colour = pColour->GetSelection();
+		game.players[a].race = pRace->GetSelection() + 1;
+		game.players[a].colour = pColour->GetSelection() + 1;
 		game.players[a].hero = pHero->GetSelection();
 	}
 
@@ -104,7 +106,7 @@ void Lobby::StartGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 	// setup game parameters
 	GameParams params;
 	MFZeroMemory(&params, sizeof(params));
-	params.bOnline = game.id == 0;
+	params.bOnline = game.id != 0;
 	params.bEditMap = false;
 	params.gameID = game.id;
 	params.pMap = game.map;

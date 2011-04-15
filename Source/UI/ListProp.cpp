@@ -185,7 +185,7 @@ void uiListProp::Draw(const uiDrawState &state)
 
 	// draw items
 	for(int a=0; a<items.size(); ++a)
-		MFFont_DrawText(pFont, 8.f - texelCenter, 2.f + textHeight*(float)a + yOffset - texelCenter, textHeight, state.colour, items[a].text.CStr(), -1, state.mat);
+		MFFont_DrawText(pFont, 8.f - texelCenter, 2.f + textHeight*(float)a + yOffset - texelCenter, textHeight, state.colour * items[a].colour, items[a].text.CStr(), -1, state.mat);
 }
 
 void uiListProp::SetSelection(int item)
@@ -210,11 +210,12 @@ void uiListProp::ClearItems()
 	selection = -1;
 }
 
-void uiListProp::AddItem(const char *pItem, void *pUserData)
+void uiListProp::AddItem(const char *pItem, void *pUserData, const MFVector &colour)
 {
 	ListItem &item = items.push();
 	item.text = pItem;
 	item.pUserData = pUserData;
+	item.colour = colour;
 }
 
 void uiListProp::FollowCursor(bool _bFollowCursor)
@@ -248,6 +249,8 @@ void uiListProp::SetItems(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 	{
 		ListItem &item = pList->items.push();
 		item.text = pItems->GetString(a);
+		item.pUserData = NULL;
+		item.colour = MFVector::white;
 	}
 }
 
@@ -264,6 +267,8 @@ void uiListProp::AddItem(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 
 	ListItem &item = pList->items.push();
 	item.text = pArguments->GetString(0);
+	item.pUserData = NULL;
+	item.colour = MFVector::white;
 }
 
 void uiListProp::RemoveItem(uiEntity *pEntity, uiRuntimeArgs *pArguments)
