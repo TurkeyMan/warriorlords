@@ -759,7 +759,7 @@ int Battle::Update()
 	if(gbBattleTest && (armies[0].numUnitsAlive == 0 || armies[1].numUnitsAlive == 0))
 	{
 		int victor = armies[0].numUnitsAlive ? 0 : 1;
-		++gTestWins[victor];
+		++gTestWins[victor ^ (1-gBattle)];
 		BeginTest();
 	}
 
