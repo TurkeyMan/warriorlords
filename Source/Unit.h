@@ -176,6 +176,7 @@ struct UnitSetDetails
 struct UnitDetails
 {
 	const char *pName;
+	const char *pDescription;
 	UnitType type;
 	int race;
 

@@ -74,9 +74,10 @@ bool UnitDefinitions::GetDetails(const char *pUnitSetName, UnitSetDetails *pDeta
 								pDetails->units[pDetails->numUnits].type = UT_Unit;
 							else if(pUnitDesc->IsString(1, "vehicle"))
 								pDetails->units[pDetails->numUnits].type = UT_Vehicle;
-
-							int i = 2;
-							pDetails->units[pDetails->numUnits].race = pUnitDesc->GetInt(i++);
+						}
+						else if(pUnitDesc->IsString(0, "race"))
+						{
+							pDetails->units[pDetails->numUnits].race = pUnitDesc->GetInt(1);
 						}
 
 						pUnitDesc = pUnitDesc->Next();
@@ -295,6 +296,7 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 				if(pUnits->IsSection("Unit"))
 				{
 					pUnit->type = UT_Unit;
+					pUnit->buildTime = 1;
 
 					MFIniLine *pUnitDesc = pUnits->Sub();
 					while(pUnitDesc)
@@ -318,25 +320,44 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 								pUnit->type = UT_Unit;
 							else if(pUnitDesc->IsString(1, "vehicle"))
 								pUnit->type = UT_Vehicle;
-
-							int i = 2;
-							pUnit->race = pUnitDesc->GetInt(i++);
-
-							pUnit->attackMin = pUnitDesc->GetInt(i++);
-							pUnit->attackMax = pUnitDesc->GetInt(i++);
-							pUnit->movement = pUnitDesc->GetInt(i++);
-
-							pUnit->atkType = pUnitDesc->GetInt(i++);
-							pUnit->attack = pUnitDesc->GetInt(i++);
-							pUnit->armour = pUnitDesc->GetInt(i++);
-							pUnit->movementClass = pUnitDesc->GetInt(i++);
-							pUnit->weapon = pUnitDesc->GetInt(i++);
-
-							pUnit->cooldown = pUnitDesc->GetFloat(i++);
-							pUnit->attackSpeed = pUnitDesc->GetFloat(i++);
-							pUnit->life = pUnitDesc->GetInt(i++);
-
-							pUnit->buildTime = pUnitDesc->GetInt(i++);
+						}
+						else if(pUnitDesc->IsString(0, "race"))
+						{
+							pUnit->race = pUnitDesc->GetInt(1);
+						}
+						else if(pUnitDesc->IsString(0, "atk"))
+						{
+							pUnit->attackMin = pUnitDesc->GetInt(1);
+							pUnit->attackMax = pUnitDesc->GetInt(2);
+						}
+						else if(pUnitDesc->IsString(0, "move"))
+						{
+							pUnit->movement = pUnitDesc->GetInt(1);
+						}
+						else if(pUnitDesc->IsString(0, "class"))
+						{
+							pUnit->atkType = pUnitDesc->GetInt(1);
+							pUnit->attack = pUnitDesc->GetInt(2);
+							pUnit->armour = pUnitDesc->GetInt(3);
+							pUnit->movementClass = pUnitDesc->GetInt(4);
+							pUnit->weapon = pUnitDesc->GetInt(5);
+						}
+						else if(pUnitDesc->IsString(0, "cooldown"))
+						{
+							pUnit->cooldown = pUnitDesc->GetFloat(1);
+							pUnit->attackSpeed = pUnitDesc->GetFloat(2);
+						}
+						else if(pUnitDesc->IsString(0, "life"))
+						{
+							pUnit->life = pUnitDesc->GetInt(1);
+						}
+						else if(pUnitDesc->IsString(0, "build"))
+						{
+							pUnit->buildTime = pUnitDesc->GetInt(1);
+						}
+						else if(pUnitDesc->IsString(0, "description"))
+						{
+							pUnit->pDescription = pUnitDesc->GetString(1);
 						}
 
 						pUnitDesc = pUnitDesc->Next();
