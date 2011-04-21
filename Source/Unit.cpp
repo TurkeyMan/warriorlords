@@ -55,19 +55,35 @@ bool UnitDefinitions::GetDetails(const char *pUnitSetName, UnitSetDetails *pDeta
 			MFIniLine *pUnit = pLine->Sub();
 			while(pUnit)
 			{
-				MFString_CopyN(pDetails->units[pDetails->numUnits].name, pUnit->GetString(5), 63);
-				pDetails->units[pDetails->numUnits].race = pUnit->GetInt(7);
-				pDetails->units[pDetails->numUnits].type = UT_Unknown;
-
-				const char *pUnitType = pUnit->GetString(6);
-				if(!MFString_CaseCmp(pUnitType, "hero"))
-					pDetails->units[pDetails->numUnits].type = UT_Hero;
-				else if(!MFString_CaseCmp(pUnitType, "unit"))
+				if(pUnit->IsSection("Unit"))
+				{
 					pDetails->units[pDetails->numUnits].type = UT_Unit;
-				else if(!MFString_CaseCmp(pUnitType, "vehicle"))
-					pDetails->units[pDetails->numUnits].type = UT_Vehicle;
 
-				++pDetails->numUnits;
+					MFIniLine *pUnitDesc = pUnit->Sub();
+					while(pUnitDesc)
+					{
+						if(pUnitDesc->IsString(0, "name"))
+						{
+							MFString_CopyN(pDetails->units[pDetails->numUnits].name, pUnitDesc->GetString(1), 63);
+						}
+						else if(pUnitDesc->IsString(0, "type"))
+						{
+							if(pUnitDesc->IsString(1, "hero"))
+								pDetails->units[pDetails->numUnits].type = UT_Hero;
+							else if(pUnitDesc->IsString(1, "unit"))
+								pDetails->units[pDetails->numUnits].type = UT_Unit;
+							else if(pUnitDesc->IsString(1, "vehicle"))
+								pDetails->units[pDetails->numUnits].type = UT_Vehicle;
+
+							int i = 2;
+							pDetails->units[pDetails->numUnits].race = pUnitDesc->GetInt(i++);
+						}
+
+						pUnitDesc = pUnitDesc->Next();
+					}
+
+					++pDetails->numUnits;
+				}
 
 				pUnit = pUnit->Next();
 			}
@@ -265,7 +281,8 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 			pUnitDefs->numUnits = 0;
 			while(pUnits)
 			{
-				++pUnitDefs->numUnits;
+				if(pUnits->IsSection("Unit"))
+					++pUnitDefs->numUnits;
 				pUnits = pUnits->Next();
 			}
 
@@ -275,40 +292,59 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 			pUnits = pLine->Sub();
 			while(pUnits)
 			{
-				pUnit->x = pUnits->GetInt(0);
-				pUnit->y = pUnits->GetInt(1);
-				pUnit->width = pUnits->GetInt(2);
-				pUnit->height = pUnits->GetInt(3);
-
-				pUnit->pName = pUnits->GetString(5);
-				if(pUnits->IsString(6, "hero"))
-					pUnit->type = UT_Hero;
-				else if(pUnits->IsString(6, "unit"))
+				if(pUnits->IsSection("Unit"))
+				{
 					pUnit->type = UT_Unit;
-				else if(pUnits->IsString(6, "vehicle"))
-					pUnit->type = UT_Vehicle;
 
-				int i = 7;
-				pUnit->race = pUnits->GetInt(i++);
+					MFIniLine *pUnitDesc = pUnits->Sub();
+					while(pUnitDesc)
+					{
+						if(pUnitDesc->IsString(0, "name"))
+						{
+							pUnit->pName = pUnitDesc->GetString(1);
+						}
+						else if(pUnitDesc->IsString(0, "pos"))
+						{
+							pUnit->x = pUnitDesc->GetInt(1);
+							pUnit->y = pUnitDesc->GetInt(2);
+							pUnit->width = pUnitDesc->GetInt(3);
+							pUnit->height = pUnitDesc->GetInt(4);
+						}
+						else if(pUnitDesc->IsString(0, "type"))
+						{
+							if(pUnitDesc->IsString(1, "hero"))
+								pUnit->type = UT_Hero;
+							else if(pUnitDesc->IsString(1, "unit"))
+								pUnit->type = UT_Unit;
+							else if(pUnitDesc->IsString(1, "vehicle"))
+								pUnit->type = UT_Vehicle;
 
-				pUnit->attackMin = pUnits->GetInt(i++);
-				pUnit->attackMax = pUnits->GetInt(i++);
-				pUnit->movement = pUnits->GetInt(i++);
+							int i = 2;
+							pUnit->race = pUnitDesc->GetInt(i++);
 
-				pUnit->atkType = pUnits->GetInt(i++);
-				pUnit->attack = pUnits->GetInt(i++);
-				pUnit->armour = pUnits->GetInt(i++);
-				pUnit->movementClass = pUnits->GetInt(i++);
-				pUnit->weapon = pUnits->GetInt(i++);
+							pUnit->attackMin = pUnitDesc->GetInt(i++);
+							pUnit->attackMax = pUnitDesc->GetInt(i++);
+							pUnit->movement = pUnitDesc->GetInt(i++);
 
-				pUnit->cooldown = pUnits->GetFloat(i++);
-				pUnit->attackSpeed = pUnits->GetFloat(i++);
-				pUnit->life = pUnits->GetInt(i++);
+							pUnit->atkType = pUnitDesc->GetInt(i++);
+							pUnit->attack = pUnitDesc->GetInt(i++);
+							pUnit->armour = pUnitDesc->GetInt(i++);
+							pUnit->movementClass = pUnitDesc->GetInt(i++);
+							pUnit->weapon = pUnitDesc->GetInt(i++);
 
-				pUnit->buildTime = pUnits->GetInt(i++);
-				pUnit->cost = pUnits->GetInt(i++);
+							pUnit->cooldown = pUnitDesc->GetFloat(i++);
+							pUnit->attackSpeed = pUnitDesc->GetFloat(i++);
+							pUnit->life = pUnitDesc->GetInt(i++);
 
-				++pUnit;
+							pUnit->buildTime = pUnitDesc->GetInt(i++);
+						}
+
+						pUnitDesc = pUnitDesc->Next();
+					}
+
+					++pUnit;
+				}
+
 				pUnits = pUnits->Next();
 			}
 		}

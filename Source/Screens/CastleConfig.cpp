@@ -59,7 +59,7 @@ bool CastleConfig::DrawContent()
 		if(pDetails->type == UT_Vehicle)
 		{
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 9 + height, MFVector::white, "Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : "");
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 8 + height*2, MFVector::white, "Gold: %d", pCastle->details.buildUnits[pCastle->nextBuild].cost);
+//			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 8 + height*2, MFVector::white, "Gold: %d", pCastle->details.buildUnits[pCastle->nextBuild].cost);
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 7 + height*3, MFVector::white, "Turns: %d", pCastle->GetBuildTime());
 		}
 		else
@@ -67,43 +67,10 @@ bool CastleConfig::DrawContent()
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 9 + height, MFVector::white, "Type: %s", pUnitDefs->GetArmourClassName(pDetails->armour));
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 8 + height*2, MFVector::white, "Atk: %d - %d (%s%s %s)", pDetails->attackMin, pDetails->attackMax, pDetails->AttackSpeedDescription(), pUnitDefs->GetWeaponClassName(pDetails->attack), pUnitDefs->GetAttackTypeName(pDetails->atkType));
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 7 + height*3, MFVector::white, "Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : "");
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 6 + height*4, MFVector::white, "Gold: %d", pCastle->details.buildUnits[pCastle->nextBuild].cost);
+//			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 6 + height*4, MFVector::white, "Gold: %d", pCastle->details.buildUnits[pCastle->nextBuild].cost);
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 5 + height*5, MFVector::white, "Turns: %d", pCastle->GetBuildTime());
 		}
 	}
-
-	// calculate total income and expense
-	int player = pGame->CurrentPlayer();
-	Map *pMap = pGame->GetMap();
-	int numCastles = pMap->GetNumCastles();
-
-	int income = 0, expense = 0;
-	for(int a=0; a<numCastles; ++a)
-	{
-		Castle *pCastle = pMap->GetCastle(a);
-		if(pCastle->GetPlayer() == player)
-		{
-			income += pCastle->details.income;
-
-			int building = pCastle->GetBuildUnit();
-			if(building > -1 && pCastle->GetBuildTime() <= 1)
-			{
-				UnitDetails *pDetails = pMap->GetUnitDefinitions()->GetUnitDetails(building);
-				expense += pDetails->cost;
-			}
-		}
-	}
-
-	int gold = pGame->GetPlayerGold(pGame->CurrentPlayer());
-
-	char incomeString[16];
-	sprintf(incomeString, "Income: %d", pCastle->details.income);
-	float incomeWidth = MFFont_GetStringWidth(pFont, incomeString, MFFont_GetFontHeight(pFont));
-	MFFont_BlitText(pFont, (int)(title.x + title.width - 32 - incomeWidth - 5), (int)title.y, MFVector::white, incomeString);
-
-	MFFont_BlitTextf(pFont, (int)lower.x + 5, (int)lower.y + 5, MFVector::white, "Treasury: %d", gold);
-	MFFont_BlitTextf(pFont, (int)lower.x + 5, (int)lower.y + 15 + height, MFVector::yellow, "Income - Expense: %d - %d", income, expense);
-	MFFont_BlitTextf(pFont, (int)lower.x + 5, (int)lower.y + 15 + height*2, expense > gold + income ? MFVector::red : MFVector::white, "Cash Flow: %+d", income - expense);
 
 	for(int a=0; a<numBuildUnits; ++a)
 		pBuildUnits[a]->Draw();
@@ -181,7 +148,6 @@ void CastleConfig::Show(Castle *pCastle)
 
 		UnitDetails *pDetails = pHero->GetDetails();
 		pCastle->details.buildUnits[a].unit = unit;
-		pCastle->details.buildUnits[a].cost = pDetails->cost;
 		pCastle->details.buildUnits[a].buildTime = pDetails->buildTime;
 
 		if(a == 2)

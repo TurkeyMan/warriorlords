@@ -486,7 +486,6 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 										details.x = -1;
 										details.y = -1;
 										details.numBuildUnits = 0;
-										details.income = 0;
 										details.bCapital = false;
 
 										while(pCastle)
@@ -504,17 +503,13 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 											{
 												details.bCapital = pCastle->GetBool(1);
 											}
-											else if(!MFString_CaseCmp(pCastle->GetString(0), "income"))
-											{
-												details.income = pCastle->GetInt(1);
-											}
 											else if(!MFString_CaseCmp(pCastle->GetString(0), "unit"))
 											{
 												int unit = pCastle->GetInt(1);
 												details.numBuildUnits = MFMax(details.numBuildUnits, unit + 1);
-												details.buildUnits[unit].unit = pCastle->GetInt(3);
-												details.buildUnits[unit].cost = pCastle->GetInt(4);
-												details.buildUnits[unit].buildTime = pCastle->GetInt(5);
+												details.buildUnits[unit].unit = pMap->pUnits->FindUnit(pCastle->GetString(3));
+												MFDebug_Assert(details.buildUnits[unit].unit != -1, MFStr("Unknown unit: %s", pCastle->GetString(3)));
+												details.buildUnits[unit].buildTime = pCastle->GetInt(4);
 											}
 
 											pCastle = pCastle->Next();
@@ -650,10 +645,7 @@ void Map::ConstructMap(int race)
 					{
 						UnitDetails *pDetails = pUnits->GetUnitDetails(castle.details.buildUnits[a].unit);
 						if(pDetails)
-						{
-							castle.details.buildUnits[a].cost += pDetails->cost;
 							castle.details.buildUnits[a].buildTime += pDetails->buildTime;
-						}
 					}
 
 					for(int a=0; a<4; ++a)
@@ -1053,12 +1045,12 @@ void Map::Save()
 		for(int a=0; a<mapTemplate[r].numCastles; ++a)
 		{
 			CastleDetails &castle = mapTemplate[r].pCastles[a];
-			int len = sprintf(buffer, "\t\t\t[Castle]\n\t\t\t{\n\t\t\t\tname = \"%s\"\n\t\t\t\tposition = %d, %d\n\t\t\t\tincome = %d\n%s", castle.name, castle.x, castle.y, castle.income, castle.bCapital ? "\t\t\t\tcapital = true\n" : "");
+			int len = sprintf(buffer, "\t\t\t[Castle]\n\t\t\t{\n\t\t\t\tname = \"%s\"\n\t\t\t\tposition = %d, %d\n%s", castle.name, castle.x, castle.y, castle.bCapital ? "\t\t\t\tcapital = true\n" : "");
 			MFFile_Write(pFile, buffer, len);
 			for(int c=0; c<castle.numBuildUnits; ++c)
 			{
 				BuildUnit &unit = castle.buildUnits[c];
-				int len = sprintf(buffer, "\t\t\t\tunit %d = %d, %d, %d\n", c, unit.unit, unit.cost, unit.buildTime);
+				int len = sprintf(buffer, "\t\t\t\tunit %d = \"%s\", %d\n", c, pUnits->GetUnitDetails(unit.unit)->pName, unit.buildTime);
 				MFFile_Write(pFile, buffer, len);
 			}
 			MFFile_Write(pFile, "\t\t\t}\n", MFString_Length("\t\t\t}\n"));
@@ -1929,7 +1921,6 @@ bool Map::PlaceCastle(int x, int y, int player)
 	pCastles[numCastles].player = player;
 	pCastles[numCastles].details.x = x;
 	pCastles[numCastles].details.y = y;
-	pCastles[numCastles].details.income = 50;
 	MFString_Copy(pCastles[numCastles].details.name, "Unnamed");
 	++numCastles;
 
@@ -1938,7 +1929,6 @@ bool Map::PlaceCastle(int x, int y, int player)
 	details.x = x;
 	details.y = y;
 	details.bCapital = player != -1;
-	details.income = 50;
 	MFString_Copy(details.name, "Unnamed");
 	return true;
 }

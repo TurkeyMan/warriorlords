@@ -899,7 +899,6 @@ void CastleEdit::Hide()
 
 		UnitDetails *pDetails = pCastle->pUnitDefs->GetUnitDetails(pTemplate->buildUnits[a].unit);
 		pTemplate->buildUnits[a].buildTime -= pDetails->buildTime;
-		pTemplate->buildUnits[a].cost -= pDetails->cost;
 	}
 }
 
@@ -930,7 +929,6 @@ void CastleEdit::SetUnit(int button, int buttonID)
 	BuildUnit &unit = pCastle->details.buildUnits[selected];
 	UnitDetails *pDetails = pDefs->GetUnitDetails(buttonID);
 	unit.unit = buttonID;
-	unit.cost = buttonID >= 0 ? pDetails->cost : 0;
 	unit.buildTime = buttonID >= 0 ? pDetails->buildTime : 0;
 
 	pCastle->buildTime = buttonID >= 0 ? unit.buildTime : 0;

@@ -68,7 +68,6 @@ protected:
 
 	Button *pBuildUnits[4];
 	StringBox *pName;
-	StringBox *pIncome;
 
 	Chooser unitSelect;
 

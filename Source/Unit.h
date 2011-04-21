@@ -185,7 +185,7 @@ struct UnitDetails
 	int atkType, attack, armour;
 	float cooldown, attackSpeed;
 	int life;
-	int buildTime, cost;
+	int buildTime;
 	int weapon;
 
 	// visible info
@@ -451,7 +451,6 @@ protected:
 struct BuildUnit
 {
 	int unit;
-	int cost;
 	int buildTime;
 };
 
@@ -463,8 +462,6 @@ struct CastleDetails
 
 	BuildUnit buildUnits[4];
 	int numBuildUnits;
-
-	int income;
 };
 
 class Castle

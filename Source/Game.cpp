@@ -52,7 +52,6 @@ Game::Game(GameParams *pParams)
 			players[a].race = pParams->players[a].race;
 			players[a].colour = pUnitDefs->GetRaceColour(pParams->players[a].colour);
 			players[a].startingHero = pParams->players[a].hero;
-			players[a].gold = 0;
 			players[a].cursorX = 0;
 			players[a].cursorY = 0;
 			players[a].pHero = NULL;
@@ -86,7 +85,6 @@ Game::Game(GameState *pState)
 		players[a].startingHero = pState->players[a].hero;
 
 		// TODO: we need to fetch these from the server!
-		players[a].gold = 0;
 		players[a].cursorX = 0;
 		players[a].cursorY = 0;
 		players[a].pHero = NULL;
@@ -315,7 +313,6 @@ void Game::BeginTurn(int player)
 				pMapScreen->ShowCastleConfig(pCastle);
 
 			++numCastles;
-			players[currentPlayer].gold += pCastle->details.income;
 
 			if(pCastle->building != -1)
 				--pCastle->buildTime;
@@ -337,7 +334,7 @@ void Game::BeginTurn(int player)
 				BuildUnit &buildUnit = pCastle->details.buildUnits[pCastle->building];
 
 				// if a hero is building here
-				if(pUnitDefs->GetUnitType(buildUnit.unit) == UT_Hero && buildUnit.cost <= players[currentPlayer].gold)
+				if(pUnitDefs->GetUnitType(buildUnit.unit) == UT_Hero)
 				{
 					Group *pGroup = NULL;
 
@@ -352,8 +349,6 @@ void Game::BeginTurn(int player)
 
 					if(pGroup || bOnline)
 					{
-						players[currentPlayer].gold -= buildUnit.cost;
-
 						// clear the hero from building, and show the build dialog
 						pCastle->building = pCastle->nextBuild = -1;
 						pCastle->buildTime = 0;
@@ -373,7 +368,7 @@ void Game::BeginTurn(int player)
 			{
 				BuildUnit &buildUnit = pCastle->details.buildUnits[pCastle->building];
 
-				if(pUnitDefs->GetUnitType(buildUnit.unit) != UT_Hero && buildUnit.cost <= players[currentPlayer].gold)
+				if(pUnitDefs->GetUnitType(buildUnit.unit) != UT_Hero)
 				{
 					Group *pGroup = NULL;
 
@@ -382,7 +377,6 @@ void Game::BeginTurn(int player)
 
 					if(pGroup || bOnline)
 					{
-						players[currentPlayer].gold -= buildUnit.cost;
 						pCastle->buildTime = pCastle->details.buildUnits[pCastle->building].buildTime;
 					}
 				}

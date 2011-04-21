@@ -20,7 +20,6 @@ struct Player
 	int startingHero;
 	MFVector colour;
 	int race;
-	int gold;
 
 	int cursorX, cursorY;
 
@@ -131,7 +130,6 @@ public:
 	bool IsMyTurn() { return IsCurrentPlayer(CurrentPlayer()); }
 
 	int GetPlayerRace(int player) { return player == -1 ? 0 : players[player].race; }
-	int GetPlayerGold(int player) { return player == -1 ? 0 : players[player].gold; }
 	MFVector GetPlayerColour(int player) { return player == -1 ? pUnitDefs->GetRaceColour(0) : players[player].colour; }
 	Unit *GetPlayerHero(int player) { return players[player].pHero; }
 

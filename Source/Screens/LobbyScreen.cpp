@@ -2,6 +2,7 @@
 #include "Display.h"
 #include "LobbyScreen.h"
 #include "HomeScreen.h"
+#include "Editor.h"
 
 #include "UI/SessionProp.h"
 #include "UI/TextProp.h"
@@ -14,6 +15,7 @@
 
 extern HomeScreen *pHome;
 extern Game *pGame;
+extern Editor *pEditor;
 
 extern Lobby lobby;
 
@@ -142,7 +144,14 @@ void Lobby::StartGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 		// start game
 		pGame = new Game(&params);
 		Game::SetCurrent(pGame);
-		pGame->BeginGame();
+
+		if(params.bEditMap)
+		{
+			pEditor = new Editor(pGame);
+			Screen::SetNext(pEditor);
+		}
+		else
+			pGame->BeginGame();
 	}
 	else
 	{
