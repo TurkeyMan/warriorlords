@@ -10,6 +10,7 @@ struct MFMaterial;
 class CastleSet;
 class Game;
 class MapTile;
+class Unit;
 class Group;
 struct Action;
 
@@ -56,25 +57,21 @@ struct Item
 {
 	enum ModType
 	{
-		MT_User = 0,
-		MT_UserDef,
-		MT_Group,
-		MT_GroupDef,
-		MT_Terrain,
-		MT_Vehicle
+		MT_Stat = 0,
+		MT_Defence,
+		MT_Terrain
 	};
 
 	enum StatMods
 	{
 		Mod_MinAtk = 0,
 		Mod_MaxAtk,
-		Mod_Speed,
-		Mod_HP,
+		Mod_Cool,
+		Mod_Life,
 		Mod_Regen,
 		Mod_Movement,
 
-		Mod_UserMax,
-		Mod_GroupMax = Mod_Movement
+		Mod_Max
 	};
 
 	struct StatMod
@@ -91,39 +88,27 @@ struct Item
 		uint32 flags;
 	};
 
-	StatMod *GetMod(int type, int index)
-	{
-		switch(type)
-		{
-			case MT_User:
-				return &user[index];
-			case MT_UserDef:
-				return &userDef[index];
-			case MT_Group:
-				return &group[index];
-			case MT_GroupDef:
-				return &groupDef[index];
-			case MT_Terrain:
-				return &terrain[index];
-			case MT_Vehicle:
-				return &vehicle[index];
-			default:
-				break;
-		}
-		return NULL;
-	}
+	StatMod *GetMod(Unit *pUnit, Unit *pHero, int type, int index);
 
 	const char *pName;
 	const char *pDescription;
 	int x, y;
 
-	// personal buffs
-	StatMod user[Mod_UserMax];
-	StatMod userDef[4];
-	StatMod group[Mod_GroupMax];
-	StatMod groupDef[4];
-	StatMod terrain[10];
-	StatMod vehicle[10];
+	struct GroupMod
+	{
+		const char **ppTargets;
+		int numUnits;
+
+		StatMod mods[Mod_Max];
+		StatMod defence[4];
+		StatMod terrain[10];
+
+		const char *pSpecial;
+		float probability;
+	};
+
+	GroupMod *pMods;
+	int numGroups;
 };
 
 enum UnitType
@@ -395,6 +380,7 @@ public:
 
 	void SetMovement(int _movement) { movement = _movement; }
 	int GetMovement() { return movement; }
+	float MoveRemaining() { return MFMax((float)movement*0.5f, 0.f); }
 	int GetTerrainPenalty(int terrainType);
 	void GetTerrainPenalties(int *pTerrainPenalties);
 	int GetMovementPenalty(MapTile *pTile, int *pTerrainType = NULL);
@@ -533,6 +519,7 @@ public:
 	void RemoveUnit(Unit *pUnit);
 
 	int GetMovement();
+	float MoveRemaining() { return MFMax((float)GetMovement()*0.5f, 0.f); }
 	bool SubtractMovementCost(MapTile *pTile);
 
 	bool IsSelected() const { return bSelected; }

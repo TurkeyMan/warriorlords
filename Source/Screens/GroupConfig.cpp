@@ -111,7 +111,7 @@ bool GroupConfig::DrawContent()
 				DrawHealthBar((int)rect.x, (int)rect.y, pUnit->GetMaxHP(), pUnit->GetHealth());
 
 			char move[8];
-			sprintf(move, "%g", pUnit->GetMovement() * 0.5f);
+			sprintf(move, "%g", pUnit->MoveRemaining());
 
 			float moveWidth = MFFont_GetStringWidth(pFont, move, height);
 

@@ -525,44 +525,107 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 			pUnitDefs->numItems = 0;
 			while(pItem)
 			{
-				++pUnitDefs->numItems;
+				if(pItem->IsSection("Item"))
+					++pUnitDefs->numItems;
 				pItem = pItem->Next();
 			}
 
-			pUnitDefs->pItems = (Item*)MFHeap_Alloc(sizeof(Item)*pUnitDefs->numItems);
+			pUnitDefs->pItems = (Item*)MFHeap_AllocAndZero(sizeof(Item)*pUnitDefs->numItems);
 
 			pItem = pLine->Sub();
 			int i = 0;
 			while(pItem)
 			{
-				Item &item = pUnitDefs->pItems[i++];
-				item.pName = pItem->GetString(3);
-				item.x = pItem->GetInt(0);
-				item.y = pItem->GetInt(1);
+				if(pItem->IsSection("Item"))
+				{
+					Item &item = pUnitDefs->pItems[i++];
 
-				int param = 4;
-				for(int a=0; a<Item::Mod_GroupMax; ++a)
-					item.user[a].Parse(pItem->GetString(param++));
-				for(int a=0; a<pUnitDefs->numAttackClasses; ++a)
-					item.userDef[a].Parse(pItem->GetString(param++));
+					MFIniLine *pItemDesc = pItem->Sub();
+					while(pItemDesc)
+					{
+						if(pItemDesc->IsString(0, "pos"))
+						{
+							item.x = pItemDesc->GetInt(1);
+							item.y = pItemDesc->GetInt(2);
+						}
+						else if(pItemDesc->IsString(0, "name"))
+						{
+							item.pName = pItemDesc->GetString(1);
+						}
+						else if(pItemDesc->IsString(0, "description"))
+						{
+							item.pDescription = pItemDesc->GetString(1);
+						}
+						else if(pItemDesc->IsSection("ModGroup"))
+							++item.numGroups;
 
-				for(int a=0; a<Item::Mod_GroupMax; ++a)
-					item.group[a].Parse(pItem->GetString(param++));
-				for(int a=0; a<pUnitDefs->numAttackClasses; ++a)
-					item.groupDef[a].Parse(pItem->GetString(param++));
+						pItemDesc = pItemDesc->Next();
+					}
 
-				item.user[Item::Mod_Movement].Parse(pItem->GetString(param++));
+					item.pMods = (Item::GroupMod*)MFHeap_AllocAndZero(sizeof(Item::GroupMod)*item.numGroups);
 
-				for(int a=0; a<numTerrainTypes; ++a)
-					item.terrain[a].Parse(pItem->GetString(param++));
+					pItemDesc = pItem->Sub();
+					int j = 0;
+					while(pItemDesc)
+					{
+						if(pItemDesc->IsSection("ModGroup"))
+						{
+							Item::GroupMod &group = item.pMods[j++];
 
-				for(int a=0; a<numTerrainTypes; ++a)
-					item.vehicle[a].Parse(pItem->GetString(param++));
+							MFIniLine *pGroup = pItemDesc->Sub();
+							while(pGroup)
+							{
+								if(pGroup->IsString(0, "target"))
+								{
+									group.numUnits = pGroup->GetStringCount() - 1;
+									group.ppTargets = (const char**)MFHeap_Alloc(sizeof(const char *)*group.numUnits);
+									for(int a=0; a<group.numUnits; ++a)
+										group.ppTargets[a] = pGroup->GetString(1 + a);
+								}
+								else if(pGroup->IsString(0, "attack"))
+								{
+									group.mods[Item::Mod_MinAtk].Parse(pGroup->GetString(1));
+									group.mods[Item::Mod_MaxAtk].Parse(pGroup->GetString(2));
+								}
+								else if(pGroup->IsString(0, "cooldown"))
+								{
+									group.mods[Item::Mod_Cool].Parse(pGroup->GetString(1));
+								}
+								else if(pGroup->IsString(0, "life"))
+								{
+									group.mods[Item::Mod_Life].Parse(pGroup->GetString(1));
+								}
+								else if(pGroup->IsString(0, "regen"))
+								{
+									group.mods[Item::Mod_Regen].Parse(pGroup->GetString(1));
+								}
+								else if(pGroup->IsString(0, "move"))
+								{
+									group.mods[Item::Mod_Movement].Parse(pGroup->GetString(1));
+								}
+								else if(pGroup->IsString(0, "defence"))
+								{
+									for(int a=0; a<pUnitDefs->numAttackClasses; ++a)
+										group.defence[a].Parse(pGroup->GetString(1 + a));
+								}
+								else if(pGroup->IsString(0, "terrain"))
+								{
+									for(int a=0; a<numTerrainTypes; ++a)
+										group.terrain[a].Parse(pGroup->GetString(1 + a));
+								}
+								else if(pGroup->IsString(0, "special"))
+								{
+									group.pSpecial = pGroup->GetString(1);
+									group.probability = pGroup->GetFloat(2);
+								}
 
-				if(param < pItem->GetStringCount())
-					item.pDescription = pItem->GetString(param);
-				else
-					item.pDescription = "";
+								pGroup = pGroup->Next();
+							}
+						}
+
+						pItemDesc = pItemDesc->Next();
+					}
+				}
 
 				pItem = pItem->Next();
 			}
@@ -996,18 +1059,18 @@ bool Unit::AddItem(int item)
 
 float Unit::GetCooldown()
 {
-	return ModStatFloat(details.cooldown, Item::MT_User, Item::Mod_Speed);
+	return ModStatFloat(details.cooldown, Item::MT_Stat, Item::Mod_Cool);
 }
 
 float Unit::GetRegen()
 {
-	float regenMod = ModStatFloat(1.f, Item::MT_User, Item::Mod_Regen);
+	float regenMod = ModStatFloat(1.f, Item::MT_Stat, Item::Mod_Regen);
 	return (IsHero() ? 0.4f : 0.25f) * regenMod;
 }
 
 float Unit::GetDefence(float damage, int wpnClass)
 {
-	damage = ModStatFloat(damage, Item::MT_UserDef, wpnClass);
+	damage = ModStatFloat(damage, Item::MT_Defence, wpnClass);
 
 	if(player != -1 && pGroup && pGroup->GetTile())
 	{
@@ -1021,10 +1084,10 @@ float Unit::GetDefence(float damage, int wpnClass)
 
 void Unit::UpdateStats()
 {
-	int newLifeMax = ModStatInt(details.life + (victories & ~1), Item::MT_User, Item::Mod_HP);
-	int newMoveMax = ModStatInt(details.movement, Item::MT_User, Item::Mod_Movement);
-	maxAtk = ModStatFloat((float)(details.attackMax + victories / 2), Item::MT_User, Item::Mod_MaxAtk);
-	minAtk = MFMin(ModStatFloat((float)(details.attackMin + victories / 2), Item::MT_User, Item::Mod_MinAtk), maxAtk);
+	int newLifeMax = ModStatInt(details.life + (victories & ~1), Item::MT_Stat, Item::Mod_Life);
+	int newMoveMax = ModStatInt(details.movement, Item::MT_Stat, Item::Mod_Movement);
+	maxAtk = ModStatFloat((float)(details.attackMax + victories / 2), Item::MT_Stat, Item::Mod_MaxAtk);
+	minAtk = MFMin(ModStatFloat((float)(details.attackMin + victories / 2), Item::MT_Stat, Item::Mod_MinAtk), maxAtk);
 
 	// galleon gives combat advantages
 	if(pGroup && pGroup->GetVehicle())
@@ -1035,24 +1098,6 @@ void Unit::UpdateStats()
 			// units in a galleon kick more arse
 			minAtk *= 1.3f;
 			maxAtk *= 1.3f;
-		}
-	}
-
-	// HACK: human queen has movement advantages when paired with knights...
-	if(!MFString_CaseCmp(pName, "Queen Karen") && pGroup)
-	{
-		// find knights in the group...
-		int numUnits = pGroup->GetNumUnits();
-		for(int a=0; a<numUnits; ++a)
-		{
-			Unit *pPotential = pGroup->GetUnit(a);
-			if(!MFString_CaseCmp(pPotential->GetName(), "Knight"))
-			{
-				UnitDetails *pQueen = pUnitDefs->GetUnitDetails(type);
-				UnitDetails *pKnight = pUnitDefs->GetUnitDetails(pPotential->type);
-				newMoveMax += pKnight->movement - pQueen->movement;
-				break;
-			}
 		}
 	}
 
@@ -1074,38 +1119,43 @@ int Unit::ModStatInt(int stat, int statType, int modIndex)
 	float scale = 1.f;
 	float diff = 0.f;
 
-	if(IsHero())
+	if(pGroup)
 	{
-		for(int a=0; a<numItems; ++a)
+		// find any heroes in the group
+		int numUnits = pGroup->GetNumUnits();
+		for(int u=0; u<numUnits; ++u)
 		{
-			Item::StatMod &mod = *GetItem(a)->GetMod(statType, modIndex);
-			if(mod.flags & Item::StatMod::SMF_Absolute)
+			Unit *pHero = pGroup->GetUnit(u);
+			if(pHero->IsHero())
 			{
-				int val = (int)mod.value;
-				if(statType == Item::MT_Terrain)
+				// all items heroes possess may affect each unit in the group...
+				int numItems = pHero->GetNumItems();
+				for(int a=0; a<numItems; ++a)
 				{
-					if(stat > 0 && val > 0)
-						stat = MFMin(stat, val);
-					else
-						stat = MFMax(stat, val);
+					Item::StatMod *pMod = pHero->GetItem(a)->GetMod(this, pHero, statType, modIndex);
+					if(pMod)
+					{
+						if(pMod->flags & Item::StatMod::SMF_Absolute)
+						{
+							int val = (int)pMod->value;
+							if(statType == Item::MT_Terrain)
+							{
+								if(stat > 0 && val > 0)
+									stat = MFMin(stat, val);
+								else
+									stat = MFMax(stat, val);
+							}
+							else
+								stat = val;
+						}
+						else if(pMod->flags & Item::StatMod::SMF_Percent)
+							scale *= pMod->value;
+						else
+							diff += pMod->value;
+					}
 				}
-				else
-					stat = val;
 			}
-			else if(mod.flags & Item::StatMod::SMF_Percent)
-				scale *= mod.value;
-			else
-				diff += mod.value;
 		}
-	}
-	else if(pGroup && (statType == Item::MT_User || statType == Item::MT_UserDef) && modIndex < Item::Mod_GroupMax)
-	{
-		statType += Item::MT_Group;
-
-		// find hero in group
-		Unit *pHero = pGroup->GetHero();
-		if(pHero)
-			return pHero->ModStatInt(stat, statType, modIndex);
 	}
 
 	return MFMax((int)(((float)stat + diff) * scale), 0);
@@ -1116,27 +1166,32 @@ float Unit::ModStatFloat(float stat, int statType, int modIndex)
 	float scale = 1.f;
 	float diff = 0.f;
 
-	if(IsHero())
+	if(pGroup)
 	{
-		for(int a=0; a<numItems; ++a)
+		// find any heroes in the group
+		int numUnits = pGroup->GetNumUnits();
+		for(int u=0; u<numUnits; ++u)
 		{
-			Item::StatMod &mod = *GetItem(a)->GetMod(statType, modIndex);
-			if(mod.flags & Item::StatMod::SMF_Absolute)
-				stat = mod.value;
-			else if(mod.flags & Item::StatMod::SMF_Percent)
-				scale *= mod.value;
-			else
-				diff += mod.value;
+			Unit *pHero = pGroup->GetUnit(u);
+			if(pHero->IsHero())
+			{
+				// all items heroes possess may affect each unit in the group...
+				int numItems = pHero->GetNumItems();
+				for(int a=0; a<numItems; ++a)
+				{
+					Item::StatMod *pMod = pHero->GetItem(a)->GetMod(this, pHero, statType, modIndex);
+					if(pMod)
+					{
+						if(pMod->flags & Item::StatMod::SMF_Absolute)
+							stat = pMod->value;
+						else if(pMod->flags & Item::StatMod::SMF_Percent)
+							scale *= pMod->value;
+						else
+							diff += pMod->value;
+					}
+				}
+			}
 		}
-	}
-	else if(pGroup && (statType == Item::MT_User || statType == Item::MT_UserDef) && modIndex < Item::Mod_GroupMax)
-	{
-		statType += Item::MT_Group;
-
-		// find hero in group
-		Unit *pHero = pGroup->GetHero();
-		if(pHero)
-			return pHero->ModStatFloat(stat, statType, modIndex);
 	}
 
 	return MFMax((stat + diff) * scale, 0.f);
@@ -1585,4 +1640,35 @@ void Item::StatMod::Parse(const char *pString)
 		flags |= SMF_Percent;
 		value = 1 + value*0.01f;
 	}
+}
+
+Item::StatMod *Item::GetMod(Unit *pUnit, Unit *pHero, int type, int index)
+{
+	for(int a=0; a<numGroups; ++a)
+	{
+		for(int b=0; b<pMods[a].numUnits; ++b)
+		{
+			if((pUnit == pHero && !MFString_CaseCmp("self", pMods[a].ppTargets[b])) ||
+				(pUnit != pHero && !MFString_CaseCmp("group", pMods[a].ppTargets[b])) ||
+				(pUnit->GetType() == UT_Unit && !MFString_CaseCmp("units", pMods[a].ppTargets[b])) ||
+				(pUnit->GetType() == UT_Hero && !MFString_CaseCmp("heroes", pMods[a].ppTargets[b])) ||
+				(pUnit->GetType() == UT_Vehicle && !MFString_CaseCmp("vehicles", pMods[a].ppTargets[b])) ||
+				!MFString_CaseCmp(pUnit->GetName(), pMods[a].ppTargets[b]))
+			{
+				switch(type)
+				{
+					case MT_Stat:
+						return &pMods[a].mods[index];
+					case MT_Defence:
+						return &pMods[a].defence[index];
+					case MT_Terrain:
+						return &pMods[a].terrain[index];
+					default:
+						break;
+				}
+			}
+		}
+	}
+
+	return NULL;
 }

@@ -481,8 +481,9 @@ void MapScreen::Draw()
 		}
 		Game::GetCurrent()->GetUnitDefs()->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset());
 
-		MFFont_BlitTextf(pFont, tx+1, ty+1, MakeVector(0,0,0,1), "Move: %g", (float)pSelection->GetMovement() * 0.5f);
-		MFFont_BlitTextf(pFont, tx, ty, MakeVector(1,1,0,1), "Move: %g", (float)pSelection->GetMovement() * 0.5f);
+		float movement = pSelection->MoveRemaining();
+		MFFont_BlitTextf(pFont, tx+1, ty+1, MakeVector(0,0,0,1), "Move: %g", movement);
+		MFFont_BlitTextf(pFont, tx, ty, MakeVector(1,1,0,1), "Move: %g", movement);
 
 		if(bUndoVisible)
 			pUndo->Draw();
