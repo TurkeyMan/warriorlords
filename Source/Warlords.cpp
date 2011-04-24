@@ -173,20 +173,14 @@ int GameMain(MFInitParams *pInitParams)
 {
 	MFRand_Seed((uint32)MFSystem_ReadRTC());
 
-#if defined(MF_IPHONE) || 0
-#if !defined(MF_IPHONE)
-	gDefaults.display.displayWidth = 320;
-	gDefaults.display.displayHeight = 480;
-#endif
-	SetDisplayOrientation(DO_90CW);
-#else
+	MFDisplay_GetDefaultRes(&pInitParams->display.displayRect);
+
+	if(pInitParams->display.displayRect.height > pInitParams->display.displayRect.width)
+		SetDisplayOrientation(DO_90CW);
+
 #if defined(_DEBUG)
-	gDefaults.display.displayWidth = 1280;
-	gDefaults.display.displayHeight = 720;
-#else
-	gDefaults.display.displayWidth = 800;
-	gDefaults.display.displayHeight = 480;
-#endif
+	pInitParams->display.displayRect.width = 1280;
+	pInitParams->display.displayRect.height = 720;
 #endif
 
 //	gDefaults.input.useDirectInputKeyboard = false;
