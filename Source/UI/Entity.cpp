@@ -608,7 +608,7 @@ void uiEntityManager::Draw()
 
 	pRoot->DrawEntity(state);
 
-#if defined(_DEBUG)
+#if 0//defined(_DEBUG)
 	if(pHover)
 		MFFont_BlitText(MFFont_GetDebugFont(), 10, 10, MFVector::white, MFStr("%s: %.2f %.2f", pHover->name.CStr(), hoverPos.x, hoverPos.y));
 	if(pFocus)

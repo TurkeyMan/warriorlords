@@ -93,6 +93,7 @@ struct Item
 	const char *pName;
 	const char *pDescription;
 	int x, y;
+	bool bCollectible;
 
 	struct GroupMod
 	{
@@ -178,6 +179,11 @@ struct UnitDetails
 	int x, y;
 	int width, height;
 
+	// start items
+	static const int MaxItems = 1;
+	int items[MaxItems];
+	int numItems;
+
 	const char *AttackSpeedDescription();
 };
 
@@ -230,6 +236,7 @@ public:
 
 	int GetNumItems() { return numItems; }
 	Item *GetItem(int item) { return &pItems[item]; }
+	int FindItem(const char *pName);
 
 	MFMaterial *GetUnitMaterial() { return pUnitMat; }
 
@@ -412,6 +419,8 @@ public:
 protected:
 	int ModStatInt(int stat, int statType, int modIndex);
 	float ModStatFloat(float stat, int statType, int modIndex);
+
+	static const int MaxItems = 8;
 
 	UnitDefinitions *pUnitDefs;
 

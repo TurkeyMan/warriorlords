@@ -359,6 +359,18 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 						{
 							pUnit->pDescription = pUnitDesc->GetString(1);
 						}
+						else if(pUnitDesc->IsString(0, "items"))
+						{
+							int numItems = pUnitDesc->GetStringCount() - 1;
+							MFDebug_Assert(numItems <= UnitDetails::MaxItems, "Exceeded maximum number of starting items!");
+
+							for(int a=0; a<numItems; ++a)
+							{
+								int item = pUnitDefs->FindItem(pUnitDesc->GetString(1 + a));
+								if(item >= 0)
+									pUnit->items[pUnit->numItems++] = item;
+							}
+						}
 
 						pUnitDesc = pUnitDesc->Next();
 					}
@@ -539,6 +551,7 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 				if(pItem->IsSection("Item"))
 				{
 					Item &item = pUnitDefs->pItems[i++];
+					item.bCollectible = true;
 
 					MFIniLine *pItemDesc = pItem->Sub();
 					while(pItemDesc)
@@ -555,6 +568,10 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 						else if(pItemDesc->IsString(0, "description"))
 						{
 							item.pDescription = pItemDesc->GetString(1);
+						}
+						else if(pItemDesc->IsString(0, "collectible"))
+						{
+							item.bCollectible = pItemDesc->GetBool(1);
 						}
 						else if(pItemDesc->IsSection("ModGroup"))
 							++item.numGroups;
@@ -689,6 +706,16 @@ int UnitDefinitions::FindUnit(const char *pName)
 	return -1;
 }
 
+int UnitDefinitions::FindItem(const char *pName)
+{
+	for(int a=0; a<numItems; ++a)
+	{
+		if(!MFString_CaseCmp(pItems[a].pName, pName))
+			return a;
+	}
+	return -1;
+}
+
 Unit *UnitDefinitions::CreateUnit(int unit, int player)
 {
 	Unit *pUnit = pGame->AllocUnit();
@@ -705,7 +732,15 @@ Unit *UnitDefinitions::CreateUnit(int unit, int player)
 	pUnit->numItems = 0;
 
 	if(pUnits[unit].type == UT_Hero)
-		pUnit->pItems = (int*)MFHeap_Alloc(sizeof(int));
+	{
+		MFDebug_Assert(pUnit->details.numItems <= Unit::MaxItems, "Too many items!");
+
+		pUnit->pItems = (int*)MFHeap_Alloc(sizeof(int)*Unit::MaxItems);
+
+		pUnit->numItems = pUnit->details.numItems;
+		for(int a=0; a<pUnit->details.numItems; ++a)
+			pUnit->pItems[a] = pUnit->details.items[a];
+	}
 
 	pUnit->kills = pUnit->victories = 0;
 	pUnit->UpdateStats();

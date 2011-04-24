@@ -91,11 +91,13 @@ bool GroupConfig::DrawContent()
 	int offset = 0;
 	for(int g = 0; g < numGroups; ++g)
 	{
+/*
 		char uuu[16];
 		sprintf(uuu, "%d-%d-%d%s", pGroups[g]->totalUnits, pGroups[g]->numForward, pGroups[g]->numRear, pGroups[g]->pVehicle ? "-*" : "");
 		float moveWidth = MFFont_GetStringWidth(pFont, uuu, height);
 
 		MFFont_BlitText(pFont, (int)window.x, (int)window.y + offset, MFVector::white, uuu);
+*/
 		offset += 16;
 
 		for(int a = 10; a >= 0; --a)

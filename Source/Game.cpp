@@ -755,6 +755,12 @@ bool Game::MoveGroupToTile(Group *pGroup, MapTile *pTile)
 
 void Game::AddUnit(Unit *pUnit, bool bCommitUnit)
 {
+	if(numUnits >= numUnitsAllocated)
+	{
+		numUnitsAllocated *= 2;
+		ppUnits = (Unit**)MFHeap_Realloc(ppUnits, sizeof(Unit*) * numUnitsAllocated);
+	}
+
 	pUnit->SetID(numUnits);
 	ppUnits[numUnits++] = pUnit;
 
@@ -767,6 +773,12 @@ void Game::AddUnit(Unit *pUnit, bool bCommitUnit)
 
 void Game::AddGroup(Group *pGroup, bool bCommitGroup)
 {
+	if(numGroups >= numGroupsAllocated)
+	{
+		numGroupsAllocated *= 2;
+		ppGroups = (Group**)MFHeap_Realloc(ppGroups, sizeof(Group*) * numGroupsAllocated);
+	}
+
 	pGroup->SetID(numGroups);
 	ppGroups[numGroups++] = pGroup;
 

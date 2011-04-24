@@ -604,7 +604,14 @@ void Map::ConstructMap(int race)
 		{
 			Ruin &ruin = pRuins[numRuins];
 
-			int item = MFRand() % pUnits->GetNumItems();
+			int item = -1;
+			do
+			{
+				item = MFRand() % pUnits->GetNumItems();
+				if(!pUnits->GetItem(item)->bCollectible)
+					item = -1;
+			}
+			while(item < 0);
 
 			ruin.InitRuin(numRuins, pMap[a].index, item);
 
