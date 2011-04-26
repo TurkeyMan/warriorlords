@@ -289,7 +289,7 @@ protected:
 	MFMaterial *pHeadMat;
 	MFMaterial *pCastleMat;
 	MFMaterial *pItemMat;
-	MFMaterial *pBattle;
+	MFMaterial *pRanks;
 
 	int tileWidth, tileHeight;
 	int itemWidth, itemHeight;

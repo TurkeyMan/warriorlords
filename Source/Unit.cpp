@@ -129,7 +129,7 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 
 	pUnitDefs->numTerrainTypes = numTerrainTypes;
 
-	pUnitDefs->pBattle = MFMaterial_Create("BattleIcons");
+	pUnitDefs->pRanks = MFMaterial_Create("UnitRanks");
 	pUnitDefs->numRenderUnits = 0;
 
 	MFIniLine *pLine = pIni->GetFirstLine();
@@ -341,6 +341,31 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 							pUnit->armour = pUnitDesc->GetInt(3);
 							pUnit->movementClass = pUnitDesc->GetInt(4);
 							pUnit->weapon = pUnitDesc->GetInt(5);
+
+							if(pUnitDesc->GetStringCount() >= 7)
+							{
+								const char *pClass = pUnitDesc->GetString(6);
+								if(!MFString_CaseCmp(pClass, "agile"))
+								{
+									pUnit->attack = 4;
+									pUnit->armour = 5;
+								}
+								else if(!MFString_CaseCmp(pClass, "tough"))
+								{
+									pUnit->attack = 5;
+									pUnit->armour = 3;
+								}
+								else if(!MFString_CaseCmp(pClass, "magic"))
+								{
+									pUnit->attack = 3;
+									pUnit->armour = 6;
+								}
+								else if(!MFString_CaseCmp(pClass, "hero"))
+								{
+									pUnit->attack = 6;
+									pUnit->armour = 4;
+								}
+							}
 						}
 						else if(pUnitDesc->IsString(0, "cooldown"))
 						{
@@ -456,7 +481,6 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 						pMovement = pMovement->Next();
 					}
 				}
-
 				else if(pClasses->IsSection("Type"))
 				{
 					MFIniLine *pType = pClasses->Sub();
@@ -662,8 +686,8 @@ void UnitDefinitions::Free()
 		MFMaterial_Destroy(pHeadMat);
 	if(pCastleMat)
 		MFMaterial_Destroy(pCastleMat);
-	if(pBattle)
-		MFMaterial_Destroy(pBattle);
+	if(pRanks)
+		MFMaterial_Destroy(pRanks);
 
 	if(pRaces)
 		MFHeap_Free(pRaces);
@@ -820,7 +844,7 @@ void UnitDefinitions::DrawUnits(float scale, float texelOffset, bool bHead, bool
 
 	if(bRank && numRanked != 0)
 	{
-		MFMaterial_SetMaterial(pBattle);
+		MFMaterial_SetMaterial(pRanks);
 
 		MFPrimitive(PT_TriList);
 		MFBegin(6*numRanked);
@@ -964,23 +988,15 @@ void UnitDefinitions::GetBadgeUVs(int rank, MFRect *pUVs, float texelOffset)
 		return;
 	--rank;
 
-	float fWidth = 128.f;
-	float fHeight = 128.f;
-	float xScale = (1.f / fWidth) * 16.f;
-	float yScale = (1.f / fHeight) * 16.f;
+	float fWidth = 64.f;
+	float fHeight = 32.f;
+	float xScale = (1.f / fWidth) * 4.f;
+	float yScale = (1.f / fHeight) * 2.f;
 	float halfX = texelOffset / fWidth;
 	float halfY = texelOffset / fHeight;
 
-	if(rank < 4)
-	{
-		pUVs->x = (6 + (rank&1))*xScale + halfX;
-		pUVs->y = (rank>>1)*yScale + halfY;
-	}
-	else
-	{
-		pUVs->x = (rank&1)*xScale + halfX;
-		pUVs->y = (2 + ((rank>>1) & 1))*yScale + halfY;
-	}
+	pUVs->x = (float)(rank & 3)*xScale + halfX;
+	pUVs->y = (float)(rank >> 2)*yScale + halfY;
 	pUVs->width = yScale;
 	pUVs->height = yScale;
 }
