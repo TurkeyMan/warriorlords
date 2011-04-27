@@ -1140,7 +1140,7 @@ float Unit::GetDefence(float damage, int wpnClass)
 	{
 		Castle *pCastle = pGroup->GetTile()->GetCastle();
 		if(pCastle && pCastle->GetPlayer() && GetPlayer())
-			damage *= 0.90f;
+			damage *= 0.80f;
 	}
 
 	return damage;

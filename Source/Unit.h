@@ -102,8 +102,8 @@ struct Item
 		int numUnits;
 
 		StatMod mods[Mod_Max];
-		StatMod defence[4];
-		StatMod terrain[10];
+		StatMod defence[8];
+		StatMod terrain[12];
 
 		const char *pSpecial;
 		float probability;
