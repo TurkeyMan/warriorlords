@@ -1056,6 +1056,19 @@ MFVector Unit::GetColour()
 	return pGame->GetPlayerColour(player);
 }
 
+float Unit::GetSpecialAttack(const char *pSpecial)
+{
+	float percent = 0.f;
+	for(int a=0; a<numItems; ++a)
+	{
+		Item *pItem = pUnitDefs->GetItem(pItems[a]);
+
+		Unit *pHero = pGroup->GetHero();
+		percent += pItem->GetSpecial(this, pHero, pSpecial);
+	}
+	return percent;
+}
+
 int Unit::GetTerrainPenalty(int terrainType)
 {
 	int penalty = pUnitDefs->GetMovementPenalty(details.movementClass, terrainType);
@@ -1722,4 +1735,26 @@ Item::StatMod *Item::GetMod(Unit *pUnit, Unit *pHero, int type, int index)
 	}
 
 	return NULL;
+}
+
+float Item::GetSpecial(Unit *pUnit, Unit *pHero, const char *pName)
+{
+	for(int a=0; a<numGroups; ++a)
+	{
+		for(int b=0; b<pMods[a].numUnits; ++b)
+		{
+			if((pUnit == pHero && !MFString_CaseCmp("self", pMods[a].ppTargets[b])) ||
+				(pUnit != pHero && !MFString_CaseCmp("group", pMods[a].ppTargets[b])) ||
+				(pUnit->GetType() == UT_Unit && !MFString_CaseCmp("units", pMods[a].ppTargets[b])) ||
+				(pUnit->GetType() == UT_Hero && !MFString_CaseCmp("heroes", pMods[a].ppTargets[b])) ||
+				(pUnit->GetType() == UT_Vehicle && !MFString_CaseCmp("vehicles", pMods[a].ppTargets[b])) ||
+				!MFString_CaseCmp(pUnit->GetName(), pMods[a].ppTargets[b]))
+			{
+				if(pMods[a].pSpecial && !MFString_CaseCmp(pMods[a].pSpecial, pName))
+					return pMods[a].probability;
+			}
+		}
+	}
+
+	return 0.f;
 }

@@ -89,6 +89,7 @@ struct Item
 	};
 
 	StatMod *GetMod(Unit *pUnit, Unit *pHero, int type, int index);
+	float GetSpecial(Unit *pUnit, Unit *pHero, const char *pName);
 
 	const char *pName;
 	const char *pDescription;
@@ -367,6 +368,7 @@ public:
 	int GetType() { return type; }
 	MFVector GetColour();
 	int GetRank() const { return MFMin(victories / 2, 8); }
+	float GetSpecialAttack(const char *pSpecial);
 
 	BattlePlan *GetBattlePlan() { return &plan; }
 	Weapon *GetWeapon() { return pUnitDefs->GetWeapon(details.weapon); }
@@ -374,7 +376,7 @@ public:
 	int GetHP() { return life; }
 	void SetHP(int hp) { life = hp; }
 	float GetHealth() { return (float)life / (float)GetMaxHP(); }
-	int Damage(int damage) { life -= MFMin(life, damage); return life; }
+	int Damage(int damage) { life = MFClamp(0, life - damage, lifeMax); return life; }
 	bool IsDead() { return life == 0; }
 
 	int GetKills() { return kills; }

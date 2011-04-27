@@ -486,13 +486,34 @@ int Battle::CalculateDamage(BattleUnit *pUnit, BattleUnit *pTarget)
 
 void Battle::HitTarget(BattleUnit *pUnit, BattleUnit *pTarget)
 {
+	if(pUnit->army == pTarget->army)
+	{
+		float heal = pUnit->pUnit->GetSpecialAttack("heal");
+		if(heal)
+		{
+			heal -= MFRand_Range(0.f, heal * 0.33f);
+
+			pTarget->pUnit->Damage(-(int)heal);
+
+			pTarget->damage = -(int)heal;
+			pTarget->damageIndicatorTime = 1.f;
+			pTarget->impactAnim = 4;
+
+			MFDebug_Log(0, MFStr("%d:%s is healed %d life by %d:%s", pTarget->army, pTarget->pUnit->GetName(), (int)heal, pUnit->army, pUnit->pUnit->GetName()));
+
+			pUnit->bHit = true;
+			pTarget->bEngaged = false;
+			return;
+		}
+	}
+
 	int damage = CalculateDamage(pUnit, pTarget);
 
 	pTarget->damage = damage;
 	pTarget->damageIndicatorTime = 1.f;
 	pTarget->impactAnim = pUnit->pUnit->GetWeapon()->impactAnim;
 
-	MFDebug_Log(0, MFStr("%d:%s Is Hit for %d damage by %d:%s", pTarget->army, pTarget->pUnit->GetName(), damage, pUnit->army, pUnit->pUnit->GetName()));
+	MFDebug_Log(0, MFStr("%d:%s is hit for %d damage by %d:%s", pTarget->army, pTarget->pUnit->GetName(), damage, pUnit->army, pUnit->pUnit->GetName()));
 
 	if(pTarget->pUnit->Damage(damage) == 0)
 	{
@@ -504,7 +525,7 @@ void Battle::HitTarget(BattleUnit *pUnit, BattleUnit *pTarget)
 		pTarget->state = US_Dying;
 		pTarget->stateTime = 1.f;
 
-		MFDebug_Log(0, MFStr("%d:%s Is Dead", pTarget->army, pTarget->pUnit->GetName()));
+		MFDebug_Log(0, MFStr("%d:%s is dead", pTarget->army, pTarget->pUnit->GetName()));
 
 		pUnit->pUnit->AddKill();
 	}
@@ -661,47 +682,76 @@ int Battle::Update()
 				Army &opponent = armies[1 - pUnit->army];
 				bool bCanAttackBackRow = bIsRanged || opponent.numForwardUnits == 0;
 
-				// pick target...
-				BattlePlan *pPlan = pUnit->pUnit->GetBattlePlan();
 				BattleUnit *pTarget = NULL;
-				int targetHP = 0;
-				bool bTargetIsRanged = false;
 
-				for(int a=0; a<opponent.numUnits; ++a)
+				Army &army = armies[pUnit->army];
+				float heal = pUnit->pUnit->GetSpecialAttack("heal");
+				if(heal)
 				{
-					BattleUnit &t = opponent.units[a];
-
-					// check if we can attack this target
-					if(t.row == 0 || bCanAttackBackRow)
+					// find wounded
+					float health = 1.f;
+					int healTarget = -1;
+					for(int a=0; a<army.numUnits; ++a)
 					{
-						// check unit is a valid target
-						if((!pPlan->bAttackAvailable && !t.pUnit->IsDead()) || t.CanBeAttacked())
+						BattleUnit &t = army.units[a];
+						if(&t == pUnit)
+							continue;
+
+						float hp = t.pUnit->GetHealth();
+						if(hp < health)
 						{
-							int maxHP = t.pUnit->GetMaxHP();
+							healTarget = a;
+							health = hp;
+						}
+					}
 
-							// we can attack this target
-							bool bPreferTarget = false;
-							if(pTarget)
-							{
-								// check for preference according to combat rules
-								if((pPlan->type == TT_Melee && !bTargetIsRanged) || (pPlan->type == TT_Ranged && bTargetIsRanged))
-								{
-									if((pPlan->strength == TS_Weakest && maxHP < targetHP) || (pPlan->strength == TS_Strongest && maxHP > targetHP))
-										bPreferTarget = true;
-								}
-								else
-								{
-									if((pPlan->type == TT_Melee && !t.pUnit->IsRanged()) || (pPlan->type == TT_Ranged && t.pUnit->IsRanged()) || 
-										(pPlan->strength == TS_Weakest && maxHP < targetHP) || (pPlan->strength == TS_Strongest && maxHP > targetHP))
-										bPreferTarget = true;
-								}
-							}
+					if(healTarget > -1 && health < 0.8f)
+						pTarget = &army.units[healTarget];
+				}
 
-							if(!pTarget || bPreferTarget)
+				if(!pTarget)
+				{
+					// pick attack target...
+					BattlePlan *pPlan = pUnit->pUnit->GetBattlePlan();
+					int targetHP = 0;
+					bool bTargetIsRanged = false;
+
+					for(int a=0; a<opponent.numUnits; ++a)
+					{
+						BattleUnit &t = opponent.units[a];
+
+						// check if we can attack this target
+						if(t.row == 0 || bCanAttackBackRow)
+						{
+							// check unit is a valid target
+							if((!pPlan->bAttackAvailable && !t.pUnit->IsDead()) || t.CanBeAttacked())
 							{
-								pTarget = &t;
-								targetHP = maxHP;
-			 					bTargetIsRanged = t.pUnit->IsRanged();
+								int maxHP = t.pUnit->GetMaxHP();
+
+								// we can attack this target
+								bool bPreferTarget = false;
+								if(pTarget)
+								{
+									// check for preference according to combat rules
+									if((pPlan->type == TT_Melee && !bTargetIsRanged) || (pPlan->type == TT_Ranged && bTargetIsRanged))
+									{
+										if((pPlan->strength == TS_Weakest && maxHP < targetHP) || (pPlan->strength == TS_Strongest && maxHP > targetHP))
+											bPreferTarget = true;
+									}
+									else
+									{
+										if((pPlan->type == TT_Melee && !t.pUnit->IsRanged()) || (pPlan->type == TT_Ranged && t.pUnit->IsRanged()) || 
+											(pPlan->strength == TS_Weakest && maxHP < targetHP) || (pPlan->strength == TS_Strongest && maxHP > targetHP))
+											bPreferTarget = true;
+									}
+								}
+
+								if(!pTarget || bPreferTarget)
+								{
+									pTarget = &t;
+									targetHP = maxHP;
+			 						bTargetIsRanged = t.pUnit->IsRanged();
+								}
 							}
 						}
 					}
@@ -719,10 +769,11 @@ int Battle::Update()
 					// unlink
 					EndWaiting(pUnit);
 
-					MFDebug_Log(0, MFStr("%d:%s Attacks %d:%s", pUnit->army, pUnit->pUnit->GetName(), pTarget->army, pTarget->pUnit->GetName()));
+					const char *pTechnique = pUnit->army == pTarget->army ? "Heals" : "Attacks";
+					MFDebug_Log(0, MFStr("%d:%s %s %d:%s", pUnit->army, pUnit->pUnit->GetName(), pTechnique, pTarget->army, pTarget->pUnit->GetName()));
 				}
 			}
-			else if(!bIsRanged && pUnit->row == 1 && armies[pUnit->army].numForwardUnits < 5)
+			else if(!bIsRanged && pUnit->row == 1 && armies[pUnit->army].numForwardUnits < 5 && armies[pUnit->army].numForwardUnits > 0)
 			{
 				Army &army = armies[pUnit->army];
 				for(int a=0; a<army.numUnits; ++a)
@@ -733,7 +784,7 @@ int Battle::Update()
 						pUnit->pTarget = &army.units[a];
 						pUnit->pTarget->bEngaged = true;
 						pUnit->state = US_Migrating;
-						pUnit->stateTime = 2.f;
+						pUnit->stateTime = 1.f;
 
 						// unlink
 						EndWaiting(pUnit);
@@ -900,7 +951,7 @@ void Battle::Draw()
 
 			if(unit.bFiring)
 			{
-				Weapon *pWeapon = unit.pUnit->GetWeapon();
+				Weapon *pWeapon = unit.army == unit.pTarget->army ? pUnitDefs->GetWeapon(12) : unit.pUnit->GetWeapon();
 
 				MFRect uvs;
 				pWeapon->GetUVs(&uvs, fTexWidth, fTexHeight, unit.army == 1, texelOffsetW);
@@ -927,7 +978,10 @@ void Battle::Draw()
 
 				// draw damage indicator with a little bouncey thing...
 				char damage[12];
-				sprintf(damage, "%d", unit.damage);
+				sprintf(damage, "%d", MFAbs(unit.damage));
+
+				MFVector damageColour = unit.damage < 0 ? MFVector::blue : MFVector::red;
+				damageColour.w = MFMin(unit.damageIndicatorTime*5.f, 1.f);
 
 				float widths[12];
 				float totalWidth = 0.f;
@@ -955,7 +1009,7 @@ void Battle::Draw()
 
 					float phase = (1.f - time)*MFPI*4;
 					float bounce = MFAbs(MFSin(phase)) * MFMax(time - 0.5f, 0.f)*50.f;
-					MFFont_BlitText(pFont, x, unit.curY - 7 - (int)height - (int)bounce, MakeVector(MFVector::red, MFMin(unit.damageIndicatorTime*5.f, 1.f)), damage + a, 1);
+					MFFont_BlitText(pFont, x, unit.curY - 7 - (int)height - (int)bounce, damageColour, damage + a, 1);
 
 					x += (int)widths[a];
 				}
