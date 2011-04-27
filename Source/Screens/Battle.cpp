@@ -694,7 +694,7 @@ int Battle::Update()
 					for(int a=0; a<army.numUnits; ++a)
 					{
 						BattleUnit &t = army.units[a];
-						if(&t == pUnit)
+						if(&t == pUnit || t.pUnit->IsDead())
 							continue;
 
 						float hp = t.pUnit->GetHealth();
