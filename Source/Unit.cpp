@@ -510,7 +510,7 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 						pAttack = pAttack->Next();
 					}
 
-					pUnitDefs->ppAttackClasses = (const char **)MFHeap_Alloc(sizeof(const char **)*pUnitDefs->numAttackClasses);
+					pUnitDefs->ppAttackClasses = (const char **)MFHeap_Alloc(sizeof(const char *)*pUnitDefs->numAttackClasses);
 
 					pAttack = pClasses->Sub();
 					while(pAttack)
@@ -537,7 +537,7 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 					pArmour = pArmour->Next();
 				}
 
-				pUnitDefs->pDefenceClasses = (ArmourClass*)MFHeap_Alloc(sizeof(const char *)*pUnitDefs->numDefenceClasses);
+				pUnitDefs->pDefenceClasses = (ArmourClass*)MFHeap_Alloc(sizeof(ArmourClass)*pUnitDefs->numDefenceClasses);
 
 				pArmour = pArmourClasses;
 				while(pArmour)

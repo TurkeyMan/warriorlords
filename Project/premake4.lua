@@ -16,6 +16,7 @@ solution "Warlords"
 		includedirs { "../Source/" }
 		objdir "../Build/"
 		targetdir "../"
+		debugdir "../"
 
 		flags { "StaticRuntime", "NoExceptions", "NoRTTI", "WinMain" }
 

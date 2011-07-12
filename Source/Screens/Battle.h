@@ -50,6 +50,7 @@ protected:
 
 		int state;
 		float stateTime;
+		float freezeTime;
 
 		// engaging state
 		BattleUnit *pTarget;

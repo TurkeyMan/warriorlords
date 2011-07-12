@@ -106,6 +106,8 @@ void Game_Update()
 {
 	MFCALLSTACKc;
 
+	MFHeap_ValidateHeap();
+
 	HTTPRequest::UpdateHTTPEvents();
 
 	pInputManager->Update();
