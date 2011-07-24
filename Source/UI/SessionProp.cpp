@@ -2,6 +2,7 @@
 #include "SessionProp.h"
 #include "Action.h"
 
+extern Game *pGame;
 void uiSessionProp::RegisterEntity()
 {
 	FactoryType *pType = uiEntityManager::RegisterEntityType("Session", Create, "Entity");
@@ -16,6 +17,7 @@ void uiSessionProp::RegisterEntity()
 	uiActionManager::RegisterProperty("numplayers", GetCurrentGameNumPlayers, NULL, pType);
 	uiActionManager::RegisterProperty("players", GetCurrentGamePlayers, NULL, pType);
 	uiActionManager::RegisterProperty("races", GetCurrentGameRaces, NULL, pType);
+	uiActionManager::RegisterProperty("activegames", GetActiveGames, NULL, pType);
 
 	uiActionManager::RegisterInstantAction("login", LoginAction, pType);
 	uiActionManager::RegisterInstantAction("logout", LogoutAction, pType);
@@ -24,8 +26,10 @@ void uiSessionProp::RegisterEntity()
 	uiActionManager::RegisterInstantAction("createonline", CreateOnline, pType);
 	uiActionManager::RegisterInstantAction("createoffline", CreateOffline, pType);
 	uiActionManager::RegisterInstantAction("joingame", JoinGame, pType);
+	uiActionManager::RegisterInstantAction("getactivegames", GetCurrentGames, pType);
 	uiActionManager::RegisterInstantAction("resumegame", ResumeGame, pType);
-	uiActionManager::RegisterInstantAction("entergame", EnterGame, pType);
+
+	uiActionManager::RegisterInstantAction("editmap", EditMap, pType);
 }
 
 uiSessionProp::uiSessionProp()
@@ -125,6 +129,38 @@ MFString uiSessionProp::GetCurrentGameRaces(uiEntity *pEntity)
 	return "";
 }
 
+MFString uiSessionProp::GetActiveGames(uiEntity *pEntity)
+{
+	uiSessionProp *pThis = (uiSessionProp*)pEntity;
+
+	MFString games = "{";
+	bool bAtLeastOne = false;
+
+	int numGames = pThis->pSession->GetNumCurrentGames();
+	for(int a=0; a<numGames; ++a)
+	{
+		GameState *pState = pThis->pSession->GetCurrentGame(a);
+		if(bAtLeastOne)
+			games += ",";
+		games += pState->name;
+		bAtLeastOne = true;
+	}
+
+	numGames = pThis->pSession->GetNumPendingGames();
+	for(int a=0; a<numGames; ++a)
+	{
+		GameDetails *pState = pThis->pSession->GetPendingGame(a);
+		if(bAtLeastOne)
+			games += ",";
+		games += pState->name;
+		bAtLeastOne = true;
+	}
+
+	games += "}";
+
+	return games;
+}
+
 void uiSessionProp::LoginAction(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiSessionProp *pThis = (uiSessionProp*)pEntity;
@@ -195,14 +231,65 @@ void uiSessionProp::CreateOffline(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 		pThis->RunScript(pThis->callback.CStr(), "");
 }
 
+void uiSessionProp::GetCurrentGames(uiEntity *pEntity, uiRuntimeArgs *pArguments)
+{
+	uiSessionProp *pThis = (uiSessionProp*)pEntity;
+
+	pThis->callback = pArguments->GetString(0);
+
+	pThis->pSession->SetUpdateDelegate(MakeDelegate(pThis, &uiSessionProp::OnUpdateGames));
+	pThis->pSession->UpdateGames();
+}
+
 void uiSessionProp::JoinGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiSessionProp *pThis = (uiSessionProp*)pEntity;
 
-	MFString name = pArguments->GetString(0);
 	pThis->callback = pArguments->GetString(1);
+	pThis->pSession->JoinGame(pArguments->GetString(0), MakeDelegate(pThis, &uiSessionProp::OnJoinGame));
+}
 
-	// find and join game
+void uiSessionProp::OnJoinGame(ServerError error, Session *pSession, GameDetails *pGame)
+{
+	if(error == SE_NO_ERROR)
+	{
+		currentGame = pGame->id;
+		activeLobby = *pGame;
+	}
+
+	if(!callback.IsEmpty())
+	{
+		MFString t = error == SE_NO_ERROR ? "false" : "true";
+
+		uiActionManager *pAM = GameData::Get()->GetActionManager();
+		uiActionScript *pScript = pAM->FindAction(callback.CStr());
+		if(pScript)
+		{
+			uiRuntimeArgs *pArgs = pAM->ParseArgs(t.CStr(), NULL);
+			pAM->RunScript(pScript, NULL, pArgs);
+		}
+	}
+}
+
+void uiSessionProp::OnUpdateGames(ServerError error, Session *pSession)
+{
+	if(error == SE_NO_ERROR)
+	{
+		//...?
+	}
+
+	if(!callback.IsEmpty())
+	{
+		MFString t = error == SE_NO_ERROR ? "false" : "true";
+
+		uiActionManager *pAM = GameData::Get()->GetActionManager();
+		uiActionScript *pScript = pAM->FindAction(callback.CStr());
+		if(pScript)
+		{
+			uiRuntimeArgs *pArgs = pAM->ParseArgs(t.CStr(), NULL);
+			pAM->RunScript(pScript, NULL, pArgs);
+		}
+	}
 }
 
 void uiSessionProp::ResumeGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
@@ -210,17 +297,75 @@ void uiSessionProp::ResumeGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 	uiSessionProp *pThis = (uiSessionProp*)pEntity;
 
 	MFString name = pArguments->GetString(0);
-	pThis->callback = pArguments->GetString(1);
+	MFString resumeGameCallback = pArguments->GetString(1);
+	MFString resumeLobbyCallback = pArguments->GetString(2);
 
-	// find and resume game
+	int numGames = pThis->pSession->GetNumPendingGames();
+	for(int a=0; a<numGames; ++a)
+	{
+		GameDetails *pGame = pThis->pSession->GetPendingGame(a);
+		if(name.CompareInsensitive(pGame->name))
+		{
+			// try and enter the lobby
+		}
+	}
+
+	const char *pError = "true";
+	numGames = pThis->pSession->GetNumCurrentGames();
+	for(int a=0; a<numGames; ++a)
+	{
+		GameState *pState = pThis->pSession->GetCurrentGame(a);
+		if(name.CompareInsensitive(pState->name))
+		{
+			pGame = new Game(pState);
+			Game::SetCurrent(pGame);
+
+			pError = "false";
+			break;
+		}
+	}
+
+	uiActionManager *pAM = GameData::Get()->GetActionManager();
+	uiActionScript *pScript = pAM->FindAction(resumeGameCallback.CStr());
+	if(pScript)
+	{
+		uiRuntimeArgs *pArgs = pAM->ParseArgs(pError, NULL);
+		pAM->RunScript(pScript, NULL, pArgs);
+	}
 }
 
-void uiSessionProp::EnterGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
+
+#include "Editor.h"
+
+extern Editor *pEditor;
+
+void uiSessionProp::EditMap(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiSessionProp *pThis = (uiSessionProp*)pEntity;
+	uiEntityManager *pEM = GameData::Get()->GetEntityManager();
 
-	// enter the game...
+	MFString map = pArguments->GetString(0);
 
-	// enter the game!
-	pThis->RunScript("onentergame");
+	// setup game parameters
+	GameParams params;
+	MFZeroMemory(&params, sizeof(params));
+	params.bOnline = false;
+	params.bEditMap = true;
+	params.gameID = 0;
+	params.pMap = map.CStr();
+
+	// hide the lobby
+	uiEntity *pLobby = pEM->Find("lobbyscreen");
+	pLobby->SetVisible(false);
+
+	// hide the menu backdrop
+	uiEntity *pBG = pEM->Find("background");
+	pBG->SetVisible(false);
+
+	// start game
+	pGame = new Game(&params);
+	Game::SetCurrent(pGame);
+
+	pEditor = new Editor(pGame);
+	Screen::SetNext(pEditor);
 }

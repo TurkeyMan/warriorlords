@@ -32,16 +32,22 @@ protected:
 	static MFString GetCurrentGamePlayers(uiEntity *pEntity);
 	static MFString GetCurrentGameRaces(uiEntity *pEntity);
 
+	static MFString GetActiveGames(uiEntity *pEntity);
+
 	static void LoginAction(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void LogoutAction(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void FindGames(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 
 	static void CreateOnline(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void CreateOffline(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+	static void GetCurrentGames(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void JoinGame(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void ResumeGame(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 
-	static void EnterGame(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+	static void EditMap(uiEntity *pEntity, uiRuntimeArgs *pArguments);
+
+	void OnJoinGame(ServerError error, Session *pSession, GameDetails *pGame);
+	void OnUpdateGames(ServerError error, Session *pSession);
 
 	Session *pSession;
 	uint32 currentGame;

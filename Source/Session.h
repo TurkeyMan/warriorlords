@@ -7,6 +7,7 @@ class Session
 {
 public:
 	typedef FastDelegate2<ServerError, Session *> SessionDelegate;
+	typedef FastDelegate3<ServerError, Session *, GameDetails *> JoinDelegate;
 
 	static void InitSession();
 	static void DeinitSession();
@@ -16,7 +17,8 @@ public:
 
 	static void Update();
 
-	void UpdateState();
+	void UpdateGames();
+	void UpdatePastGames();
 
 	void Login(const char *pUsername, const char *pPassword);
 	void Logout();
@@ -39,6 +41,7 @@ public:
 	int GetNumPastGames() { return numPastGames; }
 
 	void FindGames(MFString callback);
+	void JoinGame(MFString game, JoinDelegate callback);
 
 	GameState *GetCurrentGame(int game) { return &pCurrentGames[game]; }
 	GameDetails *GetPendingGame(int game) { return &pPendingGames[game]; }
@@ -60,6 +63,7 @@ protected:
 
 	SessionDelegate loginHandler;
 	SessionDelegate updateHandler;
+	JoinDelegate joinHandler;
 
 	uint32 currentGames[1024];
 	GameState *pCurrentGames;
@@ -77,6 +81,9 @@ protected:
 	// find game callback
 	MFString findEvent;
 
+	bool bJoining;
+	GameDetails joinGame;
+
 	// manage these locally
 	GameState offlineGames[64];
 	uint32 localGames[64];
@@ -88,6 +95,7 @@ protected:
 	HTTPRequest getPending;
 	HTTPRequest getPast;
 	HTTPRequest search;
+	HTTPRequest join;
 
 	static Session *pCurrent;
 
@@ -98,6 +106,7 @@ protected:
 	void OnGetCurrentGame(HTTPRequest::Status status);
 	void OnGetPendingGame(HTTPRequest::Status status);
 	void OnGamesFound(HTTPRequest::Status status);
+	void OnJoined(HTTPRequest::Status status);
 };
 
 #endif

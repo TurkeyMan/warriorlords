@@ -102,7 +102,7 @@ void HomeScreen::Select()
 	if(!bOffline)
 	{
 		pSession->SetUpdateDelegate(MakeDelegate(this, &HomeScreen::UpdateSession));
-		pSession->UpdateState();
+//		pSession->UpdateState();
 	}
 
 	pInputManager->PushReceiver(this);

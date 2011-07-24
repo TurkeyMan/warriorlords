@@ -22,9 +22,10 @@ Session::Session()
 	pPendingGames = NULL;
 	pPastGames = NULL;
 
-	updating = -1;
+	updating = 0;
 
 	search.SetCompleteDelegate(MakeDelegate(this, &Session::OnGamesFound));
+	join.SetCompleteDelegate(MakeDelegate(this, &Session::OnJoined));
 }
 
 Session::~Session()
@@ -39,15 +40,15 @@ void Session::Update()
 //	pCurrent->UpdateState();
 }
 
-void Session::UpdateState()
+void Session::UpdateGames()
 {
-	if(updating > 0)
+	if(updating & 3)
 		return;
 
-	updating = 3;
+	updating |= 3;
 
 	// clear the old cache...
-	numCurrentGames = numPendingGames = numPastGames = 0;
+	numCurrentGames = numPendingGames = 0;
 
 	if(pCurrentGames)
 	{
@@ -59,22 +60,34 @@ void Session::UpdateState()
 		MFHeap_Free(pPendingGames);
 		pPendingGames = NULL;
 	}
+
+	getCurrent.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetCurrent));
+	getPending.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetPending));
+
+	// get games
+	WLServ_GetActiveGames(getCurrent, user.id);
+	WLServ_GetPendingGames(getPending, user.id);
+}
+
+void Session::UpdatePastGames()
+{
+	if(updating & 4)
+		return;
+
+	updating |= 4;
+
+	// clear the old cache...
+	numPastGames = 0;
+
 	if(pPastGames)
 	{
 		MFHeap_Free(pPastGames);
 		pPastGames = NULL;
 	}
 
-	// don't fetch the past games until they are requested (user views history)
-	pPastGames = NULL;
-
-	getCurrent.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetCurrent));
-	getPending.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetPending));
 	getPast.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetPast));
 
 	// get games
-	WLServ_GetActiveGames(getCurrent, user.id);
-	WLServ_GetPendingGames(getPending, user.id);
 	WLServ_GetPastGames(getPast, user.id);
 }
 
@@ -82,6 +95,16 @@ void Session::FindGames(MFString callback)
 {
 	findEvent = callback;
 	WLServ_FindGames(search, GetUserID());
+}
+
+void Session::JoinGame(MFString game, JoinDelegate callback)
+{
+	MFZeroMemory(&joinGame, sizeof(joinGame));
+
+	joinHandler = callback;
+	bJoining = true;
+
+	WLServ_GetGameByName(join, game.CStr());
 }
 
 void Session::OnGamesFound(HTTPRequest::Status status)
@@ -119,6 +142,29 @@ void Session::OnGamesFound(HTTPRequest::Status status)
 	}
 }
 
+void Session::OnJoined(HTTPRequest::Status status)
+{
+	ServerError err = SE_NO_ERROR;
+
+	if(bJoining)
+	{
+		err = WLServResult_GetGameDetails(join, &joinGame);
+		if(err == SE_NO_ERROR)
+		{
+			WLServ_JoinGame(join, GetUserID(), joinGame.id);
+			bJoining = false;
+			return;
+		}
+	}
+	else
+	{
+		err = WLServResult_GetError(join);
+	}
+
+	if(joinHandler)
+		joinHandler(err, this, err == SE_NO_ERROR ? &joinGame : NULL);
+}
+
 void Session::OnGetCurrent(HTTPRequest::Status status)
 {
 	// get current games
@@ -126,9 +172,9 @@ void Session::OnGetCurrent(HTTPRequest::Status status)
 	ServerError err = WLServResult_GetGameList(getCurrent, "activeGames", currentGames, &numCurrentGames);
 	if(err != SE_NO_ERROR)
 	{
-		if(updateHandler)
+		updating ^= 1;
+		if((updating & 3) == 0 && updateHandler)
 			updateHandler(err, this);
-		updating = 0;
 		return;
 	}
 
@@ -142,7 +188,8 @@ void Session::OnGetCurrent(HTTPRequest::Status status)
 	}
 	else
 	{
-		if(--updating == 0 && updateHandler)
+		updating ^= 1;
+		if((updating & 3) == 0 && updateHandler)
 			updateHandler(SE_NO_ERROR, this);
 	}
 }
@@ -150,22 +197,18 @@ void Session::OnGetCurrent(HTTPRequest::Status status)
 void Session::OnGetCurrentGame(HTTPRequest::Status status)
 {
 	ServerError err = WLServResult_GetGameState(getCurrent, &pCurrentGames[numCurrent]);
-	if(0)//err != SE_NO_ERROR)
+	if(err == SE_NO_ERROR)
 	{
-		if(updateHandler)
-			updateHandler(err, this);
-		updating = 0;
-		return;
+		if(++numCurrent < numCurrentGames)
+		{
+			WLServ_GameState(getCurrent, currentGames[numCurrent]);
+			return;
+		}
 	}
 
-	if(++numCurrent < numCurrentGames)
-	{
-		WLServ_GameState(getCurrent, currentGames[numCurrent]);
-		return;
-	}
-
-	if(--updating == 0 && updateHandler)
-		updateHandler(SE_NO_ERROR, this);
+	updating ^= 1;
+	if((updating & 3) == 0 && updateHandler)
+		updateHandler(err, this);
 }
 
 void Session::OnGetPending(HTTPRequest::Status status)
@@ -175,9 +218,9 @@ void Session::OnGetPending(HTTPRequest::Status status)
 	ServerError err = WLServResult_GetGameList(getPending, "gamesWaiting", pendingGames, &numPendingGames);
 	if(err != SE_NO_ERROR)
 	{
-		if(updateHandler)
+		updating ^= 2;
+		if((updating & 3) == 0 && updateHandler)
 			updateHandler(err, this);
-		updating = 0;
 		return;
 	}
 
@@ -191,7 +234,8 @@ void Session::OnGetPending(HTTPRequest::Status status)
 	}
 	else
 	{
-		if(--updating == 0 && updateHandler)
+		updating ^= 2;
+		if((updating & 3) == 0 && updateHandler)
 			updateHandler(SE_NO_ERROR, this);
 	}
 }
@@ -199,22 +243,18 @@ void Session::OnGetPending(HTTPRequest::Status status)
 void Session::OnGetPendingGame(HTTPRequest::Status status)
 {
 	ServerError err = WLServResult_GetGameDetails(getPending, &pPendingGames[numPending]);
-	if(0)//err != SE_NO_ERROR)
+	if(err == SE_NO_ERROR)
 	{
-		if(updateHandler)
-			updateHandler(err, this);
-		updating = 0;
-		return;
+		if(++numPending < numPendingGames)
+		{
+			WLServ_GetGameByID(getPending, pendingGames[numPending]);
+			return;
+		}
 	}
 
-	if(++numPending < numPendingGames)
-	{
-		WLServ_GetGameByID(getPending, pendingGames[numPending]);
-		return;
-	}
-
-	if(--updating == 0 && updateHandler)
-		updateHandler(SE_NO_ERROR, this);
+	updating ^= 2;
+	if((updating & 3) == 0 && updateHandler)
+		updateHandler(err, this);
 }
 
 void Session::OnGetPast(HTTPRequest::Status status)
@@ -222,16 +262,10 @@ void Session::OnGetPast(HTTPRequest::Status status)
 	// get past games
 	numPastGames = sizeof(pastGames)/sizeof(pastGames[0]);
 	ServerError err = WLServResult_GetGameList(getPast, "pastGames", pastGames, &numPastGames);
-	if(err != SE_NO_ERROR)
-	{
-		if(updateHandler)
-			updateHandler(err, this);
-		updating = 0;
-		return;
-	}
 
-	if(--updating == 0 && updateHandler)
-		updateHandler(SE_NO_ERROR, this);
+	updating ^= 4;
+	if((updating & 4) == 0 && updateHandler)
+		updateHandler(err, this);
 }
 
 void Session::Login(const char *pUsername, const char *pPassword)

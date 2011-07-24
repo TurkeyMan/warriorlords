@@ -181,7 +181,7 @@ void WLServ_CreateAccount(HTTPRequest &request, const char *pUsername, const cha
 	args[2].SetString("password", pPassword);
 	args[3].SetString("email", pEmail);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 void WLServ_Login(HTTPRequest &request, const char *pUsername, const char *pPassword)
@@ -191,7 +191,7 @@ void WLServ_Login(HTTPRequest &request, const char *pUsername, const char *pPass
 	args[1].SetString("username", pUsername);
 	args[2].SetString("password", pPassword);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 void WLServ_GetUserByID(HTTPRequest &request, uint32 id)
@@ -200,7 +200,7 @@ void WLServ_GetUserByID(HTTPRequest &request, uint32 id)
 	args[0].SetString("request", "GETUSER");
 	args[1].SetInt("playerid", id);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 void WLServ_GetUserByName(HTTPRequest &request, const char *pUsername, UserDetails *pUser)
@@ -209,7 +209,7 @@ void WLServ_GetUserByName(HTTPRequest &request, const char *pUsername, UserDetai
 	args[0].SetString("request", "GETUSER");
 	args[1].SetString("username", pUsername);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 ServerError WLServResult_GetUser(HTTPRequest &request, UserDetails *pUser)
@@ -244,22 +244,22 @@ static void WLServ_GetGames(HTTPRequest &request, const char *pRequest, uint32 u
 	args[0].SetString("request", pRequest);
 	args[1].SetInt("playerid", user);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 void WLServ_GetActiveGames(HTTPRequest &request, uint32 user)
 {
-	return WLServ_GetGames(request, "GETACTIVEGAMES", user);
+	WLServ_GetGames(request, "GETACTIVEGAMES", user);
 }
 
 void WLServ_GetPastGames(HTTPRequest &request, uint32 user)
 {
-	return WLServ_GetGames(request, "GETPASTGAMES", user);
+	WLServ_GetGames(request, "GETPASTGAMES", user);
 }
 
 void WLServ_GetPendingGames(HTTPRequest &request, uint32 user)
 {
-	return WLServ_GetGames(request, "GETWAITINGGAMES", user);
+	WLServ_GetGames(request, "GETWAITINGGAMES", user);
 }
 
 ServerError WLServResult_GetGameList(HTTPRequest &request, const char *pList, uint32 *pGames, int *pNumGames)
@@ -293,7 +293,7 @@ void WLServ_CreateGame(HTTPRequest &request, uint32 user, GameCreateDetails *pDe
 	args[4].SetInt("creator", user);
 	args[5].SetInt("turntime", pDetails->turnTime);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 void WLServ_FindGames(HTTPRequest &request, uint32 user)
@@ -302,7 +302,7 @@ void WLServ_FindGames(HTTPRequest &request, uint32 user)
 	args[0].SetString("request", "SEARCHGAMES");
 	args[1].SetInt("playerid", user);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 void WLServ_FindRandomGame(HTTPRequest &request, uint32 user, uint32 *pGame)
@@ -311,7 +311,7 @@ void WLServ_FindRandomGame(HTTPRequest &request, uint32 user, uint32 *pGame)
 	args[0].SetString("request", "FINDGAME");
 	args[1].SetInt("playerid", user);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 void WLServ_BeginGame(HTTPRequest &request, uint32 game, uint32 *pPlayers, int numPlayers)
@@ -326,7 +326,7 @@ void WLServ_BeginGame(HTTPRequest &request, uint32 game, uint32 *pPlayers, int n
 		len += sprintf(players + len, a > 0 ? ",%d" : "%d", pPlayers[a]);
 	args[2].SetString("players", players);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 ServerError WLServResult_GetGame(HTTPRequest &request, uint32 *pGame)
@@ -378,7 +378,7 @@ void WLServ_GetGameByID(HTTPRequest &request, uint32 id)
 	args[0].SetString("request", "GETGAME");
 	args[1].SetInt("gameid", id);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 void WLServ_GetGameByName(HTTPRequest &request, const char *pName)
@@ -387,7 +387,7 @@ void WLServ_GetGameByName(HTTPRequest &request, const char *pName)
 	args[0].SetString("request", "GETGAME");
 	args[1].SetString("gamename", pName);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 ServerError WLServResult_GetGameDetails(HTTPRequest &request, GameDetails *pGame)
@@ -433,7 +433,7 @@ void WLServ_JoinGame(HTTPRequest &request, uint32 user, uint32 game)
 	args[1].SetInt("game", game);
 	args[2].SetInt("playerid", user);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 void WLServ_LeaveGame(HTTPRequest &request, uint32 user, uint32 game)
@@ -443,7 +443,7 @@ void WLServ_LeaveGame(HTTPRequest &request, uint32 user, uint32 game)
 	args[1].SetInt("gameid", game);
 	args[2].SetInt("playerid", user);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 void WLServ_SetRace(HTTPRequest &request, uint32 game, uint32 user, int race)
@@ -454,7 +454,7 @@ void WLServ_SetRace(HTTPRequest &request, uint32 game, uint32 user, int race)
 	args[2].SetInt("playerid", user);
 	args[3].SetInt("race", race);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 void WLServ_SetColour(HTTPRequest &request, uint32 game, uint32 user, int colour)
@@ -465,7 +465,7 @@ void WLServ_SetColour(HTTPRequest &request, uint32 game, uint32 user, int colour
 	args[2].SetInt("playerid", user);
 	args[3].SetInt("colour", colour);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 void WLServ_SetHero(HTTPRequest &request, uint32 game, uint32 user, int hero)
@@ -476,7 +476,7 @@ void WLServ_SetHero(HTTPRequest &request, uint32 game, uint32 user, int hero)
 	args[2].SetInt("playerid", user);
 	args[3].SetInt("hero", hero);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 ServerError WLServResult_GetError(HTTPRequest &request)
@@ -497,7 +497,7 @@ void WLServ_GameState(HTTPRequest &request, uint32 game)
 	args[0].SetString("request", "GETGAMEDETAILS");
 	args[1].SetInt("game", game);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 ServerError WLServResult_GetGameState(HTTPRequest &request, GameState *pState)
@@ -590,7 +590,7 @@ void WLServ_UpdateState(HTTPRequest &request, uint32 game, int lastAction)
 	args[1].SetInt("game", game);
 	args[2].SetInt("firstaction", lastAction);
 
-	return request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 ServerError WLServResult_GetActions(HTTPRequest &request)
