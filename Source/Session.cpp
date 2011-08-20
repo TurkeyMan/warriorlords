@@ -25,7 +25,14 @@ Session::Session()
 	updating = 0;
 
 	search.SetCompleteDelegate(MakeDelegate(this, &Session::OnGamesFound));
+	create.SetCompleteDelegate(MakeDelegate(this, &Session::OnCreate));
 	join.SetCompleteDelegate(MakeDelegate(this, &Session::OnJoined));
+
+	setRace.SetCompleteDelegate(MakeDelegate(this, &Session::OnRaceSet));
+	setColour.SetCompleteDelegate(MakeDelegate(this, &Session::OnColourSet));
+	setHero.SetCompleteDelegate(MakeDelegate(this, &Session::OnHeroSet));
+
+	setRaceValue = setColourValue = setHeroValue = -1;
 }
 
 Session::~Session()
@@ -97,6 +104,13 @@ void Session::FindGames(MFString callback)
 	WLServ_FindGames(search, GetUserID());
 }
 
+void Session::CreateGame(const GameCreateDetails &details, JoinDelegate callback)
+{
+	createHandler = callback;
+
+	WLServ_CreateGame(create, GetUserID(), &details);
+}
+
 void Session::JoinGame(MFString game, JoinDelegate callback)
 {
 	MFZeroMemory(&joinGame, sizeof(joinGame));
@@ -105,6 +119,61 @@ void Session::JoinGame(MFString game, JoinDelegate callback)
 	bJoining = true;
 
 	WLServ_GetGameByName(join, game.CStr());
+}
+
+void Session::MakeCurrent(uint32 game)
+{
+	for(int a=0; a<numPendingGames; ++a)
+	{
+		if(pPendingGames[a].id == game)
+		{
+			bLocalGame = false;
+			bIngame = false;
+			activeGame = a;
+			return;
+		}
+	}
+
+	for(int a=0; a<numCurrentGames; ++a)
+	{
+		if(pCurrentGames[a].id == game)
+		{
+			bLocalGame = false;
+			bIngame = true;
+			activeGame = a;
+			return;
+		}
+	}
+}
+
+void Session::SetRace(int race)
+{
+	if(setRaceValue != -1)
+		return;
+	setRaceValue = race;
+
+	GameDetails *pGame = GetActiveLobby();
+	WLServ_SetRace(setRace, pGame->id, GetUserID(), setRaceValue);
+}
+
+void Session::SetColour(int colour)
+{
+	if(setColourValue != -1)
+		return;
+	setColourValue = colour;
+
+	GameDetails *pGame = GetActiveLobby();
+	WLServ_SetColour(setColour, pGame->id, GetUserID(), setColourValue);
+}
+
+void Session::SetHero(int hero)
+{
+	if(setHeroValue != -1)
+		return;
+	setHeroValue = hero;
+
+	GameDetails *pGame = GetActiveLobby();
+	WLServ_SetHero(setHero, pGame->id, GetUserID(), setHeroValue);
 }
 
 void Session::OnGamesFound(HTTPRequest::Status status)
@@ -142,6 +211,17 @@ void Session::OnGamesFound(HTTPRequest::Status status)
 	}
 }
 
+void Session::OnCreate(HTTPRequest::Status status)
+{
+	ServerError err = SE_NO_ERROR;
+
+	GameDetails createGame;
+	err = WLServResult_GetGameDetails(create, &createGame);
+
+	if(createHandler)
+		createHandler(err, this, err == SE_NO_ERROR ? &createGame : NULL);
+}
+
 void Session::OnJoined(HTTPRequest::Status status)
 {
 	ServerError err = SE_NO_ERROR;
@@ -163,6 +243,27 @@ void Session::OnJoined(HTTPRequest::Status status)
 
 	if(joinHandler)
 		joinHandler(err, this, err == SE_NO_ERROR ? &joinGame : NULL);
+}
+
+void Session::OnRaceSet(HTTPRequest::Status status)
+{
+	if(status == HTTPRequest::CS_Succeeded)
+		GetLobbyPlayer()->race = setRaceValue;
+	setRaceValue = -1;
+}
+
+void Session::OnColourSet(HTTPRequest::Status status)
+{
+	if(status == HTTPRequest::CS_Succeeded)
+		GetLobbyPlayer()->colour = setColourValue;
+	setColourValue = -1;
+}
+
+void Session::OnHeroSet(HTTPRequest::Status status)
+{
+	if(status == HTTPRequest::CS_Succeeded)
+		GetLobbyPlayer()->hero = setHeroValue;
+	setHeroValue = -1;
 }
 
 void Session::OnGetCurrent(HTTPRequest::Status status)
@@ -320,4 +421,19 @@ GameState *Session::GetActiveGame()
 GameDetails *Session::GetActiveLobby()
 {
 	return bLocalGame ? NULL : &pPendingGames[activeGame];
+}
+
+GameDetails::Player *Session::GetLobbyPlayer()
+{
+	GameDetails *pGame = GetActiveLobby();
+	if(!pGame)
+		return NULL;
+
+	for(int a=0; a<pGame->maxPlayers; ++a)
+	{
+		if(pGame->players[a].id == user.id)
+			return &pGame->players[a];
+	}
+
+	return NULL;
 }

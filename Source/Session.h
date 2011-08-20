@@ -35,13 +35,20 @@ public:
 	bool IsIngame() { return bIngame; }
 	GameState *GetActiveGame();
 	GameDetails *GetActiveLobby();
+	GameDetails::Player *GetLobbyPlayer();
 
 	int GetNumCurrentGames() { return numCurrentGames; }
 	int GetNumPendingGames() { return numPendingGames; }
 	int GetNumPastGames() { return numPastGames; }
 
 	void FindGames(MFString callback);
+	void CreateGame(const GameCreateDetails &details, JoinDelegate callback);
 	void JoinGame(MFString game, JoinDelegate callback);
+	void MakeCurrent(uint32 game);
+
+	void SetRace(int race);
+	void SetColour(int colour);
+	void SetHero(int hero);
 
 	GameState *GetCurrentGame(int game) { return &pCurrentGames[game]; }
 	GameDetails *GetPendingGame(int game) { return &pPendingGames[game]; }
@@ -63,6 +70,7 @@ protected:
 
 	SessionDelegate loginHandler;
 	SessionDelegate updateHandler;
+	JoinDelegate createHandler;
 	JoinDelegate joinHandler;
 
 	uint32 currentGames[1024];
@@ -95,7 +103,13 @@ protected:
 	HTTPRequest getPending;
 	HTTPRequest getPast;
 	HTTPRequest search;
+	HTTPRequest create;
 	HTTPRequest join;
+	HTTPRequest setRace;
+	HTTPRequest setColour;
+	HTTPRequest setHero;
+
+	int setRaceValue, setColourValue, setHeroValue;
 
 	static Session *pCurrent;
 
@@ -106,7 +120,11 @@ protected:
 	void OnGetCurrentGame(HTTPRequest::Status status);
 	void OnGetPendingGame(HTTPRequest::Status status);
 	void OnGamesFound(HTTPRequest::Status status);
+	void OnCreate(HTTPRequest::Status status);
 	void OnJoined(HTTPRequest::Status status);
+	void OnRaceSet(HTTPRequest::Status status);
+	void OnColourSet(HTTPRequest::Status status);
+	void OnHeroSet(HTTPRequest::Status status);
 };
 
 #endif

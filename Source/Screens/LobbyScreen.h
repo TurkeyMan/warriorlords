@@ -19,7 +19,11 @@ protected:
 	static void ShowLobby(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 	static void StartGame(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 
-	void RepopulateHeroes(uiSelectBoxProp *pSelectBox, int item, void *pUserData);
+	void RepopulateHeroes(int race, int player);
+
+	void SelectRace(uiSelectBoxProp *pSelectBox, int item, void *pUserData);
+	void SelectColour(uiSelectBoxProp *pSelectBox, int item, void *pUserData);
+	void SelectHero(uiSelectBoxProp *pSelectBox, int item, void *pUserData);
 
 	uiEntity *pLobby;
 };

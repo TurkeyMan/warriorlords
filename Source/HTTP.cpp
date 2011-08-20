@@ -196,6 +196,8 @@ int HTTPRequest::RequestThread(void *_pRequest)
 	pThis->HandleRequest();
 
 	// clean up the thread
+	MFDebug_Assert(pThis->transferThread != NULL, "Errr...");
+
 	MFThread thread = pThis->transferThread;
 	MFThread_LockMutex(pThis->mutex);
 	pThis->transferThread = NULL;

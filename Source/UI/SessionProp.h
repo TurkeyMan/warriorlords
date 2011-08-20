@@ -16,6 +16,7 @@ public:
 	virtual void Update();
 	virtual void Draw(const uiDrawState &state);
 
+	Session *GetSession() { return pSession; }
 	GameDetails &GetLobby() { return activeLobby; }
 
 protected:
@@ -46,6 +47,7 @@ protected:
 
 	static void EditMap(uiEntity *pEntity, uiRuntimeArgs *pArguments);
 
+	void OnCreateGame(ServerError error, Session *pSession, GameDetails *pGame);
 	void OnJoinGame(ServerError error, Session *pSession, GameDetails *pGame);
 	void OnUpdateGames(ServerError error, Session *pSession);
 

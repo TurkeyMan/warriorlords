@@ -192,12 +192,45 @@ void uiSessionProp::CreateOnline(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiSessionProp *pThis = (uiSessionProp*)pEntity;
 
+	// create online game
 	MFString name = pArguments->GetString(0);
 	MFString map = pArguments->GetString(1);
 	int turnTime = pArguments->GetInt(2);
 	pThis->callback = pArguments->GetString(3);
 
-	// create online game
+	// create the game
+	MapDetails mapDetails;
+	Map::GetMapDetails(map.CStr(), &mapDetails);
+
+	GameCreateDetails details;
+	details.pName = name.CStr();
+	details.pMap = map.CStr();
+	details.turnTime = turnTime;
+	details.numPlayers = mapDetails.numPlayers;
+
+	pThis->pSession->CreateGame(details, MakeDelegate(pThis, &uiSessionProp::OnCreateGame));
+}
+
+void uiSessionProp::OnCreateGame(ServerError error, Session *pSession, GameDetails *pGame)
+{
+	if(error == SE_NO_ERROR)
+	{
+		currentGame = pGame->id;
+		activeLobby = *pGame;
+	}
+
+	if(!callback.IsEmpty())
+	{
+		MFString t = error == SE_NO_ERROR ? "false" : "true";
+
+		uiActionManager *pAM = GameData::Get()->GetActionManager();
+		uiActionScript *pScript = pAM->FindAction(callback.CStr());
+		if(pScript)
+		{
+			uiRuntimeArgs *pArgs = pAM->ParseArgs(t.CStr(), NULL);
+			pAM->RunScript(pScript, NULL, pArgs);
+		}
+	}
 }
 
 void uiSessionProp::CreateOffline(uiEntity *pEntity, uiRuntimeArgs *pArguments)
@@ -295,6 +328,7 @@ void uiSessionProp::OnUpdateGames(ServerError error, Session *pSession)
 void uiSessionProp::ResumeGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiSessionProp *pThis = (uiSessionProp*)pEntity;
+	uiActionManager *pAM = GameData::Get()->GetActionManager();
 
 	MFString name = pArguments->GetString(0);
 	MFString resumeGameCallback = pArguments->GetString(1);
@@ -306,7 +340,16 @@ void uiSessionProp::ResumeGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 		GameDetails *pGame = pThis->pSession->GetPendingGame(a);
 		if(name.CompareInsensitive(pGame->name))
 		{
-			// try and enter the lobby
+			pThis->currentGame = pGame->id;
+			pThis->activeLobby = *pGame;
+
+			uiActionScript *pScript = pAM->FindAction(resumeLobbyCallback.CStr());
+			if(pScript)
+			{
+				uiRuntimeArgs *pArgs = pAM->ParseArgs("false", NULL);
+				pAM->RunScript(pScript, NULL, pArgs);
+			}
+			return;
 		}
 	}
 
@@ -325,7 +368,6 @@ void uiSessionProp::ResumeGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 		}
 	}
 
-	uiActionManager *pAM = GameData::Get()->GetActionManager();
 	uiActionScript *pScript = pAM->FindAction(resumeGameCallback.CStr());
 	if(pScript)
 	{

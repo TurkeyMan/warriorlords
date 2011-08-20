@@ -30,9 +30,17 @@ void Lobby::InitLobby(uiEntity *_pLobby)
 void Lobby::ShowLobby(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiEntityManager *pEM = pEntity->GetEntityManager();
-	uiSessionProp *pSession = (uiSessionProp*)pEM->Find("session");
+	uiSessionProp *pSessionProp = (uiSessionProp*)pEM->Find("session");
 
-	GameDetails &game = pSession->GetLobby();
+	GameDetails &game = pSessionProp->GetLobby();
+	Session *pSession = pSessionProp->GetSession();
+	pSession->MakeCurrent(game.id);
+
+	if(!game.bMapDetailsLoaded)
+	{
+		Map::GetMapDetails(game.map, &game.mapDetails);
+		game.bMapDetailsLoaded = true;
+	}
 
 	uiButtonProp *pStart = (uiButtonProp*)pEM->Find("lobby_continue");
 	pStart->SetEnable(game.numPlayers == game.maxPlayers);
@@ -46,7 +54,6 @@ void Lobby::ShowLobby(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 
 		pName->SetVisible(a < game.maxPlayers);
 		pRace->SetVisible(a < game.numPlayers);
-		pRace->SetChangeCallback(MakeDelegate(&lobby, &Lobby::RepopulateHeroes));
 		pRace->SetUserData((void*)a);
 		pColour->SetVisible(a < game.numPlayers);
 		pColour->SetUserData((void*)a);
@@ -73,12 +80,21 @@ void Lobby::ShowLobby(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 			pRace->SetSelection(game.players[a].race - 1);
 			pColour->SetSelection(game.players[a].colour - 1);
 
+			lobby.RepopulateHeroes(game.players[a].race, a);
 			pHero->SetSelection(game.players[a].hero);
 		}
 		else if(a < game.maxPlayers)
 		{
 			// set player name
 			pName->SetText("Waiting for player...");
+		}
+
+		// set the change callbacks
+		pRace->SetChangeCallback(MakeDelegate(&lobby, &Lobby::SelectRace));
+		if(game.id != 0)
+		{
+			pColour->SetChangeCallback(MakeDelegate(&lobby, &Lobby::SelectColour));
+			pHero->SetChangeCallback(MakeDelegate(&lobby, &Lobby::SelectHero));
 		}
 	}
 }
@@ -167,22 +183,62 @@ void Lobby::StartGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 	}
 }
 
-void Lobby::RepopulateHeroes(uiSelectBoxProp *pSelectBox, int item, void *pUserData)
+void Lobby::RepopulateHeroes(int race, int player)
 {
 	uiEntityManager *pEM = pLobby->GetEntityManager();
-	uiSessionProp *pSession = (uiSessionProp*)pEM->Find("session");
-
-	GameDetails &game = pSession->GetLobby();
-
-	int player = (int)(uintp)pSelectBox->GetUserData();
 	uiSelectBoxProp *pHero = (uiSelectBoxProp*)pEM->Find(MFStr("lobby_hero%d", player));
+
+	uiSessionProp *pSessionProp = (uiSessionProp*)pEM->Find("session");
+	GameDetails &game = pSessionProp->GetLobby();
 
 	pHero->ClearItems();
 	for(int b=0; b<game.mapDetails.unitSetDetails.numUnits; ++b)
 	{
-		if(game.mapDetails.unitSetDetails.units[b].type == UT_Hero && game.mapDetails.unitSetDetails.units[b].race == (int)(uintp)pUserData)
+		if(game.mapDetails.unitSetDetails.units[b].type == UT_Hero && game.mapDetails.unitSetDetails.units[b].race == race)
 			pHero->AddItem(game.mapDetails.unitSetDetails.units[b].name);
 	}
+}
+
+void Lobby::SelectRace(uiSelectBoxProp *pSelectBox, int item, void *pUserData)
+{
+	uiEntityManager *pEM = pLobby->GetEntityManager();
+	uiSessionProp *pSessionProp = (uiSessionProp*)pEM->Find("session");
+
+	int race = (int)(uintp)pUserData;
+
+	GameDetails &game = pSessionProp->GetLobby();
+	if(game.id != 0)
+	{
+		Session *pSession = pSessionProp->GetSession();
+		GameDetails::Player *pPlayer = pSession->GetLobbyPlayer();
+		if(pPlayer->race != race)
+			pSession->SetRace(race);
+	}
+
+	int player = (int)(uintp)pSelectBox->GetUserData();
+	RepopulateHeroes(race, player);
+}
+
+void Lobby::SelectColour(uiSelectBoxProp *pSelectBox, int item, void *pUserData)
+{
+	uiEntityManager *pEM = pLobby->GetEntityManager();
+	uiSessionProp *pSessionProp = (uiSessionProp*)pEM->Find("session");
+
+	Session *pSession = pSessionProp->GetSession();
+	GameDetails::Player *pPlayer = pSession->GetLobbyPlayer();
+	if(pPlayer->colour != item + 1)
+		pSession->SetColour(item + 1);
+}
+
+void Lobby::SelectHero(uiSelectBoxProp *pSelectBox, int item, void *pUserData)
+{
+	uiEntityManager *pEM = pLobby->GetEntityManager();
+	uiSessionProp *pSessionProp = (uiSessionProp*)pEM->Find("session");
+
+	Session *pSession = pSessionProp->GetSession();
+	GameDetails::Player *pPlayer = pSession->GetLobbyPlayer();
+	if(pPlayer->hero != item)
+		pSession->SetHero(item);
 }
 
 

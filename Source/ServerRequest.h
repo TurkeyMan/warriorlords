@@ -189,7 +189,7 @@ void WLServ_GetPastGames(HTTPRequest &request, uint32 user);
 void WLServ_GetPendingGames(HTTPRequest &request, uint32 user);
 ServerError WLServResult_GetGameList(HTTPRequest &request, const char *pList, uint32 *pGames, int *pNumGames);
 
-void WLServ_CreateGame(HTTPRequest &request, uint32 user, GameCreateDetails *pDetails);
+void WLServ_CreateGame(HTTPRequest &request, uint32 user, const GameCreateDetails *pDetails);
 void WLServ_FindGames(HTTPRequest &request, uint32 user);
 void WLServ_FindRandomGame(HTTPRequest &request, uint32 user);
 void WLServ_BeginGame(HTTPRequest &request, uint32 game, uint32 *pPlayers, int numPlayers);

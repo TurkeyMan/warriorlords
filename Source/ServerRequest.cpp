@@ -283,7 +283,7 @@ ServerError WLServResult_GetGameList(HTTPRequest &request, const char *pList, ui
 	return result.error;
 }
 
-void WLServ_CreateGame(HTTPRequest &request, uint32 user, GameCreateDetails *pDetails)
+void WLServ_CreateGame(HTTPRequest &request, uint32 user, const GameCreateDetails *pDetails)
 {
 	MFFileHTTPRequestArg args[6];
 	args[0].SetString("request", "CREATEGAME");
