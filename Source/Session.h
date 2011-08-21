@@ -36,6 +36,7 @@ public:
 	GameState *GetActiveGame();
 	GameDetails *GetActiveLobby();
 	GameDetails::Player *GetLobbyPlayer();
+	bool IsCreator();
 
 	int GetNumCurrentGames() { return numCurrentGames; }
 	int GetNumPendingGames() { return numPendingGames; }
@@ -45,6 +46,7 @@ public:
 	void CreateGame(const GameCreateDetails &details, JoinDelegate callback);
 	void JoinGame(MFString game, JoinDelegate callback);
 	void MakeCurrent(uint32 game);
+	void BeginGame(uint32 game, uint32 *pPlayers, int numPlayers);
 
 	void SetRace(int race);
 	void SetColour(int colour);
@@ -56,6 +58,7 @@ public:
 
 	void SetLoginDelegate(SessionDelegate handler) { loginHandler = handler; }
 	void SetUpdateDelegate(SessionDelegate handler) { updateHandler = handler; }
+	void SetBeginDelegate(SessionDelegate handler) { beginHandler = handler; }
 
 protected:
 	UserDetails user;
@@ -70,6 +73,7 @@ protected:
 
 	SessionDelegate loginHandler;
 	SessionDelegate updateHandler;
+	SessionDelegate beginHandler;
 	JoinDelegate createHandler;
 	JoinDelegate joinHandler;
 
@@ -108,6 +112,7 @@ protected:
 	HTTPRequest setRace;
 	HTTPRequest setColour;
 	HTTPRequest setHero;
+	HTTPRequest begin;
 
 	int setRaceValue, setColourValue, setHeroValue;
 
@@ -125,6 +130,7 @@ protected:
 	void OnRaceSet(HTTPRequest::Status status);
 	void OnColourSet(HTTPRequest::Status status);
 	void OnHeroSet(HTTPRequest::Status status);
+	void OnBegin(HTTPRequest::Status status);
 };
 
 #endif

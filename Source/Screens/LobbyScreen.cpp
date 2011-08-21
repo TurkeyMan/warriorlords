@@ -33,7 +33,9 @@ void Lobby::ShowLobby(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 	uiSessionProp *pSessionProp = (uiSessionProp*)pEM->Find("session");
 
 	GameDetails &game = pSessionProp->GetLobby();
+
 	Session *pSession = pSessionProp->GetSession();
+	pSession->SetBeginDelegate(MakeDelegate(&lobby, &Lobby::OnBegin));
 	pSession->MakeCurrent(game.id);
 
 	if(!game.bMapDetailsLoaded)
@@ -43,6 +45,7 @@ void Lobby::ShowLobby(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 	}
 
 	uiButtonProp *pStart = (uiButtonProp*)pEM->Find("lobby_continue");
+	pStart->SetVisible(pSession->IsCreator());
 	pStart->SetEnable(game.numPlayers == game.maxPlayers);
 
 	for(int a=0; a<8; ++a)
@@ -102,9 +105,9 @@ void Lobby::ShowLobby(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 void Lobby::StartGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiEntityManager *pEM = pEntity->GetEntityManager();
-	uiSessionProp *pSession = (uiSessionProp*)pEM->Find("session");
+	uiSessionProp *pSessionProp = (uiSessionProp*)pEM->Find("session");
 
-	GameDetails &game = pSession->GetLobby();
+	GameDetails &game = pSessionProp->GetLobby();
 
 	MFDebug_Assert(game.maxPlayers == game.numPlayers, "Something went wrong?!");
 
@@ -122,33 +125,40 @@ void Lobby::StartGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 	// begin game...
 
 	// setup game parameters
-	GameParams params;
-	MFZeroMemory(&params, sizeof(params));
-	params.bOnline = game.id != 0;
-	params.bEditMap = false;
-	params.gameID = game.id;
-	params.pMap = game.map;
+	MFZeroMemory(&lobby.params, sizeof(lobby.params));
+	lobby.params.bOnline = game.id != 0;
+	lobby.params.bEditMap = false;
+	lobby.params.gameID = game.id;
+	lobby.params.pMap = game.map;
 
 	// set up the players
 	bool bAssigned[16];
 	MFZeroMemory(bAssigned, sizeof(bAssigned));
-	params.numPlayers = game.numPlayers;
+	lobby.params.numPlayers = game.numPlayers;
 	for(int a=0; a<game.numPlayers; ++a)
 	{
 		// select a random starting position for the player
-		int p = MFRand() % params.numPlayers;
+		int p = MFRand() % lobby.params.numPlayers;
 		while(bAssigned[p])
-			p = MFRand() % params.numPlayers;
+			p = MFRand() % lobby.params.numPlayers;
 		bAssigned[p] = true;
 
-		params.players[p].id = game.players[a].id;
-		params.players[p].race = game.players[a].race;
-		params.players[p].colour = game.players[a].colour;
-		params.players[p].hero = game.players[a].hero;
+		lobby.params.players[p].id = game.players[a].id;
+		lobby.params.players[p].race = game.players[a].race;
+		lobby.params.players[p].colour = game.players[a].colour;
+		lobby.params.players[p].hero = game.players[a].hero;
 	}
 
 	if(game.id == 0)
 	{
+		uiActionManager *pAM = GameData::Get()->GetActionManager();
+		uiActionScript *pScript = pAM->FindAction("ongamebegun");
+		if(pScript)
+		{
+			uiRuntimeArgs *pArgs = pAM->ParseArgs("false", NULL);
+			pAM->RunScript(pScript, NULL, pArgs);
+		}
+/*
 		// hide the lobby
 		uiEntity *pLobby = pEM->Find("lobbyscreen");
 		pLobby->SetVisible(false);
@@ -156,12 +166,12 @@ void Lobby::StartGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 		// hide the menu backdrop
 		uiEntity *pBG = pEM->Find("background");
 		pBG->SetVisible(false);
-
+*/
 		// start game
-		pGame = new Game(&params);
+		pGame = new Game(&lobby.params);
 		Game::SetCurrent(pGame);
 
-		if(params.bEditMap)
+		if(lobby.params.bEditMap)
 		{
 			pEditor = new Editor(pGame);
 			Screen::SetNext(pEditor);
@@ -171,15 +181,13 @@ void Lobby::StartGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 	}
 	else
 	{
-/*
 		// create the game
 		uint32 players[16];
-		for(int a=0; a<params.numPlayers; ++a)
-			players[a] = params.players[a].id;
+		for(int a=0; a<lobby.params.numPlayers; ++a)
+			players[a] = lobby.params.players[a].id;
 
-		WLServ_BeginGame(begin, details.id, players, params.numPlayers);
-
-*/
+		Session *pSession = pSessionProp->GetSession();
+		pSession->BeginGame(game.id, players, lobby.params.numPlayers);
 	}
 }
 
@@ -241,6 +249,27 @@ void Lobby::SelectHero(uiSelectBoxProp *pSelectBox, int item, void *pUserData)
 		pSession->SetHero(item);
 }
 
+void Lobby::OnBegin(ServerError error, Session *pSession)
+{
+	uiActionManager *pAM = GameData::Get()->GetActionManager();
+	uiActionScript *pScript = pAM->FindAction("ongamebegun");
+	if(pScript)
+	{
+		uiRuntimeArgs *pArgs = pAM->ParseArgs(error == SE_NO_ERROR ? "false" : "true", NULL);
+		pAM->RunScript(pScript, NULL, pArgs);
+	}
+
+	if(error == SE_NO_ERROR)
+	{
+		GameDetails *pDetails = pSession->GetActiveLobby();
+
+		// start game
+		params.gameID = pDetails->id;
+		pGame = new Game(&params);
+		Game::SetCurrent(pGame);
+		pGame->BeginGame();
+	}
+}
 
 LobbyScreen::LobbyScreen()
 {
@@ -589,12 +618,23 @@ void LobbyScreen::Click(int button, int buttonID)
 
 void LobbyScreen::BeginGame(HTTPRequest::Status status)
 {
-	WLServResult_GetGame(begin, &params.gameID);
+	ServerError err = WLServResult_GetGame(begin, &params.gameID);
 
-	// start game
-	pGame = new Game(&params);
-	Game::SetCurrent(pGame);
-	pGame->BeginGame();
+	if(err == SE_NO_ERROR)
+	{
+		// start game
+		pGame = new Game(&params);
+		Game::SetCurrent(pGame);
+		pGame->BeginGame();
+	}
+
+	uiActionManager *pAM = GameData::Get()->GetActionManager();
+	uiActionScript *pScript = pAM->FindAction("ongamebegun");
+	if(pScript)
+	{
+		uiRuntimeArgs *pArgs = pAM->ParseArgs(err == SE_NO_ERROR ? "true" : "false", NULL);
+		pAM->RunScript(pScript, NULL, pArgs);
+	}
 }
 
 void LobbyScreen::EnterGame(HTTPRequest::Status status)

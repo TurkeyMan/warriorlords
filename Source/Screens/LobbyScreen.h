@@ -25,7 +25,12 @@ protected:
 	void SelectColour(uiSelectBoxProp *pSelectBox, int item, void *pUserData);
 	void SelectHero(uiSelectBoxProp *pSelectBox, int item, void *pUserData);
 
+	void OnBegin(ServerError error, Session *pSession);
+
 	uiEntity *pLobby;
+
+	// begin game params
+	GameParams params;
 };
 
 class LobbyScreen : public Screen

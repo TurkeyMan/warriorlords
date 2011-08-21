@@ -32,6 +32,8 @@ Session::Session()
 	setColour.SetCompleteDelegate(MakeDelegate(this, &Session::OnColourSet));
 	setHero.SetCompleteDelegate(MakeDelegate(this, &Session::OnHeroSet));
 
+	begin.SetCompleteDelegate(MakeDelegate(this, &Session::OnBegin));
+
 	setRaceValue = setColourValue = setHeroValue = -1;
 }
 
@@ -176,6 +178,13 @@ void Session::SetHero(int hero)
 	WLServ_SetHero(setHero, pGame->id, GetUserID(), setHeroValue);
 }
 
+void Session::BeginGame(uint32 game, uint32 *pPlayers, int numPlayers)
+{
+	GameDetails *pGame = GetActiveLobby();
+
+	WLServ_BeginGame(begin, pGame->id, pPlayers, pGame->numPlayers);
+}
+
 void Session::OnGamesFound(HTTPRequest::Status status)
 {
 	const int MaxGames = 20;
@@ -264,6 +273,14 @@ void Session::OnHeroSet(HTTPRequest::Status status)
 	if(status == HTTPRequest::CS_Succeeded)
 		GetLobbyPlayer()->hero = setHeroValue;
 	setHeroValue = -1;
+}
+
+void Session::OnBegin(HTTPRequest::Status status)
+{
+	GameDetails *pGame = GetActiveLobby();
+	ServerError err = WLServResult_GetGame(begin, &pGame->id);
+
+	beginHandler(err, this);
 }
 
 void Session::OnGetCurrent(HTTPRequest::Status status)
@@ -436,4 +453,13 @@ GameDetails::Player *Session::GetLobbyPlayer()
 	}
 
 	return NULL;
+}
+
+bool Session::IsCreator()
+{
+	GameDetails *pGame = GetActiveLobby();
+	if(!pGame)
+		return true;
+
+	return pGame->players[0].id == user.id;
 }
