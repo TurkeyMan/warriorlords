@@ -90,6 +90,7 @@ protected:
 	void AddWaiting(BattleUnit *pUnit);
 	void EndWaiting(BattleUnit *pUnit);
 
+	int CalculateTargetPreference(BattleUnit *pUnit, BattleUnit *pTarget);
 	int CalculateDamage(BattleUnit *pUnit, BattleUnit *pTarget);
 	void HitTarget(BattleUnit *pUnit, BattleUnit *pTarget);
 

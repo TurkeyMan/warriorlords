@@ -467,6 +467,26 @@ void Battle::Select()
 	pInputManager->PushReceiver(this);
 }
 
+int Battle::CalculateTargetPreference(BattleUnit *pUnit, BattleUnit *pTarget)
+{
+	// if the unit is set to 
+	BattlePlan *pPlan = pUnit->pUnit->GetBattlePlan();
+	if(pPlan->bAttackAvailable && (pTarget->bEngaged || pTarget->state >= US_Engaging))
+		return 0; // reject this unit
+
+	UnitDetails *pDetails = pUnit->pUnit->GetDetails();
+	UnitDetails *pTargetDetails = pTarget->pUnit->GetDetails();
+	float damageMod = pUnitDefs->GetDamageModifier(pDetails->attack, pTargetDetails->armour);
+
+	int maxHP = pTarget->pUnit->GetMaxHP();
+
+	int key1 = (int)(pTarget->pUnit->IsRanged() ? pPlan->type != TT_Melee : pPlan->type != TT_Ranged) << 30; // primary key is the preferred target unit rank
+	int key2 = (int)(damageMod * (1.f/3.f) * 31.f) << 24; // secondary key is the damage modifier
+	int key3 = pPlan->strength == TS_Weakest ? (-maxHP & 0x3FF) : (maxHP & 0x3FF); // final key is the preferred unit strength (weak or strong)
+
+	return key1 | key2 | key3;
+}
+
 int Battle::CalculateDamage(BattleUnit *pUnit, BattleUnit *pTarget)
 {
 	UnitDetails *pDetails = pUnit->pUnit->GetDetails();
@@ -712,47 +732,22 @@ int Battle::Update()
 				if(!pTarget)
 				{
 					// pick attack target...
-					BattlePlan *pPlan = pUnit->pUnit->GetBattlePlan();
-					int targetHP = 0;
-					bool bTargetIsRanged = false;
+					int preference = 0;
 
 					for(int a=0; a<opponent.numUnits; ++a)
 					{
 						BattleUnit &t = opponent.units[a];
 
 						// check if we can attack this target
-						if(t.row == 0 || bCanAttackBackRow)
+						if(t.pUnit->IsDead() || (t.row == 1 && !bCanAttackBackRow))
+							continue;
+
+						int pref = CalculateTargetPreference(pUnit, &t);
+
+						if(!pTarget || pref > preference)
 						{
-							// check unit is a valid target
-							if((!pPlan->bAttackAvailable && !t.pUnit->IsDead()) || t.CanBeAttacked())
-							{
-								int maxHP = t.pUnit->GetMaxHP();
-
-								// we can attack this target
-								bool bPreferTarget = false;
-								if(pTarget)
-								{
-									// check for preference according to combat rules
-									if((pPlan->type == TT_Melee && !bTargetIsRanged) || (pPlan->type == TT_Ranged && bTargetIsRanged))
-									{
-										if((pPlan->strength == TS_Weakest && maxHP < targetHP) || (pPlan->strength == TS_Strongest && maxHP > targetHP))
-											bPreferTarget = true;
-									}
-									else
-									{
-										if((pPlan->type == TT_Melee && !t.pUnit->IsRanged()) || (pPlan->type == TT_Ranged && t.pUnit->IsRanged()) || 
-											(pPlan->strength == TS_Weakest && maxHP < targetHP) || (pPlan->strength == TS_Strongest && maxHP > targetHP))
-											bPreferTarget = true;
-									}
-								}
-
-								if(!pTarget || bPreferTarget)
-								{
-									pTarget = &t;
-									targetHP = maxHP;
-			 						bTargetIsRanged = t.pUnit->IsRanged();
-								}
-							}
+							pTarget = &t;
+							preference = pref;
 						}
 					}
 				}

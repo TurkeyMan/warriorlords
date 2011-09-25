@@ -1,3 +1,2 @@
 <?xml version="1.0" encoding="utf-8"?>
-<HKWidgetLayoutFrame layout_align="Fill" background_image="TitleScreen">
-</HKWidgetLayoutFrame>
+<HKWidget layout_align="Fill" background_image="TitleScreen" />
