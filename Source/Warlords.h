@@ -5,7 +5,8 @@
 #include "MFHeap.h"
 #include "MFArray.h"
 
-#include "Middleware/FastDelegate.h"
+#include "fastdelegate/FastDelegate.h"
+using namespace fastdelegate;
 
 #include "Game.h"
 #include "GameData.h"

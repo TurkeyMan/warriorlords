@@ -7,6 +7,9 @@ solution "Warlords"
 	-- include the fuji project...
 	dofile  "../../Fuji/Fuji/Private/Project/fujiproj.lua"
 
+	-- include the Haku project...
+	dofile "../../Fuji/Haku/Project/hakuproj.lua"
+
 	project "Warlords"
 		kind "WindowedApp"
 		language "C++"
@@ -23,6 +26,7 @@ solution "Warlords"
 --		pchheader "Warlords.h"
 --		pchsource "Warlords.cpp"
 
-		links { "Fuji" }
+		links { "Fuji", "Haku" }
 
 		dofile "../../Fuji/Fuji/Public/Project/fujiconfig.lua"
+		dofile "../../Fuji/Haku/Project/hakuconfig.lua"

@@ -3,8 +3,7 @@
 #include "Display.h"
 
 #include "MFSystem.h"
-
-extern bool gAppHasFocus;
+#include "MFDisplay.h"
 
 InputManager::InputManager()
 {
@@ -138,7 +137,7 @@ void InputManager::Update()
 			}
 		}
 
-		if(gAppHasFocus)
+		if(MFDisplay_HasFocus())
 		{
 			for(int b=0; b<Mouse_MaxButtons; ++b)
 			{

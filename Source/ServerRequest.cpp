@@ -396,6 +396,8 @@ ServerError WLServResult_GetGameDetails(HTTPRequest &request, GameDetails *pGame
 	if(err != SE_NO_ERROR)
 		return err;
 
+	MFZeroMemory(pGame, sizeof(*pGame));
+
 	HTTPResponse *pResponse = request.GetResponse();
 	Result result(pResponse->GetData());
 

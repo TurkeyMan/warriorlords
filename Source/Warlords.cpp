@@ -16,6 +16,10 @@
 #include "MFSystem.h"
 #include "MFDisplay.h"
 
+#include "UI/HKUI.h"
+#include "UI/HKWidgetLoader-XML.h"
+#include "UI/Widgets/HKWidgetButton.h"
+
 #define TEST_ONLINE
 
 /*** Global Stuff ***/
@@ -34,7 +38,10 @@ Lobby lobby;
 
 MFSystemCallbackFunction pInitFujiFS;
 
-bool gAppHasFocus = true;
+void HideMenu(HKWidget &w, HKWidgetEventInfo &)
+{
+	w.GetParent()->SetVisible(HKWidget::Invisible);
+}
 
 /*** Game Functions ***/
 
@@ -83,6 +90,21 @@ void Game_Init()
 		return;
 	}
 
+	// load the UI
+	HKUserInterface::Init();
+
+	HKUserInterface *pUI = new HKUserInterface();
+	HKUserInterface::SetActiveUI(pUI);
+
+	HKWidget *pRoot = HKWidget_CreateFromXML("menu.xml");
+	if(pRoot)
+	{
+		pUI->AddTopLevelWidget(pRoot, true);
+
+		HKWidgetButton *pButton = (HKWidgetButton*)pRoot->FindChild("hide");
+		pButton->OnClicked += HideMenu;
+	}
+
 	// show the titlescreen
 	uiEntity *pBG = pEM->Find("background");
 	uiEntity *pTitle = pEM->Find("titlescreen");
@@ -119,6 +141,14 @@ void Game_Update()
 
 	if(MFInput_WasPressed(Key_F1, IDD_Keyboard))
 		MFString_Dump();
+
+	if(MFInput_WasPressed(Key_F2, IDD_Keyboard))
+	{
+		MFHeap *pMainHeap = MFHeap_GetHeap(MFHT_Active);
+		MFDebug_Log(2, MFStr("%d - Allocated: %d bytes (%d bytes waste)", MFHeap_GetNumAllocations(pMainHeap), MFHeap_GetTotalAllocated(pMainHeap), MFHeap_GetTotalWaste(pMainHeap)));
+	}
+
+	HKUserInterface::Get().Update();
 }
 
 void Game_Draw()
@@ -139,6 +169,10 @@ void Game_Draw()
 
 	GameData::Get()->Draw();
 
+//	MFFont_DrawTextf(MFFont_GetDebugFont(), 10, 420, 30, MFVector::black, "Mem: %db (%d allocs)", MFHeap_GetTotalAllocated(), MFHeap_GetNumAllocations());
+
+	HKUserInterface::Get().Draw();
+
 	MFView_Pop();
 }
 
@@ -158,17 +192,17 @@ void Game_Deinit()
 	if(pLogin)
 		delete pLogin;
 
+	HKUserInterface::Deinit();
+
 	GameData::Deinit();
 }
 
 void Game_FocusGained()
 {
-	gAppHasFocus = true;
 }
 
 void Game_FocusLost()
 {
-	gAppHasFocus = false;
 }
 
 int GameMain(MFInitParams *pInitParams)
