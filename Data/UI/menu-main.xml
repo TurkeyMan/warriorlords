@@ -1,3 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<HKWidgetLayoutFrame layout_align="Fill" background_image="Window-Pirates">
-</HKWidgetLayoutFrame>
+<HKWidgetLayoutLinear layout_align="fill" background_image="Window-Pirates" layout_orientation="vertical" layout_padding="16">
+	<HKWidgetLabel name="welcome_text" text="Main Menu" text_font="Priest" layout_align="fill" text_align="center" text_colour="1,0.5,0"/>
+
+	<HKWidgetButton name="play_game" text="Play Game" text_font="Priest" layout_align="fillcenter" text_align="center" text_colour="white"/>
+	<HKWidgetButton name="resume_game" text="Resume Game" text_font="Priest" layout_align="fillcenter" text_align="center" text_colour="white"/>
+	<HKWidgetButton name="login" text="Login" text_font="Priest" layout_align="fillcenter" text_align="center" text_colour="white"/>
+</HKWidgetLayoutLinear>
