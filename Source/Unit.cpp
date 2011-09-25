@@ -707,7 +707,7 @@ void UnitDefinitions::Free()
 MFVector UnitDefinitions::GetRaceColour(int race) const
 {
 	uint32 c = pRaces[race].colour;
-	return MakeVector(((c >> 16) & 0xFF) * (1.f/255.f), ((c >> 8) & 0xFF) * (1.f/255.f), (c & 0xFF) * (1.f/255.f));
+	return MakeVector(((c >> 16) & 0xFF) * (1.f/255.f), ((c >> 8) & 0xFF) * (1.f/255.f), (c & 0xFF) * (1.f/255.f), 1.f);
 }
 
 int UnitDefinitions::FindRace(const char *pName)
