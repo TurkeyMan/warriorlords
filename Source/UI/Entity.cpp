@@ -365,7 +365,7 @@ uiEntity *uiEntity::FindChild(const char *pName) const
 {
 	for(int a=0; a<children.size(); ++a)
 	{
-		if(children[a]->name.CompareInsensitive(pName))
+		if(children[a]->name.EqualsInsensitive(pName))
 			return children[a];
 	}
 	return NULL;
@@ -400,7 +400,7 @@ bool uiEntity::SignalEvent(const char *pEvent, const char *pParams)
 	for(int a=0; a<events.size(); ++a)
 	{
 		// *** HASH TABLE?!? ***
-		if(events[a]->name.CompareInsensitive(pEvent))
+		if(events[a]->name.EqualsInsensitive(pEvent))
 		{
 			uiActionManager *pActionManager = GetActionManager();
 			uiRuntimeArgs *pArgs = pParams ? pActionManager->ParseArgs(pParams, this) : NULL;

@@ -469,7 +469,7 @@ void Battle::Select()
 
 int Battle::CalculateTargetPreference(BattleUnit *pUnit, BattleUnit *pTarget)
 {
-	// if the unit is set to 
+	// if the unit is set to wait for preferred target
 	BattlePlan *pPlan = pUnit->pUnit->GetBattlePlan();
 	if(pPlan->bAttackAvailable && (pTarget->bEngaged || pTarget->state >= US_Engaging))
 		return 0; // reject this unit

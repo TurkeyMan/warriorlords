@@ -338,7 +338,7 @@ void uiSessionProp::ResumeGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 	for(int a=0; a<numGames; ++a)
 	{
 		GameDetails *pGame = pThis->pSession->GetPendingGame(a);
-		if(name.CompareInsensitive(pGame->name))
+		if(name.EqualsInsensitive(pGame->name))
 		{
 			pThis->currentGame = pGame->id;
 			pThis->activeLobby = *pGame;
@@ -358,7 +358,7 @@ void uiSessionProp::ResumeGame(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 	for(int a=0; a<numGames; ++a)
 	{
 		GameState *pState = pThis->pSession->GetCurrentGame(a);
-		if(name.CompareInsensitive(pState->name))
+		if(name.EqualsInsensitive(pState->name))
 		{
 			pGame = new Game(pState);
 			Game::SetCurrent(pGame);

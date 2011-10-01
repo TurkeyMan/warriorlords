@@ -230,11 +230,11 @@ void uiRuntimeArgs::NotValue(int index)
 		}
 		else if(pArgs[index].type == AT_String)
 		{
-			if(pArgs[index].string.CompareInsensitive("false"))
+			if(pArgs[index].string.EqualsInsensitive("false"))
 			{
 				pArgs[index].string = "true";
 			}
-			else if(pArgs[index].string.CompareInsensitive("true"))
+			else if(pArgs[index].string.EqualsInsensitive("true"))
 			{
 				pArgs[index].string = "false";
 			}
@@ -983,10 +983,10 @@ inline MFString DoSum(MFString a, MFString b, int oper, bool bConcatinate)
 				result = a + b;
 				break;
 			case 6:
-				result = a.CompareInsensitive(b) ? "true" : "false";
+				result = a.EqualsInsensitive(b) ? "true" : "false";
 				break;
 			case 7:
-				result = a.CompareInsensitive(b) ? "false" : "true";
+				result = a.EqualsInsensitive(b) ? "false" : "true";
 				break;
 			default:
 				MFDebug_Assert(false, "Expected: Numeric operands.");
@@ -1219,7 +1219,7 @@ uiRuntimeArgs *uiActionManager::ResolveIdentifier(uiExecuteContext *pContext, co
 				int a=0, numArgs = pContext->pScript->numArgs;
 				for(; a<numArgs; ++a)
 				{
-					if(pContext->pScript->pArgs[a].CompareInsensitive(identifier))
+					if(pContext->pScript->pArgs[a].EqualsInsensitive(identifier))
 					{
 						uiRuntimeArgs *pValue = uiRuntimeArgs::Allocate(1);
 						pValue->Set(0, pContext->pArgs->Get(a));
@@ -1297,7 +1297,7 @@ uiRuntimeArgs *uiActionManager::ResolveIdentifier(uiExecuteContext *pContext, co
 				continue;
 			}
 
-			if(identifier.CompareInsensitive("parent"))
+			if(identifier.EqualsInsensitive("parent"))
 			{
 				uiEntity *pParent = pEntity->Parent();
 				if(!pParent)
@@ -1311,19 +1311,19 @@ uiRuntimeArgs *uiActionManager::ResolveIdentifier(uiExecuteContext *pContext, co
 		// check for some special keywords
 		if(depth == 0)
 		{
-			if(identifier.CompareInsensitive("entities"))
+			if(identifier.EqualsInsensitive("entities"))
 			{
 				type = Entity;
 			}
-			else if(identifier.CompareInsensitive("metrics"))
+			else if(identifier.EqualsInsensitive("metrics"))
 			{
 				type = Metric;
 			}
-			else if(identifier.CompareInsensitive("options"))
+			else if(identifier.EqualsInsensitive("options"))
 			{
 				type = Option;
 			}
-			else if(identifier.CompareInsensitive("strings"))
+			else if(identifier.EqualsInsensitive("strings"))
 			{
 				type = String;
 			}
