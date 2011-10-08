@@ -990,14 +990,14 @@ void UnitDefinitions::GetBadgeUVs(int rank, MFRect *pUVs, float texelOffset)
 
 	float fWidth = 64.f;
 	float fHeight = 32.f;
-	float xScale = (1.f / fWidth) * 4.f;
-	float yScale = (1.f / fHeight) * 2.f;
+	float xScale = 1.f / 4.f;
+	float yScale = 1.f / 2.f;
 	float halfX = texelOffset / fWidth;
 	float halfY = texelOffset / fHeight;
 
 	pUVs->x = (float)(rank & 3)*xScale + halfX;
 	pUVs->y = (float)(rank >> 2)*yScale + halfY;
-	pUVs->width = yScale;
+	pUVs->width = xScale;
 	pUVs->height = yScale;
 }
 
