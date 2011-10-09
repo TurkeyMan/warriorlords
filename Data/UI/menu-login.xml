@@ -1,30 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<HKWidgetLayoutLinear layout_align="fill" background_image="Window-Pirates" layout_orientation="vertical" layout_padding="40">
+<LinearLayout align="fill" orientation="vertical" padding="40" background_image="Window-Pirates" >
 
-	<HKWidgetLabel text="Login" text_font="Priest" layout_align="topCenter" text_align="center" text_height="50" text_colour="orange" />
+	<Label text="Login" text_font="Priest" align="topCenter" text_align="center" text_height="50" text_colour="orange" />
 
 	<!-- This frame fills the center region -->
-	<HKWidgetLayoutFrame name="middle" layout_align="fill">
+	<Frame align="fill">
 
 		<!-- This frame is centered within the center region -->
-		<HKWidgetLayoutLinear name="center" width="300" layout_align="center" layout_orientation="horizontal">
-			<HKWidgetLayoutLinear name="labels" width="100" layout_orientation="vertical">
-				<HKWidgetLabel text="Username" layout_margin="12" text_font="FranklinGothic" text_colour="white" />
-				<HKWidgetLabel text="Password" layout_margin="12" text_font="FranklinGothic" text_colour="white" />
-			</HKWidgetLayoutLinear>
-			<HKWidgetLayoutLinear name="textboxes" layout_align="leftFill" layout_orientation="vertical">
-				<HKWidgetTextbox name="username" layout_align="topFill" layout_margin="10" text_font="FranklinGothic" />
-				<HKWidgetTextbox name="password" layout_align="topFill" layout_margin="10" text_font="FranklinGothic" type="password" />
-			</HKWidgetLayoutLinear>
-		</HKWidgetLayoutLinear>
+		<LinearLayout width="300" align="center" orientation="horizontal">
+			<LinearLayout width="100" orientation="vertical">
+				<Label text="Username" margin="12" text_font="FranklinGothic" text_colour="white" />
+				<Label text="Password" margin="12" text_font="FranklinGothic" text_colour="white" />
+			</LinearLayout>
+			<LinearLayout align="leftFill" orientation="vertical">
+				<Textbox id="username" align="topFill" margin="10" text_font="FranklinGothic" />
+				<Textbox id="password" align="topFill" margin="10" text_font="FranklinGothic" type="password" />
+			</LinearLayout>
+		</LinearLayout>
 
-	</HKWidgetLayoutFrame>
+	</Frame>
 
 	<!-- This layout spans the bottom -->
-	<HKWidgetLayoutLinear name="buttom" layout_align="topCenter" layout_orientation="horizontal" layout_margin="5">
-		<HKWidgetButton name="login" text="Login" />
-		<HKWidget width="80" />
-		<HKWidgetButton name="return" text="Return" />
-	</HKWidgetLayoutLinear>
+	<LinearLayout align="topCenter" orientation="horizontal" margin="5">
+		<Button id="login" text="Login" />
+		<Widget width="80" />
+		<Button id="return" text="Return" />
+	</LinearLayout>
 
-</HKWidgetLayoutLinear>
+</LinearLayout>

@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<HKWidgetLayoutLinear layout_align="fill" background_image="Window-Pirates" layout_orientation="vertical" layout_padding="16">
-	<HKWidgetLabel name="welcome_text" text="Main Menu" text_font="Priest" layout_align="fill" text_align="center" text_height="50" text_colour="orange"/>
+<LinearLayout align="fill" orientation="vertical" padding="16" background_image="Window-Pirates">
 
-	<HKWidgetButton name="play_game" text="Play Game" text_font="Priest" layout_align="fillcenter" text_align="center" text_height="50" text_colour="white"/>
-	<HKWidgetButton name="resume_game" text="Resume Game" text_font="Priest" layout_align="fillcenter" text_align="center" text_height="50" text_colour="white"/>
+	<Label id="welcome_text" text="Main Menu" align="fill" text_font="Priest" text_align="center" text_height="50" text_colour="orange" />
 
-	<HKWidgetButton name="login" text="Login" text_font="Priest" layout_align="fillcenter" text_align="center" text_height="50" text_colour="white"/>
-	<HKWidgetButton name="profile" text="Profile" text_font="Priest" layout_align="fillcenter" text_align="center" text_colour="white" text_height="50" visible="gone"/>
-</HKWidgetLayoutLinear>
+	<Button id="play_game" text="Play Game" align="fillcenter" text_font="Priest" text_align="center" text_height="50" text_colour="white" />
+	<Button id="resume_game" text="Resume Game" align="fillcenter" text_font="Priest" text_align="center" text_height="50" text_colour="white" />
+
+	<!-- login/profile are never both visible at the same time, so one is hidden -->
+	<Button id="login" text="Login" align="fillcenter" text_font="Priest" text_align="center" text_height="50" text_colour="white" />
+	<Button id="profile" text="Profile" align="fillcenter" text_font="Priest" text_align="center" text_colour="white" text_height="50" visible="gone" />
+
+</LinearLayout>
