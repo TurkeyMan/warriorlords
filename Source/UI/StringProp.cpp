@@ -8,7 +8,7 @@
 #include "MFPrimitive.h"
 #include "MFSystem.h"
 
-static const char *gTypeStrings[MFFontJustify_Max] =
+static const char *gTypeStrings[] =
 {
 	"regular",
 	"multiline",

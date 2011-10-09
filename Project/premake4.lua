@@ -14,7 +14,7 @@ solution "Warlords"
 		kind "WindowedApp"
 		language "C++"
 		files { "../Source/**.h", "../Source/**.cpp" }
-		files { "../Data/UI/**.ini" }
+		files { "../Data/UI/**.ini", "../Data/UI/**.xml" }
 
 		includedirs { "../Source/" }
 		objdir "../Build/"

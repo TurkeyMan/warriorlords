@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <HKWidgetLayoutFrame name="menu" layout_align="Fill" background_colour="0,0,0.5">
 	<HKWidgetPrefab prefab="menu-background.xml" layout_align="Fill" />
-	<HKWidgetPrefab name="mainmenu" prefab="menu-main.xml" size="480,320" layout_align="Center" />
+	<HKWidgetPrefab name="mainmenu" prefab="menu-main.xml" size="480,320" layout_align="Center" visible="invisible"/>
+	<HKWidgetPrefab name="login" prefab="menu-login.xml" size="480,320" layout_align="Center" />
 
 	<HKWidgetButton name="hide" text="Hide!" layout_align="TopRight" layout_margin="5" />
 </HKWidgetLayoutFrame>
