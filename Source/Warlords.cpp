@@ -20,6 +20,12 @@
 #include "UI/HKWidgetLoader-XML.h"
 #include "UI/Widgets/HKWidgetButton.h"
 
+#if defined(MF_WINDOWS)
+	#define WIN32_LEAN_AND_MEAN
+	#include <windows.h>
+	#include "../Project/resource.h"
+#endif
+
 #define TEST_ONLINE
 
 /*** Global Stuff ***/
@@ -223,6 +229,10 @@ int GameMain(MFInitParams *pInitParams)
 	gDefaults.input.useXInput = false;
 //	gDefaults.system.threadPriority = MFPriority_AboveNormal;
 	gDefaults.display.pWindowTitle = "Warlords";
+
+#if defined(MF_WINDOWS)
+	gDefaults.display.pIcon = MAKEINTRESOURCE(IDI_APPICON);
+#endif
 
 	pInitFujiFS = MFSystem_RegisterSystemCallback(MFCB_FileSystemInit, Game_InitFilesystem);
 	MFSystem_RegisterSystemCallback(MFCB_InitDone, Game_Init);

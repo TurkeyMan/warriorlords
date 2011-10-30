@@ -5,7 +5,7 @@
 
 	<LinearLayout align="fill" orientation="horizontal" margin="5">
 		<!-- Put the game list on the left -->
-		<Listbox id="activegames" align="fill" weight="0.7" background_colour="black"/>
+		<Listbox id="activegames" align="fill" weight="0.7" background_colour="black" />
 
 		<!-- And some info about the selection on the right -->
 		<Frame align="fill" margin="5">
@@ -19,7 +19,7 @@
 			<!-- And buttons on the bottom -->
 			<LinearLayout align="bottomCenter" orientation="horizontal">
 				<!-- Place 2 buttons side by side, with a little spacer in the middle -->
-				<Button id="login" size="64,64" background_image="Tickicon" />
+				<Button id="resume" size="64,64" background_image="Tickicon" />
 				<Widget width="32" />
 				<Button id="return" size="64,64" background_image="Undoicon" />
 			</LinearLayout>
