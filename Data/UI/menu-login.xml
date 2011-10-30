@@ -22,9 +22,9 @@
 
 	<!-- This layout spans the bottom -->
 	<LinearLayout align="topCenter" orientation="horizontal" margin="5">
-		<Button id="login" text="Login" />
+		<Button id="login" size="64,64" background_image="Tickicon" />
 		<Widget width="80" />
-		<Button id="return" text="Return" />
+		<Button id="return" size="64,64" background_image="Undoicon" />
 	</LinearLayout>
 
 </LinearLayout>

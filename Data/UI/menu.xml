@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Frame id="menu" align="Fill" background_colour="0,0,0.5">
 	<Prefab prefab="menu-background.xml" align="Fill" />
-	<Prefab id="mainmenu" prefab="menu-main.xml" size="480,320" align="Center" visible="invisible"/>
-	<Prefab id="login" prefab="menu-login.xml" size="480,320" align="Center" />
+	<Prefab id="mainmenu" prefab="menu-main.xml" size="480,320" align="Center" visible="invisible" />
+	<Prefab id="login" prefab="menu-login.xml" size="480,320" align="Center" visible="invisible" />
+	<Prefab id="resume" prefab="menu-gamelist.xml" size="480,320" align="Center" />
 
 	<Button id="hide" text="Hide!" align="TopRight" margin="5" />
 </Frame>

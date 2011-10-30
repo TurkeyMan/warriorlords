@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout align="fill" orientation="vertical" padding="16" background_image="Window-Pirates">
+
+	<Label text="Resume Game" align="topfill" text_font="Priest" text_align="center" text_height="50" text_colour="orange" />
+
+	<LinearLayout align="fill" orientation="horizontal" margin="5">
+		<!-- Put the game list on the left -->
+		<Listbox id="activegames" align="fill" weight="0.7" background_colour="black"/>
+
+		<!-- And some info about the selection on the right -->
+		<Frame align="fill" margin="5">
+
+			<!-- Game details -->
+			<LinearLayout align="fill" orientation="vertical">
+				<Label text="Game Info..." align="topfill" text_font="FranklinGothic" text_align="center" text_height="30" text_colour="white" />
+				<!-- Game details go here... -->
+			</LinearLayout>
+
+			<!-- And buttons on the bottom -->
+			<LinearLayout align="bottomCenter" orientation="horizontal">
+				<!-- Place 2 buttons side by side, with a little spacer in the middle -->
+				<Button id="login" size="64,64" background_image="Tickicon" />
+				<Widget width="32" />
+				<Button id="return" size="64,64" background_image="Undoicon" />
+			</LinearLayout>
+
+		</Frame>
+	</LinearLayout>
+
+</LinearLayout>
