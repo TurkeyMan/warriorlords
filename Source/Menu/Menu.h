@@ -25,6 +25,17 @@ public:
 protected:
 	struct ListItem
 	{
+		ListItem() { id = 0; numPlayers = 0; }
+		ListItem(ListItem &i) { *this = i; }
+		ListItem &operator=(ListItem &i)
+		{
+			id = i.id;
+			name = i.name;
+			map = i.map;
+			numPlayers = i.numPlayers;
+			return *this;
+		}
+
 		uint32 id;
 		MFString name;
 		MFString map;
@@ -43,7 +54,7 @@ protected:
 	HKWidget *pMenu;
 	HKWidget *pCurrentWindow;
 
-	void OnReturnClicked(HKWidget &sender, HKWidgetEventInfo &ev);
+	void OnReturnClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
 
 	struct MainMenu
 	{
@@ -57,10 +68,10 @@ protected:
 		HKWidgetButton *pProfileButton;
 		HKWidgetLabel *pTitle;
 
-		void OnPlayClicked(HKWidget &sender, HKWidgetEventInfo &ev);
-		void OnResumeClicked(HKWidget &sender, HKWidgetEventInfo &ev);
-		void OnLoginClicked(HKWidget &sender, HKWidgetEventInfo &ev);
-		void OnProfileClicked(HKWidget &sender, HKWidgetEventInfo &ev);
+		void OnPlayClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
+		void OnResumeClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
+		void OnLoginClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
+		void OnProfileClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
 	} mainMenu;
 
 	struct PlayMenu
@@ -74,17 +85,27 @@ protected:
 		HKWidgetButton *pOfflineButton;
 		HKWidgetButton *pReturnButton;
 
-		void OnCreateClicked(HKWidget &sender, HKWidgetEventInfo &ev);
-		void OnJoinClicked(HKWidget &sender, HKWidgetEventInfo &ev);
-		void OnOfflineClicked(HKWidget &sender, HKWidgetEventInfo &ev);
+		void OnCreateClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
+		void OnJoinClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
+		void OnOfflineClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
 	} playMenu;
 
 	struct ListMenu
 	{
 		ListMenu()	: gameListAdapter(gameList) {}
 
+		enum Type
+		{
+			Create,
+			Offline,
+			Join,
+			Resume
+		};
+
 		void ShowResume();
 		void ShowJoin();
+
+		void ShowCreate(bool bOnline);
 
 		HKWidget *pMenu;
 
@@ -93,9 +114,18 @@ protected:
 		HKWidgetButton *pReturnButton;
 		HKWidgetLabel *pTitle;
 		HKWidget *pNamePanel;
+		HKWidgetTextbox *pName;
 
 		HKDynamicArray<ListItem> gameList;
 		GameListAdapter gameListAdapter;
+
+		Type type;
+		bool bReturnToMain;
+
+		void OnSelect(HKWidget &sender, const HKWidgetEventInfo &ev);
+		void OnNameChanged(HKWidget &sender, const HKWidgetEventInfo &ev);
+		void OnContinueClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
+		void OnReturnClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
 
 		void OnUpdateResponse(ServerError err, Session *pSession);
 		void OnFindResponse(ServerError err, Session *pSession, GameLobby *pGames, int numGames);
@@ -112,8 +142,8 @@ protected:
 		HKWidgetButton *pLoginButton;
 		HKWidgetButton *pReturnButton;
 
-		void OnUpdateLogin(HKWidget &sender, HKWidgetEventInfo &ev);
-		void OnLogin(HKWidget &sender, HKWidgetEventInfo &ev);
+		void OnUpdateLogin(HKWidget &sender, const HKWidgetEventInfo &ev);
+		void OnLogin(HKWidget &sender, const HKWidgetEventInfo &ev);
 		void OnLoginResponse(ServerError err, Session *pSession);
 	} loginMenu;
 };

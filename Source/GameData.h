@@ -26,7 +26,7 @@ public:
 	const char *GetString(int string) { return MFTranslation_GetString(pStrings, string); }
 
 	int GetNumMaps() { return maps.size(); }
-	MFString GetMapName(int map) { maps[map].name; }
+	MFString GetMapName(int map) { return maps[map].name; }
 	MFString GetMapList();
 
 protected:

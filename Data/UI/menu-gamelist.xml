@@ -10,9 +10,9 @@
 		<!-- And some info about the selection on the right -->
 		<Frame align="fill" margin="5">
 
-			<LinearLayout id="gameNamePanel" align="fill" orientation="vertical" visible="gone" >
+			<LinearLayout align="fill" orientation="vertical">
 				<!-- Game name entry box, only visible on join-game screen -->
-				<LinearLayout align="topfill" orientation="horizontal">
+				<LinearLayout id="gameNamePanel" align="topfill" orientation="horizontal" visible="gone">
 					<Label text="Game :  " align="centerleft" text_font="FranklinGothic"  text_colour="yellow" />
 					<Textbox id="gameName" align="topfill" text_font="FranklinGothic" text_colour="white" />
 				</LinearLayout>

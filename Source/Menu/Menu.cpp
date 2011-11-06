@@ -8,7 +8,7 @@
 #include "Menu.h"
 #include "Session.h"
 
-void HideMenu(HKWidget &w, HKWidgetEventInfo &)
+void HideMenu(HKWidget &w, const HKWidgetEventInfo &)
 {
 	w.GetParent()->SetVisible(HKWidget::Invisible);
 }
@@ -72,11 +72,13 @@ FrontMenu::FrontMenu()
 		listMenu.pReturnButton = listMenu.pMenu->FindChild<HKWidgetButton>("return");
 		listMenu.pTitle = listMenu.pMenu->FindChild<HKWidgetLabel>("resume_label");
 		listMenu.pNamePanel = listMenu.pMenu->FindChild("gameNamePanel");
+		listMenu.pName = listMenu.pMenu->FindChild<HKWidgetTextbox>("gameName");
 
 		listMenu.pActiveList->Bind(listMenu.gameListAdapter);
-//		listMenu.pActiveList->OnClicked += fastdelegate::MakeDelegate(this, &FrontMenu::);
-//		listMenu.pResumeButton->OnClicked += fastdelegate::MakeDelegate(this, &FrontMenu::);
-		listMenu.pReturnButton->OnClicked += fastdelegate::MakeDelegate(this, &FrontMenu::OnReturnClicked);
+		listMenu.pActiveList->OnSelChanged += fastdelegate::MakeDelegate(&listMenu, &FrontMenu::ListMenu::OnSelect);
+		listMenu.pName->OnChanged += fastdelegate::MakeDelegate(&listMenu, &FrontMenu::ListMenu::OnNameChanged);
+		listMenu.pResumeButton->OnClicked += fastdelegate::MakeDelegate(&listMenu, &FrontMenu::ListMenu::OnContinueClicked);
+		listMenu.pReturnButton->OnClicked += fastdelegate::MakeDelegate(&listMenu, &FrontMenu::ListMenu::OnReturnClicked);
 	}
 
 	// configure login window
@@ -140,7 +142,7 @@ void FrontMenu::HideCurrent()
 }
 
 // event handlers
-void FrontMenu::OnReturnClicked(HKWidget &sender, HKWidgetEventInfo &ev)
+void FrontMenu::OnReturnClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
 	FrontMenu &menu = *FrontMenu::Get();
 	menu.HideCurrent();
@@ -171,28 +173,28 @@ void FrontMenu::MainMenu::Show()
 	FrontMenu::Get()->ShowAsCurrent(pMenu);
 }
 
-void FrontMenu::MainMenu::OnPlayClicked(HKWidget &sender, HKWidgetEventInfo &ev)
+void FrontMenu::MainMenu::OnPlayClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
 	FrontMenu &menu = *FrontMenu::Get();
 	menu.HideCurrent();
 	menu.playMenu.Show();
 }
 
-void FrontMenu::MainMenu::OnResumeClicked(HKWidget &sender, HKWidgetEventInfo &ev)
+void FrontMenu::MainMenu::OnResumeClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
 	FrontMenu &menu = *FrontMenu::Get();
 	menu.HideCurrent();
 	menu.listMenu.ShowResume();
 }
 
-void FrontMenu::MainMenu::OnLoginClicked(HKWidget &sender, HKWidgetEventInfo &ev)
+void FrontMenu::MainMenu::OnLoginClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
 	FrontMenu &menu = *FrontMenu::Get();
 	menu.HideCurrent();
 	menu.loginMenu.Show();
 }
 
-void FrontMenu::MainMenu::OnProfileClicked(HKWidget &sender, HKWidgetEventInfo &ev)
+void FrontMenu::MainMenu::OnProfileClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
 }
 
@@ -209,19 +211,25 @@ void FrontMenu::PlayMenu::Show()
 	FrontMenu::Get()->ShowAsCurrent(pMenu);
 }
 
-void FrontMenu::PlayMenu::OnCreateClicked(HKWidget &sender, HKWidgetEventInfo &ev)
+void FrontMenu::PlayMenu::OnCreateClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
+	FrontMenu &menu = *FrontMenu::Get();
+	menu.HideCurrent();
+	menu.listMenu.ShowCreate(true);
 }
 
-void FrontMenu::PlayMenu::OnJoinClicked(HKWidget &sender, HKWidgetEventInfo &ev)
+void FrontMenu::PlayMenu::OnJoinClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
 	FrontMenu &menu = *FrontMenu::Get();
 	menu.HideCurrent();
 	menu.listMenu.ShowJoin();
 }
 
-void FrontMenu::PlayMenu::OnOfflineClicked(HKWidget &sender, HKWidgetEventInfo &ev)
+void FrontMenu::PlayMenu::OnOfflineClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
+	FrontMenu &menu = *FrontMenu::Get();
+	menu.HideCurrent();
+	menu.listMenu.ShowCreate(false);
 }
 
 // LoginMenu
@@ -230,13 +238,13 @@ void FrontMenu::LoginMenu::Show()
 	FrontMenu::Get()->ShowAsCurrent(pMenu);
 }
 
-void FrontMenu::LoginMenu::OnUpdateLogin(HKWidget &sender, HKWidgetEventInfo &ev)
+void FrontMenu::LoginMenu::OnUpdateLogin(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
 	// enable the login button only when both login and password contain something
 	pLoginButton->SetEnabled(!pUsernameText->IsEmpty() && !pPasswordText->IsEmpty());
 }
 
-void FrontMenu::LoginMenu::OnLogin(HKWidget &sender, HKWidgetEventInfo &ev)
+void FrontMenu::LoginMenu::OnLogin(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
 	pLoginButton->SetEnabled(false);
 	pReturnButton->SetEnabled(false);
@@ -267,6 +275,8 @@ void FrontMenu::LoginMenu::OnLoginResponse(ServerError err, Session *pSession)
 // ListMenu
 void FrontMenu::ListMenu::ShowResume()
 {
+	type = Resume;
+
 	// set the title
 	pTitle->SetText("Resume Game");
 
@@ -286,11 +296,15 @@ void FrontMenu::ListMenu::ShowResume()
 		pSession->UpdateGames();
 	}
 
+	bReturnToMain = true;
+
 	FrontMenu::Get()->ShowAsCurrent(pMenu);
 }
 
 void FrontMenu::ListMenu::ShowJoin()
 {
+	type = Join;
+
 	// set the title
 	pTitle->SetText("Join Game");
 
@@ -299,6 +313,7 @@ void FrontMenu::ListMenu::ShowJoin()
 
 	// show string box
 	pNamePanel->SetVisible(HKWidget::Visible);
+	pName->SetString(NULL);
 
 	// collect game list
 	gameList.clear();
@@ -309,7 +324,112 @@ void FrontMenu::ListMenu::ShowJoin()
 		pSession->FindGames(fastdelegate::MakeDelegate(this, &FrontMenu::ListMenu::OnFindResponse), NULL);
 	}
 
+	bReturnToMain = false;
+
 	FrontMenu::Get()->ShowAsCurrent(pMenu);
+}
+
+void FrontMenu::ListMenu::ShowCreate(bool bOnline)
+{
+	type = bOnline ? Create : Offline;
+
+	// set the title
+	pTitle->SetText(bOnline ? "Create Game" : "Offline Game");
+
+	// disable resume button
+	pResumeButton->SetEnabled(false);
+
+	// show string box
+	pNamePanel->SetVisible(bOnline ? HKWidget::Visible : HKWidget::Gone);
+	pName->SetString(NULL);
+
+	// collect map list
+	gameList.clear();
+
+	GameData *pData = GameData::Get();
+	int numMaps = pData->GetNumMaps();
+	for(int a=0; a<numMaps; ++a)
+	{
+		FrontMenu::ListItem i;
+		i.name = pData->GetMapName(a);
+		gameList.push(i);
+	}
+
+	bReturnToMain = false;
+
+	FrontMenu::Get()->ShowAsCurrent(pMenu);
+}
+
+void FrontMenu::ListMenu::OnSelect(HKWidget &sender, const HKWidgetEventInfo &ev)
+{
+	int sel = pActiveList->GetSelection();
+
+	switch(type)
+	{
+		case Join:
+		{
+			if(sel >= 0)
+				pName->SetString(gameList[sel].name);
+			break;
+		}
+		case Create:
+		{
+			pResumeButton->SetEnabled(sel >= 0 && !pName->IsEmpty());
+			break;
+		}
+		case Offline:
+		case Resume:
+			pResumeButton->SetEnabled(sel >= 0);
+			break;
+		default:
+			break;
+	}
+}
+
+void FrontMenu::ListMenu::OnNameChanged(HKWidget &sender, const HKWidgetEventInfo &ev)
+{
+	switch(type)
+	{
+		case Join:
+			pResumeButton->SetEnabled(!pName->IsEmpty());
+			break;
+		case Create:
+		{
+			int sel = pActiveList->GetSelection();
+			pResumeButton->SetEnabled(sel >= 0 && !pName->IsEmpty());
+			break;
+		}
+		default:
+			break;
+	}
+}
+
+void FrontMenu::ListMenu::OnContinueClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
+{
+	switch(type)
+	{
+		case Join:
+			break;
+		case Create:
+			break;
+		case Offline:
+			break;
+		case Resume:
+			break;
+		default:
+			break;
+	}
+}
+
+void FrontMenu::ListMenu::OnReturnClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
+{
+	FrontMenu &menu = *FrontMenu::Get();
+	menu.HideCurrent();
+
+	if(bReturnToMain)
+		menu.ShowMainMenu();
+	else
+		menu.playMenu.Show();
 }
 
 void FrontMenu::ListMenu::OnUpdateResponse(ServerError err, Session *pSession)
@@ -360,13 +480,14 @@ void FrontMenu::ListMenu::OnFindResponse(ServerError err, Session *pSession, Gam
 
 HKWidget *FrontMenu::GameListAdapter::GetItemView(int index, FrontMenu::ListItem &item)
 {
-	return HKUserInterface::Get().CreateWidget<HKWidgetLabel>();
+	HKWidgetLabel *pLabel = HKUserInterface::Get().CreateWidget<HKWidgetLabel>();
+	pLabel->SetProperty("text_font", "FranklinGothic");
+	pLabel->SetTextColour(MFVector::white);
+	return pLabel;
 }
 
 void FrontMenu::GameListAdapter::UpdateItemView(int index, FrontMenu::ListItem &item, HKWidget *pLayout)
 {
 	HKWidgetLabel *pLabel = (HKWidgetLabel*)pLayout;
-	pLabel->SetProperty("text_font", "FranklinGothic");
-	pLabel->SetTextColour(MFVector::white);
 	pLabel->SetText(item.name);
 }
