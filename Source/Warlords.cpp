@@ -16,9 +16,9 @@
 #include "MFSystem.h"
 #include "MFDisplay.h"
 
+#include "Menu/Menu.h"
+
 #include "UI/HKUI.h"
-#include "UI/HKWidgetLoader-XML.h"
-#include "UI/Widgets/HKWidgetButton.h"
 
 #if defined(MF_WINDOWS)
 	#define WIN32_LEAN_AND_MEAN
@@ -30,6 +30,8 @@
 
 /*** Global Stuff ***/
 InputManager *pInputManager = NULL;
+
+FrontMenu *pFrontMenu;
 
 Game *pGame = NULL;
 Editor *pEditor = NULL;
@@ -43,11 +45,6 @@ JoinGameScreen *pJoinGame = NULL;
 Lobby lobby;
 
 MFSystemCallbackFunction pInitFujiFS;
-
-void HideMenu(HKWidget &w, HKWidgetEventInfo &)
-{
-	w.GetParent()->SetVisible(HKWidget::Invisible);
-}
 
 /*** Game Functions ***/
 
@@ -102,14 +99,9 @@ void Game_Init()
 	HKUserInterface *pUI = new HKUserInterface();
 	HKUserInterface::SetActiveUI(pUI);
 
-	HKWidget *pRoot = HKWidget_CreateFromXML("menu.xml");
-	if(pRoot)
-	{
-		pUI->AddTopLevelWidget(pRoot, true);
-
-		HKWidgetButton *pButton = (HKWidgetButton*)pRoot->FindChild("hide");
-		pButton->OnClicked += HideMenu;
-	}
+	pFrontMenu = new FrontMenu();
+	pFrontMenu->ShowMainMenu();
+	pFrontMenu->Show();
 
 	// show the titlescreen
 	uiEntity *pBG = pEM->Find("background");
@@ -228,8 +220,7 @@ int GameMain(MFInitParams *pInitParams)
 //	gDefaults.input.useDirectInputKeyboard = false;
 	gDefaults.input.useXInput = false;
 //	gDefaults.system.threadPriority = MFPriority_AboveNormal;
-	gDefaults.display.pWindowTitle = "Warlords";
-
+	gDefaults.display.pWindowTitle = "Warrior Lords";
 #if defined(MF_WINDOWS)
 	gDefaults.display.pIcon = MAKEINTRESOURCE(IDI_APPICON);
 #endif

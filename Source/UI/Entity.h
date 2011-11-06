@@ -3,8 +3,8 @@
 
 #include "MFIni.h"
 #include "MFPtrList.h"
+#include "HKOpenHashTable.h"
 #include "../Tools/Factory.h"
-#include "../Tools/HashTable.h"
 #include "Action.h"
 
 class uiEntityManager;
@@ -258,7 +258,7 @@ private:
 	uiEntity *pHover;
 	MFVector hoverPos;
 
-	HashList<uiEntity> entityPool;
+	HKOpenHashTable<uiEntity*> entityPool;
 
 	static Factory<uiEntity> entityFactory;
 };

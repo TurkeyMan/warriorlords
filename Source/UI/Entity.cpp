@@ -567,7 +567,7 @@ bool uiEntityManager::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 void uiEntityManager::Init()
 {
-	entityPool.Create(256, 2048, 256);
+	entityPool.Init(256, 2048, 256);
 
 	pRoot = NULL;
 	pFocus = NULL;
@@ -586,7 +586,7 @@ void uiEntityManager::Init()
 
 void uiEntityManager::Deinit()
 {
-	entityPool.Destroy();
+	entityPool.Deinit();
 }
 
 void uiEntityManager::Update()
@@ -629,7 +629,7 @@ uiEntity *uiEntityManager::Create(const char *pTypeName, const char *pName, uiEn
 		pEntity->name = pName;
 
 		// add it to the entity registry
-		entityPool.Add(pEntity, pName);
+		entityPool.Add(pName, pEntity);
 
 		// set its parent
 		pEntity->pParent = pParent;
@@ -641,12 +641,14 @@ uiEntity *uiEntityManager::Create(const char *pTypeName, const char *pName, uiEn
 
 uiEntity *uiEntityManager::Find(const char *pName)
 {
-	return entityPool.Find(pName);
+	uiEntity **ppT = entityPool.Get(pName);
+	return ppT ? *ppT : NULL;
 }
 
 uiEntity *uiEntityManager::Iterate(uiEntity *pLast)
 {
-	return entityPool.Next(pLast);
+	uiEntity **ppT = entityPool.Next(entityPool.Get(pLast->GetName()));
+	return ppT ? *ppT : NULL;
 }
 
 void uiEntityManager::Destroy(uiEntity *pEntity)
@@ -656,7 +658,7 @@ void uiEntityManager::Destroy(uiEntity *pEntity)
 	pActionManager->DestroyEntity(pEntity);
 
 	// destroy it
-	entityPool.Remove(pEntity);
+	entityPool.Destroy(pEntity);
 	delete pEntity;
 }
 

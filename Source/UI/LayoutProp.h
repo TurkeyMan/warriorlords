@@ -4,7 +4,6 @@
 #include "MFIni.h"
 #include "MFPtrList.h"
 #include "../Tools/Factory.h"
-#include "../Tools/HashTable.h"
 #include "Action.h"
 
 class uiLayoutProp : public uiEntity

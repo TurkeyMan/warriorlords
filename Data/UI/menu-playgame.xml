@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Frame align="fill" padding="16" background_image="Window-Pirates">
+	<LinearLayout align="fill" orientation="vertical">
+
+		<Label text="Play Game" align="fill" text_font="Priest" text_align="center" text_height="50" text_colour="orange" />
+
+		<Button id="create" text="Create Online Game" align="fillcenter" text_font="Priest" text_align="center" text_height="50" text_colour="white" />
+		<Button id="join" text="Join Game" align="fillcenter" text_font="Priest" text_align="center" text_height="50" text_colour="white" />
+		<Button id="offline" text="Offline Game" align="fillcenter" text_font="Priest" text_align="center" text_height="50" text_colour="white" />
+
+	</LinearLayout>
+
+	<Button id="return" align="bottomRight" margin="5" size="64,64" background_image="Undoicon" />
+</Frame>

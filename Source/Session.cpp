@@ -35,6 +35,20 @@ Session::Session()
 	begin.SetCompleteDelegate(MakeDelegate(this, &Session::OnBegin));
 
 	setRaceValue = setColourValue = setHeroValue = -1;
+
+	// attempt to login...
+	const char *pLogin = MFFileSystem_Load("home:login_info.ini", NULL, true);
+	if(pLogin)
+	{
+		char *pBreak = MFString_Chr(pLogin, '\n');
+		const char *pID = pBreak;
+		while(pID && MFIsNewline(*pID))
+			++pID;
+		*pBreak = 0;
+
+		uint32 id = MFString_AsciiToInteger(pID, false, 16);
+		Resume(id);
+	}
 }
 
 Session::~Session()
@@ -100,9 +114,11 @@ void Session::UpdatePastGames()
 	WLServ_GetPastGames(getPast, user.id);
 }
 
-void Session::FindGames(MFString callback)
+void Session::FindGames(FindDelegate callback, MFString script)
 {
-	findEvent = callback;
+	findHandler = callback;
+	findEvent = script;
+
 	WLServ_FindGames(search, GetUserID());
 }
 
@@ -195,6 +211,11 @@ void Session::OnGamesFound(HTTPRequest::Status status)
 	if(err != SE_NO_ERROR)
 	{
 		// nothing?
+	}
+
+	if(findHandler)
+	{
+		findHandler(err, this, games, numGames);
 	}
 
 	if(findEvent)
@@ -390,6 +411,12 @@ void Session::Login(const char *pUsername, const char *pPassword)
 {
 	login.SetCompleteDelegate(MakeDelegate(this, &Session::OnLogin));
 	WLServ_Login(login, pUsername, pPassword);
+}
+
+void Session::Resume(uint32 id)
+{
+	login.SetCompleteDelegate(MakeDelegate(this, &Session::OnLogin));
+	WLServ_GetUserByID(login, id);
 }
 
 void Session::Logout()

@@ -2,7 +2,6 @@
 #define _GAMEDATA_H
 
 #include "Tools/ResourceCache.h"
-#include "Tools/HashTable.h"
 #include "UI/Entity.h"
 #include "UI/Action.h"
 

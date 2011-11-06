@@ -5,8 +5,8 @@
 #include "MFIni.h"
 #include "MFPtrList.h"
 #include "MFObjectPool.h"
+#include "HKOpenHashTable.h"
 #include "../Tools/Factory.h"
-#include "../Tools/HashTable.h"
 
 class uiEntity;
 struct uiActionScript_Token;
@@ -238,15 +238,15 @@ protected:
 	MFPtrListDL<uiExecuteContext> runningActions;
 	MFPtrListDL<uiActiveAction> activeDeferredActions;
 
-	HashList<uiActionScript> actions;
-	HashList<uiActionMetric> metrics;
+	HKOpenHashTable<uiActionScript*> actions;
+	HKOpenHashTable<uiActionMetric*> metrics;
 
 	// static members
 	static Factory<uiAction> actionFactory;
 
 	static MFObjectPool actionTypePool;
 	static MFObjectPool actionPool;
-	static HashList<ActionType> actionRegistry;
+	static HKOpenHashTable<ActionType*> actionRegistry;
 };
 
 #endif

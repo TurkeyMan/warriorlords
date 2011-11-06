@@ -185,7 +185,7 @@ void uiSessionProp::LogoutAction(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 void uiSessionProp::FindGames(uiEntity *pEntity, uiRuntimeArgs *pArguments)
 {
 	uiSessionProp *pThis = (uiSessionProp*)pEntity;
-	pThis->pSession->FindGames(pArguments->GetString(0));
+	pThis->pSession->FindGames(NULL, pArguments->GetString(0));
 }
 
 void uiSessionProp::CreateOnline(uiEntity *pEntity, uiRuntimeArgs *pArguments)

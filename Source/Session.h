@@ -8,6 +8,7 @@ class Session
 public:
 	typedef FastDelegate2<ServerError, Session *> SessionDelegate;
 	typedef FastDelegate3<ServerError, Session *, GameDetails *> JoinDelegate;
+	typedef FastDelegate4<ServerError, Session *, GameLobby *, int> FindDelegate;
 
 	static void InitSession();
 	static void DeinitSession();
@@ -21,6 +22,7 @@ public:
 	void UpdatePastGames();
 
 	void Login(const char *pUsername, const char *pPassword);
+	void Resume(uint32 id);
 	void Logout();
 
 	void LoadSession(uint32 user);
@@ -42,7 +44,7 @@ public:
 	int GetNumPendingGames() { return numPendingGames; }
 	int GetNumPastGames() { return numPastGames; }
 
-	void FindGames(MFString callback);
+	void FindGames(FindDelegate callback, MFString script);
 	void CreateGame(const GameCreateDetails &details, JoinDelegate callback);
 	void JoinGame(MFString game, JoinDelegate callback);
 	void MakeCurrent(uint32 game);
@@ -76,6 +78,7 @@ protected:
 	SessionDelegate beginHandler;
 	JoinDelegate createHandler;
 	JoinDelegate joinHandler;
+	FindDelegate findHandler;
 
 	uint32 currentGames[1024];
 	GameState *pCurrentGames;

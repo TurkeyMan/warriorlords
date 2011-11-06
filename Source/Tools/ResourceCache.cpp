@@ -4,25 +4,24 @@
 #include "MFSound.h"
 #include "MFModel.h"
 #include "MFFont.h"
-#include "HashTable.h"
 #include "ResourceCache.h"
 
 void ResourceCache::Init()
 {
-	materialList.Create(256, 256, 64);
-	soundList.Create(256, 256, 64);
-	modelList.Create(256, 256, 64);
-	fontList.Create(256, 256, 64);
+	materialList.Init(256, 256, 64);
+	soundList.Init(256, 256, 64);
+	modelList.Init(256, 256, 64);
+	fontList.Init(256, 256, 64);
 }
 
 void ResourceCache::Deinit()
 {
 	// free the resources
 
-	materialList.Destroy();
-	soundList.Destroy();
-	modelList.Destroy();
-	fontList.Destroy();
+	materialList.Deinit();
+	soundList.Deinit();
+	modelList.Deinit();
+	fontList.Deinit();
 }
 
 void ResourceCache::LoadResources(MFIniLine *pLine)
@@ -59,27 +58,27 @@ void ResourceCache::UnloadResources(MFIniLine *pLine)
 
 		if(pLine->IsString(1, "font"))
 		{
-			MFFont *pFont = fontList.Find(pResource);
+			MFFont *pFont = fontList[pResource];
 			MFFont_Destroy(pFont);
-			fontList.Remove(pResource);
+			fontList.Destroy(pResource);
 		}
 		else if(pLine->IsString(1, "material") || pLine->IsString(1, "image"))
 		{
-			MFMaterial *pMaterial = materialList.Find(pResource);
+			MFMaterial *pMaterial = materialList[pResource];
 			MFMaterial_Destroy(pMaterial);
-			materialList.Remove(pResource);
+			materialList.Destroy(pResource);
 		}
 		else if(pLine->IsString(1, "model"))
 		{
-			MFModel *pModel = modelList.Find(pResource);
+			MFModel *pModel = modelList[pResource];
 			MFModel_Destroy(pModel);
-			modelList.Remove(pResource);
+			modelList.Destroy(pResource);
 		}
 		else if(pLine->IsString(1, "sound"))
 		{
-			MFSound *pSound = soundList.Find(pResource);
+			MFSound *pSound = soundList[pResource];
 			MFSound_Destroy(pSound);
-			soundList.Remove(pResource);
+			soundList.Destroy(pResource);
 		}
 		pLine = pLine->Next();
 	}
@@ -89,46 +88,50 @@ void ResourceCache::LoadMaterial(const char *pName, const char *pFilename)
 {
 	MFMaterial *pMaterial = MFMaterial_Create(pFilename);
 	if(pMaterial)
-		materialList.Add(pMaterial, pName);
+		materialList.Add(pName, pMaterial);
 }
 
 void ResourceCache::LoadSound(const char *pName, const char *pFilename)
 {
 	MFSound *pSound = MFSound_Create(pFilename);
 	if(pSound)
-		soundList.Add(pSound, pName);
+		soundList.Add(pName, pSound);
 }
 
 void ResourceCache::LoadModel(const char *pName, const char *pFilename)
 {
 	MFModel *pModel = MFModel_Create(pFilename);
 	if(pModel)
-		modelList.Add(pModel, pName);
+		modelList.Add(pName, pModel);
 }
 
 void ResourceCache::LoadFont(const char *pName, const char *pFilename)
 {
 	MFFont *pFont = MFFont_Create(pFilename);
 	if(pFont)
-		fontList.Add(pFont, pName);
+		fontList.Add(pName, pFont);
 }
 
 MFMaterial *ResourceCache::FindMaterial(const char *pName)
 {
-	return materialList.Find(pName);
+	MFMaterial **ppT = materialList.Get(pName);
+	return ppT ? *ppT : NULL;
 }
 
 MFSound *ResourceCache::FindSound(const char *pName)
 {
-	return soundList.Find(pName);
+	MFSound **ppT = soundList.Get(pName);
+	return ppT ? *ppT : NULL;
 }
 
 MFModel *ResourceCache::FindModel(const char *pName)
 {
-	return modelList.Find(pName);
+	MFModel **ppT = modelList.Get(pName);
+	return ppT ? *ppT : NULL;
 }
 
 MFFont *ResourceCache::FindFont(const char *pName)
 {
-	return fontList.Find(pName);
+	MFFont **ppT = fontList.Get(pName);
+	return ppT ? *ppT : NULL;
 }

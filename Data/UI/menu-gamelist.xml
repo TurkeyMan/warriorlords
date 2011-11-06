@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout align="fill" orientation="vertical" padding="16" background_image="Window-Pirates">
 
-	<Label text="Resume Game" align="topfill" text_font="Priest" text_align="center" text_height="50" text_colour="orange" />
+	<Label id="resume_label" text="Resume Game" align="topfill" text_font="Priest" text_align="center" text_height="50" text_colour="orange" />
 
 	<LinearLayout align="fill" orientation="horizontal" margin="5">
 		<!-- Put the game list on the left -->
@@ -10,8 +10,14 @@
 		<!-- And some info about the selection on the right -->
 		<Frame align="fill" margin="5">
 
-			<!-- Game details -->
-			<LinearLayout align="fill" orientation="vertical">
+			<LinearLayout id="gameNamePanel" align="fill" orientation="vertical" visible="gone" >
+				<!-- Game name entry box, only visible on join-game screen -->
+				<LinearLayout align="topfill" orientation="horizontal">
+					<Label text="Game :  " align="centerleft" text_font="FranklinGothic"  text_colour="yellow" />
+					<Textbox id="gameName" align="topfill" text_font="FranklinGothic" text_colour="white" />
+				</LinearLayout>
+
+				<!-- Game details -->
 				<Label text="Game Info..." align="topfill" text_font="FranklinGothic" text_align="center" text_height="30" text_colour="white" />
 				<!-- Game details go here... -->
 			</LinearLayout>

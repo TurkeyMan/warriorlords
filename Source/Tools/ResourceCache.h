@@ -1,7 +1,7 @@
 #if !defined(_RESOURCE_CACHE)
 #define _RESOURCE_CACHE
 
-#include "HashTable.h"
+#include "HKOpenHashTable.h"
 
 struct MFMaterial;
 struct MFSound;
@@ -30,10 +30,10 @@ public:
 	MFFont *FindFont(const char *pName);
 
 protected:
-	HashList<MFMaterial> materialList;
-	HashList<MFSound> soundList;
-	HashList<MFModel> modelList;
-	HashList<MFFont> fontList;
+	HKOpenHashTable<MFMaterial*> materialList;
+	HKOpenHashTable<MFSound*> soundList;
+	HKOpenHashTable<MFModel*> modelList;
+	HKOpenHashTable<MFFont*> fontList;
 };
 
 #endif

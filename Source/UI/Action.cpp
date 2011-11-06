@@ -7,7 +7,7 @@
 Factory<uiAction> uiActionManager::actionFactory;
 MFObjectPool uiActionManager::actionTypePool;
 MFObjectPool uiActionManager::actionPool;
-HashList<uiActionManager::ActionType> uiActionManager::actionRegistry;
+HKOpenHashTable<uiActionManager::ActionType*> uiActionManager::actionRegistry;
 
 const char * const gpDelimeters = " \t;:',()[]{}!+-*/%\\|=";
 
@@ -263,20 +263,20 @@ void uiActionManager::InitManager()
 {
 	actionTypePool.Init(sizeof(ActionType), 256, 32);
 	actionPool.Init(sizeof(uiActionScript_Action), 128, 128);
-	actionRegistry.Create(64, 256, 32);
+	actionRegistry.Init(64, 256, 32);
 }
 
 void uiActionManager::DeinitManager()
 {
-	actionRegistry.Destroy();
+	actionRegistry.Deinit();
 	actionPool.Deinit();
 	actionTypePool.Deinit();
 }
 
 void uiActionManager::Init()
 {
-	actions.Create(256, 512, 512);
-	metrics.Create(256, 512, 512);
+	actions.Init(256, 512, 512);
+	metrics.Init(256, 512, 512);
 
 	activeDeferredActions.Init("Deferred Action Pool", 1024);
 	runningActions.Init("Active Actions", 256);
@@ -287,8 +287,8 @@ void uiActionManager::Deinit()
 	activeDeferredActions.Deinit();
 	runningActions.Deinit();
 
-	metrics.Destroy();
-	actions.Destroy();
+	metrics.Deinit();
+	actions.Deinit();
 }
 
 void uiActionManager::Update()
@@ -336,7 +336,7 @@ void uiActionManager::RegisterProperty(const char *pPropertyName, GetPropertyHan
 	pType->pSetHandler = pSetHandler;
 	pType->pEntityType = pEntityType;
 
-	actionRegistry.Add(pType, pType->pName);
+	actionRegistry.Add(pType->pName, pType);
 }
 
 void uiActionManager::RegisterInstantAction(const char *pActionName, InstantActionHandler *pActionHandler, FactoryType *pEntityType)
@@ -347,7 +347,7 @@ void uiActionManager::RegisterInstantAction(const char *pActionName, InstantActi
 	pType->pSetHandler = pActionHandler;
 	pType->pEntityType = pEntityType;
 
-	actionRegistry.Add(pType, pType->pName);
+	actionRegistry.Add(pType->pName, pType);
 }
 
 void uiActionManager::RegisterDeferredAction(const char *pActionName, Factory_CreateFunc *pCreateFunc, FactoryType *pEntityType)
@@ -360,7 +360,7 @@ void uiActionManager::RegisterDeferredAction(const char *pActionName, Factory_Cr
 
 	actionFactory.RegisterType(pType->pName, pCreateFunc);
 
-	actionRegistry.Add(pType, pType->pName);
+	actionRegistry.Add(pType->pName, pType);
 }
 
 uiExecuteContext *uiActionManager::RunScript(uiActionScript *pScript, uiEntity *pEntity, uiRuntimeArgs *pArgs)
@@ -387,10 +387,10 @@ bool uiActionManager::RunAction(uiExecuteContext *pContext, const char *pAction,
 {
 	bool bFinished = true;
 
-	uiActionScript *pScript = actions.Find(pAction);
-	if(pScript)
+	uiActionScript **ppScript = actions.Get(pAction);
+	if(ppScript)
 	{
-		RunScript(pScript, pActionEntity, pArgs);
+		RunScript(*ppScript, pActionEntity, pArgs);
 		return true;
 	}
 
@@ -515,19 +515,19 @@ uiActionManager::ActionType *uiActionManager::FindActionType(const char *pName, 
 {
 	FactoryType *pType = pEntity ? pEntity->GetType() : NULL;
 
-	ActionType *pActionType = actionRegistry.Find(pName);
-	if(!pActionType)
+	ActionType **ppActionType = actionRegistry.Get(pName);
+	if(!ppActionType)
 		return NULL;
 
 	while(1)
 	{
-		ActionType *pT = pActionType;
+		ActionType **ppI = ppActionType;
 		do
 		{
-			if(pT->pEntityType == pType)
-				return pT;
+			if((*ppI)->pEntityType == pType)
+				return *ppI;
 		}
-		while(pT = actionRegistry.NextMatch(pT));
+		while(ppI = actionRegistry.NextMatch(ppI));
 
 		if(pType)
 			pType = pType->pParent;
@@ -681,37 +681,41 @@ void *uiActionManager::Lex(const char *pAction, int *pNumTokens, int preBytes)
 
 uiActionScript *uiActionManager::FindAction(const char *pName)
 {
-	return actions.Find(pName);
+	uiActionScript **ppT = actions.Get(pName);
+	return ppT ? *ppT : NULL;
 }
 
 uiActionMetric *uiActionManager::FindMetric(const char *pName)
 {
-	return metrics.Find(pName);
+	uiActionMetric **ppT = metrics.Get(pName);
+	return ppT ? *ppT : NULL;
 }
 
 uiActionScript *uiActionManager::CreateAction(const char *pName, const char *pDescription)
 {
 	uiActionScript *pScript = ParseScript(pName, pDescription);
-	actions.Add(pScript, pScript->name.CStr());
+	actions.Add(pScript->name, pScript);
 	return pScript;
 }
 
 uiActionMetric *uiActionManager::CreateMetric(const char *pName, const char *pDescription)
 {
 	uiActionMetric *pMetric = ParseMetric(pDescription);
-	metrics.Add(pMetric, pName);
+	metrics.Add(pName, pMetric);
 	return pMetric;
 }
 
 void uiActionManager::DestroyAction(const char *pName)
 {
-	uiActionScript *pScript = actions.Remove(pName);
+	uiActionScript *pScript = actions[pName];
+	actions.Destroy(pName);
 	MFHeap_Free(pScript);
 }
 
 void uiActionManager::DestroyMetric(const char *pName)
 {
-	uiActionMetric *pMetric = metrics.Remove(pName);
+	uiActionMetric *pMetric = metrics[pName];
+	metrics.Destroy(pName);
 	MFHeap_Free(pMetric);
 }
 
