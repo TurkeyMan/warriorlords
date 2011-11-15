@@ -8,8 +8,8 @@ GameData::GameData()
 	pStrings = NULL;
 
 	resourceCache.Init();
-	actionManager.Init();
-	entityManager.Init();
+//	actionManager.Init();
+//	entityManager.Init();
 
 	MFFindData fd;
 	MFFind *pFind = MFFileSystem_FindFirst("game:Map*.ini", &fd);
@@ -31,8 +31,8 @@ GameData::GameData()
 
 GameData::~GameData()
 {
-	entityManager.Deinit();
-	actionManager.Deinit();
+//	entityManager.Deinit();
+//	actionManager.Deinit();
 	resourceCache.Deinit();
 
 	if(pStrings)
@@ -44,9 +44,9 @@ GameData::~GameData()
 
 void GameData::Init()
 {
-	uiActionManager::InitManager();
-	uiEntityManager::InitManager();
-	uiRuntimeArgs::Init();
+//	uiActionManager::InitManager();
+//	uiEntityManager::InitManager();
+//	uiRuntimeArgs::Init();
 
 	pGameData = new GameData;
 
@@ -60,20 +60,20 @@ void GameData::Deinit()
 	delete pGameData;
 	pGameData = NULL;
 
-	uiRuntimeArgs::Deinit();
-	uiActionManager::DeinitManager();
-	uiEntityManager::DeinitManager();
+//	uiRuntimeArgs::Deinit();
+//	uiActionManager::DeinitManager();
+//	uiEntityManager::DeinitManager();
 }
 
 void GameData::Update()
 {
-	entityManager.Update();
-	actionManager.Update();
+//	entityManager.Update();
+//	actionManager.Update();
 }
 
 void GameData::Draw()
 {
-	entityManager.Draw();
+//	entityManager.Draw();
 }
 
 MFString GameData::GetMapList()

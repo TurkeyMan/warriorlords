@@ -47,12 +47,13 @@ public:
 	void FindGames(FindDelegate callback, MFString script);
 	void CreateGame(const GameCreateDetails &details, JoinDelegate callback);
 	void JoinGame(MFString game, JoinDelegate callback);
+	void LeaveGame(uint32 game, SessionDelegate callback);
 	void MakeCurrent(uint32 game);
 	void BeginGame(uint32 game, uint32 *pPlayers, int numPlayers);
 
-	void SetRace(int race);
-	void SetColour(int colour);
-	void SetHero(int hero);
+	void SetRace(uint32 game, int race, SessionDelegate callback);
+	void SetColour(uint32 game, int colour, SessionDelegate callback);
+	void SetHero(uint32 game, int hero, SessionDelegate callback);
 
 	GameState *GetCurrentGame(int game) { return &pCurrentGames[game]; }
 	GameDetails *GetPendingGame(int game) { return &pPendingGames[game]; }
@@ -76,6 +77,10 @@ protected:
 	SessionDelegate loginHandler;
 	SessionDelegate updateHandler;
 	SessionDelegate beginHandler;
+	SessionDelegate leaveHandler;
+	SessionDelegate setRaceHandler;
+	SessionDelegate setColourHandler;
+	SessionDelegate setHeroHandler;
 	JoinDelegate createHandler;
 	JoinDelegate joinHandler;
 	FindDelegate findHandler;
@@ -116,6 +121,7 @@ protected:
 	HTTPRequest setColour;
 	HTTPRequest setHero;
 	HTTPRequest begin;
+	HTTPRequest leave;
 
 	int setRaceValue, setColourValue, setHeroValue;
 
@@ -134,6 +140,7 @@ protected:
 	void OnColourSet(HTTPRequest::Status status);
 	void OnHeroSet(HTTPRequest::Status status);
 	void OnBegin(HTTPRequest::Status status);
+	void OnLeave(HTTPRequest::Status status);
 };
 
 #endif

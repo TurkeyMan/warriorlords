@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout align="TopFill" orientation="horizontal">
+
+	<Label id="name" text="Name" align="CenterFill" weight="0.5" text_font="FranklinGothic" text_align="CenterLeft" text_colour="white" />
+
+	<LinearLayout id="playerSettings" align="TopFill" orientation="horizontal">
+		<Selectbox id="race" text="Race" align="CenterFill" />
+		<Selectbox id="colour" text="Col" align="Center" />
+		<Selectbox id="hero" text="Hero" align="CenterFill" weight="1.5" />
+	</LinearLayout>
+
+</LinearLayout>

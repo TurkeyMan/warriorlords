@@ -27,6 +27,7 @@ Session::Session()
 	search.SetCompleteDelegate(MakeDelegate(this, &Session::OnGamesFound));
 	create.SetCompleteDelegate(MakeDelegate(this, &Session::OnCreate));
 	join.SetCompleteDelegate(MakeDelegate(this, &Session::OnJoined));
+	leave.SetCompleteDelegate(MakeDelegate(this, &Session::OnLeave));
 
 	setRace.SetCompleteDelegate(MakeDelegate(this, &Session::OnRaceSet));
 	setColour.SetCompleteDelegate(MakeDelegate(this, &Session::OnColourSet));
@@ -139,6 +140,13 @@ void Session::JoinGame(MFString game, JoinDelegate callback)
 	WLServ_GetGameByName(join, game.CStr());
 }
 
+void Session::LeaveGame(uint32 game, SessionDelegate callback)
+{
+	leaveHandler = callback;
+
+	WLServ_LeaveGame(leave, GetUserID(), game);
+}
+
 void Session::MakeCurrent(uint32 game)
 {
 	for(int a=0; a<numPendingGames; ++a)
@@ -164,34 +172,34 @@ void Session::MakeCurrent(uint32 game)
 	}
 }
 
-void Session::SetRace(int race)
+void Session::SetRace(uint32 game, int race, SessionDelegate callback)
 {
 	if(setRaceValue != -1)
 		return;
 	setRaceValue = race;
 
-	GameDetails *pGame = GetActiveLobby();
-	WLServ_SetRace(setRace, pGame->id, GetUserID(), setRaceValue);
+	setRaceHandler = callback;
+	WLServ_SetRace(setRace, game, GetUserID(), setRaceValue);
 }
 
-void Session::SetColour(int colour)
+void Session::SetColour(uint32 game, int colour, SessionDelegate callback)
 {
 	if(setColourValue != -1)
 		return;
 	setColourValue = colour;
 
-	GameDetails *pGame = GetActiveLobby();
-	WLServ_SetColour(setColour, pGame->id, GetUserID(), setColourValue);
+	setColourHandler = callback;
+	WLServ_SetColour(setColour, game, GetUserID(), setColourValue);
 }
 
-void Session::SetHero(int hero)
+void Session::SetHero(uint32 game, int hero, SessionDelegate callback)
 {
 	if(setHeroValue != -1)
 		return;
 	setHeroValue = hero;
 
-	GameDetails *pGame = GetActiveLobby();
-	WLServ_SetHero(setHero, pGame->id, GetUserID(), setHeroValue);
+	setHeroHandler = callback;
+	WLServ_SetHero(setHero, game, GetUserID(), setHeroValue);
 }
 
 void Session::BeginGame(uint32 game, uint32 *pPlayers, int numPlayers)
@@ -217,7 +225,7 @@ void Session::OnGamesFound(HTTPRequest::Status status)
 	{
 		findHandler(err, this, games, numGames);
 	}
-
+/*
 	if(findEvent)
 	{
 		MFString t = "{ \"";
@@ -239,6 +247,7 @@ void Session::OnGamesFound(HTTPRequest::Status status)
 			pAM->RunScript(pScript, NULL, pArgs);
 		}
 	}
+*/
 }
 
 void Session::OnCreate(HTTPRequest::Status status)
@@ -275,11 +284,24 @@ void Session::OnJoined(HTTPRequest::Status status)
 		joinHandler(err, this, err == SE_NO_ERROR ? &joinGame : NULL);
 }
 
+void Session::OnLeave(HTTPRequest::Status status)
+{
+	ServerError err = SE_NO_ERROR;
+	err = WLServResult_GetError(leave);
+
+	if(leaveHandler)
+		leaveHandler(err, this);
+}
+
 void Session::OnRaceSet(HTTPRequest::Status status)
 {
 	if(status == HTTPRequest::CS_Succeeded)
 		GetLobbyPlayer()->race = setRaceValue;
 	setRaceValue = -1;
+
+	ServerError err = SE_NO_ERROR;
+	err = WLServResult_GetError(setRace);
+	setRaceHandler(err, this);
 }
 
 void Session::OnColourSet(HTTPRequest::Status status)
@@ -287,6 +309,10 @@ void Session::OnColourSet(HTTPRequest::Status status)
 	if(status == HTTPRequest::CS_Succeeded)
 		GetLobbyPlayer()->colour = setColourValue;
 	setColourValue = -1;
+
+	ServerError err = SE_NO_ERROR;
+	err = WLServResult_GetError(setColour);
+	setColourHandler(err, this);
 }
 
 void Session::OnHeroSet(HTTPRequest::Status status)
@@ -294,6 +320,10 @@ void Session::OnHeroSet(HTTPRequest::Status status)
 	if(status == HTTPRequest::CS_Succeeded)
 		GetLobbyPlayer()->hero = setHeroValue;
 	setHeroValue = -1;
+
+	ServerError err = SE_NO_ERROR;
+	err = WLServResult_GetError(setHero);
+	setHeroHandler(err, this);
 }
 
 void Session::OnBegin(HTTPRequest::Status status)
@@ -429,17 +459,18 @@ void Session::Logout()
 
 void Session::OnLogin(HTTPRequest::Status status)
 {
-	uiActionManager *pAM = GameData::Get()->GetActionManager();
+//	uiActionManager *pAM = GameData::Get()->GetActionManager();
 
 	ServerError err = WLServResult_GetUser(login, &user);
 	if(err != SE_NO_ERROR)
 	{
 		if(loginHandler)
 			loginHandler(err, this);
-
+/*
 		uiActionScript *pScript = pAM->FindAction("loginfailed");
 		if(pScript)
 			pAM->RunScript(pScript, NULL, NULL);
+*/
 		return;
 	}
 
@@ -451,10 +482,11 @@ void Session::OnLogin(HTTPRequest::Status status)
 
 	if(loginHandler)
 		loginHandler(SE_NO_ERROR, this);
-
+/*
 	uiActionScript *pScript = pAM->FindAction("loginsucceeded");
 	if(pScript)
 		pAM->RunScript(pScript, NULL, NULL);
+*/
 }
 
 GameState *Session::GetActiveGame()

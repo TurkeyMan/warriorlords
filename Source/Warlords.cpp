@@ -1,10 +1,12 @@
 #include "Warlords.h"
 #include "Display.h"
+/*
 #include "Screens/LoginScreen.h"
 #include "Screens/HomeScreen.h"
 #include "Screens/MenuScreen.h"
 #include "Screens/LobbyScreen.h"
 #include "Screens/JoinGameScreen.h"
+*/
 #include "Game.h"
 #include "Editor.h"
 
@@ -35,14 +37,14 @@ FrontMenu *pFrontMenu;
 
 Game *pGame = NULL;
 Editor *pEditor = NULL;
-
+/*
 LoginScreen *pLogin = NULL;
 HomeScreen *pHome = NULL;
 MenuScreen *pMenu = NULL;
 LobbyScreen *pLobby = NULL;
 JoinGameScreen *pJoinGame = NULL;
-
-Lobby lobby;
+*/
+//Lobby lobby;
 
 MFSystemCallbackFunction pInitFujiFS;
 
@@ -75,7 +77,7 @@ void Game_Init()
 	pInputManager = new InputManager;
 
 	GameData::Init();
-
+/*
 	// load the UI
 	uiEntityManager *pEM = GameData::Get()->GetEntityManager();
 	pEM->LoadRootNode("root");
@@ -84,7 +86,7 @@ void Game_Init()
 	uiEntity *pLobbyScreen = pEM->Find("lobbyscreen");
 	if(pLobbyScreen)
 		lobby.InitLobby(pLobbyScreen);
-
+*/
 	// check if we want to run a battle test...
 	if(MFFileSystem_Exists("battle_test.ini"))
 	{
@@ -102,7 +104,7 @@ void Game_Init()
 	pFrontMenu = new FrontMenu();
 	pFrontMenu->ShowMainMenu();
 	pFrontMenu->Show();
-
+/*
 	// show the titlescreen
 	uiEntity *pBG = pEM->Find("background");
 	uiEntity *pTitle = pEM->Find("titlescreen");
@@ -120,6 +122,7 @@ void Game_Init()
 #else
 	Screen::SetNext(pMenu);
 #endif
+*/
 }
 
 void Game_Update()
@@ -135,7 +138,8 @@ void Game_Update()
 	Session::Update();
 	Screen::UpdateScreen();
 
-	GameData::Get()->Update();
+	GameData::Get()->Update(); // old ui in here
+	HKUserInterface::Get().Update();
 
 	if(MFInput_WasPressed(Key_F1, IDD_Keyboard))
 		MFString_Dump();
@@ -145,8 +149,6 @@ void Game_Update()
 		MFHeap *pMainHeap = MFHeap_GetHeap(MFHT_Active);
 		MFDebug_Log(2, MFStr("%d - Allocated: %d bytes (%d bytes waste)", MFHeap_GetNumAllocations(pMainHeap), MFHeap_GetTotalAllocated(pMainHeap), MFHeap_GetTotalWaste(pMainHeap)));
 	}
-
-	HKUserInterface::Get().Update();
 }
 
 void Game_Draw()
@@ -165,11 +167,10 @@ void Game_Draw()
 
 	Screen::DrawScreen();
 
-	GameData::Get()->Draw();
+	GameData::Get()->Draw(); // old ui in here
+	HKUserInterface::Get().Draw();
 
 //	MFFont_DrawTextf(MFFont_GetDebugFont(), 10, 420, 30, MFVector::black, "Mem: %db (%d allocs)", MFHeap_GetTotalAllocated(), MFHeap_GetNumAllocations());
-
-	HKUserInterface::Get().Draw();
 
 	MFView_Pop();
 }
@@ -183,13 +184,13 @@ void Game_Deinit()
 
 	if(pGame)
 		delete pGame;
-
+/*
 	if(pMenu)
 		delete pMenu;
 
 	if(pLogin)
 		delete pLogin;
-
+*/
 	HKUserInterface::Deinit();
 
 	GameData::Deinit();

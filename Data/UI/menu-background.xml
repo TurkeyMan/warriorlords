@@ -1,2 +1,2 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Widget layout_align="Fill" background_image="TitleScreen" />
+<Widget align="Fill" background_image="TitleScreen" />

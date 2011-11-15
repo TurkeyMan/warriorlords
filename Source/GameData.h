@@ -2,8 +2,8 @@
 #define _GAMEDATA_H
 
 #include "Tools/ResourceCache.h"
-#include "UI/Entity.h"
-#include "UI/Action.h"
+//#include "UI/Entity.h"
+//#include "UI/Action.h"
 
 #include "MFTranslation.h"
 
@@ -18,8 +18,8 @@ public:
 	void Update();
 	void Draw();
 
-	uiActionManager *GetActionManager() { return &actionManager; }
-	uiEntityManager *GetEntityManager() { return &entityManager; }
+//	uiActionManager *GetActionManager() { return &actionManager; }
+//	uiEntityManager *GetEntityManager() { return &entityManager; }
 	ResourceCache *GetResourceCache() { return &resourceCache; }
 
 	int FindString(const char *pKey) { return MFTranslation_FindString(pStrings, pKey); }
@@ -41,8 +41,8 @@ protected:
 	~GameData();
 
 	ResourceCache resourceCache;
-	uiEntityManager entityManager;
-	uiActionManager actionManager;
+//	uiEntityManager entityManager;
+//	uiActionManager actionManager;
 
 	MFStringTable *pStrings;
 

@@ -131,7 +131,8 @@ void InputManager::Update()
 					contacts[c].Init(IDD_Mouse, a, -1, pos.x, pos.y);
 					contacts[c].downX = contacts[c].downY = 0.f;
 
-					pNewContactCallback(c);
+					if(!pNewContactCallback.empty())
+						pNewContactCallback(c);
 					break;
 				}
 			}
@@ -155,7 +156,8 @@ void InputManager::Update()
 								contacts[c].Init(IDD_Mouse, a, Mouse_LeftButton + b, contacts[mouseContacts[a]].x, contacts[mouseContacts[a]].y);
 								contacts[c].bState = true;
 
-								pNewContactCallback(c);
+								if(!pNewContactCallback.empty())
+									pNewContactCallback(c);
 
 								// send the down event
 								InputInfo info;
@@ -208,7 +210,8 @@ void InputManager::Update()
 						contacts[c].Init(IDD_TouchPanel, 0, a, pos.x, pos.y);
 						contacts[c].bState = true;
 
-						pNewContactCallback(c);
+						if(!pNewContactCallback.empty())
+							pNewContactCallback(c);
 
 						// send the down event
 						InputInfo info;
