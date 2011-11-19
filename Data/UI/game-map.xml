@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Frame align="Fill">
-	<Button id="end_turn" text="E" align="bottomright" margin="20"/>
+	<Button id="minimap" align="TopRight" size="64,64" background_image="minimap" margin="20" />
+	<Button id="undo" align="BottomLeft" size="64,64" background_image="undo" margin="20" />
+	<Button id="end_turn" align="BottomRight" size="64,64" background_image="end-turn" margin="20" />
 </Frame>

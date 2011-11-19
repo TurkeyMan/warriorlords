@@ -1,5 +1,6 @@
 #include "Warlords.h"
 #include "UI/HKUI.h"
+#include "UI/HKWidgetStyle.h"
 #include "UI/HKWidgetLoader-XML.h"
 #include "UI/Widgets/HKWidgetButton.h"
 #include "UI/Widgets/HKWidgetTextbox.h"
@@ -12,11 +13,6 @@
 extern Game *pGame;
 extern Editor *pEditor;
 
-void HideMenu(HKWidget &w, const HKWidgetEventInfo &)
-{
-	w.GetParent()->SetVisible(HKWidget::Invisible);
-}
-
 extern FrontMenu *pFrontMenu;
 FrontMenu *FrontMenu::Get()
 {
@@ -27,6 +23,9 @@ FrontMenu::FrontMenu()
 {
 	// init members
 	pCurrentWindow = NULL;
+
+	// load the styles
+	HKWidgetStyle::LoadStylesFromXML("menu-style.xml");
 
 	// load the menu
 	pMenu = HKWidget_CreateFromXML("menu.xml");

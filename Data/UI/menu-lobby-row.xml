@@ -4,9 +4,9 @@
 	<Label id="name" text="Name" align="CenterFill" weight="0.5" text_font="FranklinGothic" text_align="CenterLeft" text_colour="white" />
 
 	<LinearLayout id="playerSettings" align="TopFill" orientation="horizontal">
-		<Selectbox id="race" text="Race" align="CenterFill" />
-		<Selectbox id="colour" text="Col" align="Center" />
-		<Selectbox id="hero" text="Hero" align="CenterFill" weight="1.5" />
+		<Selectbox id="race" text="Race" align="CenterFill" style="menu-selectbox" />
+		<Selectbox id="colour" text="Col" align="Center" style="menu-selectbox" />
+		<Selectbox id="hero" text="Hero" align="CenterFill" weight="1.5" style="menu-selectbox" />
 	</LinearLayout>
 
 </LinearLayout>

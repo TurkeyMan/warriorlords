@@ -2,7 +2,7 @@
 <LinearLayout align="fill" orientation="vertical" padding="16" background_image="Window-Pirates">
 
 	<!-- Lobby title -->
-	<Label id="lobby_label" text="Lobby" align="Topfill" text_font="Priest" text_align="center" text_height="50" text_colour="orange" />
+	<Label id="lobby_label" text="Lobby" align="Topfill" style="menu-label" />
 
 	<!-- List of players -->
 	<LinearLayout align="fill" orientation="vertical">
@@ -19,10 +19,10 @@
 	<!-- And buttons on the bottom -->
 	<LinearLayout align="TopRight" orientation="horizontal">
 		<!-- Place 2 buttons side by side, with a little spacer in the middle -->
-		<Button id="start" size="64,64" background_image="Tickicon" />
-		<Button id="leave" size="64,64" background_image="Xicon" visible="gone" />
+		<Button id="start" size="64,64" background_image="Tickicon" style="menu-button" />
+		<Button id="leave" size="64,64" background_image="Xicon" style="menu-button" visible="gone" />
 		<Widget width="32" />
-		<Button id="return" size="64,64" background_image="Undoicon" />
+		<Button id="return" size="64,64" background_image="Undoicon" style="menu-button" />
 	</LinearLayout>
 
 </LinearLayout>

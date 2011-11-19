@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout align="fill" orientation="vertical" padding="16" background_image="Window-Pirates">
 
-	<Label id="welcome_text" text="Main Menu" align="fill" text_font="Priest" text_align="center" text_height="50" text_colour="orange" />
+	<Label id="welcome_text" text="Main Menu" align="fill" style="menu-label" />
 
-	<Button id="play_game" text="Play Game" align="fillcenter" text_font="Priest" text_align="center" text_height="50" text_colour="white" />
-	<Button id="resume_game" text="Resume Game" align="fillcenter" text_font="Priest" text_align="center" text_height="50" text_colour="white" />
+	<Button id="play_game" text="Play Game" align="fillcenter" style="menu-button" />
+	<Button id="resume_game" text="Resume Game" align="fillcenter" style="menu-button" />
 
 	<!-- login/profile are never both visible at the same time, so one is hidden -->
-	<Button id="login" text="Login" align="fillcenter" text_font="Priest" text_align="center" text_height="50" text_colour="white" />
-	<Button id="profile" text="Profile" align="fillcenter" text_font="Priest" text_align="center" text_colour="white" text_height="50" visible="gone" />
+	<Button id="login" text="Login" align="fillcenter" style="menu-button" />
+	<Button id="profile" text="Profile" align="fillcenter" style="menu-button" visible="gone" />
 
 </LinearLayout>

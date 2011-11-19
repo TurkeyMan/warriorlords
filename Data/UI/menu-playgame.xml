@@ -2,13 +2,13 @@
 <Frame align="fill" padding="16" background_image="Window-Pirates">
 	<LinearLayout align="fill" orientation="vertical">
 
-		<Label text="Play Game" align="fill" text_font="Priest" text_align="center" text_height="50" text_colour="orange" />
+		<Label text="Play Game" align="fill" style="menu-label" />
 
-		<Button id="create" text="Create Online Game" align="fillcenter" text_font="Priest" text_align="center" text_height="50" text_colour="white" />
-		<Button id="join" text="Join Game" align="fillcenter" text_font="Priest" text_align="center" text_height="50" text_colour="white" />
-		<Button id="offline" text="Offline Game" align="fillcenter" text_font="Priest" text_align="center" text_height="50" text_colour="white" />
+		<Button id="create" text="Create Online Game" align="fillcenter" style="menu-button" />
+		<Button id="join" text="Join Game" align="fillcenter" style="menu-button" />
+		<Button id="offline" text="Offline Game" align="fillcenter" style="menu-button" />
 
 	</LinearLayout>
 
-	<Button id="return" align="bottomRight" margin="5" size="64,64" background_image="Undoicon" />
+	<Button id="return" align="bottomRight" margin="5" size="64,64" background_image="Undoicon" style="menu-button" />
 </Frame>

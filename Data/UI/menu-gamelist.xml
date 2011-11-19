@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout align="fill" orientation="vertical" padding="16" background_image="Window-Pirates">
 
-	<Label id="resume_label" text="Resume Game" align="topfill" text_font="Priest" text_align="center" text_height="50" text_colour="orange" />
+	<Label id="resume_label" text="Resume Game" align="topfill" style="menu-button" />
 
 	<LinearLayout align="fill" orientation="horizontal" margin="5">
 		<!-- Put the game list on the left -->
-		<Listbox id="activegames" align="fill" weight="0.7" background_colour="black" />
+		<Listbox id="activegames" align="fill" weight="0.7" style="menu-list" />
 
 		<!-- And some info about the selection on the right -->
 		<Frame align="fill" margin="5">
@@ -14,7 +14,7 @@
 				<!-- Game name entry box, only visible on join-game screen -->
 				<LinearLayout id="gameNamePanel" align="topfill" orientation="horizontal" visible="gone">
 					<Label text="Game :  " align="centerleft" text_font="FranklinGothic"  text_colour="yellow" />
-					<Textbox id="gameName" align="topfill" text_font="FranklinGothic" text_colour="white" />
+					<Textbox id="gameName" align="topfill" style="menu-textbox" />
 				</LinearLayout>
 
 				<!-- Game details -->
@@ -25,9 +25,9 @@
 			<!-- And buttons on the bottom -->
 			<LinearLayout align="bottomCenter" orientation="horizontal">
 				<!-- Place 2 buttons side by side, with a little spacer in the middle -->
-				<Button id="resume" size="64,64" background_image="Tickicon" />
+				<Button id="resume" size="64,64" background_image="Tickicon" style="menu-button" />
 				<Widget width="32" />
-				<Button id="return" size="64,64" background_image="Undoicon" />
+				<Button id="return" size="64,64" background_image="Undoicon" style="menu-button" />
 			</LinearLayout>
 
 		</Frame>

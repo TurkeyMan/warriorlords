@@ -19,6 +19,7 @@
 #include "MFDisplay.h"
 
 #include "Menu/Menu.h"
+#include "Menu/Game/GameUI.h"
 
 #include "UI/HKUI.h"
 
@@ -34,6 +35,7 @@
 InputManager *pInputManager = NULL;
 
 FrontMenu *pFrontMenu;
+GameMenu *pGameMenu;
 
 Game *pGame = NULL;
 Editor *pEditor = NULL;
@@ -102,6 +104,8 @@ void Game_Init()
 	HKUserInterface::SetActiveUI(pUI);
 
 	pFrontMenu = new FrontMenu();
+	pGameMenu = new GameMenu();
+
 	pFrontMenu->ShowMainMenu();
 	pFrontMenu->Show();
 /*

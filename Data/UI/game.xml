@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Frame id="game" align="Fill">
-	<Prefab prefab="game-map.xml" align="Fill" />
+	<Prefab ID="map" prefab="game-map.xml" align="Fill" />
 
 </Frame>

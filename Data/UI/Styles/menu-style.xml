@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Resources>
+	<Style id="menu-label">
+		<Properties text_font="Priest" text_align="center" text_height="50" text_colour="orange" />
+	</Style>
+
+	<Style id="menu-button" parent="menu-label">
+		<Properties text_colour="white" style_disabled="menu-button-disabled" style_pressed="menu-button-pressed"/>
+		<Properties colour="white" />
+	</Style>
+	<Style id="menu-button-disabled" parent="menu-button">
+		<Properties colour="grey" />
+	</Style>
+	<Style id="menu-button-pressed" parent="menu-button">
+		<Properties colour="grey" />
+	</Style>
+
+	<Style id="menu-list">
+		<Properties background_colour="black" border_width="2" border_colour="white" />
+	</Style>
+
+	<Style id="menu-textbox">
+		<Properties text_font="FranklinGothic" text_colour="white" background_colour="black" border_width="2" border_colour="white" />
+	</Style>
+
+	<Style id="menu-selectbox">
+		<Properties colour="white" background_colour="black" border_width="2" border_colour="white" style_popup="menu-list" style_disabled="menu-selectbox-disabled" />
+	</Style>
+	<Style id="menu-selectbox-disabled">
+		<Properties colour="grey" />
+	</Style>
+</Resources>
