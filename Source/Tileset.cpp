@@ -3,6 +3,7 @@
 
 #include "MFIni.h"
 #include "MFMaterial.h"
+#include "Materials/MFMat_Standard.h"
 #include "MFTexture.h"
 #include "MFPrimitive.h"
 
@@ -37,8 +38,7 @@ Tileset *Tileset::Create(const char *pFilename)
 
 					if(pNew->pTileMap[0])
 					{
-						int diffuse = MFMaterial_GetParameterIndexFromName(pNew->pTileMap[0], "diffuseMap");
-						MFTexture *pTex = MFMaterial_GetParameterT(pNew->pTileMap[0], diffuse, 0);
+						MFTexture *pTex = MFMaterial_GetParameterT(pNew->pTileMap[0], MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
 						if(pTex)
 							MFTexture_GetTextureDimensions(pTex, &pNew->imageWidth, &pNew->imageHeight);
 					}
@@ -49,8 +49,7 @@ Tileset *Tileset::Create(const char *pFilename)
 
 					if(pNew->pTileMap[1])
 					{
-						int diffuse = MFMaterial_GetParameterIndexFromName(pNew->pTileMap[1], "diffuseMap");
-						MFTexture *pTex = MFMaterial_GetParameterT(pNew->pTileMap[1], diffuse, 0);
+						MFTexture *pTex = MFMaterial_GetParameterT(pNew->pTileMap[1], MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
 						if(pTex)
 							MFTexture_GetTextureDimensions(pTex, &pNew->imageWidth, &pNew->imageHeight);
 					}
@@ -61,8 +60,7 @@ Tileset *Tileset::Create(const char *pFilename)
 
 					if(pNew->pRoadMap)
 					{
-						int diffuse = MFMaterial_GetParameterIndexFromName(pNew->pRoadMap, "diffuseMap");
-						MFTexture *pTex = MFMaterial_GetParameterT(pNew->pRoadMap, diffuse, 0);
+						MFTexture *pTex = MFMaterial_GetParameterT(pNew->pRoadMap, MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
 						if(pTex)
 							MFTexture_GetTextureDimensions(pTex, &pNew->roadWidth, &pNew->roadHeight);
 					}

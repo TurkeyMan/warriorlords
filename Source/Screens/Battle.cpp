@@ -9,6 +9,7 @@
 #include "MFPrimitive.h"
 #include "MFFont.h"
 #include "MFMaterial.h"
+#include "Materials/MFMat_Standard.h"
 #include "MFView.h"
 #include "MFRenderer.h"
 #include "MFTexture.h"
@@ -834,8 +835,7 @@ void Battle::Draw()
 
 	
 	int texWidth, texHeight;
-	int diffuse = MFMaterial_GetParameterIndexFromName(pIcons, "diffuseMap");
-	MFTexture *pTex = MFMaterial_GetParameterT(pIcons, diffuse, 0);
+	MFTexture *pTex = MFMaterial_GetParameterT(pIcons, MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
 	if(pTex)
 	{
 		MFTexture_GetTextureDimensions(pTex, &texWidth, &texHeight);

@@ -20,11 +20,14 @@
 	</Style>
 
 	<Style id="menu-textbox">
-		<Properties text_font="FranklinGothic" text_colour="white" background_colour="black" border_width="2" border_colour="white" />
+		<Properties text_font="FranklinGothic" text_colour="white" />
+		<Properties background_colour="black" border_width="2" border_colour="white" />
 	</Style>
 
 	<Style id="menu-selectbox">
-		<Properties colour="white" background_colour="black" border_width="2" border_colour="white" style_popup="menu-list" style_disabled="menu-selectbox-disabled" />
+		<Properties style_popup="menu-list" style_disabled="menu-selectbox-disabled" />
+		<Properties background_colour="black" border_width="2" border_colour="white" />
+		<Properties colour="white" />
 	</Style>
 	<Style id="menu-selectbox-disabled">
 		<Properties colour="grey" />

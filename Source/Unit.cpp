@@ -2,6 +2,7 @@
 #include "Unit.h"
 
 #include "MFMaterial.h"
+#include "Materials/MFMat_Standard.h"
 #include "MFTexture.h"
 #include "MFPrimitive.h"
 #include "MFIni.h"
@@ -155,8 +156,7 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 
 			if(pUnitDefs->pUnitMat)
 			{
-				int diffuse = MFMaterial_GetParameterIndexFromName(pUnitDefs->pUnitMat, "diffuseMap");
-				MFTexture *pTex = MFMaterial_GetParameterT(pUnitDefs->pUnitMat, diffuse, 0);
+				MFTexture *pTex = MFMaterial_GetParameterT(pUnitDefs->pUnitMat, MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
 				if(pTex)
 					MFTexture_GetTextureDimensions(pTex, &pUnitDefs->unitMapWidth, &pUnitDefs->unitMapHeight);
 			}
@@ -171,8 +171,7 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 
 			if(pUnitDefs->pCastleMat)
 			{
-				int diffuse = MFMaterial_GetParameterIndexFromName(pUnitDefs->pCastleMat, "diffuseMap");
-				MFTexture *pTex = MFMaterial_GetParameterT(pUnitDefs->pCastleMat, diffuse, 0);
+				MFTexture *pTex = MFMaterial_GetParameterT(pUnitDefs->pCastleMat, MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
 				if(pTex)
 					MFTexture_GetTextureDimensions(pTex, &pUnitDefs->castleMapWidth, &pUnitDefs->castleMapHeight);
 			}
@@ -183,8 +182,7 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 
 			if(pUnitDefs->pItemMat)
 			{
-				int diffuse = MFMaterial_GetParameterIndexFromName(pUnitDefs->pCastleMat, "diffuseMap");
-				MFTexture *pTex = MFMaterial_GetParameterT(pUnitDefs->pItemMat, diffuse, 0);
+				MFTexture *pTex = MFMaterial_GetParameterT(pUnitDefs->pItemMat, MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
 				if(pTex)
 					MFTexture_GetTextureDimensions(pTex, &pUnitDefs->itemMapWidth, &pUnitDefs->itemMapHeight);
 			}
