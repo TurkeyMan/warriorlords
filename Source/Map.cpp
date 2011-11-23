@@ -1413,7 +1413,11 @@ void Map::Draw()
 	uvs.x = (xOffset - (float)(int)xOffset) * (tileWidth / targetWidth) + (texelOffset/targetWidth);
 	uvs.y = (yOffset - (float)(int)yOffset) * (tileHeight / targetHeight) + (texelOffset/targetHeight);
 	uvs.width = uvs.width / targetWidth / zoom;
+#if defined(MF_WINDOWS)
 	uvs.height = uvs.height / targetHeight / zoom;
+#else
+	uvs.height = -uvs.height / targetHeight / zoom;
+#endif
 
 	MFMaterial_SetMaterial(pRenderTargetMaterial);
 	MFPrimitive_DrawQuad(0, 0, 1, 1, MFVector::one, uvs.x, uvs.y, uvs.x + uvs.width, uvs.y + uvs.height);
