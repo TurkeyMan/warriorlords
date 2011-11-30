@@ -166,9 +166,35 @@ void LobbyMenu::OnStartClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 
 	for(int a=0; a<game.maxPlayers; ++a)
 	{
-		game.players[a].race = players[a].pRace->GetSelection() + 1;
+		game.players[a].race = players[a].pRace->GetSelection();
 		game.players[a].colour = players[a].pColour->GetSelection() + 1;
-		game.players[a].hero = players[a].pHero->GetSelection();
+		game.players[a].hero = players[a].pHero->GetSelection() - 1;
+
+		if(game.players[a].race == 0)
+		{
+			// select random race
+			while(game.players[a].race == 0)
+			{
+				int r = (MFRand() % (game.mapDetails.unitSetDetails.numRaces - 1)) + 1;
+				if(game.mapDetails.bRacePresent[r])
+					game.players[a].race = r;
+			}
+		}
+
+		if(game.players[a].hero == -1)
+		{
+			// count the number of heroes available
+			int numHeroes = 0;
+			for(int b=0; b<game.mapDetails.unitSetDetails.numUnits; ++b)
+			{
+				UnitSetDetails::Unit &unit = game.mapDetails.unitSetDetails.units[b];
+				if(unit.type == UT_Hero && (unit.race == game.players[a].race || unit.race == 0))
+					++numHeroes;
+			}
+
+			// select random hero
+			game.players[a].hero = MFRand() % numHeroes;
+		}
 	}
 
 	// begin game...

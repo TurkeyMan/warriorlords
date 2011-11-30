@@ -226,19 +226,24 @@ void Game::BeginGame()
 			players[pCastle->player].cursorY = pCastle->details.y;
 
 			// produce starting hero
-			int numTypes = pUnitDefs->GetNumUnitTypes();
 			int hero = players[pCastle->player].startingHero;
-			int heroID = players[pCastle->player].race - 1;
+			int heroID = -1;
 
-			for(int u=0; u<numTypes; ++u)
+			int numUnits = pUnitDefs->GetNumUnitTypes();
+			for(int u=0; u<numUnits; ++u)
 			{
 				UnitDetails *pUnit = pUnitDefs->GetUnitDetails(u);
-				if(pUnit->type == UT_Hero && pUnit->race == players[pCastle->player].race)
+				if(pUnit->type == UT_Hero && (pUnit->race == players[pCastle->player].race || pUnit->race == 0))
 				{
 					if(hero-- == 0)
+					{
 						heroID = u;
+						break;
+					}
 				}
 			}
+
+			MFDebug_Assert(heroID != -1, "Couldn't find hero!");
 
 			Group *pGroup = CreateUnit(heroID, pCastle, true);
 			players[pCastle->player].pHero = pGroup->GetUnit(0);

@@ -1,12 +1,5 @@
 #include "Warlords.h"
 #include "Display.h"
-/*
-#include "Screens/LoginScreen.h"
-#include "Screens/HomeScreen.h"
-#include "Screens/MenuScreen.h"
-#include "Screens/LobbyScreen.h"
-#include "Screens/JoinGameScreen.h"
-*/
 #include "Game.h"
 #include "Editor.h"
 
@@ -39,14 +32,6 @@ GameMenu *pGameMenu;
 
 Game *pGame = NULL;
 Editor *pEditor = NULL;
-/*
-LoginScreen *pLogin = NULL;
-HomeScreen *pHome = NULL;
-MenuScreen *pMenu = NULL;
-LobbyScreen *pLobby = NULL;
-JoinGameScreen *pJoinGame = NULL;
-*/
-//Lobby lobby;
 
 MFSystemCallbackFunction pInitFujiFS;
 
@@ -79,16 +64,7 @@ void Game_Init()
 	pInputManager = new InputManager;
 
 	GameData::Init();
-/*
-	// load the UI
-	uiEntityManager *pEM = GameData::Get()->GetEntityManager();
-	pEM->LoadRootNode("root");
 
-	// setup the complex lobby screen
-	uiEntity *pLobbyScreen = pEM->Find("lobbyscreen");
-	if(pLobbyScreen)
-		lobby.InitLobby(pLobbyScreen);
-*/
 	// check if we want to run a battle test...
 	if(MFFileSystem_Exists("battle_test.ini"))
 	{
@@ -108,25 +84,6 @@ void Game_Init()
 
 	pFrontMenu->ShowMainMenu();
 	pFrontMenu->Show();
-/*
-	// show the titlescreen
-	uiEntity *pBG = pEM->Find("background");
-	uiEntity *pTitle = pEM->Find("titlescreen");
-	pBG->SetVisible(true);
-	pTitle->SetVisible(true);
-
-	pLogin = new LoginScreen;
-	pHome = new HomeScreen;
-	pMenu = new MenuScreen;
-	pLobby = new LobbyScreen;
-	pJoinGame = new JoinGameScreen;
-
-#if defined(TEST_ONLINE)
-	Screen::SetNext(pLogin);
-#else
-	Screen::SetNext(pMenu);
-#endif
-*/
 }
 
 void Game_Update()
@@ -188,13 +145,7 @@ void Game_Deinit()
 
 	if(pGame)
 		delete pGame;
-/*
-	if(pMenu)
-		delete pMenu;
 
-	if(pLogin)
-		delete pLogin;
-*/
 	HKUserInterface::Deinit();
 
 	GameData::Deinit();
@@ -227,7 +178,7 @@ int GameMain(MFInitParams *pInitParams)
 //	gDefaults.system.threadPriority = MFPriority_AboveNormal;
 	gDefaults.display.pWindowTitle = "Warrior Lords";
 #if defined(MF_WINDOWS)
-	gDefaults.display.pIcon = MAKEINTRESOURCE(IDI_APPICON);
+	gDefaults.display.pIcon = MAKEINTRESOURCE(IDI_ICON1);
 #endif
 
 	pInitFujiFS = MFSystem_RegisterSystemCallback(MFCB_FileSystemInit, Game_InitFilesystem);
@@ -272,32 +223,6 @@ void DivideRect_Vert(const MFRect &rect, float split, float margin, MFRect *pTop
 	pBottom->height = rect.height - s - margin*2;
 }
 
-void DivideRect_Quad(const MFRect &rect, float hSplit, float vSplit, float margin, MFRect *pTL, MFRect *pTR, MFRect *pBL, MFRect *pBR, bool bSplitPixels)
-{
-	float hs = MFFloor(bSplitPixels ? hSplit : rect.width*hSplit);
-	float vs = MFFloor(bSplitPixels ? vSplit : rect.height*vSplit);
-
-	pTL->x = rect.x + margin;
-	pTL->y = rect.y + margin;
-	pTL->width = hs - margin*2;
-	pTL->height = vs - margin*2;
-
-	pTR->x = rect.x + hs + margin;
-	pTR->y = rect.y + margin;
-	pTR->width = rect.width - hs - margin*2;
-	pTR->height = vs - margin*2;
-
-	pBL->x = rect.x + margin;
-	pBL->y = rect.y + vs + margin;
-	pBL->width = hs - margin*2;
-	pBL->height = rect.height - vs - margin*2;
-
-	pBR->x = rect.x + hs + margin;
-	pBR->y = rect.y + vs + margin;
-	pBR->width = rect.width - hs - margin*2;
-	pBR->height = rect.height - vs - margin*2;
-}
-
 void AdjustRect_Margin(MFRect *pRect, float margin, bool bPixels)
 {
 	float hMargin = bPixels ? margin : pRect->width * margin;
@@ -307,26 +232,6 @@ void AdjustRect_Margin(MFRect *pRect, float margin, bool bPixels)
 	pRect->y += vMargin;
 	pRect->width -= hMargin*2;
 	pRect->height -= vMargin*2;
-}
-
-void DrawTicker(float x, float y)
-{
-	uint64 t = MFSystem_ReadRTC();
-	uint64 freq = MFSystem_GetRTCFrequency();
-	freq /= 5;
-	int numDots = (int)(t / freq) % 6;
-
-	MFFont_DrawText(MFFont_GetDebugFont(), MakeVector(x, y), 32.f, MFVector::white, ".....", numDots);
-}
-
-int LookupString(const char *pString, const char *pStrings[])
-{
-	for(int a=0; pStrings[a]; ++a)
-	{
-		if(!MFString_CaseCmp(pString, pStrings[a]))
-			return a;
-	}
-	return -1;
 }
 
 #if defined(MF_WINDOWS) || defined(_WINDOWS)
