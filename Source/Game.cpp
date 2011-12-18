@@ -1,6 +1,8 @@
 #include "Warlords.h"
 #include "Game.h"
 
+#include "Menu/Game/GameUI.h"
+
 #include "Screens/MapScreen.h"
 #include "Screens/Battle.h"
 
@@ -15,6 +17,8 @@
 #include <stdarg.h>
 
 Game *Game::pCurrent = NULL;
+
+extern GameMenu *pGameMenu;
 
 Game::Game(GameParams *pParams)
 {
@@ -98,6 +102,7 @@ Game::Game(GameState *pState)
 
 	// resume the game
 	Screen::SetNext(pMapScreen);
+	pGameMenu->Show();
 }
 
 void Game::Init(const char *pMapName, bool bEdit)
@@ -263,6 +268,7 @@ void Game::BeginGame()
 	ApplyActions();
 
 	Screen::SetNext(pMapScreen);
+	pGameMenu->Show();
 }
 
 void Game::BeginTurn(int player)
@@ -578,6 +584,7 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 	}
 
 	Screen::SetNext(pMapScreen);
+	pGameMenu->Show();
 }
 
 Unit *Game::AllocUnit()

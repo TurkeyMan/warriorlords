@@ -862,7 +862,7 @@ void UnitDefinitions::DrawUnits(float scale, float texelOffset, bool bHead, bool
 
 			float depth = 0.f;//bHead ? 0.f : (1000.f - unit.y) / 1000.f;
 
-			float xOffset = -(def.width - 1) / 2.f * scale + (unit.bFlip ? def.width : 0.f)*scale - 0.25f*scale;
+			float xOffset = -(def.width - 1) / 2.f * scale + (unit.bFlip ? def.width*scale - 0.25f*scale : 0.f);
 			float yOffset = -(def.height - 1) / 2.f * scale;
 			MFSetTexCoord1(uvs.x, uvs.y);
 			MFSetPosition(unit.x+xOffset, unit.y+yOffset, depth);

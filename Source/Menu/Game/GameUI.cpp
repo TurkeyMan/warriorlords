@@ -6,12 +6,14 @@
 #include "UI/Widgets/HKWidgetListbox.h"
 
 #include "GameUI.h"
+
+#include "Game.h"
 #include "Session.h"
 #include "Editor.h"
 
 extern Game *pGame;
-
 extern GameMenu *pGameMenu;
+
 GameMenu *GameMenu::Get()
 {
 	return pGameMenu;

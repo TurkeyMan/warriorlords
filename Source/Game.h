@@ -110,6 +110,9 @@ public:
 	Game(GameState *pState);
 	~Game();
 
+	static void SetCurrent(Game *pGame) { pCurrent = pGame; }
+	static Game *GetCurrent() { return pCurrent; }
+
 	MapScreen *GetMapScreen() { return pMapScreen; }
 	Battle *GetBattleScreen() { return pBattle; }
 
@@ -132,9 +135,6 @@ public:
 	int GetPlayerRace(int player) { return player == -1 ? 0 : players[player].race; }
 	MFVector GetPlayerColour(int player) { return player == -1 ? pUnitDefs->GetRaceColour(0) : players[player].colour; }
 	Unit *GetPlayerHero(int player) { return players[player].pHero; }
-
-	static void SetCurrent(Game *pGame) { pCurrent = pGame; }
-	static Game *GetCurrent() { return pCurrent; }
 
 	Unit *AllocUnit();
 	void DestroyUnit(Unit *pUnit);

@@ -48,8 +48,44 @@ void LobbyMenu::Load(HKWidget *pRoot, FrontMenu *pFrontMenu)
 	}
 }
 
+int LobbyMenu::LobbyThread(void *pArg)
+{
+	uint32 id = (uint32)(size_t)pArg;
+
+	MFSocket connection = MFSockets_CreateSocket(MFAF_Inet, MFSockType_Stream, MFProtocol_TCP);
+
+	MFSocketAddressInet address;
+	address.cbSize = sizeof(MFSocketAddressInet);
+	address.family = MFAF_Inet;
+	address.port = 43210;
+	address.address = MFSockets_MakeInetAddress(127,0,0,1);
+	MFSockets_Connect(connection, address);
+
+	MFString packet = MFString::Format("WLClient1.0\n%08x", id);
+	MFSockets_Send(connection, packet.CStr(), packet.NumBytes(), 0);
+
+	char buffer[1024];
+	int bytes = MFSockets_Recv(connection, buffer, sizeof(buffer), 0);
+	buffer[bytes] = 0;
+
+	if(MFString_Compare("Connection accepted", buffer))
+		return -1;
+
+	MFSockets_Send(connection, packet.CStr(), packet.NumBytes(), 0);
+
+	while(1)
+	{
+		int bytes = MFSockets_Recv(connection, buffer, sizeof(buffer), 0);
+	}
+
+	return 0;
+}
+
 void LobbyMenu::Show(GameDetails &_game)
 {
+	// kick off lobby thread
+	MFThread_CreateThread("Lobby Thread", LobbyThread, (void*)_game.id);
+
 	Session *pSession = Session::Get();
 	game = _game;
 

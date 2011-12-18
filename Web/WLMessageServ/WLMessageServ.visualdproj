@@ -1,0 +1,11 @@
+<DProject>
+ <ProjectGuid>969ea789-ca3a-4ffa-9dd0-02f1b24e901b</ProjectGuid>
+ <Config name="Debug">
+  <!-- default to defaults -->
+ </Config>
+ <Config name="Release">
+  </Config>
+ <Folder name="WLMessageServ">
+  <File path="main.d" />
+ </Folder>
+</DProject>
