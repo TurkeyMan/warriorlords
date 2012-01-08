@@ -171,7 +171,7 @@ private void groupThread(shared Group group)
 						{
 							// recv the packet
 							char[1024] buffer;
-							int bytes = sockets[i].receive(buffer[]);
+							auto bytes = sockets[i].receive(buffer[]);
 							if(bytes > 0)
 							{
 								char[] message = buffer[0..bytes];
