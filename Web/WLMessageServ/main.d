@@ -1,16 +1,31 @@
 module main;
 
+import std.string;
 import std.stdio;
+import std.conv;
 import std.socket;
 import std.concurrency;
+import std.algorithm;
+import std.array;
 import core.time: dur, Duration;
-import std.string;
+import core.thread;
+
+void remove(T)(ref T[] a, size_t index)
+{
+	swap(a[index], a.front);
+	a.popFront;
+	if(a.length == 0)
+		return;
+	swap(a.front, a[index-1]);
+}
 
 private class Group
 {
 	Tid tid;
 	uint id;
 };
+
+private shared Group[uint] groups;
 
 int main(string[] argv)
 {
@@ -40,44 +55,46 @@ int main(string[] argv)
 
 private void negotiationThread(shared Socket newConnection)
 {
-	class ClientGroups
-	{
-		Group[uint] groups;
-	};
-
-	shared static ClientGroups activeGroups;
-
 	Socket connection = cast()newConnection;
 
 	try
 	{
+		writeln("Incoming connection...");
+
 		// receive connection request
 		char[1024] request;
 		auto bytes = connection.receive(request[]);
 
-//		string[] tokens = request.split("\n");
+		auto tokens = request[0..bytes].split("\n");
+
+		if(tokens.length < 2 || tokens[0] != "WLClient1.0")
+			return;
+
+		uint id = parse!uint(tokens[1], 16);
 
 		// acknowledge connection
 		string acceptedString = "Connection accepted";
 		connection.send(acceptedString);
 
-		uint id = 0;
-		auto group = activeGroups.groups[id];
+		writeln("Connection accepted!");
 
-		// if the connection represents a new group
-		if(group is null)
+		auto group = id in groups;
+		if(group == null)
 		{
-			group = new shared(Group);
-			activeGroups.groups[id] = cast(shared)group;
+			// if the connection represents a new group
+			auto newGroup = new shared(Group);
+			groups[id] = newGroup;
 
-			group.id = id;
-			group.tid = cast(shared)spawn(&groupThread, cast(shared)group);
+			newGroup.id = id;
+			newGroup.tid = cast(shared)spawn(&groupThread, cast(shared)newGroup);
+
+			group = &newGroup;
 		}
 
 		// send the new connection to the group thread
 		send(cast()group.tid, newConnection);
 	}
-	catch(OwnerTerminated)
+	catch(Exception)
 	{
 		// owner terminated
 		int x = 0;
@@ -86,29 +103,114 @@ private void negotiationThread(shared Socket newConnection)
 
 private void groupThread(shared Group group)
 {
+	immutable Duration d;
+
 	Socket[] sockets;
+	SocketSet readSet = new SocketSet();
+	SocketSet errorSet = new SocketSet();
 
-	Duration d;
+	writefln("Creted new group: %08X", group.id);
 
-	SocketSet socketSet = new SocketSet();
-	for (;; socketSet.reset())
+	void newClient(shared Socket client)
+	{
+		Socket newClient = cast()client;
+		sockets ~= newClient;
+
+		writefln("Client %d joined group: %08X - num clients: %d", cast(int)newClient.handle, group.id, sockets.length);
+	}
+
+	void removeClient(int i)
+	{
+		int handle = cast(int)sockets[i].handle;
+		sockets.remove(i);
+
+		writefln("Client %d left group: %08X - num clients: %d", handle, group.id, sockets.length);
+	}
+
+	for (;; readSet.reset(), errorSet.reset())
 	{
 		try
 		{
 			// poll for new clients
-			Socket newClient;
-			while(receiveTimeout(d, (shared Socket client){ newClient = cast()client; }))
-				sockets ~= newClient;
+			while(receiveTimeout(d, &newClient, (OwnerTerminated){ /* we don't care when the patent thread terminates */ }))
+			{
+				// nothing
+			}
 
-			// add sockets to list
-			foreach(socket; sockets)
-				socketSet.add(socket);
+			if(sockets.length > 0)
+			{
+				// add sockets to list
+				foreach(socket; sockets)
+				{
+					readSet.add(socket);
+					errorSet.add(socket);
+				}
 
-			// should use a timeout or something
-			Socket.select(socketSet, null, null);
+				// should use a timeout or something
+				int signal = Socket.select(readSet, null, errorSet, 100_000); // dur!("msecs")(100) // WHY DOESN'T THIS OVERLOAD EXIST?
+				if(signal > 0)
+				{
+					// remove disconnected sockets
+					for(int i=0; i<sockets.count;)
+					{
+						if(errorSet.isSet(sockets[i]))
+						{
+							// remove from list
+							removeClient(i);
+						}
+						else
+						{
+							++i;
+						}
+					}
 
-			// echo the message to others in group
-			//...
+					// echo messages
+					for(int i=0; i<sockets.count;)
+					{
+						if(readSet.isSet(sockets[i]))
+						{
+							// recv the packet
+							char[1024] buffer;
+							int bytes = sockets[i].receive(buffer[]);
+							if(bytes > 0)
+							{
+								char[] message = buffer[0..bytes];
+
+								writefln("Client %d -> %s", cast(int)sockets[i].handle, message);
+
+								// and echo to other clients
+								for(int j=0; j<sockets.count; ++j)
+								{
+									if(i == j)
+										continue;
+
+									sockets[j].send(message);
+								}
+								++i;
+							}
+							else
+							{
+								// remove from list
+								removeClient(i);
+							}
+						}
+						else
+						{
+							++i;
+						}
+					}
+
+					// if there are none left in the group...
+					if(sockets.length == 0)
+					{
+						writefln("All clients have left group: %08X", group.id);
+
+						// destroy the group and terminate the thread
+						groups.remove(group.id);
+						return;
+					}
+				}
+			}
 		}
 		catch
 		{
