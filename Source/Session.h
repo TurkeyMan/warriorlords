@@ -9,6 +9,7 @@ public:
 	typedef FastDelegate2<ServerError, Session *> SessionDelegate;
 	typedef FastDelegate3<ServerError, Session *, GameDetails *> JoinDelegate;
 	typedef FastDelegate4<ServerError, Session *, GameLobby *, int> FindDelegate;
+	typedef FastDelegate2<uint32, const char *> PeerMessageDelegate;
 
 	static void InitSession();
 	static void DeinitSession();
@@ -16,7 +17,7 @@ public:
 	Session();
 	~Session();
 
-	static void Update();
+	void Update();
 
 	void UpdateGames();
 	void UpdatePastGames();
@@ -28,23 +29,25 @@ public:
 	void LoadSession(uint32 user);
 	void SaveSession();
 
-	bool IsLoggedIn() { return bLoggedIn; }
-	uint32 GetUserID() { return user.id; }
-	const char *GetUsername() { return user.userName; }
+	bool IsLoggedIn() const { return bLoggedIn; }
+	uint32 GetUserID() const { return user.id; }
+	const char *GetUsername() const { return user.userName; }
 
 	static Session *Get() { return pCurrent; }
 
-	bool IsIngame() { return bIngame; }
-	GameState *GetActiveGame();
-	GameDetails *GetActiveLobby();
-	GameDetails::Player *GetLobbyPlayer();
-	bool IsCreator();
+	bool IsIngame() const { return bIngame; }
+	uint32 GetGameID() const;
+	bool IsCreator() const;
 
-	int GetNumCurrentGames() { return numCurrentGames; }
-	int GetNumPendingGames() { return numPendingGames; }
-	int GetNumPastGames() { return numPastGames; }
+	const GameState *GetActiveGame() const;
+	GameDetails *GetActiveLobby() const;
+	GameDetails::Player *Session::GetLobbyPlayer(uint32 user = -1, int *pPlayer = NULL) const;
 
-	void FindGames(FindDelegate callback, MFString script);
+	int GetNumCurrentGames() const { return currentGames.size(); }
+	int GetNumPendingGames() const { return pendingGames.size(); }
+	int GetNumPastGames() const { return pastGames.size(); }
+
+	void FindGames(FindDelegate callback);
 	void CreateGame(const GameCreateDetails &details, JoinDelegate callback);
 	void JoinGame(MFString game, JoinDelegate callback);
 	void LeaveGame(uint32 game, SessionDelegate callback);
@@ -55,23 +58,32 @@ public:
 	void SetColour(uint32 game, int colour, SessionDelegate callback);
 	void SetHero(uint32 game, int hero, SessionDelegate callback);
 
-	GameState *GetCurrentGame(int game) { return &pCurrentGames[game]; }
-	GameDetails *GetPendingGame(int game) { return &pPendingGames[game]; }
-	GameDetails *GetPastGame(int game) { return &pPastGames[game]; }
+	GameState *GetCurrentGame(int game);
+	GameDetails *GetPendingGame(int game);
+	GameDetails *GetPastGame(int game);
 
 	void SetLoginDelegate(SessionDelegate handler) { loginHandler = handler; }
 	void SetUpdateDelegate(SessionDelegate handler) { updateHandler = handler; }
 	void SetBeginDelegate(SessionDelegate handler) { beginHandler = handler; }
 
+	void EnableRealtimeConnection(bool bEnabled) { bKeepConnection = bEnabled; }
+	void SendMessageToPeers(const char* pBuffer);
+	void SetMessageCallback(PeerMessageDelegate handler) { peerMessageHandler = handler; }
+
 protected:
+	enum ConnectionStage
+	{
+		Disconnected = 0,
+		Connecting,
+		Authenticating,
+		Connected
+	};
+
+	void CloseConnection();
+
 	UserDetails user;
 
 	bool bLoggedIn;
-
-	bool bLocalGame;
-	bool bIngame;
-	uint32 activeGame;
-
 	int updating;
 
 	SessionDelegate loginHandler;
@@ -85,29 +97,45 @@ protected:
 	JoinDelegate joinHandler;
 	FindDelegate findHandler;
 
-	uint32 currentGames[1024];
-	GameState *pCurrentGames;
-	int numCurrent;
-	int numCurrentGames;
-	uint32 pendingGames[1024];
-	GameDetails *pPendingGames;
-	int numPending;
-	int numPendingGames;
+	// game lists
+	struct ActiveGame
+	{
+		uint32 id;
+		bool bLoaded;
+		GameState state;
+	};
+	struct PendingGame
+	{
+		uint32 id;
+		bool bLoaded;
+		GameDetails details;
+	};
 
-	uint32 pastGames[1024];
-	GameDetails *pPastGames;
-	int numPastGames;
+	bool bLocalGame;
+	bool bIngame;
+	int activeGame;
+
+	MFArray<ActiveGame> currentGames;
+	MFArray<PendingGame> pendingGames;
+	MFArray<PendingGame> pastGames;
+
+	uint32 localGames[64]; // is ID
+	MFArray<ActiveGame> offlineGames;
 
 	// find game callback
-	MFString findEvent;
-
-	bool bJoining;
+	int joiningStep;
 	GameDetails joinGame;
 
-	// manage these locally
-	GameState offlineGames[64];
-	uint32 localGames[64];
-	int numLocalGames;
+	// realtime thread
+	bool bKeepConnection;
+	MFSocket connection;
+	ConnectionStage connectionStage;
+
+	MFSocketAddressInet serverAddress;
+	bool bAddressKnown;
+
+	PeerMessageDelegate peerMessageHandler;
+	MFArray<MFString> pendingMessages;
 
 	// communication
 	HTTPRequest login;

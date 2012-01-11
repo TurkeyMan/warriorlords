@@ -1,6 +1,8 @@
 #include "Warlords.h"
 #include "Session.h"
 
+#include <stdio.h>
+
 Session *Session::pCurrent = NULL;
 
 void Session::InitSession()
@@ -16,13 +18,11 @@ void Session::DeinitSession()
 
 Session::Session()
 {
+	bIngame = false;
 	bLoggedIn = false;
 
-	pCurrentGames = NULL;
-	pPendingGames = NULL;
-	pPastGames = NULL;
-
 	updating = 0;
+	joiningStep = 0;
 
 	search.SetCompleteDelegate(MakeDelegate(this, &Session::OnGamesFound));
 	create.SetCompleteDelegate(MakeDelegate(this, &Session::OnCreate));
@@ -50,18 +50,175 @@ Session::Session()
 		uint32 id = MFString_AsciiToInteger(pID, false, 16);
 		Resume(id);
 	}
+
+	// realtime thread
+	bKeepConnection = false;
+	connectionStage = Disconnected;
+	connection = 0;
+
+	bAddressKnown = false;
 }
 
 Session::~Session()
 {
 }
 
+void Session::CloseConnection()
+{
+	if(connection)
+	{
+		MFSockets_CloseSocket(connection);
+		connection = 0;
+	}
+	connectionStage = Disconnected;
+}
+
 void Session::Update()
 {
-	if(!pCurrent)
-		return;
-
 //	pCurrent->UpdateState();
+
+	if(bKeepConnection)
+	{
+		if(!bAddressKnown)
+		{
+			// look up address
+			MFAddressInfo *pInfo = NULL;
+			MFSockets_GetAddressInfo("keywestdata.com", NULL, NULL, &pInfo);
+
+			// do this somewhere else...
+			while(pInfo)
+			{
+				if(pInfo->family == MFAF_Inet)
+				{
+					serverAddress = *(MFSocketAddressInet*)pInfo->pAddress;
+					serverAddress.port = 43210;
+					bAddressKnown = true;
+					break;
+				}
+
+				pInfo = pInfo->pNext;
+			}
+		}
+
+		if(bAddressKnown)
+		{
+			char buffer[1024];
+
+			switch(connectionStage)
+			{
+				case Disconnected:
+				{
+					// create socket
+					connection = MFSockets_CreateSocket(MFAF_Inet, MFSockType_Stream, MFProtocol_TCP);
+
+					uint32 bTrue = 1;
+					MFSockets_SetSocketOptions(connection, MFSO_NonBlocking, &bTrue, sizeof(uint32));
+
+					connectionStage = Connecting;
+				}
+				case Connecting:
+				{
+					// attempt to connect
+					int error = MFSockets_Connect(connection, serverAddress);
+
+					MFSocketError errCode = MFSockets_GetLastError();
+					if(error == 0 || errCode == MFSockError_IsConnected)
+					{
+						MFString packet = MFString::Format("WLClient1.0\n%08x", GetGameID());
+						MFSockets_Send(connection, packet.CStr(), packet.NumBytes(), 0);
+
+						connectionStage = Authenticating;
+					}
+					else
+					{
+						if(errCode != MFSockError_WouldBlock && errCode != MFSockError_AlreadyInProgress)
+							CloseConnection();
+						break;
+					}
+				}
+				case Authenticating:
+				{
+					int bytes = MFSockets_Recv(connection, buffer, sizeof(buffer), 0);
+					if(bytes > 0)
+					{
+						buffer[bytes] = 0;
+
+						if(MFString_Compare("Connection accepted", buffer))
+						{
+							CloseConnection();
+							break;
+						}
+
+						connectionStage = Connected;
+					}
+					else
+					{
+						if(bytes == 0) // remote closed connection
+							CloseConnection();
+						break;
+					}
+				}
+				case Connected:
+				{
+					if(pendingMessages.size() > 0)
+					{
+						for(int a=0; a<pendingMessages.size(); ++a)
+							SendMessageToPeers(pendingMessages[a].CStr());
+
+						pendingMessages.clear();
+					}
+
+					// poll for data
+					int bytes = MFSockets_Recv(connection, buffer, sizeof(buffer), 0);
+					if(bytes > 0)
+					{
+						buffer[bytes] = 0;
+
+						// handle messages from other clients...
+						if(!peerMessageHandler.empty())
+						{
+							char *pOffset = MFString_Chr(buffer, ':');
+							if(pOffset)
+							{
+								*pOffset++ = 0;
+								uint32 user = MFString_AsciiToInteger(buffer, false, 16);
+
+								peerMessageHandler(user, pOffset);
+							}
+						}
+					}
+					else if(bytes == 0) // remote closed connection
+						CloseConnection();
+					break;
+				}
+				default:
+				{
+					// something went wrong!
+					CloseConnection();
+					break;
+				}
+			}
+		}
+	}
+	else
+	{
+		if(connection)
+			CloseConnection();
+		pendingMessages.clear();
+	}
+}
+
+void Session::SendMessageToPeers(const char *pBuffer)
+{
+	if(connectionStage != Connected)
+	{
+		pendingMessages.push(pBuffer);
+		return;
+	}
+
+	char buffer[1024];
+	int len = sprintf(buffer, "%08X:%s", user.id, pBuffer);
+	MFSockets_Send(connection, buffer, (int)len, 0);
 }
 
 void Session::UpdateGames()
@@ -72,18 +229,8 @@ void Session::UpdateGames()
 	updating |= 3;
 
 	// clear the old cache...
-	numCurrentGames = numPendingGames = 0;
-
-	if(pCurrentGames)
-	{
-		MFHeap_Free(pCurrentGames);
-		pCurrentGames = NULL;
-	}
-	if(pPendingGames)
-	{
-		MFHeap_Free(pPendingGames);
-		pPendingGames = NULL;
-	}
+	currentGames.clear();
+	pendingGames.clear();
 
 	getCurrent.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetCurrent));
 	getPending.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetPending));
@@ -101,13 +248,7 @@ void Session::UpdatePastGames()
 	updating |= 4;
 
 	// clear the old cache...
-	numPastGames = 0;
-
-	if(pPastGames)
-	{
-		MFHeap_Free(pPastGames);
-		pPastGames = NULL;
-	}
+	pastGames.clear();
 
 	getPast.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetPast));
 
@@ -115,10 +256,9 @@ void Session::UpdatePastGames()
 	WLServ_GetPastGames(getPast, user.id);
 }
 
-void Session::FindGames(FindDelegate callback, MFString script)
+void Session::FindGames(FindDelegate callback)
 {
 	findHandler = callback;
-	findEvent = script;
 
 	WLServ_FindGames(search, GetUserID());
 }
@@ -135,7 +275,7 @@ void Session::JoinGame(MFString game, JoinDelegate callback)
 	MFZeroMemory(&joinGame, sizeof(joinGame));
 
 	joinHandler = callback;
-	bJoining = true;
+	joiningStep = 1;
 
 	WLServ_GetGameByName(join, game.CStr());
 }
@@ -149,9 +289,9 @@ void Session::LeaveGame(uint32 game, SessionDelegate callback)
 
 void Session::MakeCurrent(uint32 game)
 {
-	for(int a=0; a<numPendingGames; ++a)
+	for(int a=0; a<pendingGames.size(); ++a)
 	{
-		if(pPendingGames[a].id == game)
+		if(pendingGames[a].id == game)
 		{
 			bLocalGame = false;
 			bIngame = false;
@@ -160,9 +300,9 @@ void Session::MakeCurrent(uint32 game)
 		}
 	}
 
-	for(int a=0; a<numCurrentGames; ++a)
+	for(int a=0; a<currentGames.size(); ++a)
 	{
-		if(pCurrentGames[a].id == game)
+		if(currentGames[a].id == game)
 		{
 			bLocalGame = false;
 			bIngame = true;
@@ -170,6 +310,27 @@ void Session::MakeCurrent(uint32 game)
 			return;
 		}
 	}
+}
+
+GameState *Session::GetCurrentGame(int game)
+{
+	if(currentGames[game].bLoaded)
+		return &currentGames[game].state;
+	return NULL;
+}
+
+GameDetails *Session::GetPendingGame(int game)
+{
+	if(pendingGames[game].bLoaded)
+		return &pendingGames[game].details;
+	return NULL;
+}
+
+GameDetails *Session::GetPastGame(int game)
+{
+	if(pastGames[game].bLoaded)
+		return &pastGames[game].details;
+	return NULL;
 }
 
 void Session::SetRace(uint32 game, int race, SessionDelegate callback)
@@ -204,7 +365,7 @@ void Session::SetHero(uint32 game, int hero, SessionDelegate callback)
 
 void Session::BeginGame(uint32 game, uint32 *pPlayers, int numPlayers)
 {
-	GameDetails *pGame = GetActiveLobby();
+	const GameDetails *pGame = GetActiveLobby();
 
 	WLServ_BeginGame(begin, pGame->id, pPlayers, pGame->numPlayers);
 }
@@ -225,29 +386,6 @@ void Session::OnGamesFound(HTTPRequest::Status status)
 	{
 		findHandler(err, this, games, numGames);
 	}
-/*
-	if(findEvent)
-	{
-		MFString t = "{ \"";
-
-		for(int a=0; a<numGames; ++a)
-		{
-			if(a > 0)
-				t += "\", \"";
-			t += games[a].name;
-		}
-
-		t += "\" }";
-		
-		uiActionManager *pAM = GameData::Get()->GetActionManager();
-		uiActionScript *pScript = pAM->FindAction(findEvent.CStr());
-		if(pScript)
-		{
-			uiRuntimeArgs *pArgs = pAM->ParseArgs(t.CStr(), NULL);
-			pAM->RunScript(pScript, NULL, pArgs);
-		}
-	}
-*/
 }
 
 void Session::OnCreate(HTTPRequest::Status status)
@@ -256,6 +394,16 @@ void Session::OnCreate(HTTPRequest::Status status)
 
 	GameDetails createGame;
 	err = WLServResult_GetGameDetails(create, &createGame);
+	if(err == SE_NO_ERROR)
+	{
+		// add new game to pending list
+		activeGame = pendingGames.size();
+
+		PendingGame &game = pendingGames.push();
+		game.id = createGame.id;
+		game.bLoaded = true;
+		game.details = createGame;
+	}
 
 	if(createHandler)
 		createHandler(err, this, err == SE_NO_ERROR ? &createGame : NULL);
@@ -265,29 +413,60 @@ void Session::OnJoined(HTTPRequest::Status status)
 {
 	ServerError err = SE_NO_ERROR;
 
-	if(bJoining)
+	if(joiningStep == 1)
 	{
+		// extend pending games
 		err = WLServResult_GetGameDetails(join, &joinGame);
+
 		if(err == SE_NO_ERROR)
 		{
 			WLServ_JoinGame(join, GetUserID(), joinGame.id);
-			bJoining = false;
+			joiningStep = 2;
 			return;
 		}
 	}
-	else
+	else if(joiningStep == 2)
 	{
 		err = WLServResult_GetError(join);
+
+		if(err == SE_NO_ERROR)
+		{
+			activeGame = pendingGames.size();
+
+			PendingGame &game = pendingGames.push();
+			game.id = joinGame.id;
+			game.bLoaded= true;
+			game.details = joinGame;
+
+			WLServ_GetGameByID(join, game.id);
+			joiningStep = 3;
+			return;
+		}
+	}
+	else if(joiningStep == 3)
+	{
+		GameDetails details;
+		err = WLServResult_GetGameDetails(join, &details);
+
+		if(err == SE_NO_ERROR)
+		{
+			pendingGames[activeGame].details = details;
+			joiningStep = 0;
+		}
 	}
 
 	if(joinHandler)
-		joinHandler(err, this, err == SE_NO_ERROR ? &joinGame : NULL);
+		joinHandler(err, this, err == SE_NO_ERROR ? &pendingGames[activeGame].details : NULL);
 }
 
 void Session::OnLeave(HTTPRequest::Status status)
 {
 	ServerError err = SE_NO_ERROR;
 	err = WLServResult_GetError(leave);
+	if(err != SE_NO_ERROR)
+		return;
+
+	SendMessageToPeers("LEAVE");
 
 	if(leaveHandler)
 		leaveHandler(err, this);
@@ -295,34 +474,52 @@ void Session::OnLeave(HTTPRequest::Status status)
 
 void Session::OnRaceSet(HTTPRequest::Status status)
 {
+	ServerError err = SE_SERVER_ERROR;
 	if(status == HTTPRequest::CS_Succeeded)
-		GetLobbyPlayer()->race = setRaceValue;
+	{
+		err = WLServResult_GetError(setRace);
+		if(err == SE_NO_ERROR)
+		{
+			GetLobbyPlayer()->race = setRaceValue;
+			SendMessageToPeers(MFStr("SETRACE:%d", setRaceValue));
+		}
+	}
 	setRaceValue = -1;
 
-	ServerError err = SE_NO_ERROR;
-	err = WLServResult_GetError(setRace);
 	setRaceHandler(err, this);
 }
 
 void Session::OnColourSet(HTTPRequest::Status status)
 {
+	ServerError err = SE_SERVER_ERROR;
 	if(status == HTTPRequest::CS_Succeeded)
-		GetLobbyPlayer()->colour = setColourValue;
+	{
+		err = WLServResult_GetError(setColour);
+		if(err == SE_NO_ERROR)
+		{
+			GetLobbyPlayer()->colour = setColourValue;
+			SendMessageToPeers(MFStr("SETCOLOUR:%d", setColourValue));
+		}
+	}
 	setColourValue = -1;
 
-	ServerError err = SE_NO_ERROR;
-	err = WLServResult_GetError(setColour);
 	setColourHandler(err, this);
 }
 
 void Session::OnHeroSet(HTTPRequest::Status status)
 {
+	ServerError err = SE_SERVER_ERROR;
 	if(status == HTTPRequest::CS_Succeeded)
-		GetLobbyPlayer()->hero = setHeroValue;
+	{
+		err = WLServResult_GetError(setHero);
+		if(err == SE_NO_ERROR)
+		{
+			GetLobbyPlayer()->hero = setHeroValue;
+			SendMessageToPeers(MFStr("SETHERO:%d", setHeroValue));
+		}
+	}
 	setHeroValue = -1;
 
-	ServerError err = SE_NO_ERROR;
-	err = WLServResult_GetError(setHero);
 	setHeroHandler(err, this);
 }
 
@@ -331,14 +528,17 @@ void Session::OnBegin(HTTPRequest::Status status)
 	GameDetails *pGame = GetActiveLobby();
 	ServerError err = WLServResult_GetGame(begin, &pGame->id);
 
+	SendMessageToPeers("BEGIN");
+
 	beginHandler(err, this);
 }
 
 void Session::OnGetCurrent(HTTPRequest::Status status)
 {
 	// get current games
-	numCurrentGames = sizeof(currentGames)/sizeof(currentGames[0]);
-	ServerError err = WLServResult_GetGameList(getCurrent, "activeGames", currentGames, &numCurrentGames);
+	uint32 gameList[1024];
+	int numGames = sizeof(gameList)/sizeof(gameList[0]);
+	ServerError err = WLServResult_GetGameList(getCurrent, "activeGames", gameList, &numGames);
 	if(err != SE_NO_ERROR)
 	{
 		updating ^= 1;
@@ -349,11 +549,16 @@ void Session::OnGetCurrent(HTTPRequest::Status status)
 
 	getCurrent.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetCurrentGame));
 
-	numCurrent = 0;
-	if(numCurrentGames)
+	if(numGames)
 	{
-		pCurrentGames = (GameState*)MFHeap_AllocAndZero(sizeof(GameState) * numCurrentGames);
-		WLServ_GameState(getCurrent, currentGames[0]);
+		currentGames.resize(numGames);
+		for(int a=0; a<numGames; ++a)
+		{
+			currentGames[a].id = gameList[a];
+			currentGames[a].bLoaded = false;
+		}
+
+		WLServ_GameState(getCurrent, currentGames[0].id);
 	}
 	else
 	{
@@ -365,13 +570,29 @@ void Session::OnGetCurrent(HTTPRequest::Status status)
 
 void Session::OnGetCurrentGame(HTTPRequest::Status status)
 {
-	ServerError err = WLServResult_GetGameState(getCurrent, &pCurrentGames[numCurrent]);
+	GameState state;
+	ServerError err = WLServResult_GetGameState(getCurrent, &state);
 	if(err == SE_NO_ERROR)
 	{
-		if(++numCurrent < numCurrentGames)
+		// find game
+		for(int a=0; a<currentGames.size(); ++a)
 		{
-			WLServ_GameState(getCurrent, currentGames[numCurrent]);
-			return;
+			if(currentGames[a].id == state.id)
+			{
+				currentGames[a].state = state;
+				currentGames[a].bLoaded = true;
+				break;
+			}
+		}
+
+		// find next game
+		for(int a=0; a<currentGames.size(); ++a)
+		{
+			if(!currentGames[a].bLoaded)
+			{
+				WLServ_GameState(getCurrent, currentGames[a].id);
+				return;
+			}
 		}
 	}
 
@@ -383,8 +604,9 @@ void Session::OnGetCurrentGame(HTTPRequest::Status status)
 void Session::OnGetPending(HTTPRequest::Status status)
 {
 	// get pending games
-	numPendingGames = sizeof(pendingGames)/sizeof(pendingGames[0]);
-	ServerError err = WLServResult_GetGameList(getPending, "gamesWaiting", pendingGames, &numPendingGames);
+	uint32 gameList[1024];
+	int numGames = sizeof(gameList)/sizeof(gameList[0]);
+	ServerError err = WLServResult_GetGameList(getPending, "gamesWaiting", gameList, &numGames);
 	if(err != SE_NO_ERROR)
 	{
 		updating ^= 2;
@@ -395,11 +617,16 @@ void Session::OnGetPending(HTTPRequest::Status status)
 
 	getPending.SetCompleteDelegate(MakeDelegate(this, &Session::OnGetPendingGame));
 
-	numPending = 0;
-	if(numPendingGames)
+	if(numGames)
 	{
-		pPendingGames = (GameDetails*)MFHeap_AllocAndZero(sizeof(GameDetails) * numPendingGames);
-		WLServ_GetGameByID(getPending, pendingGames[0]);
+		pendingGames.resize(numGames);
+		for(int a=0; a<numGames; ++a)
+		{
+			pendingGames[a].id = gameList[a];
+			pendingGames[a].bLoaded = false;
+		}
+
+		WLServ_GetGameByID(getPending, pendingGames[0].id);
 	}
 	else
 	{
@@ -411,13 +638,29 @@ void Session::OnGetPending(HTTPRequest::Status status)
 
 void Session::OnGetPendingGame(HTTPRequest::Status status)
 {
-	ServerError err = WLServResult_GetGameDetails(getPending, &pPendingGames[numPending]);
+	GameDetails details;
+	ServerError err = WLServResult_GetGameDetails(getPending, &details);
 	if(err == SE_NO_ERROR)
 	{
-		if(++numPending < numPendingGames)
+		// find game
+		for(int a=0; a<pendingGames.size(); ++a)
 		{
-			WLServ_GetGameByID(getPending, pendingGames[numPending]);
-			return;
+			if(pendingGames[a].id == details.id)
+			{
+				pendingGames[a].details = details;
+				pendingGames[a].bLoaded = true;
+				break;
+			}
+		}
+
+		// find next game
+		for(int a=0; a<pendingGames.size(); ++a)
+		{
+			if(!pendingGames[a].bLoaded)
+			{
+				WLServ_GetGameByID(getPending, pendingGames[a].id);
+				return;
+			}
 		}
 	}
 
@@ -429,8 +672,19 @@ void Session::OnGetPendingGame(HTTPRequest::Status status)
 void Session::OnGetPast(HTTPRequest::Status status)
 {
 	// get past games
-	numPastGames = sizeof(pastGames)/sizeof(pastGames[0]);
-	ServerError err = WLServResult_GetGameList(getPast, "pastGames", pastGames, &numPastGames);
+	uint32 gameList[1024];
+	int numGames = sizeof(gameList)/sizeof(gameList[0]);
+	ServerError err = WLServResult_GetGameList(getPast, "pastGames", gameList, &numGames);
+
+	if(err == SE_NO_ERROR)
+	{
+		pastGames.resize(numGames);
+		for(int a=0; a<numGames; ++a)
+		{
+			pastGames[a].id = gameList[a];
+			pastGames[a].bLoaded = false;
+		}
+	}
 
 	updating ^= 4;
 	if((updating & 4) == 0 && updateHandler)
@@ -459,18 +713,11 @@ void Session::Logout()
 
 void Session::OnLogin(HTTPRequest::Status status)
 {
-//	uiActionManager *pAM = GameData::Get()->GetActionManager();
-
 	ServerError err = WLServResult_GetUser(login, &user);
 	if(err != SE_NO_ERROR)
 	{
 		if(loginHandler)
 			loginHandler(err, this);
-/*
-		uiActionScript *pScript = pAM->FindAction("loginfailed");
-		if(pScript)
-			pAM->RunScript(pScript, NULL, NULL);
-*/
 		return;
 	}
 
@@ -478,45 +725,68 @@ void Session::OnLogin(HTTPRequest::Status status)
 	bLoggedIn = true;
 
 	// reset the game cache
-	numCurrentGames = numPendingGames = numPastGames = 0;
+	currentGames.clear();
+	pendingGames.clear();
+	pastGames.clear();
 
 	if(loginHandler)
 		loginHandler(SE_NO_ERROR, this);
-/*
-	uiActionScript *pScript = pAM->FindAction("loginsucceeded");
-	if(pScript)
-		pAM->RunScript(pScript, NULL, NULL);
-*/
 }
 
-GameState *Session::GetActiveGame()
+const GameState *Session::GetActiveGame() const
 {
-	return bLocalGame ? &offlineGames[activeGame] : &pCurrentGames[activeGame];
+	return bLocalGame ? &offlineGames[activeGame].state : &currentGames[activeGame].state;
 }
 
-GameDetails *Session::GetActiveLobby()
+GameDetails *Session::GetActiveLobby() const
 {
-	return bLocalGame ? NULL : &pPendingGames[activeGame];
+	return bLocalGame ? NULL : (GameDetails*)&pendingGames[activeGame].details;
 }
 
-GameDetails::Player *Session::GetLobbyPlayer()
+GameDetails::Player *Session::GetLobbyPlayer(uint32 id, int *pPlayer) const
 {
 	GameDetails *pGame = GetActiveLobby();
 	if(!pGame)
 		return NULL;
 
+	uint32 player = id == -1 ? user.id : id;
+
+	if(pPlayer)
+		*pPlayer = -1;
+
 	for(int a=0; a<pGame->maxPlayers; ++a)
 	{
-		if(pGame->players[a].id == user.id)
+		if(pGame->players[a].id == player)
+		{
+			if(pPlayer)
+				*pPlayer = a;
 			return &pGame->players[a];
+		}
 	}
 
 	return NULL;
 }
 
-bool Session::IsCreator()
+uint32 Session::GetGameID() const
 {
-	GameDetails *pGame = GetActiveLobby();
+	if(IsIngame())
+	{
+		const GameState *pGame = GetActiveGame();
+		return pGame->id;
+	}
+	else
+	{
+		const GameDetails *pGame = GetActiveLobby();
+		if(pGame)
+			return pGame->id;
+	}
+
+	return -1;
+}
+
+bool Session::IsCreator() const
+{
+	const GameDetails *pGame = GetActiveLobby();
 	if(!pGame)
 		return true;
 

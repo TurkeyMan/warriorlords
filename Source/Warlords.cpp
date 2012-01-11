@@ -96,7 +96,10 @@ void Game_Update()
 
 	pInputManager->Update();
 
-	Session::Update();
+	Session *pSession = Session::Get();
+	if(pSession)
+		pSession->Update();
+
 	Screen::UpdateScreen();
 
 	GameData::Get()->Update(); // old ui in here
@@ -277,3 +280,15 @@ int main(int argc, const char *argv[])
 }
 
 #endif
+/*
+#include <xmmintrin.h>
+
+__m128 poojabber( __m128 &t )
+{
+	__m128 x = _mm_add_ps(t, t);
+
+	HKWidget_GetVectorFromString( NULL );
+
+	return x;
+}
+*/

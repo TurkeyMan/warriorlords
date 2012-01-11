@@ -8,9 +8,11 @@
 extern Game *pGame;
 extern Editor *pEditor;
 
-void LobbyMenu::Load(HKWidget *pRoot, FrontMenu *pFrontMenu)
+void LobbyMenu::Load(HKWidget *pRoot, FrontMenu *_pFrontMenu)
 {
 	pMenu = pRoot;
+
+	pFrontMenu = _pFrontMenu;
 
 	if(pMenu)
 	{
@@ -22,7 +24,7 @@ void LobbyMenu::Load(HKWidget *pRoot, FrontMenu *pFrontMenu)
 
 		pStartButton->OnClicked += fastdelegate::MakeDelegate(this, &LobbyMenu::OnStartClicked);
 		pLeaveButton->OnClicked += fastdelegate::MakeDelegate(this, &LobbyMenu::OnLeaveClicked);
-		pReturnButton->OnClicked += fastdelegate::MakeDelegate(pFrontMenu, &FrontMenu::OnReturnClicked);
+		pReturnButton->OnClicked += fastdelegate::MakeDelegate(this, &LobbyMenu::OnReturnClicked);
 
 		for(int a=0; a<8; ++a)
 		{
@@ -48,50 +50,18 @@ void LobbyMenu::Load(HKWidget *pRoot, FrontMenu *pFrontMenu)
 	}
 }
 
-int LobbyMenu::LobbyThread(void *pArg)
-{
-	uint32 id = (uint32)(size_t)pArg;
-
-	MFSocket connection = MFSockets_CreateSocket(MFAF_Inet, MFSockType_Stream, MFProtocol_TCP);
-
-	MFSocketAddressInet address;
-	address.cbSize = sizeof(MFSocketAddressInet);
-	address.family = MFAF_Inet;
-	address.port = 43210;
-	address.address = MFSockets_MakeInetAddress(127,0,0,1);
-	MFSockets_Connect(connection, address);
-
-	MFString packet = MFString::Format("WLClient1.0\n%08x", id);
-	MFSockets_Send(connection, packet.CStr(), packet.NumBytes(), 0);
-
-	char buffer[1024];
-	int bytes = MFSockets_Recv(connection, buffer, sizeof(buffer), 0);
-	buffer[bytes] = 0;
-
-	if(MFString_Compare("Connection accepted", buffer))
-		return -1;
-
-	MFSockets_Send(connection, packet.CStr(), packet.NumBytes(), 0);
-
-	while(1)
-	{
-		int bytes = MFSockets_Recv(connection, buffer, sizeof(buffer), 0);
-	}
-
-	return 0;
-}
-
 void LobbyMenu::Show(GameDetails &_game)
 {
-	// kick off lobby thread
-	MFThread_CreateThread("Lobby Thread", LobbyThread, (void*)_game.id);
-
 	Session *pSession = Session::Get();
 	game = _game;
 
 	// make current and set the begin callback
 	pSession->SetBeginDelegate(MakeDelegate(this, &LobbyMenu::OnBegin));
 	pSession->MakeCurrent(game.id);
+
+	// get some detaials
+	bool bIsOnline = game.id != 0;
+	bool bCreator = pSession->IsCreator();
 
 	// load the map info
 	if(!game.bMapDetailsLoaded)
@@ -136,7 +106,7 @@ void LobbyMenu::Show(GameDetails &_game)
 		players[a].pPlayerRow->SetVisible(a < game.maxPlayers ? HKWidget::Visible : HKWidget::Gone); // show the row if the map has enough players
 		players[a].pPlayerConfig->SetVisible(a < game.numPlayers ? HKWidget::Visible : HKWidget::Gone); // hide the settings if the player has not yet joined
 
-		if(a < game.numPlayers)
+		if(bIsOnline ? game.players[a].id != 0 : a < game.numPlayers)
 		{
 			// set player name
 			players[a].pName->SetText(game.players[a].name);
@@ -146,6 +116,14 @@ void LobbyMenu::Show(GameDetails &_game)
 			players[a].pColour->SetSelection(game.players[a].colour - 1);
 
 			RepopulateHeroes(a, game.players[a].race, game.players[a].hero);
+
+			// disable selectboxes that aren't yours
+			if(bIsOnline && pSession->GetUserID() != game.players[a].id)
+			{
+				players[a].pRace->SetEnabled(false);
+				players[a].pColour->SetEnabled(false);
+				players[a].pHero->SetEnabled(false);
+			}
 		}
 		else if(a < game.maxPlayers)
 		{
@@ -157,13 +135,20 @@ void LobbyMenu::Show(GameDetails &_game)
 	bUpdatingLists = false;
 
 	// show the start or leave button
-	bool bCreator = pSession->IsCreator();
 	pStartButton->SetVisible(bCreator ? HKWidget::Visible : HKWidget::Gone);
 	pStartButton->SetEnabled(game.numPlayers == game.maxPlayers);
 
 	pLeaveButton->SetVisible(!bCreator ? HKWidget::Visible : HKWidget::Gone);
 
 	FrontMenu::Get()->ShowAsCurrent(pMenu);
+
+	if(bIsOnline)
+	{
+		// connect to the message server
+		pSession->SetMessageCallback(fastdelegate::MakeDelegate(this, &LobbyMenu::ReceivePeerMessage));
+		pSession->EnableRealtimeConnection(true);
+		pSession->SendMessageToPeers("JOIN");
+	}
 }
 
 void LobbyMenu::RepopulateHeroes(int player, int race, int hero)
@@ -193,7 +178,75 @@ void LobbyMenu::RepopulateHeroes(int player, int race, int hero)
 
 	bUpdatingHeroes = false;
 
-	players[player].pHero->SetSelection(hero+1);
+	players[player].pHero->SetSelection(hero + 1);
+}
+
+void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
+{
+	Session *pSession = Session::Get();
+	GameDetails *pDetails = pSession->GetActiveLobby();
+
+	int player;
+	GameDetails::Player *pPlayer = pSession->GetLobbyPlayer(user, &player);
+
+	do
+	{
+		char *pNextLine = MFString_Chr(pMessage, '\n');
+		if(pNextLine)
+			*pNextLine++ = 0;
+
+		char *pArg = MFString_Chr(pMessage, ':');
+		if(pArg)
+			*pArg++ = 0;
+
+		if(!MFString_CaseCmp(pMessage, "JOIN"))
+		{
+			// we need to know more information... the players details
+			//... hit the google server?
+		}
+		else if(!MFString_CaseCmp(pMessage, "LEAVE"))
+		{
+			if(pPlayer)
+			{
+				// the player left the game...
+				pPlayer->id = 0;
+
+				players[player].pPlayerRow->SetVisible(HKWidget::Gone);
+				players[player].pPlayerConfig->SetVisible(HKWidget::Gone);
+				players[player].pName->SetText("Waiting for player...");
+			}
+		}
+		else if(!MFString_CaseCmp(pMessage, "SETRACE"))
+		{
+			if(pPlayer)
+			{
+				int race = MFString_AsciiToInteger(pArg);
+				pPlayer->race = race;
+				players[player].pRace->SetSelection(race);
+			}
+		}
+		else if(!MFString_CaseCmp(pMessage, "SETCOLOUR"))
+		{
+			if(pPlayer)
+			{
+				int colour = MFString_AsciiToInteger(pArg);
+				pPlayer->colour = colour;
+				players[player].pColour->SetSelection(colour - 1);
+			}
+		}
+		else if(!MFString_CaseCmp(pMessage, "SETHERO"))
+		{
+			if(pPlayer)
+			{
+				int hero = MFString_AsciiToInteger(pArg);
+				pPlayer->hero = hero;
+				players[player].pHero->SetSelection(hero + 1);
+			}
+		}
+
+		pMessage = pNextLine;
+	}
+	while(pMessage);
 }
 
 void LobbyMenu::OnStartClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
@@ -294,6 +347,14 @@ void LobbyMenu::OnLeaveClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 	pSession->LeaveGame(game.id, MakeDelegate(this, &LobbyMenu::OnGameLeft));
 }
 
+void LobbyMenu::OnReturnClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
+{
+	Session *pSession = Session::Get();
+	pSession->EnableRealtimeConnection(false);
+
+	pFrontMenu->OnReturnClicked(sender, ev);
+}
+
 void LobbyMenu::OnRaceChanged(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
 	if(bUpdatingLists)
@@ -371,7 +432,7 @@ void LobbyMenu::OnHeroChanged(HKWidget &sender, const HKWidgetEventInfo &ev)
 
 	// change hero
 //	int hero = players[player].heroList[selectEv.selection].id;
-	int hero = selectEv.selection;
+	int hero = selectEv.selection - 1;
 	if(game.players[player].hero != hero)
 	{
 		if(game.id != 0)
@@ -398,7 +459,7 @@ void LobbyMenu::CommitRace(ServerError error, Session *pSession)
 	if(error == SE_NO_ERROR)
 		game.players[setPlayer].race = setRace;
 	else
-		players[setPlayer].pRace->SetSelection(game.players[setPlayer].race - 1);
+		players[setPlayer].pRace->SetSelection(game.players[setPlayer].race);
 }
 
 void LobbyMenu::CommitColour(ServerError error, Session *pSession)
@@ -408,7 +469,7 @@ void LobbyMenu::CommitColour(ServerError error, Session *pSession)
 	if(error == SE_NO_ERROR)
 		game.players[setPlayer].colour = setColour;
 	else
-		players[setPlayer].pHero->SetSelection(game.players[setPlayer].colour - 1);
+		players[setPlayer].pColour->SetSelection(game.players[setPlayer].colour - 1);
 }
 
 void LobbyMenu::CommitHero(ServerError error, Session *pSession)
@@ -418,7 +479,7 @@ void LobbyMenu::CommitHero(ServerError error, Session *pSession)
 	if(error == SE_NO_ERROR)
 		game.players[setPlayer].hero = setHero;
 	else
-		players[setPlayer].pHero->SetSelection(game.players[setPlayer].hero);
+		players[setPlayer].pHero->SetSelection(game.players[setPlayer].hero + 1);
 }
 
 void LobbyMenu::OnBegin(ServerError error, Session *pSession)
@@ -440,6 +501,8 @@ void LobbyMenu::OnGameLeft(ServerError error, Session *pSession)
 	HKWidgetEventInfo ev(pReturnButton);
 	FrontMenu::Get()->HideCurrent();
 	FrontMenu::Get()->ShowMainMenu();
+
+	pSession->EnableRealtimeConnection(false);
 }
 
 // list adapter

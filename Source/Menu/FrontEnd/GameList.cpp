@@ -76,7 +76,7 @@ void ListMenu::ShowJoin()
 	Session *pSession = Session::Get();
 	if(pSession->IsLoggedIn())
 	{
-		pSession->FindGames(fastdelegate::MakeDelegate(this, &ListMenu::OnFindResponse), NULL);
+		pSession->FindGames(fastdelegate::MakeDelegate(this, &ListMenu::OnFindResponse));
 	}
 
 	bReturnToMain = false;
@@ -322,6 +322,8 @@ void ListMenu::OnUpdateResponse(ServerError err, Session *pSession)
 	for(int a=0; a<numGames; ++a)
 	{
 		GameState *pState = pSession->GetCurrentGame(a);
+		if(!pState)
+			continue;
 
 		ListItem i;
 		i.id = pState->id;
@@ -336,6 +338,8 @@ void ListMenu::OnUpdateResponse(ServerError err, Session *pSession)
 	for(int a=0; a<numGames; ++a)
 	{
 		GameDetails *pState = pSession->GetPendingGame(a);
+		if(!pState)
+			continue;
 
 		ListItem i;
 		i.id = pState->id;

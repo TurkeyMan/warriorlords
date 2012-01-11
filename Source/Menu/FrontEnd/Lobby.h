@@ -70,6 +70,8 @@ protected:
 	Player players[8];
 	int numPlayers;
 
+	FrontMenu *pFrontMenu;
+
 	HKWidget *pMenu;
 
 	HKWidgetLabel *pTitle;
@@ -93,6 +95,10 @@ protected:
 
 	void RepopulateHeroes(int player, int race, int hero);
 
+	void ReceivePeerMessage(uint32 user, const char *pMessage);
+
+	void OnReturnClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
+
 	void OnStartClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
 	void OnLeaveClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
 	void OnRaceChanged(HKWidget &sender, const HKWidgetEventInfo &ev);
@@ -104,8 +110,6 @@ protected:
 	void CommitHero(ServerError error, Session *pSession);
 	void OnBegin(ServerError error, Session *pSession);
 	void OnGameLeft(ServerError error, Session *pSession);
-
-	static int LobbyThread(void *pArg);
 };
 
 #endif
