@@ -16,6 +16,8 @@ public:
 	void Load(HKWidget *pRoot, FrontMenu *pFrontMenu);
 	void Show(GameDetails &game);
 
+	GameDetails::Player *GetLobbyPlayer(uint32 id, int *pPlayer);
+
 protected:
 	struct ListItem
 	{

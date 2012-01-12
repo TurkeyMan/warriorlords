@@ -81,6 +81,7 @@ void Session::Update()
 	{
 		if(!bAddressKnown)
 		{
+#if 1
 			// look up address
 			MFAddressInfo *pInfo = NULL;
 			MFSockets_GetAddressInfo("keywestdata.com", NULL, NULL, &pInfo);
@@ -98,6 +99,13 @@ void Session::Update()
 
 				pInfo = pInfo->pNext;
 			}
+#else
+			serverAddress.cbSize = sizeof(MFSocketAddressInet);
+			serverAddress.family = MFAF_Inet;
+			serverAddress.address = MFSockets_MakeInetAddress(127, 0, 0, 1);
+			serverAddress.port = 43210;
+			bAddressKnown = true;
+#endif
 		}
 
 		if(bAddressKnown)
@@ -584,14 +592,23 @@ void Session::OnGetCurrentGame(HTTPRequest::Status status)
 				break;
 			}
 		}
+	}
 
-		// find next game
-		for(int a=0; a<currentGames.size(); ++a)
+	// find next game
+	int skip = err == SE_NO_ERROR ? 0 : 1;
+	for(int a=0; a<currentGames.size(); ++a)
+	{
+		if(!currentGames[a].bLoaded)
 		{
-			if(!currentGames[a].bLoaded)
+			if(skip == 0)
 			{
 				WLServ_GameState(getCurrent, currentGames[a].id);
 				return;
+			}
+			else
+			{
+				currentGames.remove(a--);
+				--skip;
 			}
 		}
 	}
@@ -652,14 +669,23 @@ void Session::OnGetPendingGame(HTTPRequest::Status status)
 				break;
 			}
 		}
+	}
 
-		// find next game
-		for(int a=0; a<pendingGames.size(); ++a)
+	// find next game
+	int skip = err == SE_NO_ERROR ? 0 : 1;
+	for(int a=0; a<pendingGames.size(); ++a)
+	{
+		if(!pendingGames[a].bLoaded)
 		{
-			if(!pendingGames[a].bLoaded)
+			if(skip == 0)
 			{
 				WLServ_GetGameByID(getPending, pendingGames[a].id);
 				return;
+			}
+			else
+			{
+				pendingGames.remove(a--);
+				--skip;
 			}
 		}
 	}

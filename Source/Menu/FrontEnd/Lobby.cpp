@@ -61,7 +61,7 @@ void LobbyMenu::Show(GameDetails &_game)
 
 	// get some detaials
 	bool bIsOnline = game.id != 0;
-	bool bCreator = pSession->IsCreator();
+	bool bCreator = bIsOnline ? game.players[0].id == pSession->GetUserID() : true;
 
 	// load the map info
 	if(!game.bMapDetailsLoaded)
@@ -105,7 +105,7 @@ void LobbyMenu::Show(GameDetails &_game)
 	{
 		bool bPlayerVisible = bIsOnline ? game.players[a].id != 0 : a < game.numPlayers;
 
-		players[a].pPlayerRow->SetVisible(bPlayerVisible ? HKWidget::Visible : HKWidget::Gone); // show the row if the map has enough players
+		players[a].pPlayerRow->SetVisible(a < game.maxPlayers ? HKWidget::Visible : HKWidget::Gone); // show the row if the map has enough players
 		players[a].pPlayerConfig->SetVisible(bPlayerVisible ? HKWidget::Visible : HKWidget::Gone); // hide the settings if the player has not yet joined
 
 		if(bPlayerVisible)
@@ -157,6 +157,20 @@ void LobbyMenu::Show(GameDetails &_game)
 	}
 }
 
+GameDetails::Player *LobbyMenu::GetLobbyPlayer(uint32 id, int *pPlayer)
+{
+	for(int a=0; a<game.maxPlayers; ++a)
+	{
+		if(game.players[a].id == id)
+		{
+			if(pPlayer)
+				*pPlayer = a;
+			return &game.players[a];
+		}
+	}
+	return NULL;
+}
+
 void LobbyMenu::RepopulateHeroes(int player, int race, int hero)
 {
 	bUpdatingHeroes = true;
@@ -190,10 +204,9 @@ void LobbyMenu::RepopulateHeroes(int player, int race, int hero)
 void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 {
 	Session *pSession = Session::Get();
-	GameDetails *pDetails = pSession->GetActiveLobby();
 
 	int player;
-	GameDetails::Player *pPlayer = pSession->GetLobbyPlayer(user, &player);
+	GameDetails::Player *pPlayer = GetLobbyPlayer(user, &player);
 
 	do
 	{
@@ -211,7 +224,7 @@ void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 			if(pName) *pName++ = 0;
 
 			int pos = MFString_AsciiToInteger(pArg);
-			GameDetails::Player &player = pDetails->players[pos];
+			GameDetails::Player &player = game.players[pos];
 
 			if(player.id != user)
 			{
@@ -254,6 +267,8 @@ void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 				players[pos].pHero->SetEnabled(false);
 
 				++game.numPlayers;
+
+				pStartButton->SetEnabled(game.numPlayers == game.maxPlayers);
 			}
 		}
 		else if(!MFString_CaseCmp(pMessage, "LEAVE"))
@@ -265,11 +280,12 @@ void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 				// the player left the game...
 				pPlayer->id = 0;
 
-				players[player].pPlayerRow->SetVisible(HKWidget::Gone);
 				players[player].pPlayerConfig->SetVisible(HKWidget::Gone);
 				players[player].pName->SetText("Waiting for player...");
 
 				--game.numPlayers;
+
+				pStartButton->SetEnabled(false);
 			}
 		}
 		else if(!MFString_CaseCmp(pMessage, "SETRACE"))
@@ -279,6 +295,7 @@ void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 				int race = MFString_AsciiToInteger(pArg);
 				pPlayer->race = race;
 				players[player].pRace->SetSelection(race);
+				RepopulateHeroes(player, race, pPlayer->hero);
 			}
 		}
 		else if(!MFString_CaseCmp(pMessage, "SETCOLOUR"))
