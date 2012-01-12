@@ -103,6 +103,7 @@ private void groupThread(shared Group group)
 
 	Socket[] sockets;
 	SocketSet readSet = new SocketSet();
+	SocketSet errorSet = new SocketSet();
 
 	writefln("Creted new group: %08X", group.id);
 
@@ -122,56 +123,56 @@ private void groupThread(shared Group group)
 		writefln("Client %d left group: %08X - num clients: %d", handle, group.id, sockets.length);
 	}
 
-	for (;; readSet.reset())
+	for (;; readSet.reset(), errorSet.reset())
 	{
 		try
 		{
 			// poll for new clients
 			while(receiveTimeout(d, &newClient, (OwnerTerminated){ /* we don't care when the patent thread terminates */ }))
 			{
-				// allow to process all incoming messages...
+				// nothing
 			}
 
 			if(sockets.length > 0)
 			{
 				// add sockets to list
-				foreach(i, socket; sockets)
+				foreach(socket; sockets)
 				{
-					if(socket.isAlive)
-						readSet.add(socket);
-					else
-					{
-						removeClient(i);
-
-						// if there are none left in the group...
-						if(sockets.length == 0)
-						{
-							writefln("All clients have left group: %08X", group.id);
-
-							// destroy the group and terminate the thread
-							groups.remove(group.id);
-							return;
-						}
-					}
+					readSet.add(socket);
+					errorSet.add(socket);
 				}
 
 				// should use a timeout or something
-				int signal = Socket.select(readSet, null, null, 100_000); // dur!("msecs")(100) // WHY DOESN'T THIS OVERLOAD EXIST?
+				int signal = Socket.select(readSet, null, errorSet, 200_000); // dur!("msecs")(100) // WHY DOESN'T THIS OVERLOAD EXIST?
 				if(signal > 0)
 				{
-					// echo messages
-					foreach(i, socket; sockets)
+					// remove disconnected sockets
+					for(int i=0; i<sockets.count;)
 					{
-						if(readSet.isSet(socket))
+						if(errorSet.isSet(sockets[i]))
+						{
+							// remove from list
+							removeClient(i);
+						}
+						else
+						{
+							++i;
+						}
+					}
+
+					// echo messages
+					for(int i=0; i<sockets.count;)
+					{
+						if(readSet.isSet(sockets[i]))
 						{
 							// recv the packet
 							char[1024] buffer;
-							auto bytes = socket.receive(buffer[]);
+							auto bytes = sockets[i].receive(buffer[]);
 							if(bytes > 0)
 							{
 								char[] message = buffer[0..bytes];
 
-								writefln("Client %d -> %s", cast(int)socket.handle, message);
+								writefln("Client %d -> %s", cast(int)sockets[i].handle, message);
 
 								// and echo to other clients
 								for(int j=0; j<sockets.count; ++j)
@@ -181,8 +182,28 @@ private void groupThread(shared Group group)
 
 									sockets[j].send(message);
 								}
+								++i;
+							}
+							else
+							{
+								// remove from list
+								removeClient(i);
 							}
 						}
+						else
+						{
+							++i;
+						}
+					}
+
+					// if there are none left in the group...
+					if(sockets.length == 0)
+					{
+						writefln("All clients have left group: %08X", group.id);
+
+						// destroy the group and terminate the thread
+						groups.remove(group.id);
+						return;
 					}
 				}
 			}
