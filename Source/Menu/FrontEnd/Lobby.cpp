@@ -103,10 +103,12 @@ void LobbyMenu::Show(GameDetails &_game)
 	// update the players
 	for(int a=0; a<8; ++a)
 	{
-		players[a].pPlayerRow->SetVisible(a < game.maxPlayers ? HKWidget::Visible : HKWidget::Gone); // show the row if the map has enough players
-		players[a].pPlayerConfig->SetVisible(a < game.numPlayers ? HKWidget::Visible : HKWidget::Gone); // hide the settings if the player has not yet joined
+		bool bPlayerVisible = bIsOnline ? game.players[a].id != 0 : a < game.numPlayers;
 
-		if(bIsOnline ? game.players[a].id != 0 : a < game.numPlayers)
+		players[a].pPlayerRow->SetVisible(bPlayerVisible ? HKWidget::Visible : HKWidget::Gone); // show the row if the map has enough players
+		players[a].pPlayerConfig->SetVisible(bPlayerVisible ? HKWidget::Visible : HKWidget::Gone); // hide the settings if the player has not yet joined
+
+		if(bPlayerVisible)
 		{
 			// set player name
 			players[a].pName->SetText(game.players[a].name);
@@ -147,7 +149,11 @@ void LobbyMenu::Show(GameDetails &_game)
 		// connect to the message server
 		pSession->SetMessageCallback(fastdelegate::MakeDelegate(this, &LobbyMenu::ReceivePeerMessage));
 		pSession->EnableRealtimeConnection(true);
-		pSession->SendMessageToPeers("JOIN");
+
+		// send join message
+		int player;
+		GameDetails::Player *pPlayer = pSession->GetLobbyPlayer(-1, &player);
+		pSession->SendMessageToPeers(MFStr("JOIN:%d:%s:%d:%d:%d", player, pPlayer->name, pPlayer->race, pPlayer->colour, pPlayer->hero));
 	}
 }
 
@@ -201,19 +207,69 @@ void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 
 		if(!MFString_CaseCmp(pMessage, "JOIN"))
 		{
-			// we need to know more information... the players details
-			//... hit the google server?
+			char *pName = MFString_Chr(pArg, ':');
+			if(pName) *pName++ = 0;
+
+			int pos = MFString_AsciiToInteger(pArg);
+			GameDetails::Player &player = pDetails->players[pos];
+
+			if(player.id != user)
+			{
+				MFDebug_Assert(player.id == 0, "Player already present!?");
+
+				// parse the args
+				char *pRace = MFString_Chr(pName, ':');
+				if(pRace) *pRace++ = 0;
+				char *pColour = MFString_Chr(pRace, ':');
+				if(pColour) *pColour++ = 0;
+				char *pHero = MFString_Chr(pColour, ':');
+				if(pHero) *pHero++ = 0;
+
+				int race = MFString_AsciiToInteger(pRace);
+				int colour = MFString_AsciiToInteger(pColour);
+				int hero = MFString_AsciiToInteger(pHero);
+
+				// set the player details
+				player.id = user;
+				MFString_Copy(player.name, pName);
+				player.race = race;
+				player.colour = colour;
+				player.hero = hero;
+
+				// make the player visible
+				players[pos].pPlayerRow->SetVisible(HKWidget::Visible);
+				players[pos].pPlayerConfig->SetVisible(HKWidget::Visible);
+
+				// and set up the players UI
+				players[pos].pName->SetText(pName);
+
+				// set the players selection
+				players[pos].pRace->SetSelection(race);
+				players[pos].pColour->SetSelection(colour - 1);
+				RepopulateHeroes(pos, race, hero);
+
+				// disable the UI
+				players[pos].pRace->SetEnabled(false);
+				players[pos].pColour->SetEnabled(false);
+				players[pos].pHero->SetEnabled(false);
+
+				++game.numPlayers;
+			}
 		}
 		else if(!MFString_CaseCmp(pMessage, "LEAVE"))
 		{
 			if(pPlayer)
 			{
+				// TODO: shuffle the players up one slot.
+
 				// the player left the game...
 				pPlayer->id = 0;
 
 				players[player].pPlayerRow->SetVisible(HKWidget::Gone);
 				players[player].pPlayerConfig->SetVisible(HKWidget::Gone);
 				players[player].pName->SetText("Waiting for player...");
+
+				--game.numPlayers;
 			}
 		}
 		else if(!MFString_CaseCmp(pMessage, "SETRACE"))
@@ -242,6 +298,10 @@ void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 				pPlayer->hero = hero;
 				players[player].pHero->SetSelection(hero + 1);
 			}
+		}
+		else if(!MFString_CaseCmp(pMessage, "START"))
+		{
+			// TODO!!
 		}
 
 		pMessage = pNextLine;
