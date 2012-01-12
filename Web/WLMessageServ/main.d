@@ -59,8 +59,6 @@ private void negotiationThread(shared Socket newConnection)
 
 	try
 	{
-		writeln("Incoming connection...");
-
 		// receive connection request
 		char[1024] request;
 		auto bytes = connection.receive(request[]);
@@ -75,8 +73,6 @@ private void negotiationThread(shared Socket newConnection)
 		// acknowledge connection
 		string acceptedString = "Connection accepted";
 		connection.send(acceptedString);
-
-		writeln("Connection accepted!");
 
 		auto group = id in groups;
 		if(group == null)
@@ -107,7 +103,6 @@ private void groupThread(shared Group group)
 
 	Socket[] sockets;
 	SocketSet readSet = new SocketSet();
-	SocketSet errorSet = new SocketSet();
 
 	writefln("Creted new group: %08X", group.id);
 
@@ -127,56 +122,56 @@ private void groupThread(shared Group group)
 		writefln("Client %d left group: %08X - num clients: %d", handle, group.id, sockets.length);
 	}
 
-	for (;; readSet.reset(), errorSet.reset())
+	for (;; readSet.reset())
 	{
 		try
 		{
 			// poll for new clients
 			while(receiveTimeout(d, &newClient, (OwnerTerminated){ /* we don't care when the patent thread terminates */ }))
 			{
-				// nothing
+				// allow to process all incoming messages...
 			}
 
 			if(sockets.length > 0)
 			{
 				// add sockets to list
-				foreach(socket; sockets)
+				foreach(i, socket; sockets)
 				{
-					readSet.add(socket);
-					errorSet.add(socket);
+					if(socket.isAlive)
+						readSet.add(socket);
+					else
+					{
+						removeClient(i);
+
+						// if there are none left in the group...
+						if(sockets.length == 0)
+						{
+							writefln("All clients have left group: %08X", group.id);
+
+							// destroy the group and terminate the thread
+							groups.remove(group.id);
+							return;
+						}
+					}
 				}
 
 				// should use a timeout or something
-				int signal = Socket.select(readSet, null, errorSet, 100_000); // dur!("msecs")(100) // WHY DOESN'T THIS OVERLOAD EXIST?
+				int signal = Socket.select(readSet, null, null, 100_000); // dur!("msecs")(100) // WHY DOESN'T THIS OVERLOAD EXIST?
 				if(signal > 0)
 				{
-					// remove disconnected sockets
-					for(int i=0; i<sockets.count;)
-					{
-						if(errorSet.isSet(sockets[i]))
-						{
-							// remove from list
-							removeClient(i);
-						}
-						else
-						{
-							++i;
-						}
-					}
-
 					// echo messages
-					for(int i=0; i<sockets.count;)
+					foreach(i, socket; sockets)
 					{
-						if(readSet.isSet(sockets[i]))
+						if(readSet.isSet(socket))
 						{
 							// recv the packet
 							char[1024] buffer;
-							auto bytes = sockets[i].receive(buffer[]);
+							auto bytes = socket.receive(buffer[]);
 							if(bytes > 0)
 							{
 								char[] message = buffer[0..bytes];
 
-								writefln("Client %d -> %s", cast(int)sockets[i].handle, message);
+								writefln("Client %d -> %s", cast(int)socket.handle, message);
 
 								// and echo to other clients
 								for(int j=0; j<sockets.count; ++j)
@@ -186,28 +181,8 @@ private void groupThread(shared Group group)
 
 									sockets[j].send(message);
 								}
-								++i;
-							}
-							else
-							{
-								// remove from list
-								removeClient(i);
 							}
 						}
-						else
-						{
-							++i;
-						}
-					}
-
-					// if there are none left in the group...
-					if(sockets.length == 0)
-					{
-						writefln("All clients have left group: %08X", group.id);
-
-						// destroy the group and terminate the thread
-						groups.remove(group.id);
-						return;
 					}
 				}
 			}
