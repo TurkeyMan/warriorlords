@@ -275,13 +275,34 @@ void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 		{
 			if(pPlayer)
 			{
-				// TODO: shuffle the players up one slot.
+				// shuffle the players up one slot.
+				for(int a = player; a < game.numPlayers; ++a)
+				{
+					if(a < game.numPlayers - 1)
+					{
+						game.players[a] = game.players[a + 1];
 
-				// the player left the game...
-				pPlayer->id = 0;
+						// and set up the players UI
+						players[a].pName->SetText(game.players[a].name);
 
-				players[player].pPlayerConfig->SetVisible(HKWidget::Gone);
-				players[player].pName->SetText("Waiting for player...");
+						// set the players selection
+						players[a].pRace->SetSelection(game.players[a].race);
+						players[a].pColour->SetSelection(game.players[a].colour - 1);
+						RepopulateHeroes(a, game.players[a].race, game.players[a].hero);
+
+						// disable the UI
+						bool bIsMe = game.players[a].id == pSession->GetUserID();
+						players[a].pRace->SetEnabled(bIsMe);
+						players[a].pColour->SetEnabled(bIsMe);
+						players[a].pHero->SetEnabled(bIsMe);
+					}
+					else
+					{
+						game.players[a].id = 0;
+						players[a].pPlayerConfig->SetVisible(HKWidget::Gone);
+						players[a].pName->SetText("Waiting for player...");
+					}
+				}
 
 				--game.numPlayers;
 
@@ -294,8 +315,9 @@ void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 			{
 				int race = MFString_AsciiToInteger(pArg);
 				pPlayer->race = race;
+				pPlayer->hero = -1;
 				players[player].pRace->SetSelection(race);
-				RepopulateHeroes(player, race, pPlayer->hero);
+				RepopulateHeroes(player, race, -1);
 			}
 		}
 		else if(!MFString_CaseCmp(pMessage, "SETCOLOUR"))
@@ -318,7 +340,10 @@ void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 		}
 		else if(!MFString_CaseCmp(pMessage, "START"))
 		{
-			// TODO!!
+			// need to load game state from server...
+			pSession->EnterGame(game.id, MakeDelegate(this, &LobbyMenu::StartGame));
+
+			// TODO: disable ALL UI...
 		}
 
 		pMessage = pNextLine;
@@ -561,16 +586,16 @@ void LobbyMenu::CommitHero(ServerError error, Session *pSession)
 
 void LobbyMenu::OnBegin(ServerError error, Session *pSession)
 {
-	if(error == SE_NO_ERROR)
-	{
-		// start game
-		params.gameID = game.id;
-		pGame = new Game(&params);
-		Game::SetCurrent(pGame);
-		pGame->BeginGame();
+	if(error != SE_NO_ERROR)
+		return;
 
-		FrontMenu::Get()->Hide();
-	}
+	// start game
+	params.gameID = game.id;
+	pGame = new Game(&params);
+	Game::SetCurrent(pGame);
+	pGame->BeginGame();
+
+	FrontMenu::Get()->Hide();
 }
 
 void LobbyMenu::OnGameLeft(ServerError error, Session *pSession)
@@ -580,6 +605,18 @@ void LobbyMenu::OnGameLeft(ServerError error, Session *pSession)
 	FrontMenu::Get()->ShowMainMenu();
 
 	pSession->EnableRealtimeConnection(false);
+}
+
+void LobbyMenu::StartGame(ServerError error, Session *pSession, GameState *pState)
+{
+	if(error != SE_NO_ERROR)
+		return;
+
+	// start game
+	pGame = new Game(pState);
+	Game::SetCurrent(pGame);
+
+	FrontMenu::Get()->Hide();	
 }
 
 // list adapter

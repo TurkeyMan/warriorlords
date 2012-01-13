@@ -9,6 +9,7 @@ public:
 	typedef FastDelegate2<ServerError, Session *> SessionDelegate;
 	typedef FastDelegate3<ServerError, Session *, GameDetails *> JoinDelegate;
 	typedef FastDelegate4<ServerError, Session *, GameLobby *, int> FindDelegate;
+	typedef FastDelegate3<ServerError, Session *, GameState *> BeginDelegate;
 	typedef FastDelegate2<uint32, const char *> PeerMessageDelegate;
 
 	static void InitSession();
@@ -51,6 +52,7 @@ public:
 	void CreateGame(const GameCreateDetails &details, JoinDelegate callback);
 	void JoinGame(MFString game, JoinDelegate callback);
 	void LeaveGame(uint32 game, SessionDelegate callback);
+	void EnterGame(uint32 game, BeginDelegate callback);
 	void MakeCurrent(uint32 game);
 	void BeginGame(uint32 game, uint32 *pPlayers, int numPlayers);
 
@@ -96,6 +98,7 @@ protected:
 	JoinDelegate createHandler;
 	JoinDelegate joinHandler;
 	FindDelegate findHandler;
+	BeginDelegate startHandler;
 
 	// game lists
 	struct ActiveGame
@@ -169,6 +172,7 @@ protected:
 	void OnHeroSet(HTTPRequest::Status status);
 	void OnBegin(HTTPRequest::Status status);
 	void OnLeave(HTTPRequest::Status status);
+	void OnEnter(HTTPRequest::Status status);
 };
 
 #endif

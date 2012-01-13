@@ -33,8 +33,6 @@ Session::Session()
 	setColour.SetCompleteDelegate(MakeDelegate(this, &Session::OnColourSet));
 	setHero.SetCompleteDelegate(MakeDelegate(this, &Session::OnHeroSet));
 
-	begin.SetCompleteDelegate(MakeDelegate(this, &Session::OnBegin));
-
 	setRaceValue = setColourValue = setHeroValue = -1;
 
 	// attempt to login...
@@ -295,6 +293,14 @@ void Session::LeaveGame(uint32 game, SessionDelegate callback)
 	WLServ_LeaveGame(leave, GetUserID(), game);
 }
 
+void Session::EnterGame(uint32 game, BeginDelegate callback)
+{
+	startHandler = callback;
+
+	begin.SetCompleteDelegate(MakeDelegate(this, &Session::OnEnter));
+	WLServ_GameState(begin, game);
+}
+
 void Session::MakeCurrent(uint32 game)
 {
 	for(int a=0; a<pendingGames.size(); ++a)
@@ -375,6 +381,7 @@ void Session::BeginGame(uint32 game, uint32 *pPlayers, int numPlayers)
 {
 	const GameDetails *pGame = GetActiveLobby();
 
+	begin.SetCompleteDelegate(MakeDelegate(this, &Session::OnBegin));
 	WLServ_BeginGame(begin, pGame->id, pPlayers, pGame->numPlayers);
 }
 
@@ -533,12 +540,26 @@ void Session::OnHeroSet(HTTPRequest::Status status)
 
 void Session::OnBegin(HTTPRequest::Status status)
 {
-	GameDetails *pGame = GetActiveLobby();
-	ServerError err = WLServResult_GetGame(begin, &pGame->id);
+	uint32 gameID;
+	ServerError err = WLServResult_GetGame(begin, &gameID);
 
-	SendMessageToPeers("BEGIN");
+	if(err == SE_NO_ERROR)
+	{
+		GameDetails *pGame = GetActiveLobby();
+		pGame->id = gameID;
+	}
+
+	SendMessageToPeers("START");
 
 	beginHandler(err, this);
+}
+
+void Session::OnEnter(HTTPRequest::Status status)
+{
+	GameState state;
+	ServerError err = WLServResult_GetGameState(begin, &state);
+
+	startHandler(err, this, &state);
 }
 
 void Session::OnGetCurrent(HTTPRequest::Status status)

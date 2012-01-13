@@ -112,6 +112,8 @@ protected:
 	void CommitHero(ServerError error, Session *pSession);
 	void OnBegin(ServerError error, Session *pSession);
 	void OnGameLeft(ServerError error, Session *pSession);
+
+	void StartGame(ServerError error, Session *pSession, GameState *pState);
 };
 
 #endif
