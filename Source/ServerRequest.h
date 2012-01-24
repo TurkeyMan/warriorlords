@@ -151,18 +151,16 @@ public:
 
 	void Update();
 
-	int GetNumActions() { return numActions; }
-	GameAction *GetAction(int action) { return ppActionList[action]; }
+	int GetNumActions() { return actionList.size(); }
+	GameAction *GetAction(int action) { return actionList[action]; }
 
 	GameAction *SubmitAction(GameActions action, int numArgs);
 	GameAction *SubmitActionArgs(GameActions action, int numArgs, va_list args);
 
 	void Sync();
 
-	GameAction **ppActionList;
+	MFArray<GameAction*> actionList;
 	int numServerActions;
-	int numActions;
-	int numAllocated;
 	int commitPending;
 
 	float timeout;
@@ -172,7 +170,6 @@ public:
 	HTTPRequest update;
 
 protected:
-	void Grow(int minItems);
 	void RequestCallback(HTTPRequest::Status status);
 };
 

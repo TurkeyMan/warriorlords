@@ -28,6 +28,7 @@
 				<Button id="resume" size="64,64" background_image="Tickicon" style="menu-button" />
 				<Widget width="32" />
 				<Button id="return" size="64,64" background_image="Undoicon" style="menu-button" />
+				<Button id="edit" size="32,32" align="center" background_image="Edit" style="menu-button" visible="gone"/>
 			</LinearLayout>
 
 		</Frame>

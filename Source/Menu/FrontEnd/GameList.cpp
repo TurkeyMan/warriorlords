@@ -4,7 +4,11 @@
 #include "Menu/FrontEnd/GameList.h"
 #include "Menu/Menu.h"
 
+#include "Editor.h"
+#include "Screen.h"
+
 extern Game *pGame;
+extern Editor *pEditor;
 
 // ListMenu
 void ListMenu::Load(HKWidget *pRoot, FrontMenu *pFrontMenu)
@@ -16,6 +20,7 @@ void ListMenu::Load(HKWidget *pRoot, FrontMenu *pFrontMenu)
 		pActiveList = pMenu->FindChild<HKWidgetListbox>("activegames");
 		pResumeButton = pMenu->FindChild<HKWidgetButton>("resume");
 		pReturnButton = pMenu->FindChild<HKWidgetButton>("return");
+		pEditButton = pMenu->FindChild<HKWidgetButton>("edit");
 		pTitle = pMenu->FindChild<HKWidgetLabel>("resume_label");
 		pNamePanel = pMenu->FindChild("gameNamePanel");
 		pName = pMenu->FindChild<HKWidgetTextbox>("gameName");
@@ -25,6 +30,7 @@ void ListMenu::Load(HKWidget *pRoot, FrontMenu *pFrontMenu)
 		pName->OnChanged += fastdelegate::MakeDelegate(this, &ListMenu::OnNameChanged);
 		pResumeButton->OnClicked += fastdelegate::MakeDelegate(this, &ListMenu::OnContinueClicked);
 		pReturnButton->OnClicked += fastdelegate::MakeDelegate(this, &ListMenu::OnReturnClicked);
+		pEditButton->OnClicked += fastdelegate::MakeDelegate(this, &ListMenu::OnEditClicked);
 	}
 }
 
@@ -93,6 +99,9 @@ void ListMenu::ShowCreate(bool bOnline)
 
 	// disable resume button
 	pResumeButton->SetEnabled(false);
+
+	// show the edit button
+	pEditButton->SetVisible(bOnline ? HKWidget::Gone : HKWidget::Visible);
 
 	// show string box
 	pNamePanel->SetVisible(bOnline ? HKWidget::Visible : HKWidget::Gone);
@@ -306,6 +315,8 @@ void ListMenu::OnGameJoined(ServerError error, Session *pSession, GameDetails *p
 
 void ListMenu::OnReturnClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
+	pEditButton->SetVisible(HKWidget::Gone);
+
 	FrontMenu &menu = *FrontMenu::Get();
 	menu.HideCurrent();
 
@@ -314,6 +325,45 @@ void ListMenu::OnReturnClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 	else
 		menu.playMenu.Show();
 }
+
+void ListMenu::OnEditClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
+{
+	MFString map = gameList[pActiveList->GetSelection()].name;
+
+	// setup game parameters
+	GameParams params;
+	MFZeroMemory(&params, sizeof(params));
+	params.bOnline = false;
+	params.bEditMap = true;
+	params.gameID = 0;
+	params.pMap = map.CStr();
+
+	// create the game
+	MapDetails mapDetails;
+	Map::GetMapDetails(map.CStr(), &mapDetails);
+
+	// set up the players
+	params.numPlayers = mapDetails.numPlayers;
+	for(int a=0; a<mapDetails.numPlayers; ++a)
+	{
+		params.players[a].id = 0;
+		params.players[a].race = a + 1;
+		params.players[a].colour = a + 1;
+		params.players[a].hero = 0;
+	}
+
+	// create the game
+	pGame = new Game(&params);
+	Game::SetCurrent(pGame);
+
+	// create the editor
+	pEditor = new Editor(pGame);
+	Screen::SetNext(pEditor);
+
+	// hide the menu
+	FrontMenu::Get()->Hide();
+}
+
 
 void ListMenu::OnUpdateResponse(ServerError err, Session *pSession)
 {

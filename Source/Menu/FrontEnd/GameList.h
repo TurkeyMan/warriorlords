@@ -61,6 +61,7 @@ protected:
 	HKWidgetListbox *pActiveList;
 	HKWidgetButton *pResumeButton;
 	HKWidgetButton *pReturnButton;
+	HKWidgetButton *pEditButton;
 	HKWidgetLabel *pTitle;
 	HKWidget *pNamePanel;
 	HKWidgetTextbox *pName;
@@ -77,6 +78,7 @@ protected:
 	void OnNameChanged(HKWidget &sender, const HKWidgetEventInfo &ev);
 	void OnContinueClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
 	void OnReturnClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
+	void OnEditClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
 
 	void OnUpdateResponse(ServerError err, Session *pSession);
 	void OnFindResponse(ServerError err, Session *pSession, GameLobby *pGames, int numGames);

@@ -549,8 +549,6 @@ void Session::OnBegin(HTTPRequest::Status status)
 		pGame->id = gameID;
 	}
 
-	SendMessageToPeers("START");
-
 	beginHandler(err, this);
 }
 

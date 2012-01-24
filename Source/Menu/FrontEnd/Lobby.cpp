@@ -3,10 +3,8 @@
 
 #include "Menu/FrontEnd/Lobby.h"
 #include "Menu/Menu.h"
-#include "Editor.h"
 
 extern Game *pGame;
-extern Editor *pEditor;
 
 void LobbyMenu::Load(HKWidget *pRoot, FrontMenu *_pFrontMenu)
 {
@@ -214,16 +212,30 @@ void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 		if(pNextLine)
 			*pNextLine++ = 0;
 
-		char *pArg = MFString_Chr(pMessage, ':');
-		if(pArg)
-			*pArg++ = 0;
+		// parse args
+		char *pArgs[32];
+		int numArgs = 0;
+
+		char *pArg = (char*)pMessage;
+		for(int a=0; a<32; ++a)
+		{
+			char *pArg = MFString_Chr(pArg, ':');
+			if(pArg)
+			{
+				*pArg++ = 0;
+				pArgs[a] = pArg;
+
+				++numArgs;
+			}
+			else
+			{
+				break;
+			}
+		}
 
 		if(!MFString_CaseCmp(pMessage, "JOIN"))
 		{
-			char *pName = MFString_Chr(pArg, ':');
-			if(pName) *pName++ = 0;
-
-			int pos = MFString_AsciiToInteger(pArg);
+			int pos = MFString_AsciiToInteger(pArgs[0]);
 			GameDetails::Player &player = game.players[pos];
 
 			if(player.id != user)
@@ -231,16 +243,10 @@ void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 				MFDebug_Assert(player.id == 0, "Player already present!?");
 
 				// parse the args
-				char *pRace = MFString_Chr(pName, ':');
-				if(pRace) *pRace++ = 0;
-				char *pColour = MFString_Chr(pRace, ':');
-				if(pColour) *pColour++ = 0;
-				char *pHero = MFString_Chr(pColour, ':');
-				if(pHero) *pHero++ = 0;
-
-				int race = MFString_AsciiToInteger(pRace);
-				int colour = MFString_AsciiToInteger(pColour);
-				int hero = MFString_AsciiToInteger(pHero);
+				char *pName = pArgs[1];
+				int race = MFString_AsciiToInteger(pArgs[2]);
+				int colour = MFString_AsciiToInteger(pArgs[3]);
+				int hero = MFString_AsciiToInteger(pArgs[4]);
 
 				// set the player details
 				player.id = user;
@@ -313,7 +319,7 @@ void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 		{
 			if(pPlayer)
 			{
-				int race = MFString_AsciiToInteger(pArg);
+				int race = MFString_AsciiToInteger(pArgs[0]);
 				pPlayer->race = race;
 				pPlayer->hero = -1;
 				players[player].pRace->SetSelection(race);
@@ -324,7 +330,7 @@ void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 		{
 			if(pPlayer)
 			{
-				int colour = MFString_AsciiToInteger(pArg);
+				int colour = MFString_AsciiToInteger(pArgs[0]);
 				pPlayer->colour = colour;
 				players[player].pColour->SetSelection(colour - 1);
 			}
@@ -333,7 +339,7 @@ void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 		{
 			if(pPlayer)
 			{
-				int hero = MFString_AsciiToInteger(pArg);
+				int hero = MFString_AsciiToInteger(pArgs[0]);
 				pPlayer->hero = hero;
 				players[player].pHero->SetSelection(hero + 1);
 			}
@@ -421,14 +427,10 @@ void LobbyMenu::OnStartClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 		pGame = new Game(&params);
 		Game::SetCurrent(pGame);
 
-		if(params.bEditMap)
-		{
-			pEditor = new Editor(pGame);
-			Screen::SetNext(pEditor);
-		}
-		else
-			pGame->BeginGame();
+		// begin the game
+		pGame->BeginGame();
 
+		// and hide the menu
 		FrontMenu::Get()->Hide();
 	}
 	else
@@ -594,6 +596,8 @@ void LobbyMenu::OnBegin(ServerError error, Session *pSession)
 	pGame = new Game(&params);
 	Game::SetCurrent(pGame);
 	pGame->BeginGame();
+
+	pSession->SendMessageToPeers("START");
 
 	FrontMenu::Get()->Hide();
 }
