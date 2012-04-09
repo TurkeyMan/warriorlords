@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Frame align="Fill">
-	<Button id="minimap" align="TopRight" size="64,64" background_image="minimap" margin="20" />
-	<Button id="undo" align="BottomLeft" size="64,64" background_image="undo" margin="20" />
-	<Button id="end_turn" align="BottomRight" size="64,64" background_image="end-turn" margin="20" />
+	<!-- full screen invisible widget to hook the user input -->
+	<Widget id="map" align="fill" />
+
+	<!-- map screen buttons -->
+	<Button id="show_minimap" align="TopRight" size="64,64" background_image="minimap" margin="20" style="game-button"/>
+	<Button id="undo" align="BottomLeft" size="64,64" background_image="undo" margin="20" style="game-button" />
+	<Button id="end_turn" align="BottomRight" size="64,64" background_image="end-turn" margin="20" style="game-button" />
 </Frame>

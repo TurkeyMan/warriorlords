@@ -18,6 +18,7 @@ FrontMenu::FrontMenu()
 
 	// load the styles
 	HKWidgetStyle::LoadStylesFromXML("menu-style.xml");
+	HKWidgetStyle::LoadStylesFromXML("game-style.xml");
 
 	// load the menu
 	pMenu = HKWidget_CreateFromXML("menu.xml");

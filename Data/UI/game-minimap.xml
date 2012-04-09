@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Frame align="center" background_image="Window-Pirates">
+
+	<!-- The map -->
+	<Widget id="map" align="topLeft" size="200,100" background_image="something" />
+
+	<!-- Close button -->
+	<Button id="close" align="topRight" style="game-closebutton" />
+
+</Frame>

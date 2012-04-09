@@ -4,188 +4,417 @@
 #include "UI/Widgets/HKWidgetButton.h"
 #include "UI/Widgets/HKWidgetTextbox.h"
 #include "UI/Widgets/HKWidgetListbox.h"
+#include "Menu/Widgets/UnitButton.h"
 
 #include "GameUI.h"
 
-#include "Game.h"
-#include "Session.h"
-#include "Editor.h"
+#pragma warning(disable: 4355)
 
-extern Game *pGame;
-extern GameMenu *pGameMenu;
-
-GameMenu *GameMenu::Get()
+GameUI::GameUI(Game *pGame)
+: gameScreen(this)
+, castleMenu(this)
+, miniMap(this)
+, msgBox(this)
 {
-	return pGameMenu;
-}
+	this->pGame = pGame;
+	pShowCastle = NULL;
 
-GameMenu::GameMenu()
-{
 	// init members
-	pCurrentWindow = NULL;
+	stackDepth = 0;
 
 	// load the menu
 	pMenu = HKWidget_CreateFromXML("game.xml");
 	MFDebug_Assert(pMenu, "Failed to load front menu UI!");
 
-	// configure main menu
+	pWindowContainer = pMenu->FindChild("windows");
+	pWindowContainer->RegisterInputEventHook(fastdelegate::MakeDelegate(this, &GameUI::NullEvent));
+
+	// configure map icons
 	gameScreen.pMenu = pMenu->FindChild("map");
 	if(gameScreen.pMenu)
 	{
+		gameScreen.pMap = gameScreen.pMenu->FindChild("map");
+		pGame->SetInputSource(gameScreen.pMap);
+
 		gameScreen.pUndoButton = gameScreen.pMenu->FindChild<HKWidgetButton>("undo");
 		gameScreen.pEndTurnButton = gameScreen.pMenu->FindChild<HKWidgetButton>("end_turn");
-		gameScreen.pMinimapButton = gameScreen.pMenu->FindChild<HKWidgetButton>("minimap");
+		gameScreen.pMinimapButton = gameScreen.pMenu->FindChild<HKWidgetButton>("show_minimap");
 
-		gameScreen.pUndoButton->OnClicked += fastdelegate::MakeDelegate(&gameScreen, &GameMenu::GameScreen::OnUndoClicked);
-		gameScreen.pEndTurnButton->OnClicked += fastdelegate::MakeDelegate(&gameScreen, &GameMenu::GameScreen::OnEndTurnClicked);
-		gameScreen.pMinimapButton->OnClicked += fastdelegate::MakeDelegate(&gameScreen, &GameMenu::GameScreen::OnMinimapClicked);
-	}
-/*
-	// configure new game menu
-	playMenu.pMenu = pMenu->FindChild("playgame");
-	if(playMenu.pMenu)
-	{
-		playMenu.pCreateButton = playMenu.pMenu->FindChild<HKWidgetButton>("create");
-		playMenu.pJoinButton = playMenu.pMenu->FindChild<HKWidgetButton>("join");
-		playMenu.pOfflineButton = playMenu.pMenu->FindChild<HKWidgetButton>("offline");
-		playMenu.pReturnButton = playMenu.pMenu->FindChild<HKWidgetButton>("return");
-
-		playMenu.pCreateButton->OnClicked += fastdelegate::MakeDelegate(&playMenu, &GameMenu::PlayMenu::OnCreateClicked);
-		playMenu.pJoinButton->OnClicked += fastdelegate::MakeDelegate(&playMenu, &GameMenu::PlayMenu::OnJoinClicked);
-		playMenu.pOfflineButton->OnClicked += fastdelegate::MakeDelegate(&playMenu, &GameMenu::PlayMenu::OnOfflineClicked);
-		playMenu.pReturnButton->OnClicked += fastdelegate::MakeDelegate(this, &GameMenu::OnReturnClicked);
+		gameScreen.pUndoButton->OnClicked += fastdelegate::MakeDelegate(&gameScreen, &GameUI::GameScreen::OnUndoClicked);
+		gameScreen.pEndTurnButton->OnClicked += fastdelegate::MakeDelegate(&gameScreen, &GameUI::GameScreen::OnEndTurnClicked);
+		gameScreen.pMinimapButton->OnClicked += fastdelegate::MakeDelegate(&gameScreen, &GameUI::GameScreen::OnMinimapClicked);
 	}
 
-	// configure game select menu
-	listMenu.pMenu = pMenu->FindChild("resume");
-	if(listMenu.pMenu)
+	// configure castle menu
+	castleMenu.pMenu = pMenu->FindChild("castle");
+	if(castleMenu.pMenu)
 	{
-		listMenu.pActiveList = listMenu.pMenu->FindChild<HKWidgetListbox>("activegames");
-		listMenu.pResumeButton = listMenu.pMenu->FindChild<HKWidgetButton>("resume");
-		listMenu.pReturnButton = listMenu.pMenu->FindChild<HKWidgetButton>("return");
-		listMenu.pTitle = listMenu.pMenu->FindChild<HKWidgetLabel>("resume_label");
-		listMenu.pNamePanel = listMenu.pMenu->FindChild("gameNamePanel");
-		listMenu.pName = listMenu.pMenu->FindChild<HKWidgetTextbox>("gameName");
+		castleMenu.pCastleName = pMenu->FindChild<HKWidgetLabel>("castleName");
 
-		listMenu.pActiveList->Bind(listMenu.gameListAdapter);
-		listMenu.pActiveList->OnSelChanged += fastdelegate::MakeDelegate(&listMenu, &GameMenu::ListMenu::OnSelect);
-		listMenu.pName->OnChanged += fastdelegate::MakeDelegate(&listMenu, &GameMenu::ListMenu::OnNameChanged);
-		listMenu.pResumeButton->OnClicked += fastdelegate::MakeDelegate(&listMenu, &GameMenu::ListMenu::OnContinueClicked);
-		listMenu.pReturnButton->OnClicked += fastdelegate::MakeDelegate(&listMenu, &GameMenu::ListMenu::OnReturnClicked);
-	}
+		castleMenu.pClose = pMenu->FindChild<HKWidgetButton>("close");
+		castleMenu.pClose->OnClicked += fastdelegate::MakeDelegate(this, &GameUI::OnCloseClicked);
 
-	// configure login window
-	loginMenu.pMenu = pMenu->FindChild("login");
-	if(loginMenu.pMenu)
-	{
-		loginMenu.pUsernameText = loginMenu.pMenu->FindChild<HKWidgetTextbox>("username");
-		loginMenu.pPasswordText = loginMenu.pMenu->FindChild<HKWidgetTextbox>("password");
-		loginMenu.pLoginButton = loginMenu.pMenu->FindChild<HKWidgetButton>("login");
-		loginMenu.pReturnButton = loginMenu.pMenu->FindChild<HKWidgetButton>("return");
-
-		loginMenu.pUsernameText->OnChanged += fastdelegate::MakeDelegate(&loginMenu, &GameMenu::LoginMenu::OnUpdateLogin);
-		loginMenu.pPasswordText->OnChanged += fastdelegate::MakeDelegate(&loginMenu, &GameMenu::LoginMenu::OnUpdateLogin);
-		loginMenu.pLoginButton->OnClicked += fastdelegate::MakeDelegate(&loginMenu, &GameMenu::LoginMenu::OnLogin);
-		loginMenu.pReturnButton->OnClicked += fastdelegate::MakeDelegate(this, &GameMenu::OnReturnClicked);
-	}
-
-	// configure lobby window
-	lobbyMenu.pMenu = pMenu->FindChild("lobby");
-	if(lobbyMenu.pMenu)
-	{
-		// setup the UI
-		lobbyMenu.pTitle = lobbyMenu.pMenu->FindChild<HKWidgetLabel>("lobby_label");
-		lobbyMenu.pStartButton = lobbyMenu.pMenu->FindChild<HKWidgetButton>("start");
-		lobbyMenu.pLeaveButton = lobbyMenu.pMenu->FindChild<HKWidgetButton>("leave");
-		lobbyMenu.pReturnButton = lobbyMenu.pMenu->FindChild<HKWidgetButton>("return");
-
-		lobbyMenu.pStartButton->OnClicked += fastdelegate::MakeDelegate(&lobbyMenu, &GameMenu::LobbyMenu::OnStartClicked);
-		lobbyMenu.pLeaveButton->OnClicked += fastdelegate::MakeDelegate(&lobbyMenu, &GameMenu::LobbyMenu::OnLeaveClicked);
-		lobbyMenu.pReturnButton->OnClicked += fastdelegate::MakeDelegate(this, &GameMenu::OnReturnClicked);
-
-		for(int a=0; a<8; ++a)
+		for(int a=0; a<4; ++a)
 		{
-			lobbyMenu.players[a].pPlayerRow = lobbyMenu.pMenu->FindChild(MFString::Format("player%d", a).CStr());
+			castleMenu.pUnits[a] = pMenu->FindChild<UnitButton>(MFString::Format("unit%d", a).CStr());
+			castleMenu.pUnits[a]->SetUserData((void*)a);
+			castleMenu.pUnits[a]->OnClicked += fastdelegate::MakeDelegate(&castleMenu, &GameUI::CastleMenu::OnSelectUnit);
 
-			lobbyMenu.players[a].pName = lobbyMenu.players[a].pPlayerRow->FindChild<HKWidgetLabel>("name");
-			lobbyMenu.players[a].pPlayerConfig = lobbyMenu.players[a].pPlayerRow->FindChild("playerSettings");
-
-			lobbyMenu.players[a].pRace = lobbyMenu.players[a].pPlayerRow->FindChild<HKWidgetSelectbox>("race");
-			lobbyMenu.players[a].pColour = lobbyMenu.players[a].pPlayerRow->FindChild<HKWidgetSelectbox>("colour");
-			lobbyMenu.players[a].pHero = lobbyMenu.players[a].pPlayerRow->FindChild<HKWidgetSelectbox>("hero");
-
-			lobbyMenu.players[a].pRace->Bind(lobbyMenu.raceListAdapter);
-			lobbyMenu.players[a].pRace->SetUserData((void*)a);
-			lobbyMenu.players[a].pRace->OnSelChanged += fastdelegate::MakeDelegate(&lobbyMenu, &GameMenu::LobbyMenu::OnRaceChanged);
-			lobbyMenu.players[a].pColour->Bind(lobbyMenu.colourListAdapter);
-			lobbyMenu.players[a].pColour->SetUserData((void*)a);
-			lobbyMenu.players[a].pColour->OnSelChanged += fastdelegate::MakeDelegate(&lobbyMenu, &GameMenu::LobbyMenu::OnColourChanged);
-			lobbyMenu.players[a].pHero->Bind(lobbyMenu.players[a].heroListAdapter);
-			lobbyMenu.players[a].pHero->SetUserData((void*)a);
-			lobbyMenu.players[a].pHero->OnSelChanged += fastdelegate::MakeDelegate(&lobbyMenu, &GameMenu::LobbyMenu::OnHeroChanged);
+			castleMenu.pUnits[a + 4] = pMenu->FindChild<UnitButton>(MFString::Format("hero%d", a).CStr());
+			castleMenu.pUnits[a + 4]->SetUserData((void*)(a + 4));
+			castleMenu.pUnits[a + 4]->OnClicked += fastdelegate::MakeDelegate(&castleMenu, &GameUI::CastleMenu::OnSelectUnit);
 		}
-	}
-*/
-	// configure profile window
 
+		castleMenu.pUnitDetails = pMenu->FindChild<HKWidgetLayoutFrame>("unitDetails");
+
+		castleMenu.pUnitName = pMenu->FindChild<HKWidgetLabel>("unitName");
+		castleMenu.pUnitType = pMenu->FindChild<HKWidgetLabel>("unitType");
+		castleMenu.pUnitAtk = pMenu->FindChild<HKWidgetLabel>("unitAtk");
+		castleMenu.pUnitMov = pMenu->FindChild<HKWidgetLabel>("unitMov");
+		castleMenu.pUnitTurns = pMenu->FindChild<HKWidgetLabel>("unitTurns");
+
+		castleMenu.pTypeImage = pMenu->FindChild("typeImage");
+	}
+
+	// configure minimap
+	miniMap.pMenu = pMenu->FindChild("minimap");
+	if(miniMap.pMenu)
+	{
+		miniMap.pMap = miniMap.pMenu->FindChild("map");
+		miniMap.pMap->OnDown += fastdelegate::MakeDelegate(&miniMap, &GameUI::MiniMap::OnFocusMap);
+		miniMap.pMap->OnDrag += fastdelegate::MakeDelegate(&miniMap, &GameUI::MiniMap::OnFocusMap);
+		miniMap.pMap->SetClickable(true);
+		miniMap.pMap->SetHoverable(true);
+
+		miniMap.pClose = miniMap.pMenu->FindChild<HKWidgetButton>("close");
+
+		// subscribe events
+		miniMap.pClose->OnClicked += fastdelegate::MakeDelegate(this, &GameUI::OnCloseClicked);
+	}
+
+	// configure message box
+	msgBox.pMenu = pMenu->FindChild("requestbox");
+	if(msgBox.pMenu)
+	{
+		msgBox.pMessage = msgBox.pMenu->FindChild<HKWidgetLabel>("message");
+		msgBox.pAccept = msgBox.pMenu->FindChild<HKWidgetButton>("accept");
+		msgBox.pCancel = msgBox.pMenu->FindChild<HKWidgetButton>("cancel");
+
+		// subscribe events
+		msgBox.pAccept->OnClicked += fastdelegate::MakeDelegate(&msgBox, &GameUI::MsgBox::OnAcceptClicked);
+		msgBox.pCancel->OnClicked += fastdelegate::MakeDelegate(&msgBox, &GameUI::MsgBox::OnCancelClicked);
+	}
 
 	// and add the menu to the UI manager
 	pMenu->SetVisible(HKWidget::Invisible);
 	HKUserInterface::Get().AddTopLevelWidget(pMenu, false);
 }
 
-GameMenu::~GameMenu()
+GameUI::~GameUI()
 {
 	delete pMenu;
 }
 
-void GameMenu::Show()
+void GameUI::Update()
+{
+	if(pShowCastle)
+	{
+		castleMenu.Show(pShowCastle);
+		pShowCastle = NULL;
+	}
+}
+
+void GameUI::Show()
 {
 	pMenu->SetVisible(HKWidget::Visible);
 }
 
-void GameMenu::Hide()
+void GameUI::Hide()
 {
 	HideCurrent();
 	pMenu->SetVisible(HKWidget::Invisible);
 }
 
-void GameMenu::ShowAsCurrent(HKWidget *pMenu)
+void GameUI::ShowAsCurrent(Window *pMenu, bool bShowAbove)
 {
-	pMenu->SetVisible(HKWidget::Visible);
-	pCurrentWindow = pMenu;
+	if(stackDepth == 0)
+		pWindowContainer->SetVisible(HKWidget::Visible);
+
+	// if we don't want to show it above prior windows
+	if(!bShowAbove && stackDepth > 0)
+		pCurrentWindowStack[stackDepth - 1]->GetMenu()->SetVisible(HKWidget::Invisible);
+
+	pCurrentWindowStack[stackDepth++] = pMenu;
+	pMenu->GetMenu()->SetVisible(HKWidget::Visible);
 }
 
-void GameMenu::HideCurrent()
+void GameUI::HideCurrent()
 {
-	if(pCurrentWindow)
-	{
-		pCurrentWindow->SetVisible(HKWidget::Invisible);
-		pCurrentWindow = NULL;
-	}
+	if(stackDepth == 0)
+		return;
+
+	pCurrentWindowStack[--stackDepth]->Hide();
+
+	if(stackDepth > 0)
+		pCurrentWindowStack[stackDepth - 1]->GetMenu()->SetVisible(HKWidget::Visible);
+	else
+		pWindowContainer->SetVisible(HKWidget::Invisible);
+}
+
+void GameUI::ShowMiniMap()
+{
+	miniMap.Show();
+}
+
+void GameUI::ShowMessageBox(const char *pMessage, MsgBoxDelegate selectCallback, bool bNotification)
+{
+	msgBox.Show(pMessage, selectCallback, bNotification);
+}
+
+void GameUI::ShowUndoButton(bool bShow)
+{
+	gameScreen.pUndoButton->SetVisible(bShow ? HKWidget::Visible : HKWidget::Invisible);
+}
+
+void GameUI::ShowWindowContainer(bool bShow)
+{
+	if(bShow)
+		pWindowContainer->SetVisible(HKWidget::Visible);
+	else
+		pWindowContainer->SetVisible(HKWidget::Invisible);
+}
+
+void GameUI::Window::Hide()
+{
+	pMenu->SetVisible(HKWidget::Invisible);
 }
 
 // event handlers
-void GameMenu::OnCloseClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
+bool GameUI::NullEvent(HKInputManager &manager, const HKInputManager::EventInfo &ev)
 {
-	GameMenu &menu = *GameMenu::Get();
-	menu.HideCurrent();
+	if(ev.pSource->device == IDD_Mouse && ev.pSource->deviceID != 0)
+		return false;
+
+	// HACK: right click returns
+	if(ev.buttonID == 1 && ev.ev == HKInputManager::IE_Tap)
+		HideCurrent();
+
+	// return handled
+	return true;
 }
 
-// MainMenu
-void GameMenu::GameScreen::Show()
+void GameUI::OnCloseClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
+{
+	HideCurrent();
+}
+
+// map icons
+void GameUI::GameScreen::Show()
 {
 	pMenu->SetVisible(HKWidget::Visible);
+
 }
 
-void GameMenu::GameScreen::OnEndTurnClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
+void GameUI::GameScreen::OnEndTurnClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
+	Game *pGame = Game::GetCurrent();
+
+	if(pGame->NumPendingActions() > 0)
+		pGame->ReplayNextAction();
+	else if(pGame->IsMyTurn())
+		pGame->ShowRequest("End Turn?", fastdelegate::MakeDelegate(this, &GameUI::GameScreen::OnFinishTurn), false);
 }
 
-void GameMenu::GameScreen::OnUndoClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
+void GameUI::GameScreen::OnUndoClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
+	Game *pGame = pUI->pGame;
+
+	if(pGame->bMoving)
+		return;
+
+	Group *pGroup = pGame->RevertAction(pGame->pSelection);
+	if(pGroup)
+	{
+		MapTile *pTile = pGroup->GetTile();
+		pGame->pMap->CenterView((float)pTile->GetX(), (float)pTile->GetY());
+	}
+
+	pGame->SelectGroup(pGroup);
+	pGame->UpdateUndoButton();
 }
 
-void GameMenu::GameScreen::OnMinimapClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
+void GameUI::GameScreen::OnMinimapClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
+	pUI->miniMap.Show();
+}
+
+void GameUI::GameScreen::OnFinishTurn(int selection)
+{
+	Game *pGame = pUI->pGame;
+
+	if(selection == 0)
+		pGame->EndTurn();
+}
+
+// castle Menu
+
+void GameUI::CastleMenu::Show(Castle *_pCastle)
+{
+	Game *pGame = pUI->pGame;
+
+	pCastle = _pCastle;
+
+	pCastleName->SetText(pCastle->GetName());
+
+	numBuildUnits = pCastle->details.numBuildUnits;
+
+	MFVector colour = pGame->GetPlayerColour(pCastle->player);
+
+	int a;
+	for(a=0; a<4; ++a)
+	{
+		// unit buttons
+		pUnits[a]->SetVisible(a < numBuildUnits ? HKWidget::Visible : HKWidget::Gone);
+
+		if(a < numBuildUnits)
+		{
+			pUnits[a]->SetUnit(pCastle->details.buildUnits[a].unit);
+			pUnits[a]->SetUnitColour(colour);
+
+			pUnits[a]->SetProperty("background_colour", a == pCastle->nextBuild ? "blue" : "white");
+		}
+
+		// hero buttons
+		bool bBuildHero = pGame->CanCastleBuildHero(pCastle, a);
+		pUnits[4 + a]->SetVisible(bBuildHero ? HKWidget::Visible : HKWidget::Gone);
+
+		if(bBuildHero)
+		{
+			Unit *pHero = pGame->GetPlayerHero(pCastle->player, a);
+			pUnits[4 + a]->SetUnit(pHero->GetType());
+			pUnits[4 + a]->SetUnitColour(colour);
+
+			pUnits[4 + a]->SetProperty("background_colour", 4 + a == pCastle->nextBuild ? "blue" : "white");
+		}
+	}
+
+	UpdateUnitInfo();
+
+	pUI->ShowAsCurrent(this);
+}
+
+void GameUI::CastleMenu::UpdateUnitInfo()
+{
+	int buildUnit = pCastle->GetBuildUnit();
+
+	pUnitDetails->SetVisible(buildUnit < 0 ? HKWidget::Invisible : HKWidget::Visible);
+
+	if(buildUnit >= 0)
+	{
+		UnitDefinitions *pUnitDefs = pCastle->pUnitDefs;
+		UnitDetails *pDetails = pUnitDefs->GetUnitDetails(buildUnit);
+
+		pUnitName->SetText(pDetails->pName);
+
+		if(pDetails->type == UT_Vehicle)
+		{
+			pUnitType->SetVisible(HKWidget::Gone);
+			pUnitAtk->SetVisible(HKWidget::Gone);
+			pUnitMov->SetText(MFString::Format("Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : ""));
+			pUnitTurns->SetText(MFString::Format("Turns: %d", pCastle->GetBuildTime()));
+
+			pTypeImage->SetVisible(HKWidget::Gone);
+		}
+		else
+		{
+			pUnitType->SetVisible(HKWidget::Visible);
+			pUnitAtk->SetVisible(HKWidget::Visible);
+			pUnitType->SetText(MFString::Format("Type: %s", pUnitDefs->GetArmourClassName(pDetails->armour)));
+			pUnitAtk->SetText(MFString::Format("Atk: %d - %d (%s%s)", pDetails->attackMin, pDetails->attackMax, pDetails->AttackSpeedDescription(), pUnitDefs->GetAttackTypeName(pDetails->atkType)));
+			pUnitMov->SetText(MFString::Format("Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : ""));
+			pUnitTurns->SetText(MFString::Format("Turns: %d", pCastle->GetBuildTime()));
+
+			pTypeImage->SetVisible(HKWidget::Visible);
+			pTypeImage->SetProperty("background_image", pDetails->atkType == 0 ? "Melee" : "Ranged");
+		}
+	}
+}
+
+void GameUI::CastleMenu::OnSelectUnit(HKWidget &sender, const HKWidgetEventInfo &ev)
+{
+	Game *pGame = pUI->pGame;
+
+	int button = (int)(size_t)sender.GetUserData();
+
+	MFVector colour = pGame->GetPlayerColour(pCastle->player);
+	for(int a=0; a<8; ++a)
+		pUnits[a]->SetProperty("background_colour", button == a ? "blue" : "white");
+
+	pCastle->SetBuildUnit(button);
+
+	UpdateUnitInfo();
+}
+
+void GameUI::MiniMap::Show()
+{
+	int width, height;
+	pUI->pGame->GetMap()->GetMinimap(&width, &height);
+
+	pMap->SetSize(MakeVector((float)width, (float)height));
+	pMap->SetProperty("background_image", "MiniMap");
+
+	pUI->ShowAsCurrent(this);
+
+/*
+	MFMaterial_SetMaterial(pMiniMap);
+
+	float tx = (float)MFUtil_NextPowerOf2(width);
+	float ty = (float)MFUtil_NextPowerOf2(height);
+
+	float texelCenter = MFRenderer_GetTexelCenterOffset();
+	float texelCenterX = texelCenter / tx;
+	float texelCenterY = texelCenter / ty;
+*/
+}
+
+void GameUI::MiniMap::OnFocusMap(HKWidget &sender, const HKWidgetEventInfo &ev)
+{
+	int x = 0;
+
+	// on the down-signal set bDragging, and then track hover messages...
+/*
+				int mapWidth, mapHeight;
+				pMap->GetMapSize(&mapWidth, &mapHeight);
+
+				float x = (info.down.x - window.x) / width * (float)mapWidth;
+				float y = (info.down.y - window.y) / height * (float)mapHeight;
+
+				pMap->CenterView(x, y);
+*/
+}
+
+void GameUI::MsgBox::Show(const char *pMessage, MsgBoxDelegate selectCallback, bool bNotification)
+{
+	this->selectCallback = selectCallback;
+
+	this->pMessage->SetText(pMessage);
+	pCancel->SetVisible(bNotification ? HKWidget::Invisible : HKWidget::Visible);
+
+	pUI->ShowAsCurrent(this);
+}
+
+void GameUI::MsgBox::OnAcceptClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
+{
+	if(selectCallback)
+		selectCallback(0);
+
+	pUI->HideCurrent();
+}
+
+void GameUI::MsgBox::OnCancelClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
+{
+	if(selectCallback)
+		selectCallback(-1);
+
+	pUI->HideCurrent();
 }

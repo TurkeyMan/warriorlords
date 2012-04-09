@@ -138,7 +138,7 @@ CheckBox *CheckBox::Create(const MFRect *pPosition, const char *pText, const MFV
 
 	MFString_Copy(pNew->text, pText);
 
-	pNew->pFont = Game::GetCurrent()->GetTextFont();
+	pNew->pFont = MFFont_Create("FranklinGothic");
 	pNew->colour = colour;
 	pNew->isPressed = false;
 	pNew->value = value;

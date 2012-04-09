@@ -26,7 +26,6 @@ protected:
 	MFRect window;
 	Button *pCloseButton;
 	MFMaterial *pIcons;
-	MFFont *pFont;
 
 	bool bVisible;
 	bool bCloseButton;

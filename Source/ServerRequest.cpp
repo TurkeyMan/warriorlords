@@ -692,17 +692,14 @@ const char *GameAction::GetString()
 
 ActionList::ActionList(uint32 _game)
 {
-	ppActionList = NULL;
+	actionList.reserve(1024);
+
 	numServerActions = 0;
-	numActions = 0;
-	numAllocated = 0;
 	commitPending = 0;
 
 	game = _game;
 
 	timeout = 10.f;
-
-	Grow(1024);
 
 	update.SetCompleteDelegate(MakeDelegate(this, &ActionList::RequestCallback));
 
@@ -711,11 +708,10 @@ ActionList::ActionList(uint32 _game)
 
 ActionList::~ActionList()
 {
-	if(ppActionList)
+	for(int a=0; a<actionList.size(); ++a)
 	{
-		for(int a=0; a<numActions; ++a)
-			MFHeap_Free(ppActionList[a]);
-		MFHeap_Free(ppActionList);
+		if(actionList[a])
+			MFHeap_Free(actionList[a]);
 	}
 }
 
@@ -731,20 +727,16 @@ void ActionList::Update()
 
 GameAction *ActionList::SubmitAction(GameActions action, int numArgs)
 {
-	Grow(numActions + 1);
-
 	GameAction *pNew = GameAction::Create(action, numArgs);
-	ppActionList[numActions++] = pNew;
+	actionList.push(pNew);
 
 	return pNew;
 }
 
 GameAction *ActionList::SubmitActionArgs(GameActions action, int numArgs, va_list args)
 {
-	Grow(numActions + 1);
-
 	GameAction *pNew = GameAction::Create(action, numArgs);
-	ppActionList[numActions++] = pNew;
+	actionList.push(pNew);
 
 	if(numArgs)
 	{
@@ -760,30 +752,18 @@ void ActionList::Sync()
 	if(update.RequestPending())
 		return;
 
-	if(numActions > numServerActions)
+	if(actionList.size() > numServerActions)
 	{
 		// commit pending actions
-		commitPending = WLServ_ApplyActions(update, game, ppActionList + numServerActions, numActions - numServerActions);
+		commitPending = WLServ_ApplyActions(update, game, actionList.getpointer() + numServerActions, actionList.size() - numServerActions);
 	}
 	else
 	{
 		// check for updates from the server
-		WLServ_UpdateState(update, game, numActions);
+		WLServ_UpdateState(update, game, actionList.size());
 	}
 
 	timeout = 10.f;
-}
-
-void ActionList::Grow(int minItems)
-{
-	// assure there's enough memory
-	if(minItems < numAllocated)
-		return;
-
-	while(minItems > numAllocated)
-		numAllocated = numAllocated ? numAllocated * 2 : 1024;
-
-	ppActionList = (GameAction**)MFHeap_Realloc(ppActionList, sizeof(GameAction*) * numAllocated);
 }
 
 void ActionList::RequestCallback(HTTPRequest::Status status)
@@ -814,17 +794,15 @@ void ActionList::RequestCallback(HTTPRequest::Status status)
 		numServerActions = result.Data("totalActions").AsInt();
 		int firstAction = result.Data("firstAction").AsInt();
 
-		MFDebug_Assert(firstAction  <= numActions, "Trying to load future actions!!");
+		MFDebug_Assert(firstAction <= actionList.size(), "Trying to load future actions!!");
 
-		Result::Item actionList = result.Data("actions");
-		int actionCount = actionList.Size();
-
-		Grow(numActions + actionCount);
+		Result::Item actions = result.Data("actions");
+		int actionCount = actions.Size();
 
 		// process the actions
 		for(int a=0; a<actionCount; ++a)
 		{
-			Result::Item action = actionList[a];
+			Result::Item action = actions[a];
 
 			// get action type
 			GameActions type = GA_UNKNOWN_ACTION;
@@ -849,21 +827,21 @@ void ActionList::RequestCallback(HTTPRequest::Status status)
 			for(int b=0; b<numArgs; ++b)
 				pNew->pArgs[b] = args[b].AsInt();
 
-			if(firstAction + a < numActions)
+			if(firstAction + a < actionList.size())
 			{
 				// compare the action that already exists is the same as the one the server's just given us...
-				MFDebug_Assert(*pNew == *ppActionList[firstAction + a], "The server record is different than the runtime!");
+				MFDebug_Assert(*pNew == *actionList[firstAction + a], "The server record is different than the runtime!");
 				delete pNew;
 			}
 			else
 			{
 				// append to the back of the action list
-				ppActionList[numActions++] = pNew;
+				actionList.push(pNew);
 			}
 		}
 	}
 
 	// just in case we didn't get eveything...
-	if(numActions != numServerActions)
+	if(actionList.size() != numServerActions)
 		Sync();
 }

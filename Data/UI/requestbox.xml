@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Frame align="fill" background_image="Window-Pirates">
+
+	<LinearLayout align="center" orientation="vertical">
+
+		<Label id="message" text="Message" size="320,140" text_align="center" text_font="FranklinGothic" text_colour="white" />
+
+		<!-- This layout spans the bottom -->
+		<LinearLayout align="topCenter" orientation="horizontal" margin="5">
+			<Button id="cancel" size="64,64" background_image="Xicon" style="menu-button" />
+			<Widget width="80" />
+			<Button id="accept" size="64,64" background_image="Tickicon" style="menu-button"/>
+		</LinearLayout>
+
+	</LinearLayout>
+
+</Frame>

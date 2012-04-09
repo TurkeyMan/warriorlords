@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout align="fill" orientation="vertical" padding="40" background_image="Window-Pirates" >
+
+	<Label text="Login" align="topCenter" style="menu-label" />
+
+	<!-- This frame fills the center region -->
+	<Frame align="fill">
+
+		<!-- This frame is centered within the center region -->
+		<LinearLayout width="300" align="center" orientation="horizontal">
+			<LinearLayout width="100" orientation="vertical">
+				<Label text="Username" margin="12" text_font="FranklinGothic" text_colour="white" />
+				<Label text="Password" margin="12" text_font="FranklinGothic" text_colour="white" />
+			</LinearLayout>
+			<LinearLayout align="leftFill" orientation="vertical">
+				<Textbox id="username" align="topFill" margin="10" style="menu-textbox" />
+				<Textbox id="password" align="topFill" margin="10" style="menu-textbox" type="password" />
+			</LinearLayout>
+		</LinearLayout>
+
+	</Frame>
+
+	<!-- This layout spans the bottom -->
+	<LinearLayout align="topCenter" orientation="horizontal" margin="5">
+		<Button id="login" size="64,64" background_image="Tickicon" style="menu-button" enabled="false" />
+		<Widget width="80" />
+		<Button id="return" size="64,64" background_image="Undoicon" style="menu-button" />
+	</LinearLayout>
+
+</LinearLayout>

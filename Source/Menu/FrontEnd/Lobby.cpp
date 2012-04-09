@@ -219,7 +219,7 @@ void LobbyMenu::ReceivePeerMessage(uint32 user, const char *pMessage)
 		char *pArg = (char*)pMessage;
 		for(int a=0; a<32; ++a)
 		{
-			char *pArg = MFString_Chr(pArg, ':');
+			pArg = MFString_Chr(pArg, ':');
 			if(pArg)
 			{
 				*pArg++ = 0;

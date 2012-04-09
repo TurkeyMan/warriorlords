@@ -3,11 +3,16 @@
 
 #include "Map.h"
 #include "Unit.h"
-#include "Screens/RequestBox.h"
+#include "Menu/Game/GameUI.h"
 
 #include "ServerRequest.h"
 
 #include "MFPoolHeap.h"
+
+
+// *** REMOVE ME ***
+#include "Screens/GroupConfig.h"
+
 
 struct MFFont;
 
@@ -17,13 +22,15 @@ class Battle;
 
 struct Player
 {
-	int startingHero;
 	MFVector colour;
 	int race;
+	int startingHero;
 
 	int cursorX, cursorY;
 
-	Unit *pHero;
+	Unit *pHero[4];
+	Castle *pHeroReviveLocation[4];
+	int numHeroes;
 
 	uint32 playerID;
 };
@@ -105,13 +112,23 @@ struct Action
 
 class Game
 {
+	friend class GameUI;
+	friend class MapScreen;
 public:
+	static void SetCurrent(Game *pGame) { pCurrent = pGame; }
+	static Game *GetCurrent() { return pCurrent; }
+
 	Game(GameParams *pParams);
 	Game(GameState *pState);
 	~Game();
 
-	static void SetCurrent(Game *pGame) { pCurrent = pGame; }
-	static Game *GetCurrent() { return pCurrent; }
+	void Update();
+	void Draw();
+
+	void SetInputSource(HKWidget *pWidget);
+	GameUI *GetUI() { return pGameUI; }
+
+	void Game::ShowMiniMap();
 
 	MapScreen *GetMapScreen() { return pMapScreen; }
 	Battle *GetBattleScreen() { return pBattle; }
@@ -134,7 +151,11 @@ public:
 
 	int GetPlayerRace(int player) { return player == -1 ? 0 : players[player].race; }
 	MFVector GetPlayerColour(int player) { return player == -1 ? pUnitDefs->GetRaceColour(0) : players[player].colour; }
-	Unit *GetPlayerHero(int player) { return players[player].pHero; }
+	int GetPlayerHeroCount(int player) { return players[player].numHeroes; }
+	Unit *GetPlayerHero(int player, int hero) { return players[player].pHero[hero]; }
+
+	bool CanCastleBuildHero(Castle *pCastle, int hero);
+	void SetHeroRebuildCastle(int player, int hero, Castle *pCastle);
 
 	Unit *AllocUnit();
 	void DestroyUnit(Unit *pUnit);
@@ -144,6 +165,9 @@ public:
 	Group *CreateUnit(int unit, Castle *pCastle, bool bCommitUnit = false);
 
 	bool MoveGroupToTile(Group *pGroup, MapTile *pTile);
+
+	void SelectGroup(Group *pGroup);
+	Group *GetSelected() { return pSelection; }
 
 	void PushMoveAction(Group *pGroup);
 	void UpdateMoveAction(Group *pGroup);
@@ -165,15 +189,13 @@ public:
 	MFFont *GetBattleNumbersFont() { return pBattleNumbersFont; }
 	MFFont *GetSmallNumbersFont() { return pSmallNumbersFont; }
 
-	void ShowRequest(const char *pMessage, RequestBox::SelectCallback callback, bool bNotification);
-	bool DrawRequest();
+	void ShowRequest(const char *pMessage, GameUI::MsgBoxDelegate callback, bool bNotification);
 
 	void ApplyActions();
 
 	void AddUnit(Unit *pUnit, bool bCommitUnit = false);
 	void AddGroup(Group *pGroup, bool bCommitGroup = false);
 
-	void UpdateGameState();
 	void ReplayActions(int stopAction = -1);
 	void ReplayNextAction();
 	int NumPendingActions();
@@ -186,11 +208,18 @@ public:
 protected:
 	void Init(const char *pMap, bool bEdit);
 
+	bool HandleInputEvent(HKInputManager &manager, const HKInputManager::EventInfo &ev);
+
 	void AddActions(Action *pAction, Action *pParent);
 	void CommitAction(Action *pAction);
 	Action *FindFirstDependency(Action *pAction);
 
 	void ReplayAction(GameAction *pAction);
+
+	Player* GetPlayer(uint32 user, int *pPlayer);
+	void ReceivePeerMessage(uint32 user, const char *pMessage);
+
+	void UpdateUndoButton();
 
 	MFPoolHeapExpanding units;
 	MFPoolHeapExpanding groups;
@@ -220,11 +249,22 @@ protected:
 	uint32 numGroups;
 	uint32 numGroupsAllocated;
 
+	// UI
+	GameUI *pGameUI;
+
+	GroupConfig groupConfig;
+
+	// UI data
+	Group *pSelection;
+
+	bool bMoving;
+	float countdown;
+
+	MFMaterial *pIcons;
+
 	// screens
 	MapScreen *pMapScreen;
 	Battle *pBattle;
-
-	RequestBox *pRequestBox;
 
 	// game state data
 	bool bOnline;

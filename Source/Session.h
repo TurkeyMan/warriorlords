@@ -42,7 +42,7 @@ public:
 
 	const GameState *GetActiveGame() const;
 	GameDetails *GetActiveLobby() const;
-	GameDetails::Player *Session::GetLobbyPlayer(uint32 user = -1, int *pPlayer = NULL) const;
+	GameDetails::Player *GetLobbyPlayer(uint32 user = -1, int *pPlayer = NULL) const;
 
 	int GetNumCurrentGames() const { return currentGames.size(); }
 	int GetNumPendingGames() const { return pendingGames.size(); }

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Resources>
+	<Style id="game-label">
+		<Properties text_font="FranklinGothic" text_align="center" text_colour="yellow" />
+	</Style>
+	<Style id="game-text">
+		<Properties text_font="FranklinGothic" text_align="centerLeft" text_colour="white" />
+	</Style>
+
+	<Style id="game-button" parent="game-label">
+		<Properties text_colour="white" style_disabled="game-button-disabled" style_pressed="game-button-pressed"/>
+		<Properties colour="white" />
+	</Style>
+	<Style id="game-button-disabled" parent="game-button">
+		<Properties colour="grey" />
+	</Style>
+	<Style id="game-button-pressed" parent="game-button">
+		<Properties colour="grey" />
+	</Style>
+
+	<Style id="game-closebutton" parent="game-label">
+		<Properties style_pressed="game-closebutton-pressed"/>
+		<Properties background_image="close-button" colour="white" />
+	</Style>
+	<Style id="game-closebutton-pressed" parent="game-closebutton">
+		<Properties colour="grey" />
+	</Style>
+
+	<Style id="game-unitbutton" parent="game-button">
+		<Properties size="64,64" background_colour="white" margin="4" />
+	</Style>
+
+	<Style id="game-list">
+		<Properties background_colour="black" border_width="2" border_colour="white" />
+	</Style>
+
+	<Style id="game-textbox">
+		<Properties text_font="FranklinGothic" text_colour="white" />
+		<Properties background_colour="black" border_width="2" border_colour="white" />
+	</Style>
+
+	<Style id="game-selectbox">
+		<Properties style_popup="game-list" style_disabled="game-selectbox-disabled" />
+		<Properties background_colour="black" border_width="2" border_colour="white" />
+		<Properties colour="white" />
+	</Style>
+	<Style id="game-selectbox-disabled">
+		<Properties colour="grey" />
+	</Style>
+</Resources>

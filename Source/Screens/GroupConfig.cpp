@@ -9,6 +9,8 @@
 
 #include "stdio.h"
 
+#include "Game.h"
+
 void DrawHealthBar(int x, int y, int maxHealth, float currentHealth);
 
 static float gPositions[5][5][2] =
@@ -602,6 +604,9 @@ void GroupConfig::GetBottomPanel(int i, MFRect *pRect)
 
 void GroupConfig::Show(MapTile *_pTile)
 {
+	Game *pGame = Game::GetCurrent();
+	pGame->GetUI()->ShowWindowContainer(true);
+
 	Window::Show();
 
 	pTile = _pTile;
@@ -665,9 +670,10 @@ struct Regroup
 
 void GroupConfig::Hide()
 {
-	Window::Hide();
-
 	Game *pGame = Game::GetCurrent();
+	pGame->GetUI()->ShowWindowContainer(false);
+
+	Window::Hide();
 
 	Regroup regroups[MapTile::MaxUnitsOnTile * 2];
 	int numRegroups = 0;
@@ -831,5 +837,5 @@ void GroupConfig::Hide()
 		}
 	}
 
-	pGame->GetMapScreen()->SelectGroup(pTile->GetGroup(0));
+	pGame->SelectGroup(pTile->GetGroup(0));
 }

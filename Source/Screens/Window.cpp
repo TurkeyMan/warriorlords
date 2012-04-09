@@ -18,7 +18,6 @@ Window::Window(bool _bCloseButton)
 	bCloseButton = _bCloseButton;
 	pCloseButton = NULL;
 
-	pFont = Game::GetCurrent()->GetTextFont();
 	pIcons = MFMaterial_Create("Icons");
 
 	if(bCloseButton)

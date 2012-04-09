@@ -1356,6 +1356,11 @@ void Castle::Capture(Group *pGroup)
 
 void Castle::SetBuildUnit(int slot)
 {
+	if(slot >= 4)
+		pGame->SetHeroRebuildCastle(player, slot - 4, this);
+	else if(nextBuild >= 4)
+		pGame->SetHeroRebuildCastle(player, nextBuild - 4, NULL);
+
 	nextBuild = slot;
 }
 
@@ -1363,7 +1368,7 @@ int Castle::GetBuildUnit()
 {
 	if(nextBuild == -1)
 		return -1;
-	return details.buildUnits[nextBuild].unit;
+	return nextBuild < 4 ? details.buildUnits[nextBuild].unit : pGame->GetPlayerHero(player, nextBuild - 4)->GetType();
 }
 
 int Castle::GetBuildTime()
@@ -1374,7 +1379,7 @@ int Castle::GetBuildTime()
 	if(nextBuild == building)
 		return buildTime;
 
-	return details.buildUnits[nextBuild].buildTime;
+	return nextBuild < 4 ? details.buildUnits[nextBuild].buildTime : pGame->GetPlayerHero(player, nextBuild - 4)->GetDetails()->buildTime;
 }
 
 void Ruin::InitRuin(int _id, int specialID, int _item)

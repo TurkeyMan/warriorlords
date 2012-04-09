@@ -13,12 +13,11 @@
 #include "MFMaterial.h"
 #include "MFTexture.h"
 #include "MFRenderer.h"
+#include "MFView.h"
 
 #include <stdarg.h>
 
 Game *Game::pCurrent = NULL;
-
-extern GameMenu *pGameMenu;
 
 Game::Game(GameParams *pParams)
 {
@@ -58,12 +57,21 @@ Game::Game(GameParams *pParams)
 			players[a].startingHero = pParams->players[a].hero;
 			players[a].cursorX = 0;
 			players[a].cursorY = 0;
-			players[a].pHero = NULL;
+			players[a].numHeroes = 0;
+			for(int i=0; i<4; ++i)
+			{
+				players[a].pHero[i] = NULL;
+				players[a].pHeroReviveLocation[i] = NULL;
+			}
 		}
 
 		// construct the map
 		pMap->ConstructMap();
 	}
+
+	// hook up message receiver
+	Session *pSession = Session::Get();
+	pSession->SetMessageCallback(MakeDelegate(this, &Game::ReceivePeerMessage));
 }
 
 Game::Game(GameState *pState)
@@ -91,7 +99,13 @@ Game::Game(GameState *pState)
 		// TODO: we need to fetch these from the server!
 		players[a].cursorX = 0;
 		players[a].cursorY = 0;
-		players[a].pHero = NULL;
+		players[a].numHeroes = 0;
+		for(int i=0; i<4; ++i)
+		{
+			players[a].pHero[i] = NULL;
+			players[a].pHeroReviveLocation[i] = NULL;
+		}
+
 	}
 
 	// construct the map
@@ -102,15 +116,30 @@ Game::Game(GameState *pState)
 
 	// resume the game
 	Screen::SetNext(pMapScreen);
-	pGameMenu->Show();
+	pGameUI->Show();
+
+	// hook up message receiver
+	Session *pSession = Session::Get();
+	pSession->SetMessageCallback(MakeDelegate(this, &Game::ReceivePeerMessage));
 }
 
 void Game::Init(const char *pMapName, bool bEdit)
 {
+	// init fields
+	pSelection = NULL;
+	bMoving = false;
+	countdown = 0.f;
+
+	// create the GameUI
+	pGameUI = new GameUI(this);
+
 	pText = MFFont_Create("FranklinGothic");
 	pBattleNumbersFont = MFFont_Create("Battle");
 	pSmallNumbersFont = MFFont_Create("SmallNumbers");
 
+	pIcons = MFMaterial_Create("Icons");
+
+	// ** REMOVE ME ***
 	MFTexture *pTemp = MFTexture_Create("Horiz-Pirates", false);
 	pWindow = MFMaterial_Create("Window-Pirates");
 	pHorizLine = MFMaterial_Create("Horiz-Pirates");
@@ -124,8 +153,6 @@ void Game::Init(const char *pMapName, bool bEdit)
 
 	pMapScreen = new MapScreen(this);
 	pBattle = new Battle(this);
-
-	pRequestBox = new RequestBox;
 
 	// allocate runtime data
 	const int numSizes = 4;
@@ -158,11 +185,11 @@ Game::~Game()
 		delete pBattle;
 	if(pMapScreen)
 		delete pMapScreen;
-	if(pRequestBox)
-		delete pRequestBox;
 
 	if(pMap)
 		pMap->Destroy();
+
+	MFMaterial_Destroy(pIcons);
 
 	MFFont_Destroy(pText);
 	MFFont_Destroy(pBattleNumbersFont);
@@ -173,6 +200,410 @@ Game::~Game()
 
 	if(pActionList)
 		delete pActionList;
+
+	delete pGameUI;
+}
+
+void Game::Update()
+{
+	// update UI
+	pGameUI->Update();
+
+	// update map
+	pMap->Update();
+
+	// are we moving things around?
+	if(bMoving)
+	{
+		countdown -= MFSystem_TimeDelta();
+
+		while(countdown <= 0.f)
+		{
+			Step *pStep = pSelection->pPath->GetPath();
+			if(pStep->InvalidMove())
+			{
+				bMoving = false;
+				break;
+			}
+
+			int x = pStep->x;
+			int y = pStep->y;
+
+			// validate we can move to the new square, and subtract movement penalty
+			MapTile *pNewTile = pMap->GetTile(x, y);
+			if(!pNewTile->CanMove(pSelection) || !pSelection->SubtractMovementCost(pNewTile))
+			{
+				bMoving = false;
+				break;
+			}
+
+			// remove the group from the current tile
+			MapTile *pOldTile = pSelection->GetTile();
+			pOldTile->RemoveGroup(pSelection);
+
+			// add the group to the new tile
+			pNewTile->AddGroup(pSelection);
+			pMap->ClaimFlags(x, y, pSelection->GetPlayer());
+
+			// update the move action
+			UpdateMoveAction(pSelection);
+
+			// center the map on the guy moving
+			pMap->CenterView((float)x, (float)y);
+
+			countdown += 0.15f;
+
+			// strip the step from the path
+			pStep = pSelection->pPath->StripStep(pStep);
+
+			// if we have reached our destination
+			if(!pStep)
+			{
+				pSelection->pPath = NULL;
+				bMoving = false;
+				break;
+			}
+		}
+	}
+
+	// update game state
+	if(pActionList && !IsMyTurn())
+		pActionList->Update();
+
+	if(NumPendingActions() > 0)
+		ReplayActions();
+//		ReplayActions(303);
+}
+
+void Game::Draw()
+{
+	pMap->Draw();
+
+	if(pSelection)
+	{
+		// render the path
+		if(IsCurrentPlayer(pSelection->GetPlayer()))
+		{
+			Path *pPath = pSelection->GetPath();
+			if(pPath && pPath->GetPathLength())
+			{
+				MFView_Push();
+
+				int xTiles, yTiles;
+				pMap->SetMapOrtho(&xTiles, &yTiles);
+
+				float xStart, yStart;
+				pMap->GetOffset(&xStart, &yStart);
+				int xS = (int)xStart, yS = (int)yStart;
+
+				xTiles += xS;
+				yTiles += yS;
+
+				// draw path
+				MFMaterial_SetMaterial(pIcons);
+
+				int len = pPath->GetPathLength();
+				Step *pStep = pPath->GetPath();
+
+				for(int p = 0; p < len; ++p)
+				{
+					if(pStep[p].InvalidMove())
+						break;
+
+					float texelCenterOffset = MFRenderer_GetTexelCenterOffset() / 256.f;
+					if(pStep[p].x >= xS && pStep[p].y >= yS && pStep[p].x < xTiles && pStep[p].y < yTiles)
+					{
+						float tx = (float)(pStep[p].icon & 7) / 8.f + texelCenterOffset;
+						float ty = (float)(4 + (pStep[p].icon >> 3)) / 8.f + texelCenterOffset;
+						MFPrimitive_DrawQuad((float)pStep[p].x + 0.25f, (float)pStep[p].y + 0.25f, 0.5f, 0.5f, MFVector::one, tx, ty, tx + 0.125f, ty+0.125f);
+					}
+				}
+
+				for(int p = 0; p < len; ++p)
+				{
+					if(pStep[p].InvalidMove())
+						break;
+
+					if(pStep[p].cost > 2 && pStep[p].CanMove())
+						MFFont_DrawTextf(pSmallNumbersFont, pStep[p].x + 0.61f, pStep[p].y + 0.61f, 0.27f, MFVector::yellow, "%g", (float)pStep[p].cost * 0.5f);
+				}
+
+				MFView_Pop();
+			}
+		}
+
+		// draw the group info
+		int numUnits = pSelection->GetNumUnits();
+		int tx = 42 + numUnits*32;
+		int ty = 37 - (int)MFFont_GetFontHeight(pText)/2;
+
+		if(numUnits == 0)
+		{
+			Unit *pUnit = pSelection->GetVehicle();
+			UnitDetails *pDetails = pUnit->GetDetails();
+			pUnit->Draw(5.f + (pDetails->width-1)*22.f, 5.f + (pDetails->height-1)*30.f);
+			tx += (pDetails->width-1)*76;
+			ty += (pDetails->height-1)*18;
+		}
+		else
+		{
+			for(int a = numUnits-1; a >= 0; --a)
+			{
+				Unit *pUnit = pSelection->GetUnit(a);
+				pUnit->Draw(5.f + (float)a*32.f, 5.f);
+			}
+		}
+		Game::GetCurrent()->GetUnitDefs()->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset());
+
+		float movement = pSelection->MoveRemaining();
+		MFFont_BlitTextf(pText, tx+1, ty+1, MakeVector(0,0,0,1), "Move: %g", movement);
+		MFFont_BlitTextf(pText, tx, ty, MakeVector(1,1,0,1), "Move: %g", movement);
+	}
+
+	// now draw any UI that might be on the screen.
+	groupConfig.Draw();
+
+	if(NumPendingActions() > 0)
+		MFFont_BlitTextf(pText, 100, 50, MakeVector(1,1,1,1), GetNextActionDesc());
+}
+
+void Game::SetInputSource(HKWidget *pWidget)
+{
+	pWidget->RegisterInputEventHook(MakeDelegate(this, &Game::HandleInputEvent));
+}
+
+bool Game::HandleInputEvent(HKInputManager &manager, const HKInputManager::EventInfo &ev)
+{
+	if(ev.pSource->device == IDD_Mouse && ev.pSource->deviceID != 0)
+		return false;
+
+	// only handle left clicks
+	if(ev.buttonID != 0)
+	{
+		if(ev.buttonID == 1 && ev.ev == HKInputManager::IE_Tap && !bMoving)
+			SelectGroup(NULL);
+		return false;
+	}
+
+	switch(ev.ev)
+	{
+		case HKInputManager::IE_Tap:
+		{
+			// if a unit is moving, disable interaction
+			if(bMoving)
+				return true;
+
+			// calculate the cursor position
+			int cursorX, cursorY;
+			float cx, cy;
+			pMap->GetCursor(ev.tap.x, ev.tap.y, &cx, &cy);
+			cursorX = (int)cx;
+			cursorY = (int)cy;
+
+			// get the tile
+			MapTile *pTile = pMap->GetTile(cursorX, cursorY);
+
+			if(pSelection && IsCurrentPlayer(pSelection->GetPlayer()))
+			{
+				// if we've already selected a group on this tile
+				if(pTile == pSelection->pTile)
+				{
+					SelectGroup(NULL);
+
+					// show group config screen
+					groupConfig.Show(pTile);
+					return true;
+				}
+
+				// get the selected groups tile
+				pTile = pSelection->GetTile();
+
+				// if the selected group has a path already planned
+				if(pSelection->pPath)
+				{
+					Step *pStep = pSelection->pPath->GetLast();
+
+					// if we commit to move
+					if(cursorX == pStep->x && cursorY == pStep->y)
+					{
+						// check we can move at all
+						Step *pFirst = pSelection->pPath->GetPath();
+						if(!pFirst->CanMove() || pFirst->InvalidMove())
+							break;
+
+						// first check for an attack command
+						if(pSelection->pPath->IsEnd() && pStep->CanMove())
+						{
+							const char *pMessage = NULL;
+							bool bCommitActions = false;
+
+							// the path is only a single item long, it may be an attack or search command
+							MapTile *pTile = pMap->GetTile(cursorX, cursorY);
+
+							if(pTile->IsEnemyTile(pSelection->GetPlayer()))
+							{
+								// we have an attack command!
+								Castle *pCastle = pTile->GetCastle();
+
+								// check the castle is occuppied
+								if(pCastle && pTile->GetNumUnits() == 0)
+								{
+									// search castle squares for units
+									for(int a=0; a<4; ++a)
+									{
+										MapTile *pCastleTile = pCastle->GetTile(a);
+										if(pCastleTile->GetNumUnits() != 0)
+										{
+											pTile = pCastleTile;
+											break;
+										}
+									}
+								}
+
+								if(pSelection->GetNumUnits() > 0)
+								{
+									if(pTile->GetNumUnits() == 0)
+									{
+										if(pCastle)
+										{
+											// if it's a merc castle, we need to fight the mercs
+											if(pCastle->player == -1)
+											{
+												// create merc group
+												Group *pGroup = pCastle->GetMercGroup();
+												pTile->AddGroup(pGroup);
+												BeginBattle(pSelection, pTile);
+												break;
+											}
+											else
+											{
+												// the castle is empty! claim that shit!
+												pCastle->Capture(pSelection);
+												PushCaptureCastle(pSelection, pCastle);
+
+												// show the catle config window
+												pGameUI->ShowCastleMenu(pCastle);
+
+												bCommitActions = true;
+											}
+										}
+										else
+										{
+											// there must be empty enemy vehicles on the tile, we'll capture the empty vehicles
+											for(int a=0; a<pTile->GetNumGroups(); ++a)
+											{
+												Group *pUnits = pTile->GetGroup(a);
+												PushCaptureUnits(pSelection, pUnits);
+												pUnits->SetPlayer(pSelection->GetPlayer());
+											}
+
+											bCommitActions = true;
+										}
+									}
+									else
+									{
+										// begin the battle!
+										BeginBattle(pSelection, pTile);
+										break;
+									}
+								}
+								else
+								{
+									// can't attack with an empty vehicle!
+									// TODO: play sound?
+									break;
+								}
+							}
+							else if(pTile->GetType() == OT_Special)
+							{
+								// search command
+								Unit *pHero = pSelection->GetHero();
+								if(!pHero)
+									break;
+
+								// TODO: random encounter?
+
+								// get an item
+								Ruin *pRuin = pTile->GetRuin();
+								if(!pRuin->bHasSearched)
+								{
+									pHero->AddItem(pRuin->item);
+									pRuin->bHasSearched = true;
+
+									PushSearch(pSelection, pRuin);
+
+									Item *pItem = Game::GetCurrent()->GetUnitDefs()->GetItem(pRuin->item);
+									pMessage = MFStr("You search the ruin and find\n%s", pItem->pName);
+								}
+								else
+								{
+									pMessage = "You search the ruin,\nbut it is empty!";
+								}
+
+								bCommitActions = true;
+							}
+
+							if(bCommitActions)
+							{
+								// move group to the square
+								if(MoveGroupToTile(pSelection, pTile))
+								{
+									pSelection->pPath->Destroy();
+									pSelection->pPath = NULL;
+								}
+
+								// commit the actions
+								CommitActions(pSelection);
+
+								if(pMessage)
+									Game::GetCurrent()->ShowRequest(pMessage, NULL, true);
+								break;
+							}
+						}
+
+						// move to destination...
+						bMoving = true;
+						countdown = 0.f;
+
+						// push the move to the action list
+						PushMoveAction(pSelection);
+
+						// if the undo wasn't previously visible, push it now.
+						UpdateUndoButton();
+						break;
+					}
+				}
+
+				// plot a path to the new location
+				pSelection->pathX = cursorX;
+				pSelection->pathY = cursorY;
+				pSelection->pPath = pMap->FindPath(pSelection, cursorX, cursorY);
+			}
+			else
+			{
+				// if there is a group on the tile
+				Group *pGroup = pTile->GetGroup(0);
+				if(pGroup)
+				{
+					// select the group
+					SelectGroup(pGroup);
+				}
+				else
+				{
+					// see if there's a castle on the square
+					Castle *pCastle = pTile->GetCastle();
+					if(pCastle && IsCurrentPlayer(pCastle->GetPlayer()))
+					{
+						// enter the castle config menu
+						pGameUI->ShowCastleMenu(pCastle);
+					}
+				}
+			}
+			break;
+		}
+	}
+
+	return pMap->ReceiveInputEvent(manager, ev);
 }
 
 bool Game::IsCurrentPlayer(int player)
@@ -251,7 +682,7 @@ void Game::BeginGame()
 			MFDebug_Assert(heroID != -1, "Couldn't find hero!");
 
 			Group *pGroup = CreateUnit(heroID, pCastle, true);
-			players[pCastle->player].pHero = pGroup->GetUnit(0);
+			players[pCastle->player].pHero[players[pCastle->player].numHeroes++] = pGroup->GetUnit(0);
 
 			// pirates also start with a galleon
 			int pirateID = pUnitDefs->FindRace("Pirates");
@@ -268,7 +699,7 @@ void Game::BeginGame()
 	ApplyActions();
 
 	Screen::SetNext(pMapScreen);
-	pGameMenu->Show();
+	pGameUI->Show();
 }
 
 void Game::BeginTurn(int player)
@@ -321,7 +752,7 @@ void Game::BeginTurn(int player)
 		{
 			// show the starting castle build screen
 			if(currentTurn == 0 && IsMyTurn())
-				pMapScreen->ShowCastleConfig(pCastle);
+				pGameUI->ShowCastleMenu(pCastle);
 
 			++numCastles;
 
@@ -342,21 +773,23 @@ void Game::BeginTurn(int player)
 		{
 			if(pCastle->building != -1 && pCastle->buildTime <= 0)
 			{
-				BuildUnit &buildUnit = pCastle->details.buildUnits[pCastle->building];
-
 				// if a hero is building here
-				if(pUnitDefs->GetUnitType(buildUnit.unit) == UT_Hero)
+				if(pCastle->building >= 4)
 				{
 					Group *pGroup = NULL;
 
+					Unit *pHero = players[currentPlayer].pHero[pCastle->building - 4];
 					if(!bOnline || (IsMyTurn() && NumPendingActions() <= 1))
 					{
-						pGroup = CreateUnit(buildUnit.unit, pCastle, true);
+						pGroup = CreateUnit(pHero->GetType(), pCastle, true);
 						if(pGroup)
-							pMapScreen->ShowCastleConfig(pCastle);
+							pGameUI->ShowCastleMenu(pCastle);
 					}
 					else
-						players[currentPlayer].pHero->Revive();
+						pHero->Revive();
+
+					// and clear the hero revive location
+					players[currentPlayer].pHeroReviveLocation[pCastle->building - 4] = NULL;
 
 					if(pGroup || bOnline)
 					{
@@ -377,10 +810,10 @@ void Game::BeginTurn(int player)
 		{
 			if(pCastle->building != -1 && pCastle->buildTime <= 0)
 			{
-				BuildUnit &buildUnit = pCastle->details.buildUnits[pCastle->building];
-
-				if(pUnitDefs->GetUnitType(buildUnit.unit) != UT_Hero)
+				if(pCastle->building < 4)
 				{
+					BuildUnit &buildUnit = pCastle->details.buildUnits[pCastle->building];
+
 					Group *pGroup = NULL;
 
 					if(!bOnline || (IsMyTurn() && NumPendingActions() <= 1))
@@ -388,7 +821,7 @@ void Game::BeginTurn(int player)
 
 					if(pGroup || bOnline)
 					{
-						pCastle->buildTime = pCastle->details.buildUnits[pCastle->building].buildTime;
+						pCastle->buildTime = pCastle->GetBuildTime();
 					}
 				}
 			}
@@ -423,6 +856,9 @@ void Game::BeginTurn(int player)
 
 void Game::EndTurn()
 {
+	// deselect the group
+	SelectGroup(NULL);
+
 	// commit all outstanding actions
 	CommitAllActions();
 
@@ -434,7 +870,7 @@ void Game::EndTurn()
 		if(pCastle->nextBuild != pCastle->building)
 		{
 			pCastle->building = pCastle->nextBuild;
-			pCastle->buildTime = pCastle->nextBuild > -1 ? pCastle->details.buildUnits[pCastle->nextBuild].buildTime : 0;
+			pCastle->buildTime = pCastle->nextBuild > -1 ? pCastle->GetBuildTime() : 0;
 
 			if(bOnline && !bUpdating && IsMyTurn())
 			{
@@ -459,7 +895,7 @@ void Game::BeginBattle(Group *pGroup, MapTile *pTarget)
 	CommitActions(pGroup);
 
 	// enter the battle
-	pMapScreen->SelectGroup(NULL);
+	SelectGroup(NULL);
 	pBattle->Begin(pGroup, pTarget);
 }
 
@@ -555,7 +991,7 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 	if(pGroup)
 	{
 		// select the victorious group
-		pMapScreen->SelectGroup(pGroup);
+		SelectGroup(pGroup);
 
 		// if the target is an empty castle, capture it
 		Castle *pCastle = pTarget->GetCastle();
@@ -564,7 +1000,7 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 			pCastle->Capture(pGroup);
 			PushCaptureCastle(pGroup, pCastle);
 
-			pMapScreen->ShowCastleConfig(pCastle);
+			pGameUI->ShowCastleMenu(pCastle);
 		}
 
 		// check if the target is clear, and move there
@@ -584,7 +1020,7 @@ void Game::EndBattle(Group *pGroup, MapTile *pTarget)
 	}
 
 	Screen::SetNext(pMapScreen);
-	pGameMenu->Show();
+	pGameUI->Show();
 }
 
 Unit *Game::AllocUnit()
@@ -605,6 +1041,19 @@ Group *Game::AllocGroup()
 void Game::DestroyGroup(Group *pGroup)
 {
 	groups.Delete(pGroup);
+}
+
+bool Game::CanCastleBuildHero(Castle *pCastle, int hero)
+{
+	Player &p = players[pCastle->player];
+	if(!p.pHero[hero] || !p.pHero[hero]->IsDead())
+		return false;
+	return p.pHeroReviveLocation[hero] == NULL || p.pHeroReviveLocation[hero] == pCastle;
+}
+
+void Game::SetHeroRebuildCastle(int player, int hero, Castle *pCastle)
+{
+	players[player].pHeroReviveLocation[hero] = pCastle;
 }
 
 Group *Game::CreateUnit(int unit, Castle *pCastle, bool bCommitUnit)
@@ -674,10 +1123,18 @@ Group *Game::CreateUnit(int unit, Castle *pCastle, bool bCommitUnit)
 	if(pTile)
 	{
 		// create the unit
-		Unit *pUnit;
-		if(players[pCastle->player].pHero && pDetails->type == UT_Hero)
+		Unit *pUnit = NULL;
+		if(pDetails->type == UT_Hero)
 		{
-			pUnit = players[pCastle->player].pHero;
+			for(int a=0; a<players[pCastle->player].numHeroes; ++a)
+			{
+				if(players[pCastle->player].pHero[a]->GetType() == unit)
+					pUnit = players[pCastle->player].pHero[a];
+			}
+		}
+
+		if(pUnit)
+		{
 			pUnit->Revive();
 
 			pCastle->building = -1;
@@ -763,6 +1220,36 @@ bool Game::MoveGroupToTile(Group *pGroup, MapTile *pTile)
 	pMap->ClaimFlags(pTile->GetX(), pTile->GetY(), pGroup->GetPlayer());
 
 	return true;
+}
+
+void Game::SelectGroup(Group *pGroup)
+{
+	if(pSelection == pGroup)
+		return;
+
+	if(pGroup)
+	{
+		pSelection = pGroup;
+		pSelection->bSelected = true;
+		pSelection->pPath = NULL;
+
+		if(pGroup->pathX != -1 && pGroup->pathY != -1)
+			pSelection->pPath = pMap->FindPath(pGroup, pGroup->pathX, pGroup->pathY);
+	}
+	else
+	{
+		pSelection->bSelected = false;
+
+		if(pSelection->pPath)
+		{
+			pSelection->pPath->Destroy();
+			pSelection->pPath = NULL;
+		}
+
+		pSelection = NULL;
+	}
+
+	UpdateUndoButton();
 }
 
 void Game::AddUnit(Unit *pUnit, bool bCommitUnit)
@@ -867,14 +1354,9 @@ void Game::DrawLine(float sx, float sy, float dx, float dy)
 		MFPrimitive_DrawQuad(sx, sy-8.f, dx-sx, 16.f, MFVector::one, 0.f, texelCenter, 1.f, 1.f + (texelCenter));
 }
 
-void Game::ShowRequest(const char *pMessage, RequestBox::SelectCallback callback, bool bNotification)
+void Game::ShowRequest(const char *pMessage, GameUI::MsgBoxDelegate callback, bool bNotification)
 {
-	pRequestBox->Show(pMessage, callback, bNotification);
-}
-
-bool Game::DrawRequest()
-{
-	return pRequestBox->Draw();
+	pGameUI->ShowMessageBox(pMessage, callback, bNotification);
 }
 
 void Game::PushMoveAction(Group *pGroup)
@@ -1084,7 +1566,7 @@ void Game::CommitActions(Group *pGroup)
 
 	ApplyActions();
 
-	pMapScreen->ShowUndoButton();
+	UpdateUndoButton();
 }
 
 void Game::CommitAction(Action *pAction)
@@ -1398,16 +1880,6 @@ void Game::ApplyActions()
 		pActionList->Sync();
 }
 
-void Game::UpdateGameState()
-{
-	if(pActionList && !IsMyTurn())
-		pActionList->Update();
-
-	if(NumPendingActions() > 0)
-		ReplayActions();
-//		ReplayActions(303);
-}
-
 void Game::ReplayActions(int stopAction)
 {
 	if(!pActionList)
@@ -1493,7 +1965,7 @@ void Game::ReplayAction(GameAction *pAction)
 			int unit = pAction->pArgs[1];
 			Unit *pUnit = pUnitDefs->CreateUnit(unit, player);
 			if(pUnit->IsHero())
-				players[player].pHero = pUnit;
+				players[player].pHero[players[player].numHeroes++] = pUnit;
 			AddUnit(pUnit);
 			break;
 		}
@@ -1651,4 +2123,73 @@ void Game::ReplayAction(GameAction *pAction)
 	}
 
 	bUpdating = false;
+}
+
+Player* Game::GetPlayer(uint32 user, int *pPlayer)
+{
+	if(!bOnline)
+		return NULL;
+
+	for(int a=0; a<numPlayers; ++a)
+	{
+		if(players[a].playerID == user)
+		{
+			if(pPlayer)
+				*pPlayer = a;
+			return &players[a];
+		}
+	}
+
+	return NULL;
+}
+
+void Game::ReceivePeerMessage(uint32 user, const char *pMessage)
+{
+	int player;
+	Player *pPlayer = GetPlayer(user, &player);
+
+	do
+	{
+		char *pNextLine = MFString_Chr(pMessage, '\n');
+		if(pNextLine)
+			*pNextLine++ = 0;
+
+		// parse args
+		char *pArgs[32];
+		int numArgs = 0;
+
+		char *pArg = (char*)pMessage;
+		for(int a=0; a<32; ++a)
+		{
+			pArg = MFString_Chr(pArg, ':');
+			if(pArg)
+			{
+				*pArg++ = 0;
+				pArgs[a] = pArg;
+
+				++numArgs;
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		if(!MFString_CaseCmp(pMessage, "JOIN"))
+		{
+		}
+
+		pMessage = pNextLine;
+	}
+	while(pMessage);
+}
+
+void Game::UpdateUndoButton()
+{
+	pGameUI->ShowUndoButton(pSelection && pSelection->GetLastAction());
+}
+
+void Game::ShowMiniMap()
+{
+	pGameUI->ShowMiniMap();
 }

@@ -6,6 +6,8 @@
 #include "InputHandler.h"
 #include "Path.h"
 
+#include "UI/HKWidget.h"
+
 struct MFTexture;
 class Game;
 
@@ -108,6 +110,8 @@ public:
 	void Save();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
+
+	bool ReceiveInputEvent(HKInputManager &manager, const HKInputManager::EventInfo &ev);
 
 	void Update();
 	void Draw();

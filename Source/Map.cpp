@@ -2,6 +2,8 @@
 #include "Map.h"
 #include "Display.h"
 
+#include "UI/HKUI.h"
+
 #include "MFRenderer.h"
 #include "MFIni.h"
 #include "MFView.h"
@@ -1098,6 +1100,7 @@ void Map::GetCursor(float x, float y, float *pX, float *pY)
 		*pY = yOffset + y / tileHeight;
 }
 
+
 bool Map::HandleInputEvent(InputEvent ev, InputInfo &info)
 {
 	if(info.device == IDD_Mouse && info.deviceID != 0)
@@ -1133,6 +1136,49 @@ bool Map::HandleInputEvent(InputEvent ev, InputInfo &info)
 			float newZoom = (info.device == IDD_Mouse) ? zoom + (info.pinch.deltaScale < 1.f ? -.25f : .25f) : zoom * info.pinch.deltaScale;
 			GetVisibleTileSize(&tileWidth, &tileHeight);
 			SetZoom(newZoom, info.pinch.centerX/tileWidth, info.pinch.centerY/tileHeight);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool Map::ReceiveInputEvent(HKInputManager &manager, const HKInputManager::EventInfo &ev)
+{
+	float tileWidth, tileHeight;
+
+	switch(ev.ev)
+	{
+		case HKInputManager::IE_Down:
+			if(ev.buttonID == moveButton)
+			{
+				HKUserInterface::Get().SetFocus(ev.pSource, pGame->GetUI()->GetMap());
+				xVelocity = yVelocity = 0.f;
+				return true;
+			}
+			break;
+		case HKInputManager::IE_Up:
+		case HKInputManager::IE_Cancel:
+			if(ev.buttonID == moveButton)
+			{
+				isDragging = false;
+				HKUserInterface::Get().SetFocus(ev.pSource, NULL);
+			}
+			break;
+		case HKInputManager::IE_Drag:
+			if(ev.buttonID == moveButton)
+			{
+				GetVisibleTileSize(&tileWidth, &tileHeight);
+				SetOffset(xOffset + -ev.drag.deltaX/tileWidth, yOffset + -ev.drag.deltaY/tileHeight);
+				isDragging = true;
+				return true;
+			}
+			break;
+		case HKInputManager::IE_Pinch:
+		{
+			float newZoom = (ev.pSource->device == IDD_Mouse) ? zoom + (ev.pinch.deltaScale < 1.f ? -.25f : .25f) : zoom * ev.pinch.deltaScale;
+			GetVisibleTileSize(&tileWidth, &tileHeight);
+			SetZoom(newZoom, ev.pinch.centerX/tileWidth, ev.pinch.centerY/tileHeight);
 			return true;
 		}
 	}

@@ -15,6 +15,7 @@
 #include "Menu/Game/GameUI.h"
 
 #include "UI/HKUI.h"
+#include "Menu/Widgets/UnitButton.h"
 
 #if defined(MF_WINDOWS)
 	#define WIN32_LEAN_AND_MEAN
@@ -28,7 +29,6 @@
 InputManager *pInputManager = NULL;
 
 FrontMenu *pFrontMenu;
-GameMenu *pGameMenu;
 
 Game *pGame = NULL;
 Editor *pEditor = NULL;
@@ -57,6 +57,11 @@ void Game_InitFilesystem()
 		pInitFujiFS();
 }
 
+static void NullHandler(HKWidget &, const HKWidgetEventInfo &)
+{
+	int x = 0;
+}
+
 void Game_Init()
 {
 	MFCALLSTACK;
@@ -76,11 +81,16 @@ void Game_Init()
 	// load the UI
 	HKUserInterface::Init();
 
+	HKWidgetFactory::FactoryType *pButtonType = HKUserInterface::FindWidgetType(HKWidgetButton::TypeName());
+	HKUserInterface::RegisterWidget<UnitButton>(pButtonType);
+	HKUserInterface::RegisterWidgetRenderer(UnitButton::TypeName(), RendererUnitButton::Create, NULL);
+
+	HKUserInterface::RegisterEventHandler("null", NullHandler);
+
 	HKUserInterface *pUI = new HKUserInterface();
 	HKUserInterface::SetActiveUI(pUI);
 
 	pFrontMenu = new FrontMenu();
-	pGameMenu = new GameMenu();
 
 	pFrontMenu->ShowMainMenu();
 	pFrontMenu->Show();
@@ -267,7 +277,7 @@ int main(int argc, char *argv[])
 	return r;
 }
 
-#else
+#elif !defined(MF_NACL) && !defined(MF_ANDROID)
 
 int main(int argc, const char *argv[])
 {

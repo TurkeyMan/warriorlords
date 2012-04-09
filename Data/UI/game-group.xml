@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Frame size="480,320" align="center" background_image="Window-Pirates">
+
+	<!-- The window -->
+	<LinearLayout align="fill" orientation="vertical" padding="5">
+
+		<!-- Top bit -->
+		<LinearLayout align="fill" orientation="horizontal">
+		</LinearLayout>
+
+		<!-- Unit area -->
+		<LinearLayout align="topFill" height ="168" orientation="horizontal">
+
+			<!-- Ranged units -->
+			<Frame id="ranged" align="fill">
+				<Widget align="center" background_image="Ranged" />
+			</Frame>
+
+			<!-- Melee units -->
+			<Frame id="melee" align="fill">
+				<Widget align="center" background_image="Melee" />
+			</Frame>
+
+		</LinearLayout>
+
+		<!-- Row separator -->
+		<Widget align="topFill" height ="16" background_image="Horiz-Pirates" />
+
+		<!-- Group area -->
+		<LinearLayout id="groups" align="topFill" orientation="horizontal" padding="5">
+
+
+			<!-- New group area -->
+			<Widget align="topFill" height="64" />
+
+		</LinearLayout>
+
+	</LinearLayout>
+
+	<!-- Close button -->
+	<Button id="close" align="topRight" style="game-closebutton"/>
+
+</Frame>

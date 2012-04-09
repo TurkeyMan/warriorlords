@@ -28,6 +28,7 @@ bool Inventory::DrawContent()
 {
 	Game::GetCurrent()->DrawLine(window.x + 16, window.y + 192, window.x + window.width - 16, window.y + 192);
 
+	MFFont *pFont = Game::GetCurrent()->GetTextFont();
 	float height = MFFont_GetFontHeight(pFont);
 	float width = MFFont_GetStringWidth(pFont, "Inventory", height);
 	MFFont_BlitText(pFont, (int)(window.x + window.width*0.5f - width*0.5f), (int)window.y + 10, MFVector::yellow, "Inventory");

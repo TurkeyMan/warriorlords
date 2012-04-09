@@ -17,7 +17,7 @@ UnitConfig::UnitConfig()
 	pInventory = Button::Create(pIcons, &pos, &uvs, MFVector::white);
 	pInventory->SetClickCallback(MakeDelegate(this, &UnitConfig::ShowInventory));
 
-	float height = MFFont_GetFontHeight(pFont);
+	float height = 23.f;
 	MFRect cbRect = { bottom.x + 40, bottom.y + 10, 200.f, height };
 	pStrategySelect[0] = CheckBox::Create(&cbRect, "Attack Strongest", MFVector::yellow, 1, 0);
 	pStrategySelect[0]->SetChangeCallback(MakeDelegate(this, &UnitConfig::SelectStrat));
@@ -65,6 +65,7 @@ bool UnitConfig::DrawContent()
 
 	const char *attackIcon[] = { "¥", "¤" };
 
+	MFFont *pFont = Game::GetCurrent()->GetTextFont();
 	int height = (int)MFFont_GetFontHeight(pFont);
 	float tWidth = MFFont_GetStringWidth(pFont, pUnit->GetName(), (float)height);
 	MFFont_BlitText(pFont, (int)top.x + ((int)top.width / 2) - (int)(tWidth*0.5f), (int)top.y + 5, MFVector::yellow, pUnit->GetName());

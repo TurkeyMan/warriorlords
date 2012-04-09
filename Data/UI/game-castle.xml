@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Frame size="480,320" align="center" background_image="Window-Pirates">
+
+	<!-- The window -->
+	<LinearLayout align="fill" orientation="vertical" padding="10">
+
+		<Label id="castleName" align="topCenter" style="game-label" margin="4" />
+
+		<!-- This frame fills the center region -->
+		<LinearLayout align="topFill" orientation="horizontal">
+
+			<!-- Unit selector -->
+			<Frame align="centerLeft" size="152,152">
+				<LinearLayout align="center" orientation="vertical">
+					<LinearLayout align="topCenter" orientation="horizontal">
+						<UnitButton id="unit0" style="game-unitbutton" />
+						<UnitButton id="unit1" style="game-unitbutton" />
+					</LinearLayout>
+					<LinearLayout align="topCenter" orientation="horizontal">
+						<UnitButton id="unit2" style="game-unitbutton" />
+						<UnitButton id="unit3" style="game-unitbutton" />
+					</LinearLayout>
+				</LinearLayout>
+			</Frame>
+
+			<!-- Column separator -->
+			<Widget align="fillLeft" width="16" />
+
+			<!-- Unit details -->
+			<Frame id="unitDetails" align="fill">
+				<Widget id="typeImage" align="center" background_image="Melee" />
+
+				<LinearLayout align="fill" padding="8" orientation="Vertical">
+					<Label id="unitName" style="game-text" margin="0,0,0,8" />
+					<Label id="unitType" style="game-text" />
+					<Label id="unitAtk" style="game-text" />
+					<Label id="unitMov" style="game-text" />
+					<Label id="unitTurns" style="game-text" />
+				</LinearLayout>
+			</Frame>
+
+		</LinearLayout>
+
+		<!-- Row separator -->
+		<Widget align="topFill" height ="16" background_image="Horiz-Pirates" />
+
+		<!-- This layout spans the bottom -->
+		<LinearLayout align="fill" orientation="horizontal" margin="5">
+			<UnitButton id="hero0" style="game-unitbutton" visible="invisible" />
+			<UnitButton id="hero1" style="game-unitbutton" visible="invisible" />
+			<UnitButton id="hero2" style="game-unitbutton" visible="invisible" />
+			<UnitButton id="hero3" style="game-unitbutton" visible="invisible" />
+		</LinearLayout>
+
+	</LinearLayout>
+
+	<!-- Close button -->
+	<Button id="close" align="topRight" style="game-closebutton" />
+
+</Frame>
