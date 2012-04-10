@@ -786,16 +786,9 @@ void Game::BeginTurn(int player)
 							pGameUI->ShowCastleMenu(pCastle);
 					}
 					else
-						pHero->Revive();
-
-					// and clear the hero revive location
-					players[currentPlayer].pHeroReviveLocation[pCastle->building - 4] = NULL;
-
-					if(pGroup || bOnline)
 					{
-						// clear the hero from building, and show the build dialog
-						pCastle->building = pCastle->nextBuild = -1;
-						pCastle->buildTime = 0;
+						pHero->Revive();
+						pCastle->ClearBuildUnit();
 					}
 				}
 			}
@@ -821,7 +814,7 @@ void Game::BeginTurn(int player)
 
 					if(pGroup || bOnline)
 					{
-						pCastle->buildTime = pCastle->GetBuildTime();
+						pCastle->buildTime = pCastle->GetUnitBuildTime();
 					}
 				}
 			}
@@ -869,8 +862,8 @@ void Game::EndTurn()
 		Castle *pCastle = pMap->GetCastle(a);
 		if(pCastle->nextBuild != pCastle->building)
 		{
+			pCastle->buildTime = pCastle->BuildTimeRemaining();
 			pCastle->building = pCastle->nextBuild;
-			pCastle->buildTime = pCastle->nextBuild > -1 ? pCastle->GetBuildTime() : 0;
 
 			if(bOnline && !bUpdating && IsMyTurn())
 			{
@@ -1129,18 +1122,17 @@ Group *Game::CreateUnit(int unit, Castle *pCastle, bool bCommitUnit)
 			for(int a=0; a<players[pCastle->player].numHeroes; ++a)
 			{
 				if(players[pCastle->player].pHero[a]->GetType() == unit)
+				{
 					pUnit = players[pCastle->player].pHero[a];
+					pUnit->Revive();
+
+					pCastle->ClearBuildUnit();
+					break;
+				}
 			}
 		}
 
-		if(pUnit)
-		{
-			pUnit->Revive();
-
-			pCastle->building = -1;
-			pCastle->nextBuild = -1;
-		}
-		else
+		if(!pUnit)
 		{
 			pUnit = pUnitDefs->CreateUnit(unit, pCastle->player);
 			AddUnit(pUnit, bCommitUnit);

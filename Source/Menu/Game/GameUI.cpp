@@ -321,7 +321,7 @@ void GameUI::CastleMenu::UpdateUnitInfo()
 			pUnitType->SetVisible(HKWidget::Gone);
 			pUnitAtk->SetVisible(HKWidget::Gone);
 			pUnitMov->SetText(MFString::Format("Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : ""));
-			pUnitTurns->SetText(MFString::Format("Turns: %d", pCastle->GetBuildTime()));
+			pUnitTurns->SetText(MFString::Format("Turns: %d", pCastle->BuildTimeRemaining()));
 
 			pTypeImage->SetVisible(HKWidget::Gone);
 		}
@@ -332,7 +332,7 @@ void GameUI::CastleMenu::UpdateUnitInfo()
 			pUnitType->SetText(MFString::Format("Type: %s", pUnitDefs->GetArmourClassName(pDetails->armour)));
 			pUnitAtk->SetText(MFString::Format("Atk: %d - %d (%s%s)", pDetails->attackMin, pDetails->attackMax, pDetails->AttackSpeedDescription(), pUnitDefs->GetAttackTypeName(pDetails->atkType)));
 			pUnitMov->SetText(MFString::Format("Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : ""));
-			pUnitTurns->SetText(MFString::Format("Turns: %d", pCastle->GetBuildTime()));
+			pUnitTurns->SetText(MFString::Format("Turns: %d", pCastle->BuildTimeRemaining()));
 
 			pTypeImage->SetVisible(HKWidget::Visible);
 			pTypeImage->SetProperty("background_image", pDetails->atkType == 0 ? "Melee" : "Ranged");

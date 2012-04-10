@@ -1336,10 +1336,8 @@ Group *Castle::GetMercGroup()
 
 void Castle::Capture(Group *pGroup)
 {
+	ClearBuildUnit(); // this must happen before we reassign the player, since it may need to clear a hero
 	player = pGroup->GetPlayer();
-	building = -1;
-	nextBuild = -1;
-	buildTime = 0;
 
 	for(int a=0; a<4; ++a)
 	{
@@ -1354,12 +1352,22 @@ void Castle::Capture(Group *pGroup)
 	}
 }
 
+void Castle::ClearBuildUnit()
+{
+	SetBuildUnit(-1);
+	building = -1;
+	buildTime = 0;
+}
+
 void Castle::SetBuildUnit(int slot)
 {
+	// if we're currently building a hero, clear the castle binding
+	if(nextBuild >= 4)
+		pGame->SetHeroRebuildCastle(player, nextBuild - 4, NULL);
+
+	// if we have selected to build a hero, bind it to the castle
 	if(slot >= 4)
 		pGame->SetHeroRebuildCastle(player, slot - 4, this);
-	else if(nextBuild >= 4)
-		pGame->SetHeroRebuildCastle(player, nextBuild - 4, NULL);
 
 	nextBuild = slot;
 }
@@ -1371,15 +1379,21 @@ int Castle::GetBuildUnit()
 	return nextBuild < 4 ? details.buildUnits[nextBuild].unit : pGame->GetPlayerHero(player, nextBuild - 4)->GetType();
 }
 
-int Castle::GetBuildTime()
+int Castle::BuildTimeRemaining()
 {
-	if(nextBuild == -1)
-		return 0;
-
 	if(nextBuild == building)
 		return buildTime;
 
-	return nextBuild < 4 ? details.buildUnits[nextBuild].buildTime : pGame->GetPlayerHero(player, nextBuild - 4)->GetDetails()->buildTime;
+	return GetUnitBuildTime();
+}
+
+int Castle::GetUnitBuildTime()
+{
+	int unit = nextBuild != -1 ? nextBuild : building;
+	if(unit == -1)
+		return 0;
+
+	return unit < 4 ? details.buildUnits[unit].buildTime : pGame->GetPlayerHero(player, unit - 4)->GetDetails()->buildTime;
 }
 
 void Ruin::InitRuin(int _id, int specialID, int _item)

@@ -473,9 +473,11 @@ public:
 	Group *GetMercGroup();
 	void Capture(Group *pGroup);
 
+	void ClearBuildUnit();
 	void SetBuildUnit(int slot);
 	int GetBuildUnit();
-	int GetBuildTime();
+	int GetUnitBuildTime();
+	int BuildTimeRemaining();
 
 	const char *GetName() { return details.name; }
 	void SetName(const char *pName) { MFString_Copy(details.name, pName); }
