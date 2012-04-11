@@ -119,6 +119,31 @@ protected:
 		void OnSelectUnit(HKWidget &sender, const HKWidgetEventInfo &ev);
 	} castleMenu;
 
+	// recruit menu
+	struct RecruitMenu : public Window
+	{
+		RecruitMenu(GameUI *pUI) : pUI(pUI) {}
+		GameUI *pUI;
+
+		void Show();
+
+		HKWidgetButton *pClose;
+		UnitButton *pHeroes[8];
+		int heroes[8];
+		int selected;
+
+		HKWidgetLayoutFrame *pHeroDetails;
+		HKWidgetLabel *pHeroName;
+		HKWidgetLabel *pHeroAtk;
+		HKWidgetLabel *pHeroMov;
+		HKWidgetLabel *pHeroTurns;
+		HKWidget *pTypeImage;
+
+		void UpdateHeroInfo();
+
+		void OnSelectHero(HKWidget &sender, const HKWidgetEventInfo &ev);
+	} recruitMenu;
+
 	// group config
 	struct GroupMenu : public Window
 	{

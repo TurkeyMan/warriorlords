@@ -47,6 +47,7 @@ Editor::Editor(Game *pGame)
 	MFMaterial *pWater = pTiles->GetWaterMaterial();
 	MFMaterial *pRoadMat = pTiles->GetRoadMaterial();
 	MFMaterial *pCastleMat = pUnits->GetCastleMaterial();
+	MFMaterial *pMiscMat = pUnits->GetMiscMaterial();
 
 	int tileWidth, tileHeight;
 	pTiles->GetTileSize(&tileWidth, &tileHeight);
@@ -148,7 +149,7 @@ Editor::Editor(Game *pGame)
 	{
 		pUnits->GetSpecialUVs(a, &uvs, texelOffset);
 
-		brushSelect.AddButton(2 + a/11, pCastleMat, &uvs, MFVector::one, (OT_Special << 16) | a, MakeDelegate(this, &Editor::ChooseBrush));
+		brushSelect.AddButton(2 + a/11, pMiscMat, &uvs, MFVector::one, (OT_Special << 16) | a, MakeDelegate(this, &Editor::ChooseBrush));
 	}
 
 	// region buttons
@@ -489,7 +490,7 @@ void Editor::ChooseBrush(int button, int buttonID)
 		{
 			UnitDefinitions *pUnits = pMap->GetUnitDefinitions();
 			pUnits->GetSpecialUVs(index, &rect, texelOffset);
-			pMat = pUnits->GetCastleMaterial();
+			pMat = pUnits->GetMiscMaterial();
 			break;
 		}
 		case OT_Road:

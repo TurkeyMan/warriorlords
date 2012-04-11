@@ -187,6 +187,17 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 					MFTexture_GetTextureDimensions(pTex, &pUnitDefs->itemMapWidth, &pUnitDefs->itemMapHeight);
 			}
 		}
+		else if(pLine->IsString(0, "misc_map"))
+		{
+			pUnitDefs->pMiscMat = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
+
+			if(pUnitDefs->pMiscMat)
+			{
+				MFTexture *pTex = MFMaterial_GetParameterT(pUnitDefs->pMiscMat, MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
+				if(pTex)
+					MFTexture_GetTextureDimensions(pTex, &pUnitDefs->miscMapWidth, &pUnitDefs->miscMapHeight);
+			}
+		}
 		else if(pLine->IsString(0, "tile_width"))
 		{
 			pUnitDefs->tileWidth = pLine->GetInt(1);
@@ -948,7 +959,7 @@ void UnitDefinitions::GetUnitUVs(int unit, bool bFlip, MFRect *pUVs, float texel
 	pUVs->height = def.height*yScale;
 }
 
-void UnitDefinitions::GetSpecialUVs(int index, MFRect *pUVs, float texelOffset)
+void UnitDefinitions::GetSpecialUVs(int index, MFRect *pUVs, float texelOffset, int *pWidth, int *pHeight)
 {
 	float fWidth = (float)castleMapWidth;
 	float fHeight = (float)castleMapHeight;
@@ -962,6 +973,11 @@ void UnitDefinitions::GetSpecialUVs(int index, MFRect *pUVs, float texelOffset)
 	pUVs->y = s.y*yScale + halfY;
 	pUVs->width = xScale*(float)s.width;
 	pUVs->height = yScale*(float)s.height;
+
+	if(pWidth)
+		*pWidth = s.width;
+	if(pHeight)
+		*pHeight = s.height;
 }
 
 void UnitDefinitions::GetItemUVs(int item, MFRect *pUVs, float texelOffset)

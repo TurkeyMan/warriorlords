@@ -4,6 +4,7 @@
 
 	<Frame id="windows" align="fill" visible="invisible">
 		<Prefab id="castle" prefab="game-castle.xml" align="center" visible="invisible" />
+		<Prefab id="recruit" prefab="game-recruit.xml" align="center" visible="invisible" />
 		<Prefab id="group" prefab="game-group.xml" align="center" visible="invisible" />
 		<Prefab id="minimap" prefab="game-minimap.xml" align="center" visible="invisible" />
 

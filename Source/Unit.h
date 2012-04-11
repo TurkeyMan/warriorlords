@@ -252,11 +252,12 @@ public:
 	void GetCastleUVs(int race, MFRect *pUVs, float texelOffset);
 	void GetFlagUVs(int race, MFRect *pUVs, float texelOffset);
 	void GetUnitUVs(int unit, bool bFlip, MFRect *pUVs, float texelOffset);
-	void GetSpecialUVs(int index, MFRect *pUVs, float texelOffset);
+	void GetSpecialUVs(int index, MFRect *pUVs, float texelOffset, int *pWidth = NULL, int *pHeight = NULL);
 	void GetItemUVs(int item, MFRect *pUVs, float texelOffset);
 	void GetBadgeUVs(int rank, MFRect *pUVs, float texelOffset);
 
 	inline MFMaterial *GetCastleMaterial() const { return pCastleMat; }
+	inline MFMaterial *GetMiscMaterial() const { return pMiscMat; }
 	inline MFMaterial *GetItemMaterial() const { return pItemMat; }
 
 protected:
@@ -290,6 +291,7 @@ protected:
 	MFMaterial *pHeadMat;
 	MFMaterial *pCastleMat;
 	MFMaterial *pItemMat;
+	MFMaterial *pMiscMat;
 	MFMaterial *pRanks;
 
 	int tileWidth, tileHeight;
@@ -297,6 +299,7 @@ protected:
 	int unitMapWidth, unitMapHeight;
 	int castleMapWidth, castleMapHeight;
 	int itemMapWidth, itemMapHeight;
+	int miscMapWidth, miscMapHeight;
 
 	Race *pRaces;
 	int raceCount;

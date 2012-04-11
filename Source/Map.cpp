@@ -602,7 +602,7 @@ void Map::ConstructMap(int race)
 		pMap[a].type = mapTemplate[slice].pMap[a].type;
 		pMap[a].index = mapTemplate[slice].pMap[a].index;
 
-		if(pMap[a].type == OT_Special)
+		if(pMap[a].type == OT_Special && !bEditable)
 		{
 			Ruin &ruin = pRuins[numRuins];
 
@@ -1262,6 +1262,7 @@ void Map::Draw()
 	int numTiles = 0;
 	int numRoads = 0;
 	int numCastleTiles = 0;
+	int numMiscTiles = 0;
 
 	Group *pSelection = NULL;
 
@@ -1325,9 +1326,9 @@ void Map::Draw()
 					break;
 
 				case OT_Special:
-					drawTile.i = (int8)pRuins[pTile->index].type;
-					drawTile.flags = 2;
-					++numCastleTiles;
+					drawTile.i = bEditable ? (int8)pTile->index : (int8)pRuins[pTile->index].type;
+					drawTile.flags = 4;
+					++numMiscTiles;
 					break;
 			}
 		}
@@ -1374,7 +1375,7 @@ void Map::Draw()
 		{
 			RenderTile &drawTile = renderTiles[a];
 
-			if(drawTile.flags < 8)
+			if(drawTile.flags < 4)
 			{
 				MFVector colour = MFVector::one;
 				float width = 1.f;
@@ -1390,9 +1391,6 @@ void Map::Draw()
 						pUnits->GetFlagUVs(pGame->GetPlayerRace(drawTile.i), &uvs, texelCenter);
 						colour = pGame->GetPlayerColour(drawTile.i);
 						break;
-					case 2:
-						pUnits->GetSpecialUVs(drawTile.i, &uvs, texelCenter);
-						break;
 				}
 
 				MFSetColour(colour);
@@ -1400,6 +1398,37 @@ void Map::Draw()
 				MFSetPosition((float)renderTiles[a].x, (float)renderTiles[a].y, 0);
 				MFSetTexCoord1(uvs.x + uvs.width, uvs.y + uvs.height);
 				MFSetPosition((float)renderTiles[a].x + width, (float)renderTiles[a].y + width, 0);
+			}
+		}
+
+		MFEnd();
+	}
+
+	// draw misc stuff
+	if(numMiscTiles)
+	{
+		MFMaterial_SetMaterial(pUnits->GetMiscMaterial());
+
+		MFPrimitive(PT_QuadList);
+		MFBegin(numMiscTiles*2);
+		MFRect uvs;
+
+		for(int a=0; a<numTiles; ++a)
+		{
+			RenderTile &drawTile = renderTiles[a];
+
+			if(drawTile.flags == 4)
+			{
+				MFVector colour = MFVector::one;
+
+				int width, height;
+				pUnits->GetSpecialUVs(drawTile.i, &uvs, texelCenter, &width, &height);
+
+				MFSetColour(colour);
+				MFSetTexCoord1(uvs.x, uvs.y);
+				MFSetPosition((float)renderTiles[a].x, (float)renderTiles[a].y, 0);
+				MFSetTexCoord1(uvs.x + uvs.width, uvs.y + uvs.height);
+				MFSetPosition((float)renderTiles[a].x + (float)width, (float)renderTiles[a].y + (float)height, 0);
 			}
 		}
 

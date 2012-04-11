@@ -13,6 +13,7 @@
 GameUI::GameUI(Game *pGame)
 : gameScreen(this)
 , castleMenu(this)
+, recruitMenu(this)
 , miniMap(this)
 , msgBox(this)
 {
@@ -74,6 +75,30 @@ GameUI::GameUI(Game *pGame)
 		castleMenu.pUnitTurns = pMenu->FindChild<HKWidgetLabel>("unitTurns");
 
 		castleMenu.pTypeImage = pMenu->FindChild("typeImage");
+	}
+
+	// configure recruit menu
+	recruitMenu.pMenu = pMenu->FindChild("recruit");
+	if(recruitMenu.pMenu)
+	{
+		recruitMenu.pClose = pMenu->FindChild<HKWidgetButton>("close");
+		recruitMenu.pClose->OnClicked += fastdelegate::MakeDelegate(this, &GameUI::OnCloseClicked);
+
+		for(int a=0; a<8; ++a)
+		{
+			recruitMenu.pHeroes[a] = pMenu->FindChild<UnitButton>(MFString::Format("hero%d", a).CStr());
+			recruitMenu.pHeroes[a]->SetUserData((void*)a);
+			recruitMenu.pHeroes[a]->OnClicked += fastdelegate::MakeDelegate(&recruitMenu, &GameUI::RecruitMenu::OnSelectHero);
+		}
+
+		recruitMenu.pHeroDetails = pMenu->FindChild<HKWidgetLayoutFrame>("heroDetails");
+
+		recruitMenu.pHeroName = pMenu->FindChild<HKWidgetLabel>("heroName");
+		recruitMenu.pHeroAtk = pMenu->FindChild<HKWidgetLabel>("heroAtk");
+		recruitMenu.pHeroMov = pMenu->FindChild<HKWidgetLabel>("heroMov");
+		recruitMenu.pHeroTurns = pMenu->FindChild<HKWidgetLabel>("heroTurns");
+
+		recruitMenu.pTypeImage = pMenu->FindChild("typeImage");
 	}
 
 	// configure minimap
@@ -256,7 +281,7 @@ void GameUI::GameScreen::OnFinishTurn(int selection)
 		pGame->EndTurn();
 }
 
-// castle Menu
+// castle menu
 
 void GameUI::CastleMenu::Show(Castle *_pCastle)
 {
@@ -355,6 +380,78 @@ void GameUI::CastleMenu::OnSelectUnit(HKWidget &sender, const HKWidgetEventInfo 
 	UpdateUnitInfo();
 }
 
+// recruit menu
+
+void GameUI::RecruitMenu::Show()
+{
+	Game *pGame = pUI->pGame;
+
+	selected = 0;
+
+	int player = pGame->CurrentPlayer();
+	MFVector colour = pGame->GetPlayerColour(player);
+
+	UnitDefinitions *pUnitDefs = pGame->GetUnitDefs();
+
+	int numUnits = pUnitDefs->GetNumUnitTypes();
+	int numHeroes = 0;
+	for(int a=0; a<numUnits; ++a)
+	{
+		UnitDetails *pDetails = pUnitDefs->GetUnitDetails(a);
+
+		if(pDetails->type == UT_Hero && (pDetails->race == 0 || pDetails->race == pGame->GetPlayerRace(player)))
+		{
+			heroes[numHeroes] = a;
+
+			pHeroes[numHeroes]->SetUnit(a);
+			pHeroes[numHeroes]->SetUnitColour(colour);
+
+			pHeroes[numHeroes]->SetProperty("background_colour", numHeroes == selected ? "blue" : "white");
+
+			pHeroes[numHeroes]->SetVisible(HKWidget::Visible);
+			++numHeroes;
+		}
+	}
+
+	for(int a=numHeroes; a<8; ++a)
+		pHeroes[a]->SetVisible(HKWidget::Gone);
+
+	UpdateHeroInfo();
+
+	pUI->ShowAsCurrent(this);
+}
+
+void GameUI::RecruitMenu::UpdateHeroInfo()
+{
+	Game *pGame = pUI->pGame;
+	UnitDefinitions *pUnitDefs = pGame->GetUnitDefs();
+	UnitDetails *pDetails = pUnitDefs->GetUnitDetails(heroes[selected]);
+
+	pHeroName->SetText(pDetails->pName);
+	pHeroAtk->SetText(MFString::Format("Atk: %d - %d (%s%s)", pDetails->attackMin, pDetails->attackMax, pDetails->AttackSpeedDescription(), pUnitDefs->GetAttackTypeName(pDetails->atkType)));
+	pHeroMov->SetText(MFString::Format("Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : ""));
+	pHeroTurns->SetText(MFString::Format("Turns: %d", pDetails->buildTime));
+
+	pTypeImage->SetProperty("background_image", pDetails->atkType == 0 ? "Melee" : "Ranged");
+}
+
+void GameUI::RecruitMenu::OnSelectHero(HKWidget &sender, const HKWidgetEventInfo &ev)
+{
+	Game *pGame = pUI->pGame;
+
+	int button = (int)(size_t)sender.GetUserData();
+
+//	MFVector colour = pGame->GetPlayerColour(pGame->CurrentPlayer());
+	for(int a=0; a<8; ++a)
+		pHeroes[a]->SetProperty("background_colour", button == a ? "blue" : "white");
+
+	// mark current selection
+	selected = button;
+
+	UpdateHeroInfo();
+}
+
+// minimap
 void GameUI::MiniMap::Show()
 {
 	int width, height;
@@ -392,6 +489,8 @@ void GameUI::MiniMap::OnFocusMap(HKWidget &sender, const HKWidgetEventInfo &ev)
 				pMap->CenterView(x, y);
 */
 }
+
+// message box
 
 void GameUI::MsgBox::Show(const char *pMessage, MsgBoxDelegate selectCallback, bool bNotification)
 {
