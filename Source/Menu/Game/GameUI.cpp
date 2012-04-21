@@ -50,55 +50,55 @@ GameUI::GameUI(Game *pGame)
 	castleMenu.pMenu = pMenu->FindChild("castle");
 	if(castleMenu.pMenu)
 	{
-		castleMenu.pCastleName = pMenu->FindChild<HKWidgetLabel>("castleName");
+		castleMenu.pCastleName = castleMenu.pMenu->FindChild<HKWidgetLabel>("castleName");
 
-		castleMenu.pClose = pMenu->FindChild<HKWidgetButton>("close");
+		castleMenu.pClose = castleMenu.pMenu->FindChild<HKWidgetButton>("close");
 		castleMenu.pClose->OnClicked += fastdelegate::MakeDelegate(this, &GameUI::OnCloseClicked);
 
 		for(int a=0; a<4; ++a)
 		{
-			castleMenu.pUnits[a] = pMenu->FindChild<UnitButton>(MFString::Format("unit%d", a).CStr());
+			castleMenu.pUnits[a] = castleMenu.pMenu->FindChild<UnitButton>(MFString::Format("unit%d", a).CStr());
 			castleMenu.pUnits[a]->SetUserData((void*)a);
 			castleMenu.pUnits[a]->OnClicked += fastdelegate::MakeDelegate(&castleMenu, &GameUI::CastleMenu::OnSelectUnit);
 
-			castleMenu.pUnits[a + 4] = pMenu->FindChild<UnitButton>(MFString::Format("hero%d", a).CStr());
+			castleMenu.pUnits[a + 4] = castleMenu.pMenu->FindChild<UnitButton>(MFString::Format("hero%d", a).CStr());
 			castleMenu.pUnits[a + 4]->SetUserData((void*)(a + 4));
 			castleMenu.pUnits[a + 4]->OnClicked += fastdelegate::MakeDelegate(&castleMenu, &GameUI::CastleMenu::OnSelectUnit);
 		}
 
-		castleMenu.pUnitDetails = pMenu->FindChild<HKWidgetLayoutFrame>("unitDetails");
+		castleMenu.pUnitDetails = castleMenu.pMenu->FindChild<HKWidgetLayoutFrame>("unitDetails");
 
-		castleMenu.pUnitName = pMenu->FindChild<HKWidgetLabel>("unitName");
-		castleMenu.pUnitType = pMenu->FindChild<HKWidgetLabel>("unitType");
-		castleMenu.pUnitAtk = pMenu->FindChild<HKWidgetLabel>("unitAtk");
-		castleMenu.pUnitMov = pMenu->FindChild<HKWidgetLabel>("unitMov");
-		castleMenu.pUnitTurns = pMenu->FindChild<HKWidgetLabel>("unitTurns");
+		castleMenu.pUnitName = castleMenu.pMenu->FindChild<HKWidgetLabel>("unitName");
+		castleMenu.pUnitType = castleMenu.pMenu->FindChild<HKWidgetLabel>("unitType");
+		castleMenu.pUnitAtk = castleMenu.pMenu->FindChild<HKWidgetLabel>("unitAtk");
+		castleMenu.pUnitMov = castleMenu.pMenu->FindChild<HKWidgetLabel>("unitMov");
+		castleMenu.pUnitTurns = castleMenu.pMenu->FindChild<HKWidgetLabel>("unitTurns");
 
-		castleMenu.pTypeImage = pMenu->FindChild("typeImage");
+		castleMenu.pTypeImage = castleMenu.pMenu->FindChild("typeImage");
 	}
 
 	// configure recruit menu
 	recruitMenu.pMenu = pMenu->FindChild("recruit");
 	if(recruitMenu.pMenu)
 	{
-		recruitMenu.pClose = pMenu->FindChild<HKWidgetButton>("close");
+		recruitMenu.pClose = recruitMenu.pMenu->FindChild<HKWidgetButton>("close");
 		recruitMenu.pClose->OnClicked += fastdelegate::MakeDelegate(this, &GameUI::OnCloseClicked);
 
 		for(int a=0; a<8; ++a)
 		{
-			recruitMenu.pHeroes[a] = pMenu->FindChild<UnitButton>(MFString::Format("hero%d", a).CStr());
+			recruitMenu.pHeroes[a] = recruitMenu.pMenu->FindChild<UnitButton>(MFString::Format("hero%d", a).CStr());
 			recruitMenu.pHeroes[a]->SetUserData((void*)a);
 			recruitMenu.pHeroes[a]->OnClicked += fastdelegate::MakeDelegate(&recruitMenu, &GameUI::RecruitMenu::OnSelectHero);
 		}
 
-		recruitMenu.pHeroDetails = pMenu->FindChild<HKWidgetLayoutFrame>("heroDetails");
+		recruitMenu.pHeroDetails = recruitMenu.pMenu->FindChild<HKWidgetLayoutFrame>("heroDetails");
 
-		recruitMenu.pHeroName = pMenu->FindChild<HKWidgetLabel>("heroName");
-		recruitMenu.pHeroAtk = pMenu->FindChild<HKWidgetLabel>("heroAtk");
-		recruitMenu.pHeroMov = pMenu->FindChild<HKWidgetLabel>("heroMov");
-		recruitMenu.pHeroTurns = pMenu->FindChild<HKWidgetLabel>("heroTurns");
+		recruitMenu.pHeroName = recruitMenu.pMenu->FindChild<HKWidgetLabel>("heroName");
+		recruitMenu.pHeroAtk = recruitMenu.pMenu->FindChild<HKWidgetLabel>("heroAtk");
+		recruitMenu.pHeroMov = recruitMenu.pMenu->FindChild<HKWidgetLabel>("heroMov");
+		recruitMenu.pHeroTurns = recruitMenu.pMenu->FindChild<HKWidgetLabel>("heroTurns");
 
-		recruitMenu.pTypeImage = pMenu->FindChild("typeImage");
+		recruitMenu.pTypeImage = recruitMenu.pMenu->FindChild("typeImage");
 	}
 
 	// configure minimap

@@ -149,7 +149,7 @@ Editor::Editor(Game *pGame)
 	{
 		pUnits->GetSpecialUVs(a, &uvs, texelOffset);
 
-		brushSelect.AddButton(2 + a/11, pMiscMat, &uvs, MFVector::one, (OT_Special << 16) | a, MakeDelegate(this, &Editor::ChooseBrush));
+		brushSelect.AddButton(2 + a/11, pMiscMat, &uvs, MFVector::one, (OT_Place << 16) | a, MakeDelegate(this, &Editor::ChooseBrush));
 	}
 
 	// region buttons
@@ -222,9 +222,9 @@ bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
 							pMap->PlaceFlag(cursorX, cursorY, brushIndex[brush]);
 						break;
 					}
-					case OT_Special:
+					case OT_Place:
 					{
-						if(detail == OT_Special)
+						if(detail == OT_Place)
 							pMap->ClearDetail(cursorX, cursorY);
 						else
 							pMap->PlaceSpecial(cursorX, cursorY, brushIndex[brush]);
@@ -486,7 +486,7 @@ void Editor::ChooseBrush(int button, int buttonID)
 			--brushIndex[brush];
 			break;
 		}
-		case OT_Special:
+		case OT_Place:
 		{
 			UnitDefinitions *pUnits = pMap->GetUnitDefinitions();
 			pUnits->GetSpecialUVs(index, &rect, texelOffset);

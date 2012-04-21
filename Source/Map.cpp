@@ -184,7 +184,7 @@ bool MapTile::IsEnemyTile(int player)
 
 bool MapTile::CanMove(Group *_pGroup)
 {
-	if(type == OT_Special)
+	if(type == OT_Place)
 		return false;
 	if(IsEnemyTile(_pGroup->player))
 		return false;
@@ -589,7 +589,7 @@ void Map::ConstructMap(int race)
 
 	// copy the map data
 	int numTiles = mapWidth * mapHeight;
-	numRuins = 0;
+	numPlaces = 0;
 	for(int a=0; a<numTiles; ++a)
 	{
 		pMap[a].region = pMapRegions[a];
@@ -602,27 +602,54 @@ void Map::ConstructMap(int race)
 		pMap[a].type = mapTemplate[slice].pMap[a].type;
 		pMap[a].index = mapTemplate[slice].pMap[a].index;
 
-		if(pMap[a].type == OT_Special && !bEditable)
+		if(pMap[a].type == OT_Place && !bEditable)
 		{
-			Ruin &ruin = pRuins[numRuins];
+			Place &place = pPlaces[numPlaces];
 
-			int item = -1;
-			do
+			place.id = numPlaces;
+			place.pUnitDefs = pUnits;
+			place.pTile = &pMap[a];
+			place.pSpecial = pUnits->GetSpecial(pMap[a].index);
+
+			pMap[a].pObject = &place;
+			pMap[a].index = numPlaces++;
+
+			if(place.GetType() == Special::ST_Searchable)
 			{
-				item = MFRand() % pUnits->GetNumItems();
-				if(!pUnits->GetItem(item)->bCollectible)
-					item = -1;
+				// select an item for the ruin...
+				// TODO: should we allow duplicate items?
+				int item = -1;
+				do
+				{
+					item = MFRand() % pUnits->GetNumItems();
+					if(!pUnits->GetItem(item)->bCollectible)
+						item = -1;
+				}
+				while(item < 0);
+
+				place.InitRuin(item);
 			}
-			while(item < 0);
+		}
+	}
 
-			ruin.InitRuin(numRuins, pMap[a].index, item);
+	// update the surrounding squares for multi-square places
+	for(int a=0; a<numPlaces; ++a)
+	{
+		Place *pPlace = GetPlace(a);
+		const Special *pDesc = pPlace->GetPlaceDesc();
+		MapTile *pTile = pPlace->pTile;
 
-			ruin.pUnitDefs = pUnits;
-			ruin.pTile = &pMap[a];
-			ruin.pSpecial = pUnits->GetSpecial(pMap[a].index);
-
-			pMap[a].pObject = &ruin;
-			pMap[a].index = numRuins++;
+		for(int y=0; y<pDesc->height; ++y)
+		{
+			for(int x=0; x<pDesc->width; ++x)
+			{
+				MapTile &tile = pTile[y*mapWidth + x];
+				tile.type = pTile->type;
+				tile.pObject = pTile->pObject;
+				tile.index = pTile->index;
+				tile.objectX = x;
+				tile.objectY = y;
+			}
 		}
 	}
 
@@ -663,7 +690,8 @@ void Map::ConstructMap(int race)
 						tile.pObject = &castle;
 						tile.type = OT_Castle;
 						tile.index = numCastles;
-						tile.castleTile = a;
+						tile.objectX = a & 1;
+						tile.objectY = a >> 1;
 					}
 
 					++numCastles;
@@ -698,7 +726,7 @@ MFMaterial *Map::GetMinimap(int *pMapWidth, int *pMapHeight)
 				int player = pTile->GetPlayer();
 				if(player > -2)
 					colour = Game::GetCurrent()->GetPlayerColour(player);
-				else if(pTile->GetType() == OT_Special)
+				else if(pTile->GetType() == OT_Place)
 					colour = MFVector::white;
 				else if(pTile->IsRoad())
 					colour = MakeVector(.75f, .5f, .0f, 1.f);
@@ -1294,6 +1322,12 @@ void Map::Draw()
 			drawTile.x = x;
 			drawTile.y = y;
 
+			if(pTile->objectX > 0 || pTile->objectY > 0)
+			{
+				--numTiles;
+				continue;
+			}
+
 			switch(pTile->type)
 			{
 				case OT_Road:
@@ -1306,12 +1340,6 @@ void Map::Draw()
 
 				case OT_Castle:
 				{
-					if(pTile->castleTile != 0)
-					{
-						--numTiles;
-						continue;
-					}
-
 					Castle *pCastle = GetCastle(pTile->index);
 					drawTile.i = (int8)pCastle->player;
 					drawTile.flags = 0;
@@ -1325,8 +1353,8 @@ void Map::Draw()
 					++numCastleTiles;
 					break;
 
-				case OT_Special:
-					drawTile.i = bEditable ? (int8)pTile->index : (int8)pRuins[pTile->index].type;
+				case OT_Place:
+					drawTile.i = bEditable ? (int8)pTile->index : (int8)pPlaces[pTile->index].GetRenderID();
 					drawTile.flags = 4;
 					++numMiscTiles;
 					break;
@@ -1997,7 +2025,8 @@ bool Map::PlaceCastle(int x, int y, int player)
 		MapTile *pTile = pMap + (y + (a >>1))*mapWidth + x + (a & 1);
 		pTile->type = OT_Castle;
 		pTile->index = numCastles;
-		pTile->castleTile = a;
+		pTile->objectX = a & 1;
+		pTile->objectY = a >> 1;
 		pTile->pObject = GetCastle(numCastles);
 	}
 
@@ -2060,10 +2089,10 @@ bool Map::PlaceSpecial(int x, int y, int index)
 	ClearDetail(x, y);
 
 	// terrain is compatible, place special
-	pMap[y*mapWidth + x].type = OT_Special;
+	pMap[y*mapWidth + x].type = OT_Place;
 	pMap[y*mapWidth + x].index = index;
 
-	mapTemplate[editRace].pMap[y*mapWidth + x].type = OT_Special;
+	mapTemplate[editRace].pMap[y*mapWidth + x].type = OT_Place;
 	mapTemplate[editRace].pMap[y*mapWidth + x].index = index;
 
 	return true;
@@ -2253,7 +2282,8 @@ void Map::ClearDetail(int x, int y)
 		for(int a=0; a<4; ++a)
 		{
 			MapTile *pCastleTile = pMap + (cy + (a >> 1))*mapWidth + cx + (a & 1);
-			pCastleTile->castleTile = 0;
+			pCastleTile->objectX = 0;
+			pCastleTile->objectY = 0;
 			pCastleTile->index = 0;
 			pCastleTile->type = OT_None;
 		}

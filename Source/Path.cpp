@@ -285,7 +285,7 @@ bool Path::FindPath(Group *pGroup, int destX, int destY)
 					int tg = item.gScore + (terrainSpeed*2) + cornerPenalty;
 
 					// avoid ruins
-					if(pTile->GetType() == OT_Special)
+					if(pTile->GetType() == OT_Place)
 						tg += 50;
 
 					// avoid enemy tiles

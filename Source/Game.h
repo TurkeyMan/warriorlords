@@ -93,7 +93,7 @@ struct Action
 		struct Search
 		{
 			Unit *pUnit;
-			Ruin *pRuin;
+			Place *pRuin;
 		} search;
 		struct CaptureCastle
 		{
@@ -173,7 +173,7 @@ public:
 	void UpdateMoveAction(Group *pGroup);
 	void PushRearrange(Group *pGroup, Unit **ppNewOrder);
 	void PushRegroup(Group **ppBefore, int numBefore, Group **ppAfter, int numAfter);
-	void PushSearch(Group *pGroup, Ruin *pRuin);
+	void PushSearch(Group *pGroup, Place *pRuin);
 	void PushCaptureCastle(Group *pGroup, Castle *pCastle);
 	void PushCaptureUnits(Group *pGroup, Group *pUnits);
 

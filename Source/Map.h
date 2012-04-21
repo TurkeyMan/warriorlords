@@ -18,7 +18,7 @@ enum ObjectType
 	OT_Terrain,
 	OT_Castle,
 	OT_Flag,
-	OT_Special,
+	OT_Place,
 	OT_Road,
 	OT_Region,
 
@@ -75,7 +75,7 @@ public:
 	Unit *FindVehicle();
 
 	Castle *GetCastle() { if(type == OT_Castle) return (Castle*)pObject; return NULL; }
-	Ruin *GetRuin() { if(type == OT_Special) return (Ruin*)pObject; return NULL; }
+	Place *GetPlace() { if(type == OT_Place) return (Place*)pObject; return NULL; }
 
 	bool IsFriendlyTile(int player);
 	bool IsEnemyTile(int player);
@@ -90,12 +90,13 @@ protected:
 
 	uint16 x, y;
 	uint16 terrain;			// terrain tile
+	uint8 region;			// region
 
 	uint8 type;				// type of detail on tile
 	uint8 index;			// index of item on tile
-	uint8 castleTile : 2;	// castle square: 0 = top left, 1 = top right, 2 = bottom left, 3 = bottom right
-	uint8 region : 4;		// region
-	uint8 flags : 2;		// tile flags
+
+	uint8 objectX, objectY;	// object square relative to its top left point
+	uint8 flags;			// tile flags
 };
 
 class Map : public InputReceiver
@@ -140,8 +141,8 @@ public:
 	int GetNumCastles() const { return numCastles; }
 	Castle *GetCastle(int id) { return &pCastles[id]; }
 
-	int GetNumRuins() const { return numRuins; }
-	Ruin *GetRuin(int id) { return &pRuins[id]; }
+	int GetNumPlaces() const { return numPlaces; }
+	Place *GetPlace(int id) { return &pPlaces[id]; }
 
 	ObjectType GetDetailType(int x, int y) const;
 	int GetDetail(int x, int y) const;
@@ -211,8 +212,8 @@ protected:
 	MapTile *pMap;
 	Castle pCastles[256];
 	int numCastles;
-	Ruin pRuins[256];
-	int numRuins;
+	Place pPlaces[256];
+	int numPlaces;
 
 	Path path;
 

@@ -269,6 +269,7 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 			while(pSpecial)
 			{
 				int s = pSpecial->GetInt(0);
+				pUnitDefs->pSpecials[s].index = s;
 				pUnitDefs->pSpecials[s].pName = pSpecial->GetString(1);
 				pUnitDefs->pSpecials[s].x = (uint8)pSpecial->GetInt(2);
 				pUnitDefs->pSpecials[s].y = (uint8)pSpecial->GetInt(3);
@@ -278,7 +279,9 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 				for(int a=6; a<pSpecial->GetStringCount(); ++a)
 				{
 					if(pSpecial->IsString(a, "searchable"))
-						pUnitDefs->pSpecials[s].canSearch = 1;
+						pUnitDefs->pSpecials[s].type = Special::ST_Searchable;
+					else if(pSpecial->IsString(a, "recruit"))
+						pUnitDefs->pSpecials[s].type = Special::ST_Recruit;
 				}
 
 				pSpecial = pSpecial->Next();
@@ -1412,16 +1415,10 @@ int Castle::GetUnitBuildTime()
 	return unit < 4 ? details.buildUnits[unit].buildTime : pGame->GetPlayerHero(player, unit - 4)->GetDetails()->buildTime;
 }
 
-void Ruin::InitRuin(int _id, int specialID, int _item)
+void Place::InitRuin(int item)
 {
-	pUnitDefs = NULL;
-	pSpecial = NULL;
-	pTile = NULL;
-
-	id = _id;
-	type = specialID;
-	item = _item;
-	bHasSearched = false;
+	ruin.item = item;
+	ruin.bHasSearched = false;
 }
 
 Group *Group::Create(int _player)

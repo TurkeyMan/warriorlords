@@ -24,11 +24,17 @@ struct Race
 
 struct Special
 {
+	enum Type
+	{
+		ST_Searchable,
+		ST_Recruit
+	};
+
 	const char *pName;
 	uint8 x, y;
 	uint8 width, height;
-	uint16 canSearch : 1;
-	uint16 flags : 15;
+	Type type;
+	int index;
 };
 
 struct Weapon
@@ -502,10 +508,16 @@ public:
 	int nextBuild;
 };
 
-class Ruin
+class Place
 {
 public:
-	void InitRuin(int id, int specialID, int item);
+	const Special *GetPlaceDesc() const { return pSpecial; }
+	Special::Type GetType() const { return pSpecial->type; }
+	int GetID() const { return id; }
+	int GetRenderID() const { return pSpecial->index; }
+
+	void InitRuin(int item);
+
 
 //protected:
 	UnitDefinitions *pUnitDefs;
@@ -514,10 +526,21 @@ public:
 	MapTile *pTile;
 
 	int id;
-	int type;
 
-	int item;
-	bool bHasSearched;
+	union
+	{
+		struct
+		{
+			int item;
+			bool bHasSearched;
+		} ruin;
+
+		struct
+		{
+			int building;
+			int turnsRemaining;
+		} recruit;
+	};
 };
 
 class Group

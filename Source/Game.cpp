@@ -514,33 +514,42 @@ bool Game::HandleInputEvent(HKInputManager &manager, const HKInputManager::Event
 									break;
 								}
 							}
-							else if(pTile->GetType() == OT_Special)
+							else if(pTile->GetType() == OT_Place)
 							{
-								// search command
-								Unit *pHero = pSelection->GetHero();
-								if(!pHero)
-									break;
+								Place *pPlace = pTile->GetPlace();
+								Special::Type type = pPlace->GetType();
 
-								// TODO: random encounter?
-
-								// get an item
-								Ruin *pRuin = pTile->GetRuin();
-								if(!pRuin->bHasSearched)
+								switch(type)
 								{
-									pHero->AddItem(pRuin->item);
-									pRuin->bHasSearched = true;
+									case Special::ST_Searchable:
+									{
+										// search command
+										Unit *pHero = pSelection->GetHero();
+										if(!pHero)
+											break;
 
-									PushSearch(pSelection, pRuin);
+										// TODO: random encounter?
 
-									Item *pItem = Game::GetCurrent()->GetUnitDefs()->GetItem(pRuin->item);
-									pMessage = MFStr("You search the ruin and find\n%s", pItem->pName);
+										// get an item
+										if(!pPlace->ruin.bHasSearched)
+										{
+											pHero->AddItem(pPlace->ruin.item);
+											pPlace->ruin.bHasSearched = true;
+
+											PushSearch(pSelection, pPlace);
+
+											Item *pItem = Game::GetCurrent()->GetUnitDefs()->GetItem(pPlace->ruin.item);
+											pMessage = MFStr("You search the ruin and find\n%s", pItem->pName);
+										}
+										else
+										{
+											pMessage = "You search the ruin,\nbut it is empty!";
+										}
+
+										bCommitActions = true;
+										break;
+									}
 								}
-								else
-								{
-									pMessage = "You search the ruin,\nbut it is empty!";
-								}
-
-								bCommitActions = true;
 							}
 
 							if(bCommitActions)
@@ -638,15 +647,15 @@ void Game::BeginGame()
 			}
 		}
 
-		int numRuins = pMap->GetNumRuins();
-		if(numRuins)
+		int numPlaces = pMap->GetNumPlaces();
+		if(numPlaces)
 		{
-			GameAction *pAction = SubmitAction(GA_ADDRUINS, numRuins);
+			GameAction *pAction = SubmitAction(GA_ADDRUINS, numPlaces);
 
-			for(int a=0; a<numRuins; ++a)
+			for(int a=0; a<numPlaces; ++a)
 			{
-				Ruin *pRuin = pMap->GetRuin(a);
-				pAction->pArgs[a] = pRuin->item;
+				Place *pPlace = pMap->GetPlace(a);
+				pAction->pArgs[a] = pPlace->GetType() == Special::ST_Searchable ? pPlace->ruin.item : 0;
 			}
 		}
 	}
@@ -1460,7 +1469,7 @@ void Game::PushRegroup(Group **ppBefore, int numBefore, Group **ppAfter, int num
 	pAction->pParent = NULL; // regroup actions do not have a single parent
 }
 
-void Game::PushSearch(Group *pGroup, Ruin *pRuin)
+void Game::PushSearch(Group *pGroup, Place *pRuin)
 {
 	if(bUpdating)
 		return;
@@ -1639,7 +1648,7 @@ void Game::CommitAction(Action *pAction)
 			}
 			break;
 		case Action::AT_Search:
-			SubmitActionArgs(GA_SEARCH, 2, pAction->prop.search.pUnit->GetID(), pAction->prop.search.pRuin->id);
+			SubmitActionArgs(GA_SEARCH, 2, pAction->prop.search.pUnit->GetID(), pAction->prop.search.pRuin->GetID());
 			break;
 		case Action::AT_CaptureCastle:
 			SubmitActionArgs(GA_CLAIMCASTLE, 2, pAction->prop.captureCastle.pCastle->id, pAction->pGroup->GetPlayer());
@@ -1946,8 +1955,9 @@ void Game::ReplayAction(GameAction *pAction)
 		{
 			for(int b=0; b<pAction->numArgs; ++b)
 			{
-				Ruin *pRuin = pMap->GetRuin(b);
-				pRuin->item = pAction->pArgs[b];
+				Place *pPlace = pMap->GetPlace(b);
+				if(pPlace->GetType() == Special::ST_Searchable)
+					pPlace->ruin.item = pAction->pArgs[b];
 			}
 			break;
 		}
@@ -2069,9 +2079,9 @@ void Game::ReplayAction(GameAction *pAction)
 		case GA_SEARCH:
 		{
 			Unit *pUnit = ppUnits[pAction->pArgs[0]];
-			Ruin *pRuin = pMap->GetRuin(pAction->pArgs[1]);
-			pUnit->AddItem(pRuin->item);
-			pRuin->bHasSearched = true;
+			Place *pRuin = pMap->GetPlace(pAction->pArgs[1]);
+			pUnit->AddItem(pRuin->ruin.item);
+			pRuin->ruin.bHasSearched = true;
 			break;
 		}
 		case GA_BATTLE:
