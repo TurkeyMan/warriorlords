@@ -629,6 +629,10 @@ void Map::ConstructMap(int race)
 
 				place.InitRuin(item);
 			}
+			else if(place.GetType() == Special::ST_Recruit)
+			{
+				place.recruit.recruiting = -1;
+			}
 		}
 	}
 

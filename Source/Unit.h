@@ -537,7 +537,8 @@ public:
 
 		struct
 		{
-			int building;
+			Unit *pRecruitHero;
+			int recruiting;
 			int turnsRemaining;
 		} recruit;
 	};

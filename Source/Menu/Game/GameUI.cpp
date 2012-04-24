@@ -186,6 +186,11 @@ void GameUI::HideCurrent()
 		pWindowContainer->SetVisible(HKWidget::Invisible);
 }
 
+void GameUI::ShowRecruitMenu(Place *pPlace, Unit *pHero)
+{
+	recruitMenu.Show(pPlace, pHero);
+}
+
 void GameUI::ShowMiniMap()
 {
 	miniMap.Show();
@@ -382,14 +387,21 @@ void GameUI::CastleMenu::OnSelectUnit(HKWidget &sender, const HKWidgetEventInfo 
 
 // recruit menu
 
-void GameUI::RecruitMenu::Show()
+void GameUI::RecruitMenu::Show(Place *pPlace, Unit *pHero)
 {
 	Game *pGame = pUI->pGame;
 
-	selected = 0;
+	this->pPlace = pPlace;
 
 	int player = pGame->CurrentPlayer();
 	MFVector colour = pGame->GetPlayerColour(player);
+
+	if(pPlace->recruit.recruiting < 0 || pPlace->recruit.pRecruitHero != pHero)
+	{
+		pPlace->recruit.pRecruitHero = pHero;
+		pPlace->recruit.recruiting = -1;
+		pPlace->recruit.turnsRemaining = 0;
+	}
 
 	UnitDefinitions *pUnitDefs = pGame->GetUnitDefs();
 
@@ -399,14 +411,14 @@ void GameUI::RecruitMenu::Show()
 	{
 		UnitDetails *pDetails = pUnitDefs->GetUnitDetails(a);
 
-		if(pDetails->type == UT_Hero && (pDetails->race == 0 || pDetails->race == pGame->GetPlayerRace(player)))
+		if(pDetails->type == UT_Hero && (!pGame->PlayerHasHero(player, a) && (pDetails->race == 0 || pDetails->race == pGame->GetPlayerRace(player))))
 		{
 			heroes[numHeroes] = a;
 
 			pHeroes[numHeroes]->SetUnit(a);
 			pHeroes[numHeroes]->SetUnitColour(colour);
 
-			pHeroes[numHeroes]->SetProperty("background_colour", numHeroes == selected ? "blue" : "white");
+			pHeroes[numHeroes]->SetProperty("background_colour", pPlace->recruit.recruiting == a ? "blue" : "white");
 
 			pHeroes[numHeroes]->SetVisible(HKWidget::Visible);
 			++numHeroes;
@@ -423,9 +435,15 @@ void GameUI::RecruitMenu::Show()
 
 void GameUI::RecruitMenu::UpdateHeroInfo()
 {
-	Game *pGame = pUI->pGame;
-	UnitDefinitions *pUnitDefs = pGame->GetUnitDefs();
-	UnitDetails *pDetails = pUnitDefs->GetUnitDetails(heroes[selected]);
+	int selected = pPlace->recruit.recruiting;
+
+	pHeroDetails->SetVisible(selected >= 0 ? HKWidget::Visible : HKWidget::Invisible);
+
+	if(selected < 0)
+		return;
+
+	UnitDefinitions *pUnitDefs = pUI->pGame->GetUnitDefs();
+	UnitDetails *pDetails = pUnitDefs->GetUnitDetails(selected);
 
 	pHeroName->SetText(pDetails->pName);
 	pHeroAtk->SetText(MFString::Format("Atk: %d - %d (%s%s)", pDetails->attackMin, pDetails->attackMax, pDetails->AttackSpeedDescription(), pUnitDefs->GetAttackTypeName(pDetails->atkType)));
@@ -446,7 +464,8 @@ void GameUI::RecruitMenu::OnSelectHero(HKWidget &sender, const HKWidgetEventInfo
 		pHeroes[a]->SetProperty("background_colour", button == a ? "blue" : "white");
 
 	// mark current selection
-	selected = button;
+	pPlace->recruit.recruiting = heroes[button];
+	pPlace->recruit.turnsRemaining = 2;
 
 	UpdateHeroInfo();
 }

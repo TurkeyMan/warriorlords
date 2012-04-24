@@ -549,6 +549,18 @@ bool Game::HandleInputEvent(HKInputManager &manager, const HKInputManager::Event
 										bCommitActions = true;
 										break;
 									}
+									case Special::ST_Recruit:
+									{
+										// recruit hero
+										Unit *pHero = pSelection->GetHero();
+										if(!pHero)
+											break;
+
+										pGameUI->ShowRecruitMenu(pPlace, pHero);
+
+										bCommitActions = true;
+										break;
+									}
 								}
 							}
 
@@ -690,14 +702,14 @@ void Game::BeginGame()
 
 			MFDebug_Assert(heroID != -1, "Couldn't find hero!");
 
-			Group *pGroup = CreateUnit(heroID, pCastle, true);
+			Group *pGroup = CreateUnit(heroID, pCastle, NULL, true);
 			players[pCastle->player].pHero[players[pCastle->player].numHeroes++] = pGroup->GetUnit(0);
 
 			// pirates also start with a galleon
 			int pirateID = pUnitDefs->FindRace("Pirates");
 			int galleonID = pUnitDefs->FindUnit("Galleon");
 			if(players[pCastle->player].race == pirateID && galleonID >= 0)
-				CreateUnit(galleonID, pCastle, true);
+				CreateUnit(galleonID, pCastle, NULL, true);
 		}
 	}
 
@@ -790,7 +802,7 @@ void Game::BeginTurn(int player)
 					Unit *pHero = players[currentPlayer].pHero[pCastle->building - 4];
 					if(!bOnline || (IsMyTurn() && NumPendingActions() <= 1))
 					{
-						pGroup = CreateUnit(pHero->GetType(), pCastle, true);
+						pGroup = CreateUnit(pHero->GetType(), pCastle, NULL, true);
 						if(pGroup)
 							pGameUI->ShowCastleMenu(pCastle);
 					}
@@ -800,6 +812,40 @@ void Game::BeginTurn(int player)
 						pCastle->ClearBuildUnit();
 					}
 				}
+			}
+		}
+	}
+
+	// recruit heroes
+	for(int a = 0; a < pMap->GetNumPlaces(); ++a)
+	{
+		Place *pPlace = pMap->GetPlace(a);
+
+		if(pPlace->GetType() != Special::ST_Recruit || pPlace->recruit.recruiting < 0)
+			continue;
+
+		if(pPlace->recruit.pRecruitHero->GetPlayer() != currentPlayer)
+			continue;
+
+		if(pPlace->recruit.pRecruitHero->IsDead())
+		{
+			pPlace->recruit.pRecruitHero = NULL;
+			pPlace->recruit.recruiting = -1;
+			continue;
+		}
+
+		MapTile *pTile = pPlace->recruit.pRecruitHero->GetGroup()->GetTile();
+		if(pTile->GetPlace() == pPlace)
+		{
+			--pPlace->recruit.turnsRemaining;
+
+			if(pPlace->recruit.turnsRemaining == 0)
+			{
+				// build hero
+				CreateUnit(pPlace->recruit.recruiting, NULL, pPlace, true);
+
+				pPlace->recruit.pRecruitHero = NULL;
+				pPlace->recruit.recruiting = -1;
 			}
 		}
 	}
@@ -819,7 +865,7 @@ void Game::BeginTurn(int player)
 					Group *pGroup = NULL;
 
 					if(!bOnline || (IsMyTurn() && NumPendingActions() <= 1))
-						pGroup = CreateUnit(buildUnit.unit, pCastle, true);
+						pGroup = CreateUnit(buildUnit.unit, pCastle, NULL, true);
 
 					if(pGroup || bOnline)
 					{
@@ -1045,6 +1091,16 @@ void Game::DestroyGroup(Group *pGroup)
 	groups.Delete(pGroup);
 }
 
+bool Game::PlayerHasHero(int player, int hero)
+{
+	for(int a=0; a<players[player].numHeroes; ++a)
+	{
+		if(players[player].pHero[a]->GetType() == hero)
+			return true;
+	}
+	return false;
+}
+
 bool Game::CanCastleBuildHero(Castle *pCastle, int hero)
 {
 	Player &p = players[pCastle->player];
@@ -1058,13 +1114,26 @@ void Game::SetHeroRebuildCastle(int player, int hero, Castle *pCastle)
 	players[player].pHeroReviveLocation[hero] = pCastle;
 }
 
-Group *Game::CreateUnit(int unit, Castle *pCastle, bool bCommitUnit)
+Group *Game::CreateUnit(int unit, Castle *pCastle, Place *pPlace,  bool bCommitUnit)
 {
 	// find space in the castle for the unit
 	MapTile *pTile = NULL;
 
-	int x = pCastle->details.x;
-	int y = pCastle->details.y;
+	int x, y;
+	int player;
+
+	if(pCastle)
+	{
+		x = pCastle->details.x;
+		y = pCastle->details.y;
+		player = pCastle->player;
+	}
+	if(pPlace)
+	{
+		x = pPlace->pTile->GetX();
+		y = pPlace->pTile->GetY();
+		player = pPlace->recruit.pRecruitHero->GetPlayer();
+	}
 
 	UnitDetails *pDetails = pUnitDefs->GetUnitDetails(unit);
 	uint32 castleTerrain = pMap->GetTerrainAt(x, y);
@@ -1089,7 +1158,7 @@ Group *Game::CreateUnit(int unit, Castle *pCastle, bool bCommitUnit)
 
 			MapTile *pT = pMap->GetTile(tx, ty);
 
-			if(pT->IsEnemyTile(pCastle->player))
+			if(pT->IsEnemyTile(player))
 				continue;
 
 			uint32 terrain = pT->GetTerrain();
@@ -1128,11 +1197,11 @@ Group *Game::CreateUnit(int unit, Castle *pCastle, bool bCommitUnit)
 		Unit *pUnit = NULL;
 		if(pDetails->type == UT_Hero)
 		{
-			for(int a=0; a<players[pCastle->player].numHeroes; ++a)
+			for(int a=0; a<players[player].numHeroes; ++a)
 			{
-				if(players[pCastle->player].pHero[a]->GetType() == unit)
+				if(players[player].pHero[a]->GetType() == unit)
 				{
-					pUnit = players[pCastle->player].pHero[a];
+					pUnit = players[player].pHero[a];
 					pUnit->Revive();
 
 					pCastle->ClearBuildUnit();
@@ -1143,12 +1212,15 @@ Group *Game::CreateUnit(int unit, Castle *pCastle, bool bCommitUnit)
 
 		if(!pUnit)
 		{
-			pUnit = pUnitDefs->CreateUnit(unit, pCastle->player);
+			pUnit = pUnitDefs->CreateUnit(unit, player);
 			AddUnit(pUnit, bCommitUnit);
+
+			if(pUnit->IsHero())
+				players[player].pHero[players[player].numHeroes++] = pUnit;
 		}
 
 		// create a group for the unit, and add it to the tile
-		Group *pGroup = Group::Create(pCastle->player);
+		Group *pGroup = Group::Create(player);
 		pGroup->AddUnit(pUnit);
 		pTile->AddGroup(pGroup);
 
@@ -1159,7 +1231,7 @@ Group *Game::CreateUnit(int unit, Castle *pCastle, bool bCommitUnit)
 			if(pGroup->GetTile()->GetNumUnits() < 10)
 			{
 				// if there's space on the same tile, add the second one to the same group
-				Unit *pUnit2 = pUnitDefs->CreateUnit(unit, pCastle->player);
+				Unit *pUnit2 = pUnitDefs->CreateUnit(unit, player);
 				AddUnit(pUnit2, bCommitUnit);
 				pGroup->AddUnit(pUnit2);
 			}
@@ -1173,11 +1245,11 @@ Group *Game::CreateUnit(int unit, Castle *pCastle, bool bCommitUnit)
 					if(numUnits < 10)
 					{
 						// create the second on the new tile
-						Unit *pUnit2 = pUnitDefs->CreateUnit(unit, pCastle->player);
+						Unit *pUnit2 = pUnitDefs->CreateUnit(unit, player);
 						AddUnit(pUnit2, bCommitUnit);
 
 						// create a group for the unit, and add it to the tile
-						Group *pGroup2 = Group::Create(pCastle->player);
+						Group *pGroup2 = Group::Create(player);
 						pGroup2->AddUnit(pUnit2);
 						pT->AddGroup(pGroup2);
 						AddGroup(pGroup2, bCommitUnit);

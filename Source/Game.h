@@ -153,6 +153,7 @@ public:
 	MFVector GetPlayerColour(int player) { return player == -1 ? pUnitDefs->GetRaceColour(0) : players[player].colour; }
 	int GetPlayerHeroCount(int player) { return players[player].numHeroes; }
 	Unit *GetPlayerHero(int player, int hero) { return players[player].pHero[hero]; }
+	bool PlayerHasHero(int player, int hero);
 
 	bool CanCastleBuildHero(Castle *pCastle, int hero);
 	void SetHeroRebuildCastle(int player, int hero, Castle *pCastle);
@@ -162,7 +163,7 @@ public:
 	Group *AllocGroup();
 	void DestroyGroup(Group *pGroup);
 
-	Group *CreateUnit(int unit, Castle *pCastle, bool bCommitUnit = false);
+	Group *CreateUnit(int unit, Castle *pCastle, Place *pPlace, bool bCommitUnit = false);
 
 	bool MoveGroupToTile(Group *pGroup, MapTile *pTile);
 

@@ -41,6 +41,7 @@ public:
 	void ShowGameScreen() { gameScreen.Show(); }
 
 	void ShowCastleMenu(Castle *pCastle) { pShowCastle = pCastle; }
+	void ShowRecruitMenu(Place *pRecruit, Unit *pHero);
 	void ShowMiniMap();
 
 	void ShowMessageBox(const char *pMessage, MsgBoxDelegate selectCallback, bool bNotification);
@@ -125,12 +126,10 @@ protected:
 		RecruitMenu(GameUI *pUI) : pUI(pUI) {}
 		GameUI *pUI;
 
-		void Show();
+		void Show(Place *pPlace, Unit *pHero);
 
 		HKWidgetButton *pClose;
 		UnitButton *pHeroes[8];
-		int heroes[8];
-		int selected;
 
 		HKWidgetLayoutFrame *pHeroDetails;
 		HKWidgetLabel *pHeroName;
@@ -138,6 +137,9 @@ protected:
 		HKWidgetLabel *pHeroMov;
 		HKWidgetLabel *pHeroTurns;
 		HKWidget *pTypeImage;
+
+		Place *pPlace;
+		int heroes[8];
 
 		void UpdateHeroInfo();
 

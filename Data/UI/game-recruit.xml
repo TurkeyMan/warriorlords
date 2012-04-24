@@ -7,7 +7,7 @@
 		<Label text="Swordhenge" align="topCenter" style="game-label" margin="4" />
 
 		<!-- heroes span the top top -->
-		<LinearLayout align="fill" orientation="horizontal" margin="5">
+		<LinearLayout align="topCenter" orientation="horizontal" margin="5">
 			<UnitButton id="hero0" style="game-unitbutton" />
 			<UnitButton id="hero1" style="game-unitbutton" />
 			<UnitButton id="hero2" style="game-unitbutton" />
@@ -22,7 +22,7 @@
 		<Widget align="topFill" height ="16" background_image="Horiz-Pirates" />
 
 		<!-- This frame fills the center region -->
-		<LinearLayout align="topFill" orientation="horizontal">
+		<LinearLayout align="fill" orientation="horizontal">
 
 			<!-- Hero details -->
 			<Frame id="heroDetails" align="fill">
