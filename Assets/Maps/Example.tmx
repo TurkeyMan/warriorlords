@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.0" orientation="orthogonal" width="50" height="50" tilewidth="64" tileheight="64">
+ <properties>
+  <property name="name" value="Example Map"/>
+ </properties>
+ <tileset firstgid="1" source="dTiles.tsx"/>
+ <tileset firstgid="257" name="Roads" tilewidth="64" tileheight="64">
+  <image source="../../Data/Roads.png" width="1024" height="512"/>
+ </tileset>
+ <tileset firstgid="385" name="Castles" tilewidth="128" tileheight="128">
+  <image source="Castles.png" width="512" height="128"/>
+ </tileset>
+ <tileset firstgid="389" name="Details" tilewidth="64" tileheight="64">
+  <image source="Details.png" width="256" height="64"/>
+ </tileset>
+ <tileset firstgid="393" name="Regions" tilewidth="64" tileheight="64">
+  <image source="Regions.png" width="768" height="64"/>
+ </tileset>
+ <layer name="Template-map" width="50" height="50">
+  <data encoding="base64" compression="zlib">
+   eJzt00sOgkAQRdGChM8C5LMB1A0o7H9lvA6SdAxGkIHVyR2cSY/uS7oyM8sAIGGFVFJK7aBnT+97a3i7SStPmRx0fvOQTvpo07oh9OcOGo9sCc2NXKIN/+46syeVf/RJfCeFpXHbWwZb/tTVlvu4O2j6xfqnutee3kHT2T2jpX0jAAAAAAAAAAAAALbNZTsO/w==
+  </data>
+ </layer>
+ <layer name="Template-detail" width="50" height="50">
+  <data encoding="base64" compression="zlib">
+   eJzt1cEJgDAQBEBjKXZgOtAOLMH+m1BBQYSggqAnMxDIc5e7kKoCnjSmtxOUDXO2dPE0u3v+cKc7aj1e0Rb2KFqPLe8xd7Qe3eGN50KvaErziaZbZxKhx9mfsuxYH6AHAAAAAAAA8C8Tk1cDfw==
+  </data>
+ </layer>
+ <objectgroup name="Template-castle" width="50" height="50">
+  <object name="Swordhenge" type="recruit" gid="387" x="192" y="512"/>
+  <object gid="389" x="960" y="576"/>
+  <object gid="389" x="960" y="448"/>
+  <object type="flag" gid="389" x="1088" y="320"/>
+  <object gid="389" x="1088" y="896"/>
+  <object gid="389" x="704" y="960"/>
+  <object gid="389" x="448" y="832"/>
+  <object name="La Castelle" type="castle" gid="385" x="768" y="832">
+   <properties>
+    <property name="unit0" value="Wizard"/>
+   </properties>
+  </object>
+  <object name="Temple of Doom" type="castle" gid="385" x="1088" y="704"/>
+  <object name="North Manor" type="castle" gid="385" x="704" y="320"/>
+  <object name="Capital City" type="capital" gid="386" x="512" y="640"/>
+  <object gid="390" x="704" y="640"/>
+ </objectgroup>
+ <layer name="Regions" width="50" height="50" visible="0">
+  <data encoding="base64" compression="zlib">
+   eJztwwEJAAAMA6A9/lovx0HBXlJVVVVVVVVVVVV9fhUaQ/Q=
+  </data>
+ </layer>
+</map>
