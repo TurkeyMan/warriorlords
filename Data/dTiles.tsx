@@ -12,8 +12,8 @@
   <terrain name="Tundra" tile="3" distances=",4,7,5,3,2,5,4,0"/>
  </terraintypes>
  <tile id="0" terrain="0,0,0,0"/>
- <tile id="1" terrain="0,0,0,0"/>
- <tile id="2" terrain="0,0,0,0"/>
+ <tile id="1" terrain="0,0,0,0" probability="4"/>
+ <tile id="2" terrain="0,0,0,0" probability="2"/>
  <tile id="3" terrain="7,7,7,7"/>
  <tile id="4" terrain="0,0,0,2"/>
  <tile id="5" terrain="0,0,2,2"/>
@@ -44,7 +44,7 @@
  <tile id="31" terrain="5,4,5,4"/>
  <tile id="32" terrain="3,3,3,3"/>
  <tile id="33" terrain="3,3,3,3"/>
- <tile id="35" terrain="6,6,6,6"/>
+ <tile id="35" terrain="6,6,6,6" probability="4"/>
  <tile id="36" terrain="0,2,0,2"/>
  <tile id="37" terrain="2,0,2,2"/>
  <tile id="38" terrain="0,2,2,2"/>
@@ -58,8 +58,8 @@
  <tile id="46" terrain="4,5,5,5"/>
  <tile id="47" terrain="5,4,5,4"/>
  <tile id="48" terrain="4,4,4,4"/>
- <tile id="49" terrain="4,4,4,4"/>
- <tile id="50" terrain="6,6,6,6"/>
+ <tile id="49" terrain="4,4,4,4" probability="10"/>
+ <tile id="50" terrain="6,6,6,6" probability="6"/>
  <tile id="51" terrain="6,6,6,6"/>
  <tile id="52" terrain="0,2,0,0"/>
  <tile id="53" terrain="2,2,0,0"/>
@@ -173,8 +173,8 @@
  <tile id="165" terrain="3,4,3,3"/>
  <tile id="166" terrain="4,3,3,3"/>
  <tile id="167" terrain="3,4,3,4"/>
- <tile id="168" terrain="5,5,5,5"/>
- <tile id="169" terrain="5,5,5,5"/>
+ <tile id="168" terrain="5,5,5,5" probability="2"/>
+ <tile id="169" terrain="5,5,5,5" probability="4"/>
  <tile id="170" terrain="1,1,0,5"/>
  <tile id="171" terrain="1,1,5,0"/>
  <tile id="172" terrain="0,0,5,1"/>
@@ -189,8 +189,8 @@
  <tile id="181" terrain="3,3,4,4"/>
  <tile id="182" terrain="3,3,4,4"/>
  <tile id="183" terrain="3,4,4,4"/>
- <tile id="184" terrain="7,7,7,7"/>
- <tile id="185" terrain="7,7,7,7"/>
+ <tile id="184" terrain="7,7,7,7" probability="5"/>
+ <tile id="185" terrain="7,7,7,7" probability="4"/>
  <tile id="186" terrain="0,5,1,1"/>
  <tile id="187" terrain="5,0,1,1"/>
  <tile id="188" terrain="5,1,0,0"/>
