@@ -6,6 +6,7 @@ solution "Warlords"
 	platforms { "Native", "x32", "x64" }
 
 	-- include the fuji project...
+	fujiDll = true
 	dofile  "../../Fuji/Fuji/Private/Project/fujiproj.lua"
 
 	-- include the Haku project...
@@ -20,14 +21,14 @@ solution "Warlords"
 		includedirs { "../Source/" }
 		objdir "../Build/"
 		targetdir "../"
-		debugdir "../"
+--		debugdir "../"
 
 		flags { "StaticRuntime", "NoExceptions", "NoRTTI", "WinMain" }
 
 --		pchheader "Warlords.h"
 --		pchsource "Warlords.cpp"
 
-		links { "Fuji", "Haku" }
+		links { iif(fujiDll == true, "FujiDLL", "Fuji"), "Haku" }
 
 		dofile "../../Fuji/Fuji/Public/Project/fujiconfig.lua"
 		dofile "../../Fuji/Haku/Project/hakuconfig.lua"

@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include <libjson/libjson.h>
+#include <libjson.h>
 
 #if 0//defined(_DEBUG)
 	const char *pHostname = "10.0.0.27";
@@ -18,7 +18,7 @@
 	const int port = 80;
 #endif
 
-static const char *gpActions[GA_MAX] = 
+static const char *gpActions[GA_MAX] =
 {
 	"UNKNOWN_ACTION",
 

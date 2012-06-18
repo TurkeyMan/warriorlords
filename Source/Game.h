@@ -128,7 +128,7 @@ public:
 	void SetInputSource(HKWidget *pWidget);
 	GameUI *GetUI() { return pGameUI; }
 
-	void Game::ShowMiniMap();
+	void ShowMiniMap();
 
 	MapScreen *GetMapScreen() { return pMapScreen; }
 	Battle *GetBattleScreen() { return pBattle; }
