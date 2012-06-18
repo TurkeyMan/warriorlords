@@ -1425,7 +1425,7 @@ void Map::Draw()
 						break;
 				}
 
-				MFSetColour(colour);
+				MFSetColourV(colour);
 				MFSetTexCoord1(uvs.x, uvs.y);
 				MFSetPosition((float)renderTiles[a].x, (float)renderTiles[a].y, 0);
 				MFSetTexCoord1(uvs.x + uvs.width, uvs.y + uvs.height);
@@ -1456,7 +1456,7 @@ void Map::Draw()
 				int width, height;
 				pUnits->GetSpecialUVs(drawTile.i, &uvs, texelCenter, &width, &height);
 
-				MFSetColour(colour);
+				MFSetColourV(colour);
 				MFSetTexCoord1(uvs.x, uvs.y);
 				MFSetPosition((float)renderTiles[a].x, (float)renderTiles[a].y, 0);
 				MFSetTexCoord1(uvs.x + uvs.width, uvs.y + uvs.height);

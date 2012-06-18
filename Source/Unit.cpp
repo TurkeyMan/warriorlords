@@ -828,7 +828,7 @@ void UnitDefinitions::DrawUnits(float scale, float texelOffset, bool bHead, bool
 		if(unit.rank > 0)
 			++numRanked;
 
-		MFSetColour(MakeVector(pGame->GetPlayerColour(unit.player), unit.alpha));
+		MFSetColourV(MakeVector(pGame->GetPlayerColour(unit.player), unit.alpha));
 
 		MFRect uvs;
 		GetUnitUVs(unit.unit, unit.bFlip, &uvs, texelOffset);
@@ -1736,6 +1736,19 @@ void Item::StatMod::Parse(const char *pString)
 	}
 }
 
+static bool IsType(Unit *pUnit, const char *pTarget)
+{
+	UnitDefinitions *pDefs = pUnit->GetDefs();
+	return (pUnit->GetType() == UT_Unit && !MFString_CaseCmp("units", pTarget)) ||
+			(pUnit->GetType() == UT_Hero && !MFString_CaseCmp("heroes", pTarget)) ||
+			(pUnit->GetType() == UT_Vehicle && !MFString_CaseCmp("vehicles", pTarget)) ||
+			!MFString_CaseCmp(pUnit->GetName(), pTarget) ||
+			!MFString_CaseCmp(pDefs->GetRaceName(pUnit->GetRace()), pTarget) ||
+			!MFString_CaseCmp(pDefs->GetMovementClassName(pUnit->GetDetails()->movementClass), pTarget) ||
+			!MFString_CaseCmp(pDefs->GetUnitTypeName(pUnit->GetDetails()->atkType), pTarget) ||
+			!MFString_CaseCmp(pDefs->GetArmourClassName(pUnit->GetDetails()->armour), pTarget);
+}
+
 Item::StatMod *Item::GetMod(Unit *pUnit, Unit *pHero, int type, int index)
 {
 	for(int a=0; a<numGroups; ++a)
@@ -1744,10 +1757,7 @@ Item::StatMod *Item::GetMod(Unit *pUnit, Unit *pHero, int type, int index)
 		{
 			if((pUnit == pHero && !MFString_CaseCmp("self", pMods[a].ppTargets[b])) ||
 				(pUnit != pHero && !MFString_CaseCmp("group", pMods[a].ppTargets[b])) ||
-				(pUnit->GetType() == UT_Unit && !MFString_CaseCmp("units", pMods[a].ppTargets[b])) ||
-				(pUnit->GetType() == UT_Hero && !MFString_CaseCmp("heroes", pMods[a].ppTargets[b])) ||
-				(pUnit->GetType() == UT_Vehicle && !MFString_CaseCmp("vehicles", pMods[a].ppTargets[b])) ||
-				!MFString_CaseCmp(pUnit->GetName(), pMods[a].ppTargets[b]))
+				IsType(pUnit, pMods[a].ppTargets[b]))
 			{
 				switch(type)
 				{
@@ -1775,10 +1785,7 @@ float Item::GetSpecial(Unit *pUnit, Unit *pHero, const char *pName)
 		{
 			if((pUnit == pHero && !MFString_CaseCmp("self", pMods[a].ppTargets[b])) ||
 				(pUnit != pHero && !MFString_CaseCmp("group", pMods[a].ppTargets[b])) ||
-				(pUnit->GetType() == UT_Unit && !MFString_CaseCmp("units", pMods[a].ppTargets[b])) ||
-				(pUnit->GetType() == UT_Hero && !MFString_CaseCmp("heroes", pMods[a].ppTargets[b])) ||
-				(pUnit->GetType() == UT_Vehicle && !MFString_CaseCmp("vehicles", pMods[a].ppTargets[b])) ||
-				!MFString_CaseCmp(pUnit->GetName(), pMods[a].ppTargets[b]))
+				IsType(pUnit, pMods[a].ppTargets[b]))
 			{
 				if(pMods[a].pSpecial && !MFString_CaseCmp(pMods[a].pSpecial, pName))
 					return pMods[a].probability;

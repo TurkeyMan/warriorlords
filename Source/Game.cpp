@@ -325,7 +325,7 @@ void Game::Draw()
 						break;
 
 					if(pStep[p].cost > 2 && pStep[p].CanMove())
-						MFFont_DrawTextf(pSmallNumbersFont, pStep[p].x + 0.61f, pStep[p].y + 0.61f, 0.27f, MFVector::yellow, "%g", (float)pStep[p].cost * 0.5f);
+						MFFont_DrawText2f(pSmallNumbersFont, pStep[p].x + 0.61f, pStep[p].y + 0.61f, 0.27f, MFVector::yellow, "%g", (float)pStep[p].cost * 0.5f);
 				}
 
 				MFView_Pop();

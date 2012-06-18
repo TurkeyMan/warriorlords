@@ -406,14 +406,14 @@ void Editor::Draw()
 	const char *pText = "Race: Template";
 	if(editRace > 0)
 		pText = MFStr("Race: %s", pMap->GetUnitDefinitions()->GetRaceName(editRace));
-	MFFont_DrawText(MFFont_GetDebugFont(), 87.f, 10.f, 32.f, MFVector::black, pText);
-	MFFont_DrawText(MFFont_GetDebugFont(), 85.f, 8.f, 32.f, MFVector::white, pText);
+	MFFont_DrawText2(MFFont_GetDebugFont(), 87.f, 10.f, 32.f, MFVector::black, pText);
+	MFFont_DrawText2(MFFont_GetDebugFont(), 85.f, 8.f, 32.f, MFVector::white, pText);
 
 	pText = "Region: X";
 	if(editRegion != 15)
 		pText = MFStr("Region: %d", editRegion + 1);
-	MFFont_DrawText(MFFont_GetDebugFont(), 87.f, 47.f, 32.f, MFVector::black, pText);
-	MFFont_DrawText(MFFont_GetDebugFont(), 85.f, 45.f, 32.f, MFVector::white, pText);
+	MFFont_DrawText2(MFFont_GetDebugFont(), 87.f, 47.f, 32.f, MFVector::black, pText);
+	MFFont_DrawText2(MFFont_GetDebugFont(), 85.f, 45.f, 32.f, MFVector::white, pText);
 }
 
 void Editor::Deselect()
