@@ -6,7 +6,7 @@ solution "Warlords"
 	platforms { "Native", "x32", "x64" }
 
 	-- include the fuji project...
-	fujiDll = true
+--	fujiDll = true
 	dofile  "../../Fuji/Fuji/Private/Project/fujiproj.lua"
 
 	-- include the Haku project...

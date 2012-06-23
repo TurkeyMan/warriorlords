@@ -3,12 +3,11 @@
 #include "ServerRequest.h"
 
 #include "MFSystem.h"
+#include "MFDocumentJSON.h"
 
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
-
-#include <libjson.h>
 
 #if 0//defined(_DEBUG)
 	const char *pHostname = "10.0.0.27";
@@ -78,54 +77,54 @@ public:
 	class Item
 	{
 	public:
-		Item(JSONNODE *_pNode)
+		Item(MFJSONValue *_pNode)
 		{
 			pNode = _pNode;
-			pArray = NULL;
 		}
 
-		JSONNODE *pNode;
-		JSONNODE *pArray;
+		MFJSONValue *pNode;
 
 		bool AsBool()
 		{
-			return !!json_as_bool(pNode);
+			if(pNode->IsNull())
+				return NULL;
+			return pNode->Bool();
 		}
 
 		int AsInt()
 		{
-			return json_as_int(pNode);
+			if(pNode->IsNull())
+				return 0;
+			return pNode->Int();
 		}
 
 		float AsFloat()
 		{
-			return json_as_float(pNode);
+			if(pNode->IsNull())
+				return 0.0f;
+			return pNode->Float();
 		}
 
 		const char *AsString()
 		{
-			return json_as_string(pNode);
+			if(pNode->IsNull())
+				return "";
+			return pNode->String();
 		}
 
 		Item Get(const char *pField)
 		{
-			return Item(json_get(pNode, pField));
+			return pNode->Member(pField);
 		}
 
 		int Size()
 		{
-			if(!pArray)
-				pArray = json_as_array(pNode);
-
-			return json_size(pArray);
+			return pNode->Length();
 		}
 
 		Item operator [](int index)
 		{
-			if(!pArray)
-				pArray = json_as_array(pNode);
-
-			return Item(json_at(pArray, index));
+			return pNode->At(index);
 		}
 	};
 
@@ -134,27 +133,29 @@ public:
 	{
 		error = SE_INVALID_RESPONSE;
 
-		pRoot = json_parse(pJson);
-		if(!pRoot)
+		pDoc = MFParseJSON_Parse((char*)pJson, true);
+		if(!pDoc)
 			return;
 
-		JSONNODE *pReq = json_get(pRoot, "request");
-		JSONNODE *pErr = json_get(pRoot, "error");
+		pRoot = MFParseJSON_Root(pDoc);
+
+		MFJSONValue *pReq = pRoot->Member("request");
+		MFJSONValue *pErr = pRoot->Member("error");
 
 		if(pReq != NULL && pErr != NULL)
 		{
-			pRequest = json_as_string(pReq);
+			pRequest = pReq->String();
 
-			error = (ServerError)json_as_int(pErr);
-			pErrorMessage = json_as_string(json_get(pRoot, "message"));
+			error = (ServerError)pErr->Int();
+			pErrorMessage = pRoot->Member("message")->String();
 		}
 
-		data.pNode = json_get(pRoot, "response");
+		data.pNode = pRoot->Member("response");
 	}
 
 	~Result()
 	{
-		json_delete(pRoot);
+		MFParseJSON_DestroyDocument(pDoc);
 	}
 
 	const char *pRequest;
@@ -162,7 +163,8 @@ public:
 	ServerError error;
 	const char *pErrorMessage;
 
-	JSONNODE *pRoot;
+	MFDocumentJSON *pDoc;
+	MFJSONValue *pRoot;
 	Item data;
 
 	Item Data(const char *pField = NULL)
