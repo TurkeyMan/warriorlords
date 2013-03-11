@@ -1,8 +1,8 @@
 #include "Warlords.h"
 #include "UnitConfig.h"
 
-#include "MFFont.h"
-#include "MFRenderer.h"
+#include "Fuji/MFFont.h"
+#include "Fuji/MFRenderer.h"
 
 void DrawHealthBar(int x, int y, int maxHealth, float currentHealth);
 

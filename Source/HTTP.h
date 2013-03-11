@@ -1,9 +1,9 @@
 #if !defined(_HTTP_H)
 #define _HTTP_H
 
-#include "MFThread.h"
-#include "MFSockets.h"
-#include "FileSystem/MFFileSystemHTTP.h"
+#include "Fuji/MFThread.h"
+#include "Fuji/MFSockets.h"
+#include "Fuji/FileSystem/MFFileSystemHTTP.h"
 
 enum HTTPError
 {

@@ -1,7 +1,7 @@
 #if !defined(_PATH_H)
 #define _PATH_H
 
-#include "MFPoolHeap.h"
+#include "Fuji/MFPoolHeap.h"
 
 class Map;
 class Group;

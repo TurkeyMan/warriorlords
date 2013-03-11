@@ -1,11 +1,11 @@
 #if !defined(_WARLORDS_H)
 #define _WARLORDS_H
 
-#include "Fuji.h"
-#include "MFHeap.h"
-#include "MFArray.h"
+#include "Fuji/Fuji.h"
+#include "Fuji/MFHeap.h"
+#include "Fuji/MFArray.h"
 
-#include "Middleware/FastDelegate.h"
+#include "Fuji/Middleware/FastDelegate.h"
 using namespace fastdelegate;
 
 #include "Game.h"

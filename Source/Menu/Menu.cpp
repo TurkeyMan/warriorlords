@@ -1,7 +1,7 @@
 #include "Warlords.h"
-#include "UI/HKUI.h"
-#include "UI/HKWidgetStyle.h"
-#include "UI/HKWidgetLoader-XML.h"
+#include "Haku/UI/HKUI.h"
+#include "Haku/UI/HKWidgetStyle.h"
+#include "Haku/UI/HKWidgetLoader-XML.h"
 
 #include "Menu.h"
 

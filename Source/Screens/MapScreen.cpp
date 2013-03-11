@@ -5,11 +5,11 @@
 
 #include "Menu/Game/GameUI.h"
 
-#include "MFSystem.h"
-#include "MFPrimitive.h"
-#include "MFMaterial.h"
-#include "MFView.h"
-#include "MFRenderer.h"
+#include "Fuji/MFSystem.h"
+#include "Fuji/MFPrimitive.h"
+#include "Fuji/MFMaterial.h"
+#include "Fuji/MFView.h"
+#include "Fuji/MFRenderer.h"
 
 MapScreen::MapScreen(Game *_pGame)
 {

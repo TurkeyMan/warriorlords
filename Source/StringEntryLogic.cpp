@@ -1,8 +1,8 @@
 #include "Warlords.h"
-#include "MFInput.h"
-#include "MFString.h"
-#include "MFHeap.h"
-#include "MFSystem.h"
+#include "Fuji/MFInput.h"
+#include "Fuji/MFString.h"
+#include "Fuji/MFHeap.h"
+#include "Fuji/MFSystem.h"
 #include "StringEntryLogic.h"
 
 #if defined(MF_WINDOWS)

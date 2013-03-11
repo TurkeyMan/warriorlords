@@ -7,7 +7,7 @@ solution "Warlords"
 
 	-- include the fuji project...
 --	fujiDll = true
-	dofile  "../../Fuji/Fuji/Private/Project/fujiproj.lua"
+	dofile  "../../Fuji/Fuji/Project/fujiproj.lua"
 
 	-- include the Haku project...
 	dofile "../../Fuji/Haku/Project/hakuproj.lua"
@@ -30,5 +30,5 @@ solution "Warlords"
 
 		links { iif(fujiDll == true, "FujiDLL", "Fuji"), "Haku" }
 
-		dofile "../../Fuji/Fuji/Public/Project/fujiconfig.lua"
-		dofile "../../Fuji/Haku/Project/hakuconfig.lua"
+		dofile "../../Fuji/dist/Project/fujiconfig.lua"
+		dofile "../../Fuji/dist/Project/hakuconfig.lua"

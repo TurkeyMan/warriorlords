@@ -3,11 +3,11 @@
 
 #include "Game.h"
 
-#include "UI/HKWidget.h"
-#include "UI/Widgets/HKWidgetButton.h"
-#include "UI/Widgets/HKWidgetTextbox.h"
-#include "UI/Widgets/HKWidgetListbox.h"
-#include "UI/Widgets/HKWidgetSelectbox.h"
+#include "Haku/UI/HKWidget.h"
+#include "Haku/UI/Widgets/HKWidgetButton.h"
+#include "Haku/UI/Widgets/HKWidgetTextbox.h"
+#include "Haku/UI/Widgets/HKWidgetListbox.h"
+#include "Haku/UI/Widgets/HKWidgetSelectbox.h"
 #include "Menu/Widgets/UnitButton.h"
 
 class GameUI

@@ -1,11 +1,11 @@
 #include "Warlords.h"
-#include "UI/HKUI.h"
+#include "Haku/UI/HKUI.h"
 
 #include "UnitButton.h"
 
-#include "MFRenderer.h"
-#include "MFMaterial.h"
-#include "MFPrimitive.h"
+#include "Fuji/MFRenderer.h"
+#include "Fuji/MFMaterial.h"
+#include "Fuji/MFPrimitive.h"
 
 extern Game *pGame;
 

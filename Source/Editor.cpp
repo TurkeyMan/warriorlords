@@ -2,12 +2,12 @@
 #include "Editor.h"
 #include "Display.h"
 
-#include "MFInput.h"
-#include "MFSystem.h"
-#include "MFPrimitive.h"
-#include "MFFont.h"
-#include "MFMaterial.h"
-#include "MFRenderer.h"
+#include "Fuji/MFInput.h"
+#include "Fuji/MFSystem.h"
+#include "Fuji/MFPrimitive.h"
+#include "Fuji/MFFont.h"
+#include "Fuji/MFMaterial.h"
+#include "Fuji/MFRenderer.h"
 
 #include "Path.h"
 

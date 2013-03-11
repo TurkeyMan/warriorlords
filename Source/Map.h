@@ -1,3 +1,4 @@
+#pragma once
 #if !defined(_MAP_H)
 #define _MAP_H
 
@@ -6,7 +7,7 @@
 #include "InputHandler.h"
 #include "Path.h"
 
-#include "UI/HKWidget.h"
+#include "Haku/UI/HKWidget.h"
 
 struct MFTexture;
 class Game;

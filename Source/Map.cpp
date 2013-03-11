@@ -2,18 +2,18 @@
 #include "Map.h"
 #include "Display.h"
 
-#include "UI/HKUI.h"
+#include "Haku/UI/HKUI.h"
 
-#include "MFRenderer.h"
-#include "MFIni.h"
-#include "MFView.h"
-#include "MFMaterial.h"
-#include "MFPrimitive.h"
-#include "MFInput.h"
-#include "MFSystem.h"
-#include "MFFont.h"
-#include "MFTexture.h"
-#include "MFFileSystem.h"
+#include "Fuji/MFRenderer.h"
+#include "Fuji/MFIni.h"
+#include "Fuji/MFView.h"
+#include "Fuji/MFMaterial.h"
+#include "Fuji/MFPrimitive.h"
+#include "Fuji/MFInput.h"
+#include "Fuji/MFSystem.h"
+#include "Fuji/MFFont.h"
+#include "Fuji/MFTexture.h"
+#include "Fuji/MFFileSystem.h"
 
 #include "stdio.h"
 
@@ -755,7 +755,7 @@ MFMaterial *Map::GetMinimap(int *pMapWidth, int *pMapHeight)
 		}
 	}
 
-	MFTexture *pTex = MFTexture_ScaleFromRawData("MiniMap", pMiniMapImage, texWidth, texHeight, texWidth * minimapPixelScale, texHeight * minimapPixelScale, TexFmt_A8R8G8B8, minimapPixelScale > 1 ? SA_AdvMAME : SA_None);
+	MFTexture *pTex = MFTexture_ScaleFromRawData("MiniMap", pMiniMapImage, texWidth, texHeight, texWidth * minimapPixelScale, texHeight * minimapPixelScale, ImgFmt_A8R8G8B8, minimapPixelScale > 1 ? SA_AdvMAME : SA_None);
 
 	pMinimapMaterial = MFMaterial_Create("MiniMap");
 	MFTexture_Destroy(pTex);
@@ -928,7 +928,7 @@ try_again:
 	rtHeight -= rtHeight%tileHeight;
 	rtWidth = MFUtil_NextPowerOf2(rtWidth);
 	rtHeight = MFUtil_NextPowerOf2(rtHeight);
-	pRenderTarget = MFTexture_CreateRenderTarget("MapSurface", rtWidth, rtHeight, TexFmt_SelectFastest_NoAlpha);
+	pRenderTarget = MFTexture_CreateRenderTarget("MapSurface", rtWidth, rtHeight, ImgFmt_SelectFastest_NoAlpha);
 
 	if(!pRenderTarget && maxZoom > 1.f)
 	{

@@ -1,7 +1,7 @@
 #if !defined(_RESOURCE_CACHE)
 #define _RESOURCE_CACHE
 
-#include "MFOpenHashTable.h"
+#include "Fuji/MFOpenHashTable.h"
 
 struct MFMaterial;
 struct MFSound;

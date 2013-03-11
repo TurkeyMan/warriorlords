@@ -1,9 +1,9 @@
 #if !defined(_MENU_GAMELIST_H)
 #define _MENU_GAMELIST_H
 
-#include "UI/Widgets/HKWidgetButton.h"
-#include "UI/Widgets/HKWidgetTextbox.h"
-#include "UI/Widgets/HKWidgetListbox.h"
+#include "Haku/UI/Widgets/HKWidgetButton.h"
+#include "Haku/UI/Widgets/HKWidgetTextbox.h"
+#include "Haku/UI/Widgets/HKWidgetListbox.h"
 
 class FrontMenu;
 

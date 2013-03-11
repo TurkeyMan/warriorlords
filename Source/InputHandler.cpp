@@ -2,8 +2,8 @@
 #include "InputHandler.h"
 #include "Display.h"
 
-#include "MFSystem.h"
-#include "MFDisplay.h"
+#include "Fuji/MFSystem.h"
+#include "Fuji/MFDisplay.h"
 
 InputManager::InputManager()
 {

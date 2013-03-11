@@ -1,7 +1,7 @@
 #include "Warlords.h"
 #include "Display.h"
 
-#include "MFDisplay.h"
+#include "Fuji/MFDisplay.h"
 
 static DisplayOrientation gDisplayOrientation = DO_Normal;
 

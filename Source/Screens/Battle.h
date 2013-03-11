@@ -1,7 +1,7 @@
 #if !defined(_BATTLE_H)
 #define _BATTLE_H
 
-#include "MFMaterial.h"
+#include "Fuji/MFMaterial.h"
 
 #include "Screen.h"
 #include "Unit.h"

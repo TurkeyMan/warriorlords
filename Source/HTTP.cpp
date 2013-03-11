@@ -1,7 +1,7 @@
 #include "Warlords.h"
 #include "HTTP.h"
 
-#include "MFSockets.h"
+#include "Fuji/MFSockets.h"
 #include "stdio.h"
 #include "string.h"
 

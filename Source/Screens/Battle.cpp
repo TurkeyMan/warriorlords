@@ -4,18 +4,18 @@
 #include "Path.h"
 #include "Display.h"
 
-#include "MFInput.h"
-#include "MFSystem.h"
-#include "MFPrimitive.h"
-#include "MFFont.h"
-#include "MFMaterial.h"
-#include "Materials/MFMat_Standard.h"
-#include "MFView.h"
-#include "MFRenderer.h"
-#include "MFTexture.h"
+#include "Fuji/MFInput.h"
+#include "Fuji/MFSystem.h"
+#include "Fuji/MFPrimitive.h"
+#include "Fuji/MFFont.h"
+#include "Fuji/MFMaterial.h"
+#include "Fuji/Materials/MFMat_Standard.h"
+#include "Fuji/MFView.h"
+#include "Fuji/MFRenderer.h"
+#include "Fuji/MFTexture.h"
 
 // remove me!
-#include "MFIni.h"
+#include "Fuji/MFIni.h"
 
 #include <stdio.h>
 

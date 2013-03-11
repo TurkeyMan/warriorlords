@@ -1,7 +1,7 @@
 #if !defined(_INPUTHANDLER_H)
 #define _INPUTHANDLER_H
 
-#include "MFInput.h"
+#include "Fuji/MFInput.h"
 
 enum InputEvent
 {

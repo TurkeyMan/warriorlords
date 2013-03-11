@@ -2,8 +2,8 @@
 #include "HTTP.h"
 #include "ServerRequest.h"
 
-#include "MFSystem.h"
-#include "MFDocumentJSON.h"
+#include "Fuji/MFSystem.h"
+#include "Fuji/MFDocumentJSON.h"
 
 #include <string.h>
 #include <stdio.h>

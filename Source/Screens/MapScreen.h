@@ -8,7 +8,7 @@
 
 #include "Unit.h"
 
-#include "MFFont.h"
+#include "Fuji/MFFont.h"
 
 #include "GroupConfig.h"
 

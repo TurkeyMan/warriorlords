@@ -1,3 +1,4 @@
+#pragma once
 #if !defined(_GAMEDATA_H)
 #define _GAMEDATA_H
 
@@ -5,7 +6,7 @@
 //#include "UI/Entity.h"
 //#include "UI/Action.h"
 
-#include "MFTranslation.h"
+#include "Fuji/MFTranslation.h"
 
 class GameData
 {

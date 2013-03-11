@@ -2,10 +2,10 @@
 #include "GroupConfig.h"
 #include "MapScreen.h"
 
-#include "MFPrimitive.h"
-#include "MFRenderer.h"
-#include "MFMaterial.h"
-#include "MFFont.h"
+#include "Fuji/MFPrimitive.h"
+#include "Fuji/MFRenderer.h"
+#include "Fuji/MFMaterial.h"
+#include "Fuji/MFFont.h"
 
 #include "stdio.h"
 

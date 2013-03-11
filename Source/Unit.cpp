@@ -1,11 +1,11 @@
 #include "Warlords.h"
 #include "Unit.h"
 
-#include "MFMaterial.h"
-#include "Materials/MFMat_Standard.h"
-#include "MFTexture.h"
-#include "MFPrimitive.h"
-#include "MFIni.h"
+#include "Fuji/MFMaterial.h"
+#include "Fuji/Materials/MFMat_Standard.h"
+#include "Fuji/MFTexture.h"
+#include "Fuji/MFPrimitive.h"
+#include "Fuji/MFIni.h"
 
 extern Game *pGame;
 

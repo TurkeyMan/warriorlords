@@ -2,10 +2,10 @@
 #include "StringBox.h"
 #include "Display.h"
 
-#include "MFPrimitive.h"
-#include "MFView.h"
-#include "MFFont.h"
-#include "MFSystem.h"
+#include "Fuji/MFPrimitive.h"
+#include "Fuji/MFView.h"
+#include "Fuji/MFFont.h"
+#include "Fuji/MFSystem.h"
 
 static float gBlinkTime = 0.4f;
 

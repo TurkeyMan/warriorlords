@@ -1,9 +1,9 @@
-#include "Fuji.h"
-#include "MFIni.h"
-#include "MFMaterial.h"
-#include "MFSound.h"
-#include "MFModel.h"
-#include "MFFont.h"
+#include "Fuji/Fuji.h"
+#include "Fuji/MFIni.h"
+#include "Fuji/MFMaterial.h"
+#include "Fuji/MFSound.h"
+#include "Fuji/MFModel.h"
+#include "Fuji/MFFont.h"
 #include "ResourceCache.h"
 
 void ResourceCache::Init()

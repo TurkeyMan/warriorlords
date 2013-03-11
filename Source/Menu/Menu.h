@@ -1,10 +1,10 @@
 #if !defined(_FRONTMENU_H)
 #define _FRONTMENU_H
 
-#include "UI/Widgets/HKWidgetButton.h"
-#include "UI/Widgets/HKWidgetTextbox.h"
-#include "UI/Widgets/HKWidgetListbox.h"
-#include "UI/Widgets/HKWidgetSelectbox.h"
+#include "Haku/UI/Widgets/HKWidgetButton.h"
+#include "Haku/UI/Widgets/HKWidgetTextbox.h"
+#include "Haku/UI/Widgets/HKWidgetListbox.h"
+#include "Haku/UI/Widgets/HKWidgetSelectbox.h"
 
 #include "Menu/FrontEnd/Lobby.h"
 #include "Menu/FrontEnd/GameList.h"

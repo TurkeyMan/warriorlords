@@ -1,9 +1,9 @@
 #include "Warlords.h"
 #include "Inventory.h"
 
-#include "MFFont.h"
-#include "MFMaterial.h"
-#include "MFRenderer.h"
+#include "Fuji/MFFont.h"
+#include "Fuji/MFMaterial.h"
+#include "Fuji/MFRenderer.h"
 
 Inventory::Inventory()
 : Window(true)

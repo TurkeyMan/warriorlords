@@ -3,24 +3,24 @@
 #include "Game.h"
 #include "Editor.h"
 
-#include "MFFileSystem.h"
-#include "FileSystem/MFFileSystemNative.h"
-#include "MFModel.h"
-#include "MFView.h"
-#include "MFRenderer.h"
-#include "MFSystem.h"
-#include "MFDisplay.h"
+#include "Fuji/MFFileSystem.h"
+#include "Fuji/FileSystem/MFFileSystemNative.h"
+#include "Fuji/MFModel.h"
+#include "Fuji/MFView.h"
+#include "Fuji/MFRenderer.h"
+#include "Fuji/MFSystem.h"
+#include "Fuji/MFDisplay.h"
 
 #include "Menu/Menu.h"
 #include "Menu/Game/GameUI.h"
 
-#include "UI/HKUI.h"
+#include "Haku/UI/HKUI.h"
 #include "Menu/Widgets/UnitButton.h"
 
 #if defined(MF_WINDOWS)
 	#define WIN32_LEAN_AND_MEAN
 	#include <windows.h>
-	#include "../Project/resource.h"
+//	#include "../Project/resource.h"
 #endif
 
 #define TEST_ONLINE
@@ -191,7 +191,7 @@ int GameMain(MFInitParams *pInitParams)
 //	gDefaults.system.threadPriority = MFPriority_AboveNormal;
 	gDefaults.display.pWindowTitle = "Warrior Lords";
 #if defined(MF_WINDOWS)
-	gDefaults.display.pIcon = MAKEINTRESOURCE(IDI_ICON1);
+//	gDefaults.display.pIcon = MAKEINTRESOURCE(IDI_ICON1);
 #endif
 
 	pInitFujiFS = MFSystem_RegisterSystemCallback(MFCB_FileSystemInit, Game_InitFilesystem);

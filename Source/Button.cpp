@@ -1,10 +1,10 @@
 #include "Warlords.h"
 #include "Button.h"
 
-#include "MFMaterial.h"
-#include "MFPrimitive.h"
-#include "MFInput.h"
-#include "MFFont.h"
+#include "Fuji/MFMaterial.h"
+#include "Fuji/MFPrimitive.h"
+#include "Fuji/MFInput.h"
+#include "Fuji/MFFont.h"
 
 Button *Button::Create(const MFMaterial *pImage, const MFRect *pPosition, const MFRect *pUVs, const MFVector &colour, int buttonID, bool bTriggerOnDown)
 {

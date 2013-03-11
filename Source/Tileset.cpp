@@ -1,11 +1,11 @@
 #include "Warlords.h"
 #include "Tileset.h"
 
-#include "MFIni.h"
-#include "MFMaterial.h"
-#include "Materials/MFMat_Standard.h"
-#include "MFTexture.h"
-#include "MFPrimitive.h"
+#include "Fuji/MFIni.h"
+#include "Fuji/MFMaterial.h"
+#include "Fuji/Materials/MFMat_Standard.h"
+#include "Fuji/MFTexture.h"
+#include "Fuji/MFPrimitive.h"
 
 Tileset *Tileset::Create(const char *pFilename)
 {
