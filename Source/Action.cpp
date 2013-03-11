@@ -160,6 +160,8 @@ void Game::Init(const char *pMapName, bool bEdit)
 	const size_t sizes[numSizes] = { sizeof(Action*)*1, sizeof(Action*)*6, sizeof(Action*)*MapTile::MaxUnitsOnTile * 2, sizeof(Action*)*256 };
 	actionList.Init(numSizes, numItems, sizes);
 
+	actionCache.Init(1024, sizeof(Action), 256);
+
 	units.Init(256, sizeof(Unit), 256);
 	groups.Init(128, sizeof(Group), 64);
 
@@ -1438,7 +1440,7 @@ void Game::PushMoveAction(Group *pGroup)
 	Action *pAction = (Action*)actionCache.Alloc();
 	MFZeroMemory(pAction, sizeof(Action));
 
-	pAction->type = AT_Move;
+	pAction->type = Action::AT_Move;
 	pAction->pGroup = pGroup;
 
 	MapTile *pTile = pGroup->GetTile();

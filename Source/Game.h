@@ -1,13 +1,13 @@
+#pragma once
 #if !defined(_GAME_H)
 #define _GAME_H
 
 #include "Map.h"
 #include "Unit.h"
+#include "Action.h"
 #include "Menu/Game/GameUI.h"
 
 #include "ServerRequest.h"
-
-#include "MFPoolHeap.h"
 
 
 // *** REMOVE ME ***
@@ -51,63 +51,6 @@ struct GameParams
 
 	const char *pMap;
 	bool bEditMap;
-};
-
-struct Action
-{
-	enum ActionType
-	{
-		AT_Move,
-		AT_Rearrange,
-		AT_Regroup,
-		AT_Search,
-		AT_CaptureCastle,
-		AT_CaptureUnits
-	};
-
-	ActionType type;
-	Group *pGroup;
-	union U
-	{
-		struct Move
-		{
-			int startX, startY;
-			int startMove[11];
-			int destX, destY;
-			int destMove[11];
-		} move;
-		struct Rearrange
-		{
-			Unit *pBefore[10];
-			int beforeForward, beforeRear;
-			Unit *pAfter[10];
-			int afterForward, afterRear;
-		} rearrange;
-		struct Regroup
-		{
-			Group *pBefore[MapTile::MaxUnitsOnTile * 2];
-			int numBefore;
-			Group *pAfter[MapTile::MaxUnitsOnTile * 2];
-			int numAfter;
-		} regroup;
-		struct Search
-		{
-			Unit *pUnit;
-			Place *pRuin;
-		} search;
-		struct CaptureCastle
-		{
-			Castle *pCastle;
-		} captureCastle;
-		struct CaptureUnits
-		{
-			Group *pUnits;
-		} captureUnits;
-	} prop;
-
-	Action *pParent;
-	Action **ppChildren;
-	int numChildren;
 };
 
 class Game
@@ -215,7 +158,7 @@ protected:
 	void CommitAction(Action *pAction);
 	Action *FindFirstDependency(Action *pAction);
 
-	void ReplayAction(GameAction *pAction);
+	void ReplayAction(Action *pAction);
 
 	Player* GetPlayer(uint32 user, int *pPlayer);
 	void ReceivePeerMessage(uint32 user, const char *pMessage);
@@ -224,8 +167,6 @@ protected:
 
 	MFPoolHeapExpanding units;
 	MFPoolHeapExpanding groups;
-	MFPoolHeapExpanding actionCache;
-	MFPoolHeapCollection actionList;
 
 	// game resources
 	MFFont *pText;
@@ -280,7 +221,7 @@ protected:
 	int numTopActions;
 
 	// server actions
-	ActionList *pActionList;
+	History history;
 	int lastAction;
 
 	static Game *pCurrent;

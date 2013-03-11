@@ -1,8 +1,10 @@
+#pragma once
 #if !defined(_UNIT_H)
 #define _UNIT_H
 
+#include "Action.h"
 #include "Path.h"
-#include "MFPoolHeap.h"
+#include "Fuji/MFPoolHeap.h"
 
 class MFIni;
 struct MFMaterial;
@@ -585,7 +587,7 @@ public:
 	void FindPath(int x, int y);
 	Path *GetPath() const { return pPath; }
 
-	Action *GetLastAction() { return pLastAction; }
+	PendingAction *GetLastAction() { return pLastAction; }
 
 	bool ValidateGroup();
 
@@ -616,7 +618,7 @@ public:
 	int pathX, pathY;
 	Path *pPath;
 
-	Action *pLastAction;
+	PendingAction *pLastAction;
 
 	Group *pNext;
 };
