@@ -249,9 +249,7 @@ void GameUI::GameScreen::OnEndTurnClicked(HKWidget &sender, const HKWidgetEventI
 {
 	Game *pGame = Game::GetCurrent();
 
-	if(pGame->NumPendingActions() > 0)
-		pGame->ReplayNextAction();
-	else if(pGame->IsMyTurn())
+	if(pGame->IsMyTurn())
 		pGame->ShowRequest("End Turn?", fastdelegate::MakeDelegate(this, &GameUI::GameScreen::OnFinishTurn), false);
 }
 

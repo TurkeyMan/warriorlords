@@ -4,7 +4,6 @@
 
 #include "Action.h"
 #include "Path.h"
-#include "Fuji/MFPoolHeap.h"
 
 class MFIni;
 struct MFMaterial;
@@ -354,6 +353,7 @@ class Unit
 {
 	friend class UnitDefinitions;
 	friend class Group;
+	friend class History;
 public:
 	void Destroy();
 
@@ -551,7 +551,7 @@ class Group
 public:
 	static Group *Create(int player);
 	void Destroy();
- 
+
 	uint32 GetID() { return id; }
 	void SetID(uint32 _id) { id = _id; }
 

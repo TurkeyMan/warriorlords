@@ -25,7 +25,11 @@
 
 #define TEST_ONLINE
 
+
 /*** Global Stuff ***/
+
+MFRenderer *pRenderer = NULL;
+
 InputManager *pInputManager = NULL;
 
 FrontMenu *pFrontMenu;
@@ -34,6 +38,7 @@ Game *pGame = NULL;
 Editor *pEditor = NULL;
 
 MFSystemCallbackFunction pInitFujiFS;
+
 
 /*** Game Functions ***/
 
@@ -62,9 +67,43 @@ static void NullHandler(HKWidget &, const HKWidgetEventInfo &)
 	int x = 0;
 }
 
+MFRenderLayer* GetRenderLayer(RenderLayer layer)
+{
+	return MFRenderer_GetLayer(pRenderer, layer);
+}
+
+void BeginLayer(RenderLayer layer)
+{
+	MFRenderLayerSet layerSet;
+	MFZeroMemory(&layerSet, sizeof(layerSet));
+	layerSet.pSolidLayer = GetRenderLayer(layer);
+	MFRenderer_SetRenderLayerSet(pRenderer, &layerSet);
+}
+
+void Init_Renderer()
+{
+	// create the renderer with a single layer that clears before rendering
+	MFRenderLayerDescription layers[] = { { "Map" }, { "Scene" }, { "UI" } };
+	const int numLayers = sizeof(layers) / sizeof(layers[0]);
+	pRenderer = MFRenderer_Create(layers, numLayers, NULL, NULL);
+	MFRenderer_SetCurrent(pRenderer);
+
+	for(int a=0; a<numLayers; ++a)
+		MFRenderLayer_SetLayerSortMode(MFRenderer_GetLayer(pRenderer, a), MFRL_SM_None);
+
+	MFRenderLayer_SetClear(MFRenderer_GetLayer(pRenderer, 0), MFRCF_All);
+}
+
+void Destroy_Renderer()
+{
+	MFRenderer_Destroy(pRenderer);
+}
+
 void Game_Init()
 {
 	MFCALLSTACK;
+
+	Init_Renderer();
 
 	pInputManager = new InputManager;
 
@@ -137,10 +176,12 @@ void Game_Draw()
 	GetOrthoMatrix(&ortho, false);
 	MFView_SetCustomProjection(ortho, false);
 
-	MFRenderer_ClearScreen();
+//	MFRenderer_ClearScreen();
 
+	BeginLayer(RL_Scene);
 	Screen::DrawScreen();
 
+	BeginLayer(RL_UI);
 	GameData::Get()->Draw(); // old ui in here
 	HKUserInterface::Get().Draw();
 
@@ -162,6 +203,8 @@ void Game_Deinit()
 	HKUserInterface::Deinit();
 
 	GameData::Deinit();
+
+	Destroy_Renderer();
 }
 
 void Game_FocusGained()

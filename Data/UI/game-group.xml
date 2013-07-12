@@ -9,7 +9,7 @@
 		</LinearLayout>
 
 		<!-- Unit area -->
-		<LinearLayout align="topFill" height ="168" orientation="horizontal">
+		<LinearLayout align="topFill" height="168" orientation="horizontal">
 
 			<!-- Ranged units -->
 			<Frame id="ranged" align="fill">
@@ -24,7 +24,7 @@
 		</LinearLayout>
 
 		<!-- Row separator -->
-		<Widget align="topFill" height ="16" background_image="Horiz-Pirates" />
+		<Widget align="topFill" height="16" background_image="Horiz-Pirates" />
 
 		<!-- Group area -->
 		<LinearLayout id="groups" align="topFill" orientation="horizontal" padding="5">

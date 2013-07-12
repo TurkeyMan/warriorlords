@@ -19,7 +19,7 @@
 		</LinearLayout>
 
 		<!-- Row separator -->
-		<Widget align="topFill" height ="16" background_image="Horiz-Pirates" />
+		<Widget align="topFill" height="16" background_image="Horiz-Pirates" />
 
 		<!-- This frame fills the center region -->
 		<LinearLayout align="fill" orientation="horizontal">

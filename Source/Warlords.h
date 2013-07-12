@@ -16,4 +16,15 @@ void DivideRect_Horiz(const MFRect &rect, float split, float margin, MFRect *pLe
 void DivideRect_Vert(const MFRect &rect, float split, float margin, MFRect *pTop, MFRect *pBottom, bool bSplitPixels);
 void AdjustRect_Margin(MFRect *pRect, float margin, bool bPixels = true);
 
+enum RenderLayer
+{
+	RL_Map = 0,
+	RL_Scene = 1,
+	RL_UI = 2
+};
+
+struct MFRenderLayer;
+MFRenderLayer* GetRenderLayer(RenderLayer layer);
+void BeginLayer(RenderLayer layer);
+
 #endif

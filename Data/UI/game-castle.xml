@@ -42,7 +42,7 @@
 		</LinearLayout>
 
 		<!-- Row separator -->
-		<Widget align="topFill" height ="16" background_image="Horiz-Pirates" />
+		<Widget align="topFill" height="16" background_image="Horiz-Pirates" />
 
 		<!-- This layout spans the bottom -->
 		<LinearLayout align="fill" orientation="horizontal" margin="5">

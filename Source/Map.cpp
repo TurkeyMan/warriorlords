@@ -8,6 +8,7 @@
 #include "Fuji/MFIni.h"
 #include "Fuji/MFView.h"
 #include "Fuji/MFMaterial.h"
+#include "Fuji/Materials/MFMat_Standard.h"
 #include "Fuji/MFPrimitive.h"
 #include "Fuji/MFInput.h"
 #include "Fuji/MFSystem.h"
@@ -937,6 +938,7 @@ try_again:
 	}
 
 	pRenderTargetMaterial = MFMaterial_Create("MapSurface");
+	MFMaterial_SetParameterI(pRenderTargetMaterial, MFMatStandard_Blend, 0, MFMatStandard_Blend_None);
 
 	screen.width = MFMin(screen.width, 480.f);
 	screen.height = MFMin(screen.height, 320.f);
@@ -1262,9 +1264,14 @@ void Map::Update()
 
 void Map::Draw()
 {
+	MFRenderLayer *pLayer = GetRenderLayer(RL_Map);
+	MFRenderLayer_SetLayerRenderTarget(pLayer, 0, pRenderTarget);
+	MFRenderLayer_SetLayerDepthTarget(pLayer, NULL);
+	BeginLayer(RL_Map);
+
 	MFView_Push();
 
-	MFRenderer_SetRenderTarget(pRenderTarget, NULL);
+//	MFRenderer_SetRenderTarget(pRenderTarget, NULL);
 
 	float texelCenter = MFRenderer_GetTexelCenterOffset();
 	int xStart = (int)xOffset;
@@ -1503,7 +1510,8 @@ void Map::Draw()
 	MFEnd();
 
 	// reset the render target
-	MFRenderer_SetDeviceRenderTarget();
+	BeginLayer(RL_Scene);
+//	MFRenderer_SetDeviceRenderTarget();
 
 	// render the map to the screen
 	MFMatrix orthoMat;

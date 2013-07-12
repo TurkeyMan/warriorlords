@@ -120,7 +120,10 @@ public:
 
 	void DrawDebug();
 
-	void GetMapSize(int *pWidth, int *pHeight) { if(pWidth) *pWidth = mapWidth; if(pHeight) *pHeight = mapHeight; }
+	const char *GetName() const							{ return name; }
+	const char *GetFileName() const						{ return filename; }
+
+	void GetMapSize(int *pWidth, int *pHeight) const	{ if(pWidth) *pWidth = mapWidth; if(pHeight) *pHeight = mapHeight; }
 	void GetCursor(float x, float y, float *pX, float *pY);
 	void GetVisibleTileSize(float *pWidth, float *pHeight);
 
@@ -133,23 +136,23 @@ public:
 
 	void SetMapOrtho(int *pXTiles = NULL, int *pYTiles = NULL);
 
-	MapTile *GetTile(int x, int y) const { return pMap + y*mapWidth + x; }
-	const Tile *GetTerrainTile(int terrainTile) const { return pTiles->GetTile(terrainTile); }
-	const Tile *GetTerrainTileAt(int x, int y) const { return pTiles->GetTile(pMap[y*mapWidth + x].terrain); }
-	uint32 GetTerrain(int terrainTile) const { return pTiles->GetTile(terrainTile)->terrain; }
-	uint32 GetTerrainAt(int x, int y) const { return pTiles->GetTile(pMap[y*mapWidth + x].terrain)->terrain; }
+	MapTile *GetTile(int x, int y) const				{ return pMap + y*mapWidth + x; }
+	const Tile *GetTerrainTile(int terrainTile) const	{ return pTiles->GetTile(terrainTile); }
+	const Tile *GetTerrainTileAt(int x, int y) const	{ return pTiles->GetTile(pMap[y*mapWidth + x].terrain); }
+	uint32 GetTerrain(int terrainTile) const			{ return pTiles->GetTile(terrainTile)->terrain; }
+	uint32 GetTerrainAt(int x, int y) const				{ return pTiles->GetTile(pMap[y*mapWidth + x].terrain)->terrain; }
 
-	int GetNumCastles() const { return numCastles; }
-	Castle *GetCastle(int id) { return &pCastles[id]; }
+	int GetNumCastles() const							{ return numCastles; }
+	Castle *GetCastle(int id)							{ return &pCastles[id]; }
 
-	int GetNumPlaces() const { return numPlaces; }
-	Place *GetPlace(int id) { return &pPlaces[id]; }
+	int GetNumPlaces() const							{ return numPlaces; }
+	Place *GetPlace(int id)								{ return &pPlaces[id]; }
 
 	ObjectType GetDetailType(int x, int y) const;
 	int GetDetail(int x, int y) const;
 
-	Tileset *GetTileset() { return pTiles; }
-	UnitDefinitions *GetUnitDefinitions() { return pUnits; }
+	Tileset *GetTileset()								{ return pTiles; }
+	UnitDefinitions *GetUnitDefinitions()				{ return pUnits; }
 
 	bool SetTerrain(int x, int y, int tl, int tr, int bl, int br, uint32 mask = 0xFFFFFFFF);
 	void SetRegion(int x, int y, int region);
@@ -161,9 +164,9 @@ public:
 
 	void ClearDetail(int x, int y);
 
-	void SetMoveKey(bool bAlternate) { moveButton = bAlternate ? 1 : 0; }
-	void SetEditRegion(int region) { editRegion = region; }
-	void SetEditRace(int race) { editRace = race; }
+	void SetMoveKey(bool bAlternate)					{ moveButton = bAlternate ? 1 : 0; }
+	void SetEditRegion(int region)						{ editRegion = region; }
+	void SetEditRace(int race)							{ editRace = race; }
 
 	int UpdateChange(int a);
 

@@ -649,25 +649,6 @@ void GroupConfig::Show(MapTile *_pTile)
 	}
 }
 
-static bool ContainsGroup(Group *pGroup, Group **ppGroups, int numGroups)
-{
-	for(int g=0; g<numGroups; ++g)
-	{
-		if(pGroup == ppGroups[g])
-			return true;
-	}
-	return false;
-}
-
-struct Regroup
-{
-	int numSourceGroups;
-	int numNewGroups;
-	Group *pSourceGroups[MapTile::MaxUnitsOnTile * 2];
-	Group *pNewGroups[MapTile::MaxUnitsOnTile * 2];
-	bool bWasRearranged;
-};
-
 void GroupConfig::Hide()
 {
 	Game *pGame = Game::GetCurrent();
@@ -675,167 +656,176 @@ void GroupConfig::Hide()
 
 	Window::Hide();
 
-	Regroup regroups[MapTile::MaxUnitsOnTile * 2];
-	int numRegroups = 0;
-	int regroupIDs[MapTile::MaxUnitsOnTile * 2];
+	struct SubRegroup
+	{
+		MFArray<Group*> before;
+		MFArray<Group*> after;
+	};
 
-	// sort new groups into regroup actions...
+	PendingAction::Regroup::Before before[MapTile::MaxUnitsOnTile * 2];
+	PendingAction::Regroup::After after[MapTile::MaxUnitsOnTile * 2];
+	SubRegroup subs[MapTile::MaxUnitsOnTile * 2];
+	int numBefore = 0, numAfter = 0, numSubs = 0, numSubGroups = 0;
+
+	// populate the 'before' state
+	numBefore = pTile->GetNumGroups();
+	for(int i=0; i<numBefore; ++i)
+	{
+		PendingAction::Regroup::Before &g = before[i];
+		g.pGroup = pTile->GetGroup(0);
+		g.pPreviousAction = g.pGroup->pLastAction;
+		pTile->RemoveGroup(g.pGroup);
+	}
+
+	// popoulate the afters, and build sub-regroups
 	for(int a=0; a<numGroups; ++a)
 	{
-		UnitGroup *pGroup = pGroups[a];
+		UnitGroup &group = *pGroups[a];
 
-		bool bFound = false;
-		for(int g=0; g<numRegroups; ++g)
+		PendingAction::Regroup::After &aft = after[numAfter++];
+
+		// first find if it matches one of our 'before' groups verbatim
+		int b=0;
+		for(; b<numBefore; ++b)
 		{
-			Regroup &regroup = regroups[g];
-			bool bContainsGroup = false;
+			Group *pBefore = before[b].pGroup;
+			if(pBefore->GetNumForwardUnits() != group.numForward || pBefore->GetNumRearUnits() != group.numRear || pBefore->GetVehicle() != group.pVehicle)
+				continue;
 
-			// find if unit is already in this group
-			for(int u=0; u<11; ++u)
+			// compare front
+			int i=0;
+			for(; i<group.numForward; ++i)
 			{
-				Unit *pUnit = pGroup->pUnits[u];
-				if(pUnit && ContainsGroup(pUnit->GetGroup(), regroup.pSourceGroups, regroup.numSourceGroups))
-				{
-					bContainsGroup = true;
+				if(pBefore->GetForwardUnit(i) != group.pForward[i])
 					break;
-				}
 			}
+			if(i<group.numForward)
+				continue;
 
-			if(bContainsGroup)
+			// compare back
+			for(i=0; i<group.numRear; ++i)
 			{
-				regroupIDs[a] = g;
-
-				// add all missing groups
-				for(int u=0; u<11; ++u)
-				{
-					Unit *pUnit = pGroup->pUnits[u];
-					if(pUnit)
-					{
-						Group *pG = pUnit->GetGroup();
-						if(pUnit && !ContainsGroup(pG, regroup.pSourceGroups, regroup.numSourceGroups))
-							regroup.pSourceGroups[regroup.numSourceGroups++] = pG;
-					}
-				}
-
-				bFound = true;
-				break;
-			}
-		}
-
-		if(!bFound)
-		{
-			Regroup &regroup = regroups[numRegroups];
-			regroupIDs[a] = numRegroups++;
-
-			// add to new group list
-			regroup.numSourceGroups = 0;
-			regroup.numNewGroups = 0;
-
-			// add all source groups
-			for(int u=0; u<11; ++u)
-			{
-				Unit *pUnit = pGroup->pUnits[u];
-				if(pUnit)
-				{
-					Group *pG = pUnit->GetGroup();
-					if(!ContainsGroup(pG, regroup.pSourceGroups, regroup.numSourceGroups))
-						regroup.pSourceGroups[regroup.numSourceGroups++] = pG;
-				}
-			}
-		}
-	}
-
-	// remove old groups from tile
-	for(int a=0; a<numRegroups; ++a)
-	{
-		Regroup &regroup = regroups[a];
-
-		// remove old groups from tile
-		for(int b=0; b<regroup.numSourceGroups; ++b)
-			pTile->RemoveGroup(regroup.pSourceGroups[b]);
-	}
-
-	// create/rearrange the groups
-	for(int a=numGroups-1; a>=0; --a)
-	{
-		UnitGroup *pGroup = pGroups[a];
-		Regroup &regroup = regroups[regroupIDs[a]];
-
-		// check if the group is only rearranged
-		regroup.bWasRearranged = regroup.numSourceGroups == 1 && pGroup->totalUnits == regroup.pSourceGroups[0]->GetNumUnits() + (regroup.pSourceGroups[0]->GetVehicle() ? 1 : 0);
-		if(regroup.bWasRearranged)
-		{
-			Group *pSource = regroup.pSourceGroups[0];
-
-			// check that a rearrange actually ocurred
-			bool bWasRearranged = false;
-			int i = 0;
-			for(int b=0; b<10; ++b)
-			{
-				if(pGroup->pUnits[b] && pGroup->pUnits[b] != pSource->GetUnit(i++))
-				{
-					bWasRearranged = true;
+				if(pBefore->GetRearUnit(i) != group.pRear[i])
 					break;
-				}
 			}
+			if(i<group.numRear)
+				continue;
 
-			if(bWasRearranged)
-			{
-				// create rearrange action
-				pGame->PushRearrange(pSource, pGroup->pUnits);
+			// we have an unmodified group!
+			aft.pGroup = pBefore;
+			aft.sub = numSubs++;
 
-				// rearrange the group
-				for(int b=0; b<10; ++b)
-					pSource->pUnits[b] = pGroup->pUnits[b];
-				pSource->numForwardUnits = pGroup->numForward;
-				pSource->numRearUnits = pGroup->numRear;				
-			}
-
-			// put the group on top
-			pTile->AddGroup(pSource);
+			SubRegroup &sub = subs[aft.sub];
+			sub.before.push(pBefore);
+			sub.after.push(pBefore);
+			numSubGroups += 2;
+			break;
 		}
+		if(b < numBefore)
+			continue;
+
+		// we have a new group...
+		// find an existing sub-regroup it belongs in
+		for(b=0; b<numSubs; ++b)
+		{
+			for(int i=0; i<11; ++i)
+			{
+				if(group.pUnits[i] && subs[b].before.contains(group.pUnits[i]->GetGroup()))
+					goto bail;
+			}
+		}
+bail:
+		if(b == numSubs)
+			aft.sub = numSubs++; // create new sub-regroup
 		else
-		{
-			// create new group
-			Group *pNewGroup = Group::Create(regroup.pSourceGroups[0]->GetPlayer());
-			regroup.pNewGroups[regroup.numNewGroups++] = pNewGroup;
+			aft.sub = b; // add to existing sub-regroup
 
-			for(int b=0; b<10; ++b)
+		// find source groups and build new group
+		SubRegroup &sub = subs[aft.sub];
+		Group *pNewGroup = Group::Create(pGame->CurrentPlayer());
+
+		for(int i=0; i<11; ++i)
+		{
+			if(group.pUnits[i])
 			{
-				if(pGroup->pUnits[b])
+				Unit *pUnit = group.pUnits[i];
+
+				// add the unit's old group to the sub-regroup if not already present...
+				Group *pSourceGroup = pUnit->GetGroup();
+				for(int j=0; j<sub.before.size(); ++j)
 				{
-					if(b < 5)
-						pNewGroup->AddForwardUnit(pGroup->pUnits[b]);
-					else
-						pNewGroup->AddRearUnit(pGroup->pUnits[b]);
+					if(sub.before[j] == pSourceGroup)
+						goto add_to_new_group;
 				}
+
+				// it's not already present, so add it
+				sub.before.push(pSourceGroup);
+				++numSubGroups;
+
+add_to_new_group:
+				// add the unit to it's new group
+				if(i < 5)
+					pNewGroup->AddForwardUnit(pUnit);
+				else if(i < 10)
+					pNewGroup->AddRearUnit(pUnit);
+				else
+					pNewGroup->AddUnit(pUnit);
 			}
-
-			pNewGroup->pVehicle = pGroup->pVehicle;
-			if(pNewGroup->pVehicle)
-				pNewGroup->pVehicle->SetGroup(pNewGroup);
-
-			// update the groups stats
-			pNewGroup->UpdateGroupStats();
-
-			// and add the group to the map
-			pTile->AddGroup(pNewGroup);
-
-			MFDebug_Assert(pNewGroup->ValidateGroup(), "EEK!");
 		}
+
+		// update the groups stats
+		pNewGroup->UpdateGroupStats();
+
+		// and set it to the regroup action
+		aft.pGroup = pNewGroup;
+		sub.after.push(pNewGroup);
+		++numSubGroups;
 	}
 
-	// create regroup actions
-	for(int a=0; a<numRegroups; ++a)
-	{
-		Regroup &regroup = regroups[a];
+	// put new groups on tile (in reverse order)
+	for(int a=numAfter-1; a>=0; --a)
+		pTile->AddGroup(after[a].pGroup);
 
-		if(!regroup.bWasRearranged)
-		{
-			// create regroup action
-			pGame->PushRegroup(regroup.pSourceGroups, regroup.numSourceGroups, regroup.pNewGroups, regroup.numNewGroups);
-		}
-	}
-
+	// select the top group
 	pGame->SelectGroup(pTile->GetGroup(0));
+
+	// check there was actually some activity
+	if(numBefore == numAfter)
+	{
+		int a=0;
+		for(; a<numBefore; ++a)
+		{
+			if(before[a].pGroup != after[a].pGroup)
+				break;
+		}
+		if(a == numBefore)
+			return;
+	}
+
+	// create regroup action
+	PendingAction::Regroup regroup;
+	regroup.x = pTile->GetX();
+	regroup.y = pTile->GetY();
+	regroup.pMem = MFHeap_AllocAndZero(sizeof(PendingAction::Regroup::Before)*numBefore + sizeof(PendingAction::Regroup::After)*numAfter + sizeof(PendingAction::Regroup::SubRegroup)*numSubs + sizeof(Group*)*numSubGroups);
+	regroup.pBefore = (PendingAction::Regroup::Before*)regroup.pMem;
+	regroup.numBefore = numBefore;
+	regroup.pAfter = (PendingAction::Regroup::After*)&regroup.pBefore[numBefore];
+	regroup.numAfter = numAfter;
+	regroup.pSubRegroups = (PendingAction::Regroup::SubRegroup*)&regroup.pAfter[numAfter];
+	regroup.numSubRegroups = numSubs;
+	Group **ppSubGroups = (Group**)&regroup.pSubRegroups[numSubs];
+	MFCopyMemory(regroup.pBefore, before, sizeof(PendingAction::Regroup::Before) * numBefore);
+	MFCopyMemory(regroup.pAfter, after, sizeof(PendingAction::Regroup::After) * numAfter);
+	for(int a=0; a<numSubs; ++a)
+	{
+		regroup.pSubRegroups[a].numBefore = subs[a].before.size();
+		regroup.pSubRegroups[a].ppBefore = ppSubGroups;
+		for(int b=0; b<subs[a].before.size(); ++b)
+			*ppSubGroups++ = subs[a].before[b];
+		regroup.pSubRegroups[a].numAfter = subs[a].after.size();
+		regroup.pSubRegroups[a].ppAfter = ppSubGroups;
+		for(int b=0; b<subs[a].after.size(); ++b)
+			*ppSubGroups++ = subs[a].after[b];
+	}
+	pGame->PushRegroup(&regroup);
 }

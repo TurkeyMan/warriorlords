@@ -1795,3 +1795,4 @@ float Item::GetSpecial(Unit *pUnit, Unit *pHero, const char *pName)
 
 	return 0.f;
 }
+

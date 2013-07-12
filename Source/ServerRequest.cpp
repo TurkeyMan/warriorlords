@@ -757,7 +757,7 @@ void ActionList::Sync()
 	if(actionList.size() > numServerActions)
 	{
 		// commit pending actions
-		commitPending = WLServ_ApplyActions(update, game, actionList.getpointer() + numServerActions, actionList.size() - numServerActions);
+		commitPending = WLServ_ApplyActions(update, game, actionList.getPointer() + numServerActions, actionList.size() - numServerActions);
 	}
 	else
 	{

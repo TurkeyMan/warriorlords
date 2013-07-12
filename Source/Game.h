@@ -2,13 +2,14 @@
 #if !defined(_GAME_H)
 #define _GAME_H
 
+#include "Fuji/MFObjectPool.h"
+
 #include "Map.h"
 #include "Unit.h"
 #include "Action.h"
 #include "Menu/Game/GameUI.h"
 
 #include "ServerRequest.h"
-
 
 // *** REMOVE ME ***
 #include "Screens/GroupConfig.h"
@@ -23,16 +24,20 @@ class Battle;
 struct Player
 {
 	MFVector colour;
+	int colourID;
+
+	uint32 playerID;
+
 	int race;
 	int startingHero;
+
+	bool bEliminated;
 
 	int cursorX, cursorY;
 
 	Unit *pHero[4];
 	Castle *pHeroReviveLocation[4];
 	int numHeroes;
-
-	uint32 playerID;
 };
 
 struct GameParams
@@ -53,10 +58,29 @@ struct GameParams
 	bool bEditMap;
 };
 
+struct Statistics
+{
+	struct PlayerStats
+	{
+		int numCastles;
+		int numUnits;
+		int numHeroes;
+		int numTransports;
+		int battlesWon;
+		int battlesLost;
+		int castlesClaimed;
+		int castlesLost;
+		int transportsClaimed;
+	};
+
+	MFArray<PlayerStats[6]> turns;
+};
+
 class Game
 {
 	friend class GameUI;
 	friend class MapScreen;
+	friend class History;
 public:
 	static void SetCurrent(Game *pGame) { pCurrent = pGame; }
 	static Game *GetCurrent() { return pCurrent; }
@@ -113,13 +137,8 @@ public:
 	void SelectGroup(Group *pGroup);
 	Group *GetSelected() { return pSelection; }
 
-	void PushMoveAction(Group *pGroup);
-	void UpdateMoveAction(Group *pGroup);
-	void PushRearrange(Group *pGroup, Unit **ppNewOrder);
-	void PushRegroup(Group **ppBefore, int numBefore, Group **ppAfter, int numAfter);
-	void PushSearch(Group *pGroup, Place *pRuin);
-	void PushCaptureCastle(Group *pGroup, Castle *pCastle);
-	void PushCaptureUnits(Group *pGroup, Group *pUnits);
+	inline void PushRegroup(PendingAction::Regroup *pRegroup) { history.PushRegroup(pRegroup); }
+	inline void PushCaptureUnits(Group *pGroup, Group *pUnits) { history.PushCaptureUnits(pGroup, pUnits); }
 
 	Group *RevertAction(Group *pGroup);
 	void CommitActions(Group *pGroup);
@@ -135,38 +154,22 @@ public:
 
 	void ShowRequest(const char *pMessage, GameUI::MsgBoxDelegate callback, bool bNotification);
 
-	void ApplyActions();
-
-	void AddUnit(Unit *pUnit, bool bCommitUnit = false);
-	void AddGroup(Group *pGroup, bool bCommitGroup = false);
-
-	void ReplayActions(int stopAction = -1);
-	void ReplayNextAction();
-	int NumPendingActions();
-
-	const char *GetNextActionDesc();
-
-	GameAction *SubmitAction(GameActions action, int numArgs);
-	GameAction *SubmitActionArgs(GameActions action, int numArgs, ...);
-
 protected:
 	void Init(const char *pMap, bool bEdit);
 
 	bool HandleInputEvent(HKInputManager &manager, const HKInputManager::EventInfo &ev);
 
-	void AddActions(Action *pAction, Action *pParent);
-	void CommitAction(Action *pAction);
-	Action *FindFirstDependency(Action *pAction);
+	void UpdateUndoButton();
+
+	int NextPlayer();
 
 	void ReplayAction(Action *pAction);
 
 	Player* GetPlayer(uint32 user, int *pPlayer);
 	void ReceivePeerMessage(uint32 user, const char *pMessage);
 
-	void UpdateUndoButton();
-
-	MFPoolHeapExpanding units;
-	MFPoolHeapExpanding groups;
+	int AddUnit(Unit *pUnit) { int numUnits = units.size(); units.push(pUnit); return numUnits; }
+	int AddGroup(Group *pGroup) { int numGroups = groups.size(); groups.push(pGroup); return numGroups; }
 
 	// game resources
 	MFFont *pText;
@@ -183,13 +186,11 @@ protected:
 	Player players[12];
 	int numPlayers;
 
-	Unit **ppUnits;
-	uint32 numUnits;
-	uint32 numUnitsAllocated;
+	MFArray<Unit*> units;
+	MFArray<Group*> groups;
 
-	Group **ppGroups;
-	uint32 numGroups;
-	uint32 numGroupsAllocated;
+	MFObjectPool unitPool;
+	MFObjectPool groupPool;
 
 	// UI
 	GameUI *pGameUI;
@@ -210,15 +211,12 @@ protected:
 
 	// game state data
 	bool bOnline;
-	bool bUpdating;
 	uint32 gameID;
 
 	int currentPlayer;
 	int currentTurn;
 
-	// undo history
-	Action **ppActionHistory;
-	int numTopActions;
+	Statistics gameStats;
 
 	// server actions
 	History history;
