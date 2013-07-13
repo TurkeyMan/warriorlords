@@ -1241,6 +1241,9 @@ void Game::SelectGroup(Group *pGroup)
 	if(pSelection == pGroup)
 		return;
 
+	if(pSelection)
+		pSelection->bSelected = false;
+
 	if(pGroup)
 	{
 		pSelection = pGroup;
@@ -1252,8 +1255,6 @@ void Game::SelectGroup(Group *pGroup)
 	}
 	else
 	{
-		pSelection->bSelected = false;
-
 		if(pSelection->pPath)
 		{
 			pSelection->pPath->Destroy();
@@ -1338,20 +1339,19 @@ void Game::CommitAllActions()
 
 Group *Game::RevertAction(Group *pGroup)
 {
-/*
-	Action *pAction = pGroup->pLastAction;
-	if(!pAction || (pAction->numChildren && pAction->type != Action::AT_Regroup))
+	PendingAction *pAction = pGroup->pLastAction;
+	if(!pAction)
 		return pGroup;
 
 	// perform undo
 	switch(pAction->type)
 	{
-		case Action::AT_Move:
+		case PAT_Move:
 		{
 			// revert to old tile
 			MapTile *pTile = pGroup->GetTile();
 			pTile->RemoveGroup(pGroup);
-			MapTile *pOldTile = pMap->GetTile(pAction->prop.move.startX, pAction->prop.move.startY);
+			MapTile *pOldTile = pMap->GetTile(pAction->move.startX, pAction->move.startY);
 			pOldTile->AddGroup(pGroup);
 
 			int numUnits = pGroup->GetNumUnits();
@@ -1359,65 +1359,79 @@ Group *Game::RevertAction(Group *pGroup)
 			{
 				// restore unit movement
 				Unit *pUnit = pGroup->GetUnit(a);
-				pUnit->SetMovement(pAction->prop.move.startMove[a]);
+				pUnit->SetMovement(pAction->move.startMovement[a]);
 			}
-
 			if(pGroup->pVehicle)
 			{
 				// restore vehicle movement
-				pGroup->pVehicle->SetMovement(pAction->prop.move.startMove[numUnits]);
+				pGroup->pVehicle->SetMovement(pAction->move.startMovement[numUnits]);
 			}
 
 			// set the groups path target to the position we undid
-			pGroup->FindPath(pAction->prop.move.destX, pAction->prop.move.destY);
+			pGroup->FindPath(pAction->move.destX, pAction->move.destY);
 
 			// pop action
-			pGroup->pLastAction = pAction->pParent;
+			pGroup->pLastAction = pAction->move.pPreviousAction;
 			break;
 		}
 
-		case Action::AT_Rearrange:
+		case PAT_Regroup:
 		{
-			for(int a=0; a<10; ++a)
-				pGroup->pForwardUnits[a] = pAction->prop.rearrange.pBefore[a];
-			pGroup->numForwardUnits = pAction->prop.rearrange.beforeForward;
-			pGroup->numRearUnits = pAction->prop.rearrange.beforeRear;
-
-			// pop action
-			pGroup->pLastAction = pAction->pParent;
-			break;
-		}
-
-		case Action::AT_Regroup:
-		{
-			// check if all groups are present
-			for(int a=0; a<pAction->prop.regroup.numAfter; ++a)
+			// find if any groups are missing...
+			PendingAction *pMostRecent = pAction;
+			while(1)
 			{
-				Group *pAfter = pAction->prop.regroup.pAfter[a];
-				if(pAfter->pLastAction != pAction)
+				if(pMostRecent->type == PAT_Move)
 				{
-					// one group is still missing, lets undo that units most recent action
-					Action *pUndo = FindFirstDependency(pAfter->pLastAction);
-
-					Group *pDeepestChild = pUndo->pGroup ? pUndo->pGroup : pUndo->prop.regroup.pAfter[0];
-					return RevertAction(pDeepestChild);
+					if(!pMostRecent->move.pNextAction)
+						break;
+					pMostRecent = pMostRecent->move.pNextAction;
 				}
+				else if(pMostRecent->type == PAT_Regroup)
+				{
+					int a=0;
+					for(; a<pMostRecent->regroup.numAfter; ++a)
+					{
+						if(pMostRecent->regroup.pAfter[a].pNextAction)
+						{
+							pMostRecent = pMostRecent->regroup.pAfter[a].pNextAction;
+							break;
+						}
+					}
+					if(a == pMostRecent->regroup.numAfter)
+						break;
+				}
+			}
+			if(pMostRecent != pAction)
+			{
+				// at least one group is still missing, let's forward the undo action to that group
+				if(pMostRecent->type == PAT_Move)
+					return RevertAction(pMostRecent->move.pGroup);
+				else
+					return RevertAction(pMostRecent->regroup.pAfter[0].pGroup);
 			}
 
 			// get map tile
-			MapTile *pTile = pAction->prop.regroup.pAfter[0]->GetTile();
+			MapTile *pTile = pAction->regroup.pAfter[0].pGroup->GetTile();
 
-			for(int a=0; a<pAction->prop.regroup.numAfter; ++a)
+			// remove 'after' groups
+			for(int a=0; a<pAction->regroup.numAfter; ++a)
 			{
 				// destroy the target groups
-				Group *pAfter = pAction->prop.regroup.pAfter[a];
-				pTile->RemoveGroup(pAfter);
-				pAfter->Destroy();
+				PendingAction::Regroup::After &after = pAction->regroup.pAfter[a];
+				pTile->RemoveGroup(after.pGroup);
+
+				// only destroy if it was created...
+				PendingAction::Regroup::SubRegroup &sub = pAction->regroup.pSubRegroups[after.sub];
+				if(sub.ppBefore[0] != sub.ppAfter[0])
+					after.pGroup->Destroy();
 			}
 
-			for(int a=pAction->prop.regroup.numBefore-1; a>=0; --a)
+			// revert to 'before' groups
+			for(int a=pAction->regroup.numBefore-1; a>=0; --a)
 			{
-				pGroup = pAction->prop.regroup.pBefore[a];
+				PendingAction::Regroup::Before &before = pAction->regroup.pBefore[a];
+				pGroup = before.pGroup;
 
 				// assign the units back to the old group
 				for(int b=0; b<pGroup->GetNumUnits(); ++b)
@@ -1425,82 +1439,21 @@ Group *Game::RevertAction(Group *pGroup)
 					Unit *pUnit = pGroup->GetUnit(b);
 					pUnit->SetGroup(pGroup);
 				}
-
 				if(pGroup->pVehicle)
 					pGroup->pVehicle->SetGroup(pGroup);
 
 				// add old group to tile
 				pTile->AddGroup(pGroup);
 
-				// clear child action from old group
-				if(pGroup->pLastAction)
-				{
-					for(int b=0; b<pGroup->pLastAction->numChildren; ++b)
-					{
-						if(pGroup->pLastAction->ppChildren[a] == pAction)
-						{
-							--pGroup->pLastAction->numChildren;
-							for(; a<pGroup->pLastAction->numChildren; ++a)
-								pGroup->pLastAction->ppChildren[a] = pGroup->pLastAction->ppChildren[a+1];
-							break;
-						}
-					}
-				}
+				// and point at the previous action
+				pGroup->pLastAction = before.pPreviousAction;
 			}
 		}
 	}
 
 	// disconnect action
-	if(pAction->pParent)
-	{
-		for(int a=0; a<pAction->pParent->numChildren; ++a)
-		{
-			if(pAction->pParent->ppChildren[a] == pAction)
-			{
-				--pAction->pParent->numChildren;
-				for(; a<pAction->pParent->numChildren; ++a)
-					pAction->pParent->ppChildren[a] = pAction->pParent->ppChildren[a+1];
-				break;
-			}
-		}
-	}
-	else if(pAction->type == Action::AT_Regroup)
-	{
-		for(int p=0; p<pAction->prop.regroup.numBefore; ++p)
-		{
-			Action *pParent = pAction->prop.regroup.pBefore[p]->pLastAction;
-			if(!pParent)
-				continue;
+	history.PopPending(pAction);
 
-			for(int a=0; a<pParent->numChildren; ++a)
-			{
-				if(pParent->ppChildren[a] == pAction)
-				{
-					--pParent->numChildren;
-					for(; a<pParent->numChildren; ++a)
-						pParent->ppChildren[a] = pParent->ppChildren[a+1];
-					break;
-				}
-			}
-		}
-	}
-	else
-	{
-		for(int a=0; a<numTopActions; ++a)
-		{
-			if(ppActionHistory[a] == pAction)
-			{
-				--numTopActions;
-				for(; a<numTopActions; ++a)
-					ppActionHistory[a] = ppActionHistory[a+1];
-				break;
-			}
-		}
-	}
-
-	// destroy the action
-	DestroyAction(pAction);
-*/
 	return pGroup;
 }
 

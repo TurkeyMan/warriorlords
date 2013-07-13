@@ -17,10 +17,12 @@ class Game;
 
 enum ActionType
 {
-	AT_BeginGame,
+	AT_Unknown = -1,
+
+	AT_BeginGame = 0,
 	AT_BeginTurn,
 	AT_PlayerEliminated,
-	AT_Vectory,
+	AT_Victory,
 	AT_SetBuild,
 	AT_CreateUnit,
 	AT_CreateGroup,
@@ -31,6 +33,8 @@ enum ActionType
 	AT_Battle,
 	AT_CaptureCastle,
 	AT_CaptureUnits,
+
+	AT_Max
 };
 
 enum PendingActionType
@@ -41,7 +45,7 @@ enum PendingActionType
 
 struct Action
 {
-	struct Player	{ uint32 player; int race, colour;	MFString Str() const { return MFString::Format("{ %08X, %d, %d }", player, race, colour); }	};
+	struct Player	{ uint32 id; int race, colour;		MFString Str() const { return MFString::Format("{ %08X, %d, %d }", id, race, colour); }	};
 	struct Castle	{ int castle, player;				MFString Str() const { return MFString::Format("{ %d: %d }", castle, player); }				};
 	struct Ruin		{ int place, item;					MFString Str() const { return MFString::Format("{ %d: %d }", place, item); }				};
 	struct Unit		{ uint32 unit; int health, kills;	MFString Str() const { return MFString::Format("{ %d: %d, %d }", unit, health, kills); }	};
@@ -214,10 +218,13 @@ public:
 	void PushCaptureUnits(Group *pGroup, Group *pUnits);
 
 	void CommitPending(Group *pGroup);
+	void PopPending(PendingAction *pAction);
 
 private:
 	void CommitAction(PendingAction *pAction);
 	void Push(Action &action);
+
+	void Disconnect(PendingAction *pAction, PendingAction *pFrom);
 
 	MFArray<Action> actions;
 	MFObjectPool pendingPool;
