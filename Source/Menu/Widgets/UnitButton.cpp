@@ -7,8 +7,6 @@
 #include "Fuji/MFMaterial.h"
 #include "Fuji/MFPrimitive.h"
 
-extern Game *pGame;
-
 HKWidget *UnitButton::Create(HKWidgetType *pType)
 {
 	return new UnitButton(pType);
@@ -54,7 +52,7 @@ void RendererUnitButton::Render(const HKWidget &widget, const MFMatrix &worldTra
 	if(button.unit < 0)
 		return;
 
-	UnitDefinitions *pUnitDefs = pGame->GetUnitDefs();
+	UnitDefinitions *pUnitDefs = Game::GetCurrent()->GetUnitDefs();
 
 	MFMaterial *pUnitMat = pUnitDefs->GetUnitMaterial();
 	float texelCenter = MFRenderer_GetTexelCenterOffset();

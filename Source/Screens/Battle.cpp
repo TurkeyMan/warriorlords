@@ -21,7 +21,6 @@
 
 const float Battle::introLength = 4.f;
 
-extern Game *pGame;
 static bool gbBattleTest = false;
 static int gTestWins[2] = {0, 0};
 static int gBattle = 0;
@@ -40,7 +39,7 @@ void BeginTest()
 	MFIni *pIni = MFIni::Create("battle_test");
 	MFIniLine *pLine = pIni->GetFirstLine();
 
-	UnitDefinitions *pDefs = pGame->GetUnitDefs();
+	UnitDefinitions *pDefs = Game::GetCurrent()->GetUnitDefs();
 	while(pLine)
 	{
 		if(pLine->IsSection("Group1") || pLine->IsSection("Group2"))
@@ -87,13 +86,15 @@ void BeginTest()
 	}
 
 
-	pGame->BeginBattle(pGroup1, &tile[1]);
+	Game::GetCurrent()->BeginBattle(pGroup1, &tile[1]);
 
 	gBattle = 1 - gBattle;
 }
 
 void BattleTest()
 {
+	MFDebug_Assert(false, "!");
+
 	gbBattleTest = true;
 
 	// create a game
@@ -113,7 +114,7 @@ void BattleTest()
 	params.players[1].hero = 0;
 
 	// start game
-	pGame = new Game(&params);
+	Game *pGame = new Game(&params);
 	Game::SetCurrent(pGame);
 	pGame->BeginGame();
 

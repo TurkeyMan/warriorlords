@@ -34,11 +34,6 @@ uint32 MapTile::GetTerrain() const
 	return pMap->GetTerrain(terrain);
 }
 
-int MapTile::GetRegionRace() const
-{
-	return region == 0xF ? 0 : Game::GetCurrent()->GetPlayerRace(region);
-}
-
 void MapTile::AddGroup(Group *_pGroup)
 {
 	MFDebug_Assert(_pGroup->ValidateGroup(), "EEK!");
@@ -333,7 +328,6 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 			pMap = (Map*)MFHeap_AllocAndZero(sizeof(Map));
 			pMap = new(pMap) Map;
 			MFString_Copy(pMap->filename, pMapFilename);
-			pMap->pGame = pGame;
 			pMap->bEditable = bEditable;
 
 			MFIniLine *pMapLine = pLine->Sub();
@@ -582,7 +576,7 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 	return pMap;
 }
 
-void Map::ConstructMap(int race)
+void Map::ConstructMap(int *pRaces, int race)
 {
 	// check race has map defined
 	if(race > -1 && !mapTemplate[race].pMap)
@@ -597,7 +591,7 @@ void Map::ConstructMap(int race)
 
 		int slice = race;
 		if(race == -1)
-			slice = pMap[a].GetRegionRace();
+			slice = pMap[a].region == 0xF ? 0 : pRaces[pMap[a].region];
 
 		pMap[a].terrain = mapTemplate[slice].pMap[a].terrain;
 		pMap[a].type = mapTemplate[slice].pMap[a].type;
@@ -672,7 +666,7 @@ void Map::ConstructMap(int race)
 
 				int slice = race;
 				if(race == -1)
-					slice = pTile->GetRegionRace();
+					slice = pTile->region == 0xF ? 0 : pRaces[pTile->region];
 
 				if(slice == a)
 				{
@@ -866,8 +860,6 @@ Map *Map::CreateNew(Game *pGame, const char *pTileset, const char *pUnits)
 {
 	Map *pNew = (Map*)MFHeap_AllocAndZero(sizeof(Map));
 	pNew = new(pNew) Map;
-
-	pNew->pGame = pGame;
 
 	MFString_Copy(pNew->name, "Untitled");
 	MFString_Copy(pNew->tileset, pTileset);
@@ -1186,7 +1178,7 @@ bool Map::ReceiveInputEvent(HKInputManager &manager, const HKInputManager::Event
 		case HKInputManager::IE_Down:
 			if(ev.buttonID == moveButton)
 			{
-				HKUserInterface::Get().SetFocus(ev.pSource, pGame->GetUI()->GetMap());
+				HKUserInterface::Get().SetFocus(ev.pSource, Game::GetCurrent()->GetUI()->GetMap());
 				xVelocity = yVelocity = 0.f;
 				return true;
 			}
@@ -1262,7 +1254,7 @@ void Map::Update()
 #endif
 }
 
-void Map::Draw()
+void Map::Draw(Game *pGame)
 {
 	MFRenderLayer *pLayer = GetRenderLayer(RL_Map);
 	MFRenderLayer_SetLayerRenderTarget(pLayer, 0, pRenderTarget);

@@ -4,8 +4,6 @@
 #include "Menu/FrontEnd/Lobby.h"
 #include "Menu/Menu.h"
 
-extern Game *pGame;
-
 void LobbyMenu::Load(HKWidget *pRoot, FrontMenu *_pFrontMenu)
 {
 	pMenu = pRoot;
@@ -372,7 +370,7 @@ void LobbyMenu::OnStartClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 			// select random race
 			while(game.players[a].race == 0)
 			{
-				int r = (MFRand() % (game.mapDetails.unitSetDetails.numRaces - 1)) + 1;
+				int r = (MFRand() % 4) + 1;
 				if(game.mapDetails.bRacePresent[r])
 					game.players[a].race = r;
 			}
@@ -424,11 +422,8 @@ void LobbyMenu::OnStartClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 	if(game.id == 0)
 	{
 		// start game
-		pGame = new Game(&params);
+		Game *pGame = Game::NewGame(&params);
 		Game::SetCurrent(pGame);
-
-		// begin the game
-		pGame->BeginGame();
 
 		// and hide the menu
 		FrontMenu::Get()->Hide();
@@ -593,7 +588,7 @@ void LobbyMenu::OnBegin(ServerError error, Session *pSession)
 
 	// start game
 	params.gameID = game.id;
-	pGame = new Game(&params);
+	Game *pGame = new Game(&params);
 	Game::SetCurrent(pGame);
 	pGame->BeginGame();
 
@@ -617,7 +612,7 @@ void LobbyMenu::StartGame(ServerError error, Session *pSession, GameState *pStat
 		return;
 
 	// start game
-	pGame = new Game(pState);
+	Game *pGame = new Game(pState);
 	Game::SetCurrent(pGame);
 
 	FrontMenu::Get()->Hide();	

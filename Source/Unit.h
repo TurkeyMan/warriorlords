@@ -2,7 +2,6 @@
 #if !defined(_UNIT_H)
 #define _UNIT_H
 
-#include "Action.h"
 #include "Path.h"
 
 class MFIni;
@@ -13,7 +12,7 @@ class Game;
 class MapTile;
 class Unit;
 class Group;
-struct Action;
+struct PendingAction;
 
 struct Race
 {
@@ -203,8 +202,6 @@ public:
 	static UnitDefinitions *Load(Game *pGame, const char *pUnitSetName, int numTerrainTypes);
 	void Free();
 
-	Game *GetGame() { return pGame; }
-
 	inline int GetNumRaces() { return raceCount; }
 	inline const char *GetRaceName(int race) { return pRaces[race].pName; }
 	MFVector GetRaceColour(int race) const;
@@ -216,7 +213,7 @@ public:
 	int FindUnit(const char *pName);
 
 	UnitDetails *GetUnitDetails(int unit) { return &pUnits[unit]; }
-	class Unit *CreateUnit(int unit, int player);
+	Unit *CreateUnit(int unit, int player);
 	void DestroyUnit(Unit *pUnit);
 
 	inline int GetNumSpecials() { return specialCount; }
@@ -288,8 +285,6 @@ protected:
 		float *pDamageMods;
 	};
 
-	Game *pGame;
-
 	MFIni *pUnitDefs;
 
 	const char *pName;
@@ -353,7 +348,7 @@ class Unit
 {
 	friend class UnitDefinitions;
 	friend class Group;
-	friend class History;
+	friend class Game;
 public:
 	void Destroy();
 

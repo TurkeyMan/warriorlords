@@ -76,14 +76,74 @@ struct Statistics
 	MFArray<PlayerStats[6]> turns;
 };
 
+struct PendingAction
+{
+	struct Move
+	{
+		Group *pGroup;
+		int startX, startY;
+		int destX, destY;
+		int startMovement[11];
+		int endMovement[11];
+		PendingAction *pPreviousAction;
+		PendingAction *pNextAction;
+	};
+	struct Regroup
+	{
+		struct SubRegroup
+		{
+			Group **ppBefore;
+			int numBefore;
+			Group **ppAfter;
+			int numAfter;
+		};
+
+		struct Before
+		{
+			Group *pGroup;
+			PendingAction *pPreviousAction;
+		};
+
+		struct After
+		{
+			Group *pGroup;
+			PendingAction *pNextAction;
+			int sub;
+		};
+
+		int x, y;
+
+		void *pMem;
+		Before *pBefore;
+		int numBefore;
+		After *pAfter;
+		int numAfter;
+		SubRegroup *pSubRegroups;
+		int numSubRegroups;
+	};
+
+	PendingActionType type;
+	union
+	{
+		Move move;
+		Regroup regroup;
+	};
+};
+
 class Game
 {
 	friend class GameUI;
 	friend class MapScreen;
 	friend class History;
 public:
-	static void SetCurrent(Game *pGame) { pCurrent = pGame; }
+	static Game *SetCurrent(Game *pGame) { Game *pOld = pCurrent; pCurrent = pGame; return pOld; }
 	static Game *GetCurrent() { return pCurrent; }
+
+	static Game *NewGame(GameParams *pParams);
+	static Game *ResumeGame(const char *pGameName, bool bOnline);
+	static Game *CreateEditor(const char *pMap);
+
+	Game(History *pHistory, Map *pMap = NULL);
 
 	Game(GameParams *pParams);
 	Game(GameState *pState);
@@ -137,11 +197,13 @@ public:
 	void SelectGroup(Group *pGroup);
 	Group *GetSelected() { return pSelection; }
 
-	inline void PushRegroup(PendingAction::Regroup *pRegroup) { history.PushRegroup(pRegroup); }
+	void PushMoveAction(Group *pGroup);
+	void UpdateMoveAction(Group *pGroup);
+	void PushRegroup(PendingAction::Regroup *pRegroup);
 	inline void PushCaptureUnits(Group *pGroup, Group *pUnits) { history.PushCaptureUnits(pGroup, pUnits); }
 
 	Group *RevertAction(Group *pGroup);
-	void CommitActions(Group *pGroup);
+	void CommitPending(Group *pGroup);
 	void CommitAllActions();
 	void DestroyAction(Action *pAction);
 
@@ -168,8 +230,13 @@ protected:
 	Player* GetPlayer(uint32 user, int *pPlayer);
 	void ReceivePeerMessage(uint32 user, const char *pMessage);
 
+	Unit *CreateUnit(int unit, int player);
 	int AddUnit(Unit *pUnit) { int numUnits = units.size(); units.push(pUnit); return numUnits; }
 	int AddGroup(Group *pGroup) { int numGroups = groups.size(); groups.push(pGroup); return numGroups; }
+
+	void CommitAction(PendingAction *pAction);
+	void PopPending(PendingAction *pAction);
+	void DisconnectAction(PendingAction *pAction, PendingAction *pFrom);
 
 	// game resources
 	MFFont *pText;
@@ -218,9 +285,12 @@ protected:
 
 	Statistics gameStats;
 
-	// server actions
-	History history;
+	// game history
+	History &history;
 	int lastAction;
+
+	// pending (undo) action pool
+	MFObjectPool pendingPool;
 
 	static Game *pCurrent;
 };

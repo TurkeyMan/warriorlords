@@ -129,78 +129,17 @@ struct Action
 	};
 };
 
-struct PendingAction
-{
-	struct Move
-	{
-		Group *pGroup;
-		int startX, startY;
-		int destX, destY;
-		int startMovement[11];
-		int endMovement[11];
-		PendingAction *pPreviousAction;
-		PendingAction *pNextAction;
-	};
-	struct Regroup
-	{
-		struct SubRegroup
-		{
-			Group **ppBefore;
-			int numBefore;
-			Group **ppAfter;
-			int numAfter;
-		};
-
-		struct Before
-		{
-			Group *pGroup;
-			PendingAction *pPreviousAction;
-		};
-
-		struct After
-		{
-			Group *pGroup;
-			PendingAction *pNextAction;
-			int sub;
-		};
-
-		int x, y;
-
-		void *pMem;
-		Before *pBefore;
-		int numBefore;
-		After *pAfter;
-		int numAfter;
-		SubRegroup *pSubRegroups;
-		int numSubRegroups;
-	};
-
-	PendingActionType type;
-	union
-	{
-		Move move;
-		Regroup regroup;
-	};
-};
-
 class History
 {
 public:
-	History(Game *pGame) : pendingPool(sizeof(PendingAction), 1024, 1024), pGame(pGame) { }
 	~History();
 
 	// serialise
 	MFString Write(int firstAction = 0, int lastAction = -1);
 	void Read(MFString text);
 
-	// undo-able
-	void PushMoveAction(Group *pGroup);
-	void UpdateMoveAction(Group *pGroup);
-
-	void PushRegroup(PendingAction::Regroup *pRegroup);
-
 	// hard actions
-	void PushBeginGame(const char *pMap, Player *pPlayers, int numPlayers, Action::Castle *pCastles, int numCastles, Action::Ruin *pRuins, int numRuins);
+	void PushBeginGame(const char *pMap, Action::Player *pPlayers, int numPlayers, Action::Castle *pCastles, int numCastles, Action::Ruin *pRuins, int numRuins);
 
 	void PushBeginTurn(int player);
 	void PushPlayerEliminated(int player);
@@ -211,25 +150,19 @@ public:
 	void PushCreateUnit(Unit *pUnit);
 	void PushResurrect(Unit *pUnit);
 	void PushCreateGroup(Group *pGroup);
+	void PushRestack(MapTile *pTile);
 
+	void PushMove(PendingAction *pAction);
 	void PushSearch(Unit *pHero, Place *pRuin);
+
 	void PushBattle(Action::Unit *pUnits, int numUnits);
 	void PushCaptureCastle(Group *pGroup, Castle *pCastle);
 	void PushCaptureUnits(Group *pGroup, Group *pUnits);
 
-	void CommitPending(Group *pGroup);
-	void PopPending(PendingAction *pAction);
-
-private:
-	void CommitAction(PendingAction *pAction);
 	void Push(Action &action);
 
-	void Disconnect(PendingAction *pAction, PendingAction *pFrom);
-
+private:
 	MFArray<Action> actions;
-	MFObjectPool pendingPool;
-
-	Game *pGame;
 };
 
 #endif

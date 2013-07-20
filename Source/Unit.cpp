@@ -7,8 +7,6 @@
 #include "Fuji/MFPrimitive.h"
 #include "Fuji/MFIni.h"
 
-extern Game *pGame;
-
 bool UnitDefinitions::GetDetails(const char *pUnitSetName, UnitSetDetails *pDetails)
 {
 	if(!pDetails)
@@ -107,7 +105,6 @@ UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, in
 
 	UnitDefinitions *pUnitDefs = new UnitDefinitions;
 
-	pUnitDefs->pGame = pGame;
 	pUnitDefs->pUnitDefs = pIni;
 
 	pUnitDefs->pUnits = NULL;
@@ -754,7 +751,7 @@ int UnitDefinitions::FindItem(const char *pName)
 
 Unit *UnitDefinitions::CreateUnit(int unit, int player)
 {
-	Unit *pUnit = pGame->AllocUnit();
+	Unit *pUnit = Game::GetCurrent()->AllocUnit();
 
 	pUnit->type = unit;
 	pUnit->player = player;
@@ -793,7 +790,7 @@ Unit *UnitDefinitions::CreateUnit(int unit, int player)
 
 void UnitDefinitions::DestroyUnit(Unit *pUnit)
 {
-	pGame->DestroyUnit(pUnit);
+	Game::GetCurrent()->DestroyUnit(pUnit);
 }
 
 void UnitDefinitions::AddRenderUnit(int unit, float x, float y, int player, bool bFlip, float alpha, int rank)
@@ -828,7 +825,7 @@ void UnitDefinitions::DrawUnits(float scale, float texelOffset, bool bHead, bool
 		if(unit.rank > 0)
 			++numRanked;
 
-		MFSetColourV(MakeVector(pGame->GetPlayerColour(unit.player), unit.alpha));
+		MFSetColourV(MakeVector(Game::GetCurrent()->GetPlayerColour(unit.player), unit.alpha));
 
 		MFRect uvs;
 		GetUnitUVs(unit.unit, unit.bFlip, &uvs, texelOffset);
@@ -1065,12 +1062,12 @@ void Unit::SetGroup(Group *_pGroup)
 
 int Unit::GetRace()
 {
-	return pGame->GetPlayerRace(player);
+	return Game::GetCurrent()->GetPlayerRace(player);
 }
 
 MFVector Unit::GetColour()
 {
-	return pGame->GetPlayerColour(player);
+	return Game::GetCurrent()->GetPlayerColour(player);
 }
 
 float Unit::GetSpecialAttack(const char *pSpecial)
@@ -1297,7 +1294,7 @@ MapTile *Castle::GetTile(int index)
 	if(index >= 2)
 	{
 		int width;
-		Map *pMap = pUnitDefs->GetGame()->GetMap();
+		Map *pMap = Game::GetCurrent()->GetMap();
 		pMap->GetMapSize(&width, NULL);
 		return pTile + width + (index & 1);
 	}
@@ -1314,7 +1311,7 @@ bool Castle::IsEmpty()
 
 	// check the second row... very painfully mind you.
 	int width;
-	Map *pMap = pUnitDefs->GetGame()->GetMap();
+	Map *pMap = Game::GetCurrent()->GetMap();
 	pMap->GetMapSize(&width, NULL);
 	MapTile *pT = pTile + width;
 	return pT[0].GetNumUnits() == 0 && pT[1].GetNumUnits() == 0;
@@ -1347,7 +1344,7 @@ Group *Castle::GetMercGroup()
 	int numUnits = odds[MFRand() % range];
 	for(int a=0; a<numUnits; ++a)
 	{
-		pGroup->AddUnit(pGame->GetUnitDefs()->CreateUnit(choices[MFRand()%numChoices], -1));
+		pGroup->AddUnit(Game::GetCurrent()->GetUnitDefs()->CreateUnit(choices[MFRand()%numChoices], -1));
 	}
 
 	return pGroup;
@@ -1365,7 +1362,7 @@ void Castle::Capture(Group *pGroup)
 		for(int b=0; b<pCastleTile->GetNumGroups(); ++b)
 		{
 			Group *pUnit = pCastleTile->GetGroup(b);
-			pGame->PushCaptureUnits(pGroup, pUnit);
+			Game::GetCurrent()->PushCaptureUnits(pGroup, pUnit);
 			pUnit->SetPlayer(player);
 		}
 	}
@@ -1382,11 +1379,11 @@ void Castle::SetBuildUnit(int slot)
 {
 	// if we're currently building a hero, clear the castle binding
 	if(nextBuild >= 4)
-		pGame->SetHeroRebuildCastle(player, nextBuild - 4, NULL);
+		Game::GetCurrent()->SetHeroRebuildCastle(player, nextBuild - 4, NULL);
 
 	// if we have selected to build a hero, bind it to the castle
 	if(slot >= 4)
-		pGame->SetHeroRebuildCastle(player, slot - 4, this);
+		Game::GetCurrent()->SetHeroRebuildCastle(player, slot - 4, this);
 
 	nextBuild = slot;
 }
@@ -1395,7 +1392,7 @@ int Castle::GetBuildUnit()
 {
 	if(nextBuild == -1)
 		return -1;
-	return nextBuild < 4 ? details.buildUnits[nextBuild].unit : pGame->GetPlayerHero(player, nextBuild - 4)->GetType();
+	return nextBuild < 4 ? details.buildUnits[nextBuild].unit : Game::GetCurrent()->GetPlayerHero(player, nextBuild - 4)->GetType();
 }
 
 int Castle::BuildTimeRemaining()
@@ -1412,7 +1409,7 @@ int Castle::GetUnitBuildTime()
 	if(unit == -1)
 		return 0;
 
-	return unit < 4 ? details.buildUnits[unit].buildTime : pGame->GetPlayerHero(player, unit - 4)->GetDetails()->buildTime;
+	return unit < 4 ? details.buildUnits[unit].buildTime : Game::GetCurrent()->GetPlayerHero(player, unit - 4)->GetDetails()->buildTime;
 }
 
 void Place::InitRuin(int item)

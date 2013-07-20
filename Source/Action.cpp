@@ -27,6 +27,7 @@ History::~History()
 {
 	MFDebug_Assert(actions[0].type == AT_BeginGame, "Expected: first action is AT_BeginGame");
 
+	MFHeap_Free((void*)actions[0].beginGame.pMap);
 	MFHeap_Free(actions[0].beginGame.pCastles);
 	MFHeap_Free(actions[0].beginGame.pRuins);
 }
@@ -310,16 +311,16 @@ void History::Read(MFString text)
 	}
 }
 
-void History::PushBeginGame(const char *pMap, Player *pPlayers, int numPlayers, Action::Castle *pCastles, int numCastles, Action::Ruin *pRuins, int numRuins)
+void History::PushBeginGame(const char *pMap, Action::Player *pPlayers, int numPlayers, Action::Castle *pCastles, int numCastles, Action::Ruin *pRuins, int numRuins)
 {
 	Action a;
 	a.type = AT_BeginGame;
 	a.beginGame.pMap = MFString_Dup(pMap);
 	for(int i=0; i<numPlayers; ++i)
 	{
-		a.beginGame.players[i].id = pPlayers[i].playerID;
+		a.beginGame.players[i].id = pPlayers[i].id;
 		a.beginGame.players[i].race = pPlayers[i].race;
-		a.beginGame.players[i].colour = pPlayers[i].colourID;
+		a.beginGame.players[i].colour = pPlayers[i].race;
 	}
 	a.beginGame.numPlayers = numPlayers;
 	a.beginGame.pCastles = pCastles;
@@ -365,8 +366,6 @@ void History::PushSetBuild(uint32 castle, uint32 unitType, uint32 buildTime)
 
 void History::PushCreateUnit(Unit *pUnit)
 {
-	pUnit->id = pGame->AddUnit(pUnit);
-
 	Action a;
 	a.type = AT_CreateUnit;
 	a.createUnit.unitType = pUnit->GetType();
@@ -375,8 +374,6 @@ void History::PushCreateUnit(Unit *pUnit)
 
 void History::PushCreateGroup(Group *pGroup)
 {
-	pGroup->id = pGame->AddGroup(pGroup);
-
 	Action a;
 	a.type = AT_CreateGroup;
 	for(int i=0; i<11; ++i)
@@ -391,6 +388,18 @@ void History::PushCreateGroup(Group *pGroup)
 	Push(a);
 }
 
+void History::PushRestack(MapTile *pTile)
+{
+	Action a;
+	a.type = AT_Restack;
+	a.restack.x = pTile->GetX();
+	a.restack.y = pTile->GetY();
+	a.restack.numGroups = pTile->GetNumGroups();
+	for(int i=0; i<a.restack.numGroups; ++i)
+		a.restack.groupStack[i] = pTile->GetGroup(i)->GetID();
+	Push(a);
+}
+
 void History::PushResurrect(Unit *pUnit)
 {
 	Action a;
@@ -399,115 +408,20 @@ void History::PushResurrect(Unit *pUnit)
 	Push(a);
 }
 
-void History::PushMoveAction(Group *pGroup)
+void History::PushMove(PendingAction *pAction)
 {
-	PendingAction *pA = (PendingAction*)pendingPool.AllocAndZero();
-	pA->type = PAT_Move;
-	pA->move.pGroup = pGroup;
-	pA->move.startX = pGroup->x;
-	pA->move.startY = pGroup->y;
-	pA->move.destX = pGroup->x;
-	pA->move.destY = pGroup->y;
-
-	// set movement
-	int numUnits = pGroup->GetNumUnits();
-	for(int a=0; a<numUnits; ++a)
-		pA->move.endMovement[a] = pA->move.startMovement[a] = pGroup->GetUnit(a)->GetMovement();
-	if(pGroup->pVehicle)
-	{
-		pA->move.endMovement[numUnits] = pA->move.startMovement[numUnits] = pGroup->pVehicle->GetMovement();
-		++numUnits;
-	}
-	for(int a=numUnits; a<11; ++a)
-		pA->move.endMovement[a] = pA->move.startMovement[a] = -1;
-
-	// couple the action to the previous action
-	pA->move.pPreviousAction = pGroup->pLastAction;
-	if(pGroup->pLastAction)
-	{
-		PendingAction *pPrev = pGroup->pLastAction;
-		switch(pPrev->type)
-		{
-			case PAT_Move:
-				pPrev->move.pNextAction = pA;
-				break;
-
-			case PAT_Regroup:
-				for(int a=0; a<pPrev->regroup.numAfter; ++a)
-				{
-					if(pPrev->regroup.pAfter[a].pGroup == pGroup)
-						pPrev->regroup.pAfter[a].pNextAction = pA;
-				}
-				break;
-		}
-	}
-
-	pGroup->pLastAction = pA;
-}
-
-void History::UpdateMoveAction(Group *pGroup)
-{
-	MapTile *pTile = pGroup->GetTile();
-	PendingAction *pAction = pGroup->pLastAction;
-	MFDebug_Assert(pAction && pAction->type == PAT_Move, "!?");
-
-	pAction->move.destX = pTile->GetX();
-	pAction->move.destY = pTile->GetY();
-	for(int a=0; a<11; ++a)
-	{
-		if(a < 5)
-			pAction->move.endMovement[a] = a < pGroup->numForwardUnits ? pGroup->pUnits[a]->GetMovement() : -1;
-		else if(a < 10)
-			pAction->move.endMovement[a] = a - 5 < pGroup->numRearUnits ? pGroup->pUnits[a]->GetMovement() : -1;
-		else
-			pAction->move.endMovement[a] = pGroup->pUnits[a] ? pGroup->pUnits[a]->GetMovement() : -1;
-	}
-}
-
-void History::PushRegroup(PendingAction::Regroup *pRegroup)
-{
-	PendingAction *pA = (PendingAction*)pendingPool.AllocAndZero();
-	pA->type = PAT_Regroup;
-
-	pA->regroup = *pRegroup;
-
-	// couple the action to each before group's previous action
-	for(int a=0; a<pA->regroup.numBefore; ++a)
-	{
-		PendingAction::Regroup::Before &before = pA->regroup.pBefore[a];
-
-		before.pPreviousAction = before.pGroup->pLastAction;
-		if(before.pPreviousAction)
-		{
-			// couple the action to the previous action
-			PendingAction *pPrev = before.pPreviousAction;
-			switch(pPrev->type)
-			{
-				case PAT_Move:
-					pPrev->move.pNextAction = pA;
-					break;
-
-				case PAT_Regroup:
-					for(int a=0; a<pPrev->regroup.numAfter; ++a)
-					{
-						if(pPrev->regroup.pAfter[a].pGroup == before.pGroup)
-							pPrev->regroup.pAfter[a].pNextAction = pA;
-					}
-					break;
-			}
-		}
-	}
-	for(int a=0; a<pRegroup->numAfter; ++a)
-	{
-		pRegroup->pAfter[a].pGroup->pLastAction = pA;
-		pRegroup->pAfter[a].pNextAction = NULL;
-	}
+	Action a;
+	a.type = AT_Move;
+	a.move.group = pAction->move.pGroup->GetID();
+	a.move.destX = pAction->move.destX;
+	a.move.destY = pAction->move.destY;
+	for(int i=0; i<11; ++i)
+		a.move.endMovement[i] = pAction->move.endMovement[i];
+	Push(a);
 }
 
 void History::PushSearch(Unit *pHero, Place *pRuin)
 {
-	CommitPending(pHero->GetGroup());
-
 	Action a;
 	a.type = AT_Search;
 	a.search.unit = pHero->GetID();
@@ -527,8 +441,6 @@ void History::PushBattle(Action::Unit *pUnits, int numUnits)
 
 void History::PushCaptureCastle(Group *pGroup, Castle *pCastle)
 {
-	CommitPending(pGroup);
-
 	Action a;
 	a.type = AT_CaptureCastle;
 	a.captureCastle.castle = pCastle->id;
@@ -537,159 +449,10 @@ void History::PushCaptureCastle(Group *pGroup, Castle *pCastle)
 
 void History::PushCaptureUnits(Group *pGroup, Group *pUnits)
 {
-	CommitPending(pGroup);
-
 	Action a;
 	a.type = AT_CaptureUnits;
 	a.captureUnits.group = pUnits->GetID();
 	Push(a);
-}
-
-void History::CommitPending(Group *pGroup)
-{
-	if(pGroup->pLastAction)
-	{
-		CommitAction(pGroup->pLastAction);
-		pGroup->pLastAction = NULL;
-	}
-}
-
-void History::PopPending(PendingAction *pAction)
-{
-	switch(pAction->type)
-	{
-		case PAT_Move:
-			Disconnect(pAction, pAction->move.pPreviousAction);
-			break;
-
-		case PAT_Regroup:
-			for(int i=0; i<pAction->regroup.numBefore; ++i)
-				Disconnect(pAction, pAction->regroup.pBefore[i].pPreviousAction);
-			MFHeap_Free(pAction->regroup.pMem);
-			break;
-	}
-
-	pendingPool.Free(pAction);
-}
-
-void History::CommitAction(PendingAction *pAction)
-{
-	switch(pAction->type)
-	{
-		case PAT_Move:
-		{
-			PendingAction::Move &move = pAction->move;
-
-			if(move.pPreviousAction)
-				CommitAction(move.pPreviousAction);
-
-			Action a;
-			a.type = AT_Move;
-			a.move.group = move.pGroup->GetID();
-			a.move.destX = move.destX;
-			a.move.destY = move.destY;
-			for(int i=0; i<11; ++i)
-				a.move.endMovement[i] = move.endMovement[i];
-			Push(a);
-
-			// disconnect from action tree
-			if(pAction->move.pNextAction)
-			{
-				PendingAction *pNext = pAction->move.pNextAction;
-
-				switch(pNext->type)
-				{
-					case PAT_Move:
-						pNext->move.pPreviousAction = NULL;
-						break;
-
-					case PAT_Regroup:
-						for(int a=0; a<pNext->regroup.numBefore; ++a)
-						{
-							if(pNext->regroup.pBefore[a].pPreviousAction == pAction)
-								pNext->regroup.pBefore[a].pPreviousAction = NULL;
-						}
-						break;
-				}
-			}
-			else
-			{
-				MFDebug_Assert(pAction->move.pGroup->pLastAction == pAction, "Something's gone wonky?");
-				pAction->move.pGroup->pLastAction = NULL;
-			}
-
-			break;
-		}
-
-		case PAT_Regroup:
-		{
-			PendingAction::Regroup &regroup = pAction->regroup;
-
-			// commit previous actions for each source group
-			for(int i=0; i<regroup.numBefore; ++i)
-			{
-				if(regroup.pBefore[i].pPreviousAction)
-					CommitAction(regroup.pBefore[i].pPreviousAction);
-			}
-
-			Action a;
-			a.type = AT_Restack;
-			a.restack.numGroups = regroup.numAfter;
-			a.restack.x = regroup.x;
-			a.restack.y = regroup.x;
-
-			// create new groups
-			for(int i=0; i<regroup.numAfter; ++i)
-			{
-				PendingAction::Regroup::After &newGroup = regroup.pAfter[i];
-				int sub = newGroup.sub;
-
-				// check if the group wasn't changed
-				if(regroup.pSubRegroups[sub].ppBefore[0] != regroup.pSubRegroups[sub].ppAfter[0])
-				{
-					// if it was, create the new group
-					PushCreateGroup(newGroup.pGroup);
-				}
-
-				// add group to stack
-				a.restack.groupStack[i] = newGroup.pGroup->GetID();
-
-				// disconnect from action tree
-				if(newGroup.pNextAction)
-				{
-					PendingAction *pNext = newGroup.pNextAction;
-
-					switch(pNext->type)
-					{
-						case PAT_Move:
-							pNext->move.pPreviousAction = NULL;
-							break;
-
-						case PAT_Regroup:
-							for(int a=0; a<pNext->regroup.numBefore; ++a)
-							{
-								if(pNext->regroup.pBefore[a].pPreviousAction == pAction)
-									pNext->regroup.pBefore[a].pPreviousAction = NULL;
-							}
-							break;
-					}
-				}
-				else
-				{
-					MFDebug_Assert(newGroup.pGroup->pLastAction == pAction, "Something's gone wonky?");
-					newGroup.pGroup->pLastAction = NULL;
-				}
-			}
-
-			// push the restack action
-			Push(a);
-
-			MFHeap_Free(pAction->regroup.pMem);
-			break;
-		}
-	}
-
-	pendingPool.Free(pAction);
 }
 
 void History::Push(Action &action)
@@ -698,25 +461,4 @@ void History::Push(Action &action)
 
 	MFString text = Write();
 	MFFileSystem_Save("history.txt", text.CStr(), text.NumBytes());
-}
-
-void History::Disconnect(PendingAction *pAction, PendingAction *pFrom)
-{
-	if(pFrom)
-	{
-		switch(pFrom->type)
-		{
-			case PAT_Move:
-				MFDebug_Assert(pFrom->move.pNextAction == pAction, "Expected; == pAction!");
-				pFrom->move.pNextAction = NULL;
-				break;
-			case PAT_Regroup:
-				for(int i=0; i<pFrom->regroup.numAfter; ++i)
-				{
-					if(pFrom->regroup.pAfter[i].pNextAction == pAction)
-						pFrom->regroup.pAfter[i].pNextAction = NULL;
-				}
-				break;
-		}
-	}
 }

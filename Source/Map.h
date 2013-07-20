@@ -58,7 +58,6 @@ public:
 	ObjectType GetType() const { return (ObjectType)type; }
 	uint32 GetRoadDirections() const { return type == OT_Road ? index : 0; }
 	int GetRegion() const { return region; }
-	int GetRegionRace() const;
 
 	void AddGroup(Group *pGroup);
 	void AddGroupToBack(Group *pGroup);
@@ -116,7 +115,7 @@ public:
 	bool ReceiveInputEvent(HKInputManager &manager, const HKInputManager::EventInfo &ev);
 
 	void Update();
-	void Draw();
+	void Draw(Game *pGame);
 
 	void DrawDebug();
 
@@ -172,7 +171,7 @@ public:
 
 	Path *FindPath(Group *pGroup, int destX, int destY);
 
-	void ConstructMap(int race = -1);
+	void ConstructMap(int *pRaces, int race = -1);
 
 	MFMaterial *GetMinimap(int *pMapWidth, int *pMapHeight);
 
@@ -187,8 +186,6 @@ protected:
 	char name[32];
 	char tileset[32];
 	char unitset[32];
-
-	Game *pGame;
 
 	Tileset *pTiles;
 	UnitDefinitions *pUnits;

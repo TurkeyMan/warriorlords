@@ -7,7 +7,6 @@
 #include "Editor.h"
 #include "Screen.h"
 
-extern Game *pGame;
 extern Editor *pEditor;
 
 // ListMenu
@@ -269,7 +268,7 @@ void ListMenu::OnContinueClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 				GameState *pState = pSession->GetCurrentGame(a);
 				if(pState->id == id)
 				{
-					pGame = new Game(pState);
+					Game *pGame = new Game(pState);
 					Game::SetCurrent(pGame);
 
 					FrontMenu::Get()->Hide();
@@ -353,7 +352,7 @@ void ListMenu::OnEditClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 	}
 
 	// create the game
-	pGame = new Game(&params);
+	Game *pGame = new Game(&params);
 	Game::SetCurrent(pGame);
 
 	// create the editor

@@ -343,7 +343,7 @@ int Editor::Update()
 		if(bChangeRace)
 		{
 			editRace = 0;
-			pMap->ConstructMap(editRace);
+			pMap->ConstructMap(NULL, editRace);
 			pMap->SetEditRace(editRace);
 		}
 		else
@@ -366,7 +366,7 @@ int Editor::Update()
 			if(bChangeRace)
 			{
 				editRace = a + 1;
-				pMap->ConstructMap(editRace);
+				pMap->ConstructMap(NULL, editRace);
 				pMap->SetEditRace(editRace);
 			}
 			else
@@ -382,7 +382,7 @@ int Editor::Update()
 
 void Editor::Draw()
 {
-	pMap->Draw();
+	pMap->Draw(pGame);
 
 	// draw debug
 	static bool bDrawDebug = false;
@@ -841,7 +841,7 @@ void CastleEdit::Show(Castle *_pCastle)
 	pInputManager->PushReceiver(this);
 
 	UnitDefinitions *pUnitDefs = pCastle->pUnitDefs;
-	Game *pGame = pUnitDefs->GetGame();
+	Game *pGame = Game::GetCurrent();
 
 	MFMaterial *pUnitMat = pUnitDefs->GetUnitMaterial();
 	float texelOffset = MFRenderer_GetTexelCenterOffset();

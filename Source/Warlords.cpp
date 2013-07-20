@@ -34,7 +34,6 @@ InputManager *pInputManager = NULL;
 
 FrontMenu *pFrontMenu;
 
-Game *pGame = NULL;
 Editor *pEditor = NULL;
 
 MFSystemCallbackFunction pInitFujiFS;
@@ -196,9 +195,6 @@ void Game_Deinit()
 
 	if(pEditor)
 		delete pEditor;
-
-	if(pGame)
-		delete pGame;
 
 	HKUserInterface::Deinit();
 
