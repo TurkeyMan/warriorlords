@@ -1890,7 +1890,7 @@ void Game::ReplayAction(Action *pAction)
 			for(int a = pAction->restack.numGroups - 1; a >= 0; --a)
 				pTile->AddGroup(groups[pAction->restack.groupStack[a]]);
 			break;
-		} 
+		}
 		case AT_Move:
 		{
 			Group *pGroup = groups[pAction->move.group];
@@ -1945,7 +1945,7 @@ void Game::ReplayAction(Action *pAction)
 			pCastle->ClearBuildUnit();
 			pCastle->player = currentPlayer;
 			break;
-		}	
+		}
 		case AT_CaptureUnits:
 			groups[pAction->captureUnits.group]->SetPlayer(currentPlayer);
 			break;
