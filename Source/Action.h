@@ -60,9 +60,6 @@ struct Action
 			Player players[12];
 			int numPlayers;
 
-			Castle *pCastles;
-			int numCastles;
-
 			Ruin *pRuins;
 			int numRuins;
 		} beginGame;
@@ -132,6 +129,9 @@ struct Action
 class History
 {
 public:
+	History()
+	: actionsApplied(0)
+	{}
 	~History();
 
 	// serialise
@@ -161,8 +161,20 @@ public:
 
 	void Push(Action &action);
 
+	int NumActions() { return actions.size(); }
+	int NumApplied() { return actionsApplied; }
+
+	Action &Get(int index) { return actions[index]; }
+	Action *GetNext()
+	{
+		if(actionsApplied < actions.size())
+			return &actions[actionsApplied++];
+		return NULL;
+	}
+
 private:
 	MFArray<Action> actions;
+	int actionsApplied;
 };
 
 #endif

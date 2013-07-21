@@ -97,7 +97,7 @@ bool UnitDefinitions::GetDetails(const char *pUnitSetName, UnitSetDetails *pDeta
 	return true;
 }
 
-UnitDefinitions *UnitDefinitions::Load(Game *pGame, const char *pUnitSetName, int numTerrainTypes)
+UnitDefinitions *UnitDefinitions::Load(const char *pUnitSetName, int numTerrainTypes)
 {
 	MFIni *pIni = MFIni::Create(pUnitSetName);
 	if(!pIni)
@@ -729,6 +729,21 @@ int UnitDefinitions::FindRace(const char *pName)
 	return -1;
 }
 
+int UnitDefinitions::GetHeroForRace(int race, int heroIndex) const
+{
+	int numUnits = GetNumUnitTypes();
+	for(int u=0; u<numUnits; ++u)
+	{
+		UnitDetails *pUnit = GetUnitDetails(u);
+		if(pUnit->type == UT_Hero && (pUnit->race == race || pUnit->race == 0))
+		{
+			if(heroIndex-- == 0)
+				return u;
+		}
+	}
+	return -1;
+}
+
 int UnitDefinitions::FindUnit(const char *pName)
 {
 	for(int a=0; a<numUnits; ++a)
@@ -1340,7 +1355,7 @@ Group *Castle::GetMercGroup()
 		choices[numChoices++] = 25; // maceman
 	}
 
-	int range = MFMin(15, 10 + Game::GetCurrent()->GetCurrentTurn());
+	int range = MFMin(15, 10 + Game::GetCurrent()->GetCurrentRound());
 	int numUnits = odds[MFRand() % range];
 	for(int a=0; a<numUnits; ++a)
 	{
@@ -1420,7 +1435,7 @@ void Place::InitRuin(int item)
 
 Group *Group::Create(int _player)
 {
-	Group * pGroup = new Group;
+	Group *pGroup = new Group;
 	pGroup->player = _player;
 	pGroup->numForwardUnits = pGroup->numRearUnits = 0;
 	pGroup->bSelected = false;

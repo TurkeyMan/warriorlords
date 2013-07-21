@@ -199,20 +199,21 @@ class UnitDefinitions
 public:
 	static bool GetDetails(const char *pUnitSetName, UnitSetDetails *pDetails);
 
-	static UnitDefinitions *Load(Game *pGame, const char *pUnitSetName, int numTerrainTypes);
+	static UnitDefinitions *Load(const char *pUnitSetName, int numTerrainTypes);
 	void Free();
 
 	inline int GetNumRaces() { return raceCount; }
 	inline const char *GetRaceName(int race) { return pRaces[race].pName; }
 	MFVector GetRaceColour(int race) const;
 	int FindRace(const char *pName);
+	int GetHeroForRace(int race, int heroIndex) const;
 
-	inline int GetNumUnitTypes() { return numUnits; }
-	inline UnitType GetUnitType(int unit) { return pUnits[unit].type; }
-	inline const char *GetUnitTypeName(int unit) { return pUnits[unit].pName; }
+	inline int GetNumUnitTypes() const { return numUnits; }
+	inline UnitType GetUnitType(int unit) const { return pUnits[unit].type; }
+	inline const char *GetUnitTypeName(int unit) const { return pUnits[unit].pName; }
 	int FindUnit(const char *pName);
 
-	UnitDetails *GetUnitDetails(int unit) { return &pUnits[unit]; }
+	UnitDetails *GetUnitDetails(int unit) const { return &pUnits[unit]; }
 	Unit *CreateUnit(int unit, int player);
 	void DestroyUnit(Unit *pUnit);
 

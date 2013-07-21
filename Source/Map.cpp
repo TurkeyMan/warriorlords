@@ -87,8 +87,6 @@ void MapTile::RemoveGroup(Group *_pGroup)
 
 	_pGroup->pNext = NULL;
 	_pGroup->pTile = NULL;
-
-	MFDebug_Assert(_pGroup->ValidateGroup(), "EEK!");
 }
 
 int MapTile::GetNumGroups()
@@ -309,7 +307,7 @@ bool Map::GetMapDetails(const char *pMapFilename, MapDetails *pDetails)
 	return true;
 }
 
-Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
+Map *Map::Create(const char *pMapFilename, bool bEditable)
 {
 	MFIni *pIni = MFIni::Create(pMapFilename);
 	if(!pIni)
@@ -346,7 +344,7 @@ Map *Map::Create(Game *pGame, const char *pMapFilename, bool bEditable)
 				else if(pMapLine->IsString(0, "units"))
 				{
 					MFString_Copy(pMap->unitset, pMapLine->GetString(1));
-					pMap->pUnits = UnitDefinitions::Load(pGame, pMapLine->GetString(1), pMap->pTiles->GetNumTerrainTypes());
+					pMap->pUnits = UnitDefinitions::Load(pMapLine->GetString(1), pMap->pTiles->GetNumTerrainTypes());
 				}
 				else if(pMapLine->IsString(0, "map_width"))
 				{
@@ -609,22 +607,7 @@ void Map::ConstructMap(int *pRaces, int race)
 			pMap[a].pObject = &place;
 			pMap[a].index = numPlaces++;
 
-			if(place.GetType() == Special::ST_Searchable)
-			{
-				// select an item for the ruin...
-				// TODO: should we allow duplicate items?
-				int item = -1;
-				do
-				{
-					item = MFRand() % pUnits->GetNumItems();
-					if(!pUnits->GetItem(item)->bCollectible)
-						item = -1;
-				}
-				while(item < 0);
-
-				place.InitRuin(item);
-			}
-			else if(place.GetType() == Special::ST_Recruit)
+			if(place.GetType() == Special::ST_Recruit)
 			{
 				place.recruit.recruiting = -1;
 			}
@@ -658,43 +641,43 @@ void Map::ConstructMap(int *pRaces, int race)
 
 	for(int a=0; a<16; ++a)
 	{
-		if(mapTemplate[a].pCastles)
+		if(!mapTemplate[a].pCastles)
+			continue;
+
+		for(int c=0; c<mapTemplate[a].numCastles; ++c)
 		{
-			for(int c=0; c<mapTemplate[a].numCastles; ++c)
+			MapTile *pTile = GetTile(mapTemplate[a].pCastles[c].x, mapTemplate[a].pCastles[c].y);
+
+			int slice = race;
+			if(race == -1)
+				slice = pTile->region == 0xF ? 0 : pRaces[pTile->region];
+
+			if(slice == a)
 			{
-				MapTile *pTile = GetTile(mapTemplate[a].pCastles[c].x, mapTemplate[a].pCastles[c].y);
+				Castle &castle = pCastles[numCastles];
 
-				int slice = race;
-				if(race == -1)
-					slice = pTile->region == 0xF ? 0 : pRaces[pTile->region];
+				castle.Init(numCastles, mapTemplate[a].pCastles[c], mapTemplate[a].pCastles[c].bCapital ? pTile->GetRegion() : -1);
+				castle.pUnitDefs = pUnits;
+				castle.pTile = pTile;
 
-				if(slice == a)
+				for(int a=0; a<castle.details.numBuildUnits; ++a)
 				{
-					Castle &castle = pCastles[numCastles];
-
-					castle.Init(numCastles, mapTemplate[a].pCastles[c], mapTemplate[a].pCastles[c].bCapital ? pTile->GetRegion() : -1);
-					castle.pUnitDefs = pUnits;
-					castle.pTile = pTile;
-
-					for(int a=0; a<castle.details.numBuildUnits; ++a)
-					{
-						UnitDetails *pDetails = pUnits->GetUnitDetails(castle.details.buildUnits[a].unit);
-						if(pDetails)
-							castle.details.buildUnits[a].buildTime += pDetails->buildTime;
-					}
-
-					for(int a=0; a<4; ++a)
-					{
-						MapTile &tile = pTile[(a >> 1)*mapWidth + (a & 1)];
-						tile.pObject = &castle;
-						tile.type = OT_Castle;
-						tile.index = numCastles;
-						tile.objectX = a & 1;
-						tile.objectY = a >> 1;
-					}
-
-					++numCastles;
+					UnitDetails *pDetails = pUnits->GetUnitDetails(castle.details.buildUnits[a].unit);
+					if(pDetails)
+						castle.details.buildUnits[a].buildTime += pDetails->buildTime;
 				}
+
+				for(int a=0; a<4; ++a)
+				{
+					MapTile &tile = pTile[(a >> 1)*mapWidth + (a & 1)];
+					tile.pObject = &castle;
+					tile.type = OT_Castle;
+					tile.index = numCastles;
+					tile.objectX = a & 1;
+					tile.objectY = a >> 1;
+				}
+
+				++numCastles;
 			}
 		}
 	}
@@ -856,7 +839,7 @@ int Map::ChooseTile(int *pSelectedTiles, int numVariants)
 	return 0;
 }
 
-Map *Map::CreateNew(Game *pGame, const char *pTileset, const char *pUnits)
+Map *Map::CreateNew(const char *pTileset, const char *pUnits)
 {
 	Map *pNew = (Map*)MFHeap_AllocAndZero(sizeof(Map));
 	pNew = new(pNew) Map;
@@ -875,7 +858,7 @@ Map *Map::CreateNew(Game *pGame, const char *pTileset, const char *pUnits)
 	}
 
 	pNew->pTiles = Tileset::Create(pTileset);
-	pNew->pUnits = UnitDefinitions::Load(pGame, pUnits, pNew->pTiles->GetNumTerrainTypes());
+	pNew->pUnits = UnitDefinitions::Load(pUnits, pNew->pTiles->GetNumTerrainTypes());
 
 	pNew->path.Init(pNew);
 

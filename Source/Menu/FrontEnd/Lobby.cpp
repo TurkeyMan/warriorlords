@@ -588,9 +588,8 @@ void LobbyMenu::OnBegin(ServerError error, Session *pSession)
 
 	// start game
 	params.gameID = game.id;
-	Game *pGame = new Game(&params);
+	Game *pGame = Game::NewGame(&params);
 	Game::SetCurrent(pGame);
-	pGame->BeginGame();
 
 	pSession->SendMessageToPeers("START");
 
@@ -612,7 +611,8 @@ void LobbyMenu::StartGame(ServerError error, Session *pSession, GameState *pStat
 		return;
 
 	// start game
-	Game *pGame = new Game(pState);
+//	Game *pGame = new Game(pState);
+	Game *pGame = Game::ResumeGame(NULL, false);
 	Game::SetCurrent(pGame);
 
 	FrontMenu::Get()->Hide();	

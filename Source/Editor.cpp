@@ -18,7 +18,7 @@ Editor::Editor(Game *pGame)
 
 	if(!pMap)
 	{
-		pMap = Map::CreateNew(pGame, "TileSet", "Castles");
+		pMap = Map::CreateNew("TileSet", "Castles");
 		bOwnsMap = true;
 	}
 

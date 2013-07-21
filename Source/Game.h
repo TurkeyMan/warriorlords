@@ -29,7 +29,6 @@ struct Player
 	uint32 playerID;
 
 	int race;
-	int startingHero;
 
 	bool bEliminated;
 
@@ -144,9 +143,6 @@ public:
 	static Game *CreateEditor(const char *pMap);
 
 	Game(History *pHistory, Map *pMap = NULL);
-
-	Game(GameParams *pParams);
-	Game(GameState *pState);
 	~Game();
 
 	void Update();
@@ -160,7 +156,6 @@ public:
 	MapScreen *GetMapScreen() { return pMapScreen; }
 	Battle *GetBattleScreen() { return pBattle; }
 
-	void BeginGame();
 	void BeginTurn(int player);
 	void EndTurn();
 	void BeginBattle(Group *pGroup, MapTile *pTarget);
@@ -171,7 +166,7 @@ public:
 
 	bool IsOnline() { return bOnline; }
 
-	int GetCurrentTurn() { return currentTurn; }
+	int GetCurrentRound() { return currentRound; }
 	int CurrentPlayer() { return currentPlayer; }
 	bool IsCurrentPlayer(int player);
 	bool IsMyTurn() { return IsCurrentPlayer(CurrentPlayer()); }
@@ -190,7 +185,7 @@ public:
 	Group *AllocGroup();
 	void DestroyGroup(Group *pGroup);
 
-	Group *CreateUnit(int unit, Castle *pCastle, Place *pPlace, bool bCommitUnit = false);
+	Group *CreateUnit(int unit, Castle *pCastle, Place *pPlace);
 
 	bool MoveGroupToTile(Group *pGroup, MapTile *pTile);
 
@@ -217,15 +212,13 @@ public:
 	void ShowRequest(const char *pMessage, GameUI::MsgBoxDelegate callback, bool bNotification);
 
 protected:
-	void Init(const char *pMap, bool bEdit);
+	int GetHeroForRace(int race, int heroIndex);
 
 	bool HandleInputEvent(HKInputManager &manager, const HKInputManager::EventInfo &ev);
 
 	void UpdateUndoButton();
 
 	int NextPlayer();
-
-	void ReplayAction(Action *pAction);
 
 	Player* GetPlayer(uint32 user, int *pPlayer);
 	void ReceivePeerMessage(uint32 user, const char *pMessage);
@@ -237,6 +230,10 @@ protected:
 	void CommitAction(PendingAction *pAction);
 	void PopPending(PendingAction *pAction);
 	void DisconnectAction(PendingAction *pAction, PendingAction *pFrom);
+
+	void CatchUp() { ReplayUntil(history.NumActions()); }
+	void ReplayUntil(int action);
+	void ReplayAction(Action *pAction);
 
 	// game resources
 	MFFont *pText;
@@ -281,13 +278,12 @@ protected:
 	uint32 gameID;
 
 	int currentPlayer;
-	int currentTurn;
+	int currentRound;
 
 	Statistics gameStats;
 
 	// game history
 	History &history;
-	int lastAction;
 
 	// pending (undo) action pool
 	MFObjectPool pendingPool;

@@ -55,6 +55,29 @@ void ListMenu::ShowResume()
 		pSession->SetUpdateDelegate(fastdelegate::MakeDelegate(this, &ListMenu::OnUpdateResponse));
 		pSession->UpdateGames();
 	}
+	else
+	{
+		// list local games only
+		MFFindData fd;
+		MFFind *pFind = MFFileSystem_FindFirst("home:*.txt", &fd);
+		while(pFind)
+		{
+			fd.pFilename;
+
+			ListItem i;
+			i.id = 0;
+			i.name = fd.pFilename;
+			i.map = "";
+			i.numPlayers = 0;
+			gameList.push(i);
+
+			if(!MFFileSystem_FindNext(pFind, &fd))
+			{
+				MFFileSystem_FindClose(pFind);
+				pFind = NULL;
+			}
+		}
+	}
 
 	bReturnToMain = true;
 
@@ -249,30 +272,42 @@ void ListMenu::OnContinueClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 
 		case Resume:
 		{
-			uint32 id = gameList[pActiveList->GetSelection()].id;
+			ListItem &item = gameList[pActiveList->GetSelection()];
+			uint32 id = item.id;
 
-			int numGames = pSession->GetNumPendingGames();
-			for(int a=0; a<numGames; ++a)
+			if(id == 0)
 			{
-				GameDetails *pGame = pSession->GetPendingGame(a);
-				if(pGame->id == id)
-				{
-					ShowLobby(*pGame);
-					return;
-				}
+				Game *pGame = Game::ResumeGame(item.name.CStr(), false);
+				Game::SetCurrent(pGame);
+
+				FrontMenu::Get()->Hide();
 			}
-
-			numGames = pSession->GetNumCurrentGames();
-			for(int a=0; a<numGames; ++a)
+			else
 			{
-				GameState *pState = pSession->GetCurrentGame(a);
-				if(pState->id == id)
+				int numGames = pSession->GetNumPendingGames();
+				for(int a=0; a<numGames; ++a)
 				{
-					Game *pGame = new Game(pState);
-					Game::SetCurrent(pGame);
+					GameDetails *pGame = pSession->GetPendingGame(a);
+					if(pGame->id == id)
+					{
+						ShowLobby(*pGame);
+						return;
+					}
+				}
 
-					FrontMenu::Get()->Hide();
-					return;
+				numGames = pSession->GetNumCurrentGames();
+				for(int a=0; a<numGames; ++a)
+				{
+					GameState *pState = pSession->GetCurrentGame(a);
+					if(pState->id == id)
+					{
+	//					Game *pGame = new Game(pState);
+						Game *pGame = Game::ResumeGame(NULL, true);
+						Game::SetCurrent(pGame);
+
+						FrontMenu::Get()->Hide();
+						return;
+					}
 				}
 			}
 			break;
@@ -352,7 +387,7 @@ void ListMenu::OnEditClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 	}
 
 	// create the game
-	Game *pGame = new Game(&params);
+	Game *pGame = Game::CreateEditor(map.CStr());
 	Game::SetCurrent(pGame);
 
 	// create the editor

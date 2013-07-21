@@ -104,8 +104,8 @@ class Map : public InputReceiver
 public:
 	static bool GetMapDetails(const char *pMapFilename, MapDetails *pDetails);
 
-	static Map *Create(Game *pGame, const char *pMapFilename, bool bEditable = false);
-	static Map *CreateNew(Game *pGame, const char *pTileset, const char *pUnits);
+	static Map *Create(const char *pMapFilename, bool bEditable = false);
+	static Map *CreateNew(const char *pTileset, const char *pUnits);
 	void Destroy();
 
 	void Save();

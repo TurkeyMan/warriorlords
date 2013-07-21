@@ -114,9 +114,8 @@ void BattleTest()
 	params.players[1].hero = 0;
 
 	// start game
-	Game *pGame = new Game(&params);
+	Game *pGame = Game::NewGame(&params);
 	Game::SetCurrent(pGame);
-	pGame->BeginGame();
 
 	BeginTest();
 }

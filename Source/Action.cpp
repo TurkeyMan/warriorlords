@@ -28,7 +28,6 @@ History::~History()
 	MFDebug_Assert(actions[0].type == AT_BeginGame, "Expected: first action is AT_BeginGame");
 
 	MFHeap_Free((void*)actions[0].beginGame.pMap);
-	MFHeap_Free(actions[0].beginGame.pCastles);
 	MFHeap_Free(actions[0].beginGame.pRuins);
 }
 
@@ -46,14 +45,12 @@ MFString History::Write(int firstAction, int lastAction)
 			case AT_BeginGame:
 			{
 				auto &beginGame = actions[i].beginGame;
-				MFString players, castles, ruins;
+				MFString players, ruins;
 				for(int a=0; a<beginGame.numPlayers; ++a)
 					players += MFString::Format(a > 0 ? ", %s" : "%s", beginGame.players[a].Str().CStr());
-				for(int a=0; a<beginGame.numCastles; ++a)
-					castles += MFString::Format(a > 0 ? ", %s" : "%s", beginGame.pCastles[a].Str().CStr());
 				for(int a=0; a<beginGame.numRuins; ++a)
 					ruins += MFString::Format(a > 0 ? ", %s" : "%s", beginGame.pRuins[a].Str().CStr());
-				text += MFString::Format("%d BeginGame \"%s\", %d [ %s ], %d [ %s ], %d [ %s ]\n", i, beginGame.pMap, beginGame.numPlayers, players.CStr(), beginGame.numCastles, castles.CStr(), beginGame.numRuins, ruins.CStr());
+				text += MFString::Format("%d BeginGame \"%s\", %d [ %s ], %d [ %s ]\n", i, beginGame.pMap, beginGame.numPlayers, players.CStr(), beginGame.numRuins, ruins.CStr());
 				break;
 			}
 			case AT_BeginTurn:
@@ -165,11 +162,10 @@ void History::Read(MFString text)
 			{
 				MFString map;
 				MFString playerText;
-				MFString castleText;
 				MFString ruinText;
 
 				// parse the action
-				line.Parse("\"%s\", %d [ %s ], %d [ %s ], %d [ %s ]", &map, &a.beginGame.numPlayers, &playerText, &a.beginGame.numCastles, &castleText, &a.beginGame.numRuins, &ruinText);
+				line.Parse("\"%s\", %d [ %s ], %d [ %s ]", &map, &a.beginGame.numPlayers, &playerText, &a.beginGame.numRuins, &ruinText);
 
 				// get map
 				a.beginGame.pMap = MFString_Dup(map.CStr());
@@ -183,20 +179,6 @@ void History::Read(MFString text)
 					playerList[i].Parse("{ %x, %d, %d", &a.beginGame.players[i].id, &a.beginGame.players[i].race, &a.beginGame.players[i].colour);
 				}
 				MFDebug_Assert(a.beginGame.numPlayers == playerList.size(), "Incorrect number of players!");
-
-				// parse castles
-				MFArray<MFString> castleList;
-				MFArray<Action::Castle> castles;
-				castleText.Split(castleList, "}");
-				for(int i=0; i<castleList.size(); ++i)
-				{
-					Action::Castle c;
-					castleList[i].Trim(true, false, " ,");
-					castleList[i].Parse("{ %d: %d", &c.castle, &c.player);
-					castles.push(c);
-				}
-				MFDebug_Assert(a.beginGame.numCastles == castles.size(), "Incorrect number of castles!");
-				a.beginGame.pCastles = castles.getCopy();
 
 				// parse ruins
 				MFArray<MFString> ruinList;
@@ -323,11 +305,9 @@ void History::PushBeginGame(const char *pMap, Action::Player *pPlayers, int numP
 		a.beginGame.players[i].colour = pPlayers[i].race;
 	}
 	a.beginGame.numPlayers = numPlayers;
-	a.beginGame.pCastles = pCastles;
-	a.beginGame.numCastles = numCastles;
 	a.beginGame.pRuins = pRuins;
 	a.beginGame.numRuins = numRuins;
-	Push(a);
+	actions.push(a);
 }
 
 void History::PushBeginTurn(int player)
@@ -458,6 +438,9 @@ void History::PushCaptureUnits(Group *pGroup, Group *pUnits)
 void History::Push(Action &action)
 {
 	actions.push(action);
+
+	++actionsApplied;
+	MFDebug_Assert(actions.size() == actionsApplied, "Out of sync?");
 
 	MFString text = Write();
 	MFFileSystem_Save("history.txt", text.CStr(), text.NumBytes());

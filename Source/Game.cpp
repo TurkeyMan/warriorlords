@@ -24,106 +24,78 @@ Game::Game(History *pHistory, Map *pMap)
 , history(*pHistory)
 , pMap(pMap)
 {
-}
+	// get first action
+	Action *pAction = history.GetNext();
+	MFDebug_Assert(pAction && pAction->type == AT_BeginGame, "Expected: BeginGame action");
+	Action &beginAction = *pAction;
 
-Game::Game(GameParams *pParams)
-: pendingPool(sizeof(PendingAction), 1024, 1024)
-, history(*(new History()))
-{
-	bOnline = pParams->bOnline;
-	gameID = pParams->gameID;
+	// init fields
+//	bOnline = pParams->bOnline;
+//	gameID = pParams->gameID;
+	bOnline = false;
+	gameID = 0;
 
-	Init(pParams->pMap, pParams->bEditMap);
+	currentPlayer = -1;
+	currentRound = 0;
 
-	lastAction = 0;
+	pSelection = NULL;
+	bMoving = false;
+	countdown = 0.f;
 
-	currentPlayer = 0;
-	currentTurn = 0;
+	// allocate runtime data
+	unitPool.Init(sizeof(Unit), 256, 256);
+	groupPool.Init(sizeof(Group), 128, 64);
 
-	if(pParams->bEditMap)
+	// create the GameUI
+	pGameUI = new GameUI(this);
+
+	pText = MFFont_Create("FranklinGothic");
+	pBattleNumbersFont = MFFont_Create("Battle");
+	pSmallNumbersFont = MFFont_Create("SmallNumbers");
+
+	pIcons = MFMaterial_Create("Icons");
+
+	// ** REMOVE ME ***
+	MFTexture *pTemp = MFTexture_Create("Horiz-Pirates", false);
+	pWindow = MFMaterial_Create("Window-Pirates");
+	pHorizLine = MFMaterial_Create("Horiz-Pirates");
+	MFTexture_Destroy(pTemp);
+
+	// if a map was not supplied
+	if(!pMap)
 	{
-		// init the players
-		int numRaces = pUnitDefs->GetNumRaces() - 1;
-		for(int a=0; a<numRaces; ++a)
-		{
-			players[a].race = a + 1;
-			players[a].colour = pUnitDefs->GetRaceColour(a + 1);
-		}
+		// load the map
+		this->pMap = pMap = Map::Create(beginAction.beginGame.pMap, false);
 
-		// construct the map
-		pMap->ConstructMap(0);
-	}
-	else
-	{
-		// setup players
-		for(int a=0; a<pParams->numPlayers; ++a)
-		{
-			MFZeroMemory(&players[a], sizeof(players[a]));
-
-			players[a].playerID = pParams->players[a].id;
-			players[a].race = pParams->players[a].race;
-			players[a].colourID = pParams->players[a].colour;
-			players[a].colour = pUnitDefs->GetRaceColour(pParams->players[a].colour);
-			players[a].startingHero = pParams->players[a].hero;
-		}
-
-		numPlayers = pParams->numPlayers;
-
-		// construct the map
+		// construct the map from slices
 		int races[16];
-		for(int a=0; a<pParams->numPlayers; ++a)
-			races[a] = pParams->players[a].race;
+		for(int a=0; a<beginAction.beginGame.numPlayers; ++a)
+			races[a] = beginAction.beginGame.players[a].race;
 		pMap->ConstructMap(races);
+
+		// populate ruins
+		for(int a=0; a<beginAction.beginGame.numRuins; ++a)
+		{
+			int place = beginAction.beginGame.pRuins[a].place;
+			pMap->GetPlace(place)->InitRuin(beginAction.beginGame.pRuins[a].item);
+		}
 	}
-
-	// hook up message receiver
-	Session *pSession = Session::Get();
-	pSession->SetMessageCallback(MakeDelegate(this, &Game::ReceivePeerMessage));
-}
-
-Game::Game(GameState *pState)
-: pendingPool(sizeof(PendingAction), 1024, 1024)
-, history(*(new History()))
-{
-	bOnline = true;
-	gameID = pState->id;
-
-	Init(pState->map, false);
-
-	// TODO: we should try loading game state and pending actions from disk...
-	currentPlayer = 0;
-	currentTurn = 0;
+	pUnitDefs = pMap->GetUnitDefinitions();
 
 	// setup players
-	for(int a=0; a<pState->numPlayers; ++a)
+	numPlayers = beginAction.beginGame.numPlayers;
+	MFZeroMemory(players, sizeof(players));
+	for(int a=0; a<beginAction.beginGame.numPlayers; ++a)
 	{
-		MFZeroMemory(&players[a], sizeof(players[a]));
-
-		players[a].playerID = pState->players[a].id;
-		players[a].race = pState->players[a].race;
-		players[a].colourID = pState->players[a].colour;
-		players[a].colour = pUnitDefs->GetRaceColour(pState->players[a].colour);
-		players[a].startingHero = pState->players[a].hero;
+		players[a].playerID = beginAction.beginGame.players[a].id;
+		players[a].race = beginAction.beginGame.players[a].race;
+		players[a].colourID = beginAction.beginGame.players[a].colour;
+		players[a].colour = pUnitDefs->GetRaceColour(beginAction.beginGame.players[a].colour);
 	}
 
-	numPlayers = pState->numPlayers;
-
-	// construct the map
-	int races[16];
-	for(int a=0; a<pState->numPlayers; ++a)
-		races[a] = pState->players[a].race;
-	pMap->ConstructMap(races);
-
-	// update the game state
-	lastAction = 0;
-
-	// resume the game
-	Screen::SetNext(pMapScreen);
-	pGameUI->Show();
-
-	// hook up message receiver
-	Session *pSession = Session::Get();
-	pSession->SetMessageCallback(MakeDelegate(this, &Game::ReceivePeerMessage));
+	// and allocate the game screens
+	pMapScreen = new MapScreen(this);
+	pBattle = new Battle(this);
 }
 
 Game *Game::NewGame(GameParams *pParams)
@@ -131,7 +103,7 @@ Game *Game::NewGame(GameParams *pParams)
 	History *pHistory = new History();
 
 	// create map...
-	Map *pMap = Map::Create(NULL, pParams->pMap, false);
+	Map *pMap = Map::Create(pParams->pMap, false);
 	UnitDefinitions *pUnitDefs = pMap->GetUnitDefinitions();
 
 	int races[16];
@@ -140,6 +112,7 @@ Game *Game::NewGame(GameParams *pParams)
 	pMap->ConstructMap(races);
 
 	// populate map with starting players
+	// TODO: this can be removed. it's all implicit in the map!
 	MFArray<Action::Castle> castles;
 	int numCastles = pMap->GetNumCastles();
 	for(int a=0; a<numCastles; ++a)
@@ -160,12 +133,24 @@ Game *Game::NewGame(GameParams *pParams)
 	for(int a=0; a<numPlaces; ++a)
 	{
 		Place *pPlace = pMap->GetPlace(a);
-		pPlace->ruin.item = MFRand() % pUnitDefs->GetNumItems();
 		if(pPlace->GetType() == Special::ST_Searchable)
 		{
-			Action::Ruin &r = ruins.push();
-			r.place = a;
-			r.item = pPlace->ruin.item;
+				// select an item for the ruin...
+				// TODO: should we allow duplicate items?
+				int item = -1;
+				do
+				{
+					item = MFRand() % pUnitDefs->GetNumItems();
+					if(!pUnitDefs->GetItem(item)->bCollectible)
+						item = -1;
+				}
+				while(item < 0);
+
+				pPlace->InitRuin(item);
+
+				Action::Ruin &r = ruins.push();
+				r.place = a;
+				r.item = item;
 		}
 	}
 
@@ -180,78 +165,46 @@ Game *Game::NewGame(GameParams *pParams)
 
 	pHistory->PushBeginGame(pParams->pMap, players, pParams->numPlayers, castles.getCopy(), castles.size(), ruins.getCopy(), ruins.size());
 
+	// create the game object
 	Game *pGame = new Game(pHistory, pMap);
-
-	pGame->bOnline = pParams->bOnline;
-	pGame->gameID = pParams->gameID;
-
-	pGame->Init(NULL, false);
-
-	pGame->lastAction = 0;
-	pGame->currentPlayer = 0;
-	pGame->currentTurn = 0;
-
-	// setup players
-	for(int a=0; a<pParams->numPlayers; ++a)
-	{
-		MFZeroMemory(&pGame->players[a], sizeof(pGame->players[a]));
-
-		pGame->players[a].playerID = pParams->players[a].id;
-		pGame->players[a].race = pParams->players[a].race;
-		pGame->players[a].colourID = pParams->players[a].colour;
-		pGame->players[a].colour = pGame->pUnitDefs->GetRaceColour(pParams->players[a].colour);
-		pGame->players[a].startingHero = pParams->players[a].hero;
-	}
-
-	pGame->numPlayers = pParams->numPlayers;
 
 	// TODO: eliminate this...
 	Game *pOld = Game::SetCurrent(pGame);
 
 	// create starting units
-	for(int a=0; a<pMap->GetNumCastles(); ++a)
+	for(int p=0; p<pGame->numPlayers; ++p)
 	{
-		Castle *pCastle = pMap->GetCastle(a);
-		if(pCastle->player != -1)
+		pGame->BeginTurn(p);
+
+		for(int a=0; a<pMap->GetNumCastles(); ++a)
 		{
-			// set each players map focus on starting castle
-			pGame->players[pCastle->player].cursorX = pCastle->details.x;
-			pGame->players[pCastle->player].cursorY = pCastle->details.y;
-
-			// produce starting hero
-			int hero = pGame->players[pCastle->player].startingHero;
-			int heroID = -1;
-
-			int numUnits = pUnitDefs->GetNumUnitTypes();
-			for(int u=0; u<numUnits; ++u)
+			Castle *pCastle = pMap->GetCastle(a);
+			if(pCastle->player == p)
 			{
-				UnitDetails *pUnit = pUnitDefs->GetUnitDetails(u);
-				if(pUnit->type == UT_Hero && (pUnit->race == players[pCastle->player].race || pUnit->race == 0))
-				{
-					if(hero-- == 0)
-					{
-						heroID = u;
-						break;
-					}
-				}
+				Player &player = pGame->players[p];
+
+				// set each players map focus on starting castle
+				player.cursorX = pCastle->details.x;
+				player.cursorY = pCastle->details.y;
+
+				// produce starting hero
+				int hero = pParams->players[p].hero;
+				int heroID = pGame->pUnitDefs->GetHeroForRace(player.race, hero);
+				MFDebug_Assert(heroID != -1, "Couldn't find hero!");
+
+				pGame->CreateUnit(heroID, pCastle, NULL);
+
+				// pirates also start with a galleon
+				int pirateID = pUnitDefs->FindRace("Pirates");
+				int galleonID = pUnitDefs->FindUnit("Galleon");
+				if(player.race == pirateID && galleonID >= 0)
+					pGame->CreateUnit(galleonID, pCastle, NULL);
 			}
-
-			MFDebug_Assert(heroID != -1, "Couldn't find hero!");
-
-			Group *pGroup = pGame->CreateUnit(heroID, pCastle, NULL, true);
-			pGame->players[pCastle->player].pHero[pGame->players[pCastle->player].numHeroes++] = pGroup->GetUnit(0);
-
-			// pirates also start with a galleon
-			int pirateID = pUnitDefs->FindRace("Pirates");
-			int galleonID = pUnitDefs->FindUnit("Galleon");
-			if(players[pCastle->player].race == pirateID && galleonID >= 0)
-				pGame->CreateUnit(galleonID, pCastle, NULL, true);
 		}
 	}
 
 	// begin the first turn
 	pGame->BeginTurn(0);
-	pGame->history.PushBeginTurn(0);
 
 	Game::SetCurrent(pOld);
 
@@ -268,7 +221,7 @@ Game *Game::NewGame(GameParams *pParams)
 
 Game *Game::ResumeGame(const char *pGameName, bool bOnline)
 {
-	char *pGameHistory = MFFileSystem_Load(pGameName);
+	char *pGameHistory = MFFileSystem_Load(pGameName, NULL, true);
 	History *pHistory = new History();
 	pHistory->Read(pGameHistory);
 
@@ -276,7 +229,21 @@ Game *Game::ResumeGame(const char *pGameName, bool bOnline)
 
 	MFHeap_Free(pGameHistory);
 
-	// ...
+	// TODO: eliminate this...
+	Game *pOld = Game::SetCurrent(pGame);
+
+	// replay actions
+	pGame->CatchUp();
+
+	Game::SetCurrent(pOld);
+
+	// TODO: move this?
+	Screen::SetNext(pGame->pMapScreen);
+	pGame->pGameUI->Show();
+
+	// hook up message receiver
+	Session *pSession = Session::Get();
+	pSession->SetMessageCallback(MakeDelegate(pGame, &Game::ReceivePeerMessage));
 
 	return pGame;
 }
@@ -288,11 +255,10 @@ Game *Game::CreateEditor(const char *pMap)
 	pGame->bOnline = false;
 	pGame->gameID = 0;
 
-	pGame->Init(pMap, true);
+//	pGame->Init(pMap, true);
 
-	pGame->lastAction = 0;
 	pGame->currentPlayer = 0;
-	pGame->currentTurn = 0;
+	pGame->currentRound = 0;
 
 	// init the players
 	int numRaces = pGame->pUnitDefs->GetNumRaces() - 1;
@@ -306,41 +272,6 @@ Game *Game::CreateEditor(const char *pMap)
 	pGame->pMap->ConstructMap(0);
 
 	return pGame;
-}
-
-void Game::Init(const char *pMapName, bool bEdit)
-{
-	// init fields
-	pSelection = NULL;
-	bMoving = false;
-	countdown = 0.f;
-
-	// create the GameUI
-	pGameUI = new GameUI(this);
-
-	pText = MFFont_Create("FranklinGothic");
-	pBattleNumbersFont = MFFont_Create("Battle");
-	pSmallNumbersFont = MFFont_Create("SmallNumbers");
-
-	pIcons = MFMaterial_Create("Icons");
-
-	// ** REMOVE ME ***
-	MFTexture *pTemp = MFTexture_Create("Horiz-Pirates", false);
-	pWindow = MFMaterial_Create("Window-Pirates");
-	pHorizLine = MFMaterial_Create("Horiz-Pirates");
-	MFTexture_Destroy(pTemp);
-
-	// create the map and screens
-	if(!pMap)
-		pMap = Map::Create(this, pMapName, bEdit);
-	pUnitDefs = pMap->GetUnitDefinitions();
-
-	pMapScreen = new MapScreen(this);
-	pBattle = new Battle(this);
-
-	// allocate runtime data
-	unitPool.Init(sizeof(Unit), 256, 256);
-	groupPool.Init(sizeof(Group), 128, 64);
 }
 
 Game::~Game()
@@ -797,62 +728,12 @@ bool Game::IsCurrentPlayer(int player)
 	return player == currentPlayer && players[player].playerID == pSession->GetUserID();
 }
 
-void Game::BeginGame()
-{
-	// create starting units
-	for(int a=0; a<pMap->GetNumCastles(); ++a)
-	{
-		Castle *pCastle = pMap->GetCastle(a);
-		if(pCastle->player != -1)
-		{
-			// set each players map focus on starting castle
-			players[pCastle->player].cursorX = pCastle->details.x;
-			players[pCastle->player].cursorY = pCastle->details.y;
-
-			// produce starting hero
-			int hero = players[pCastle->player].startingHero;
-			int heroID = -1;
-
-			int numUnits = pUnitDefs->GetNumUnitTypes();
-			for(int u=0; u<numUnits; ++u)
-			{
-				UnitDetails *pUnit = pUnitDefs->GetUnitDetails(u);
-				if(pUnit->type == UT_Hero && (pUnit->race == players[pCastle->player].race || pUnit->race == 0))
-				{
-					if(hero-- == 0)
-					{
-						heroID = u;
-						break;
-					}
-				}
-			}
-
-			MFDebug_Assert(heroID != -1, "Couldn't find hero!");
-
-			Group *pGroup = CreateUnit(heroID, pCastle, NULL, true);
-			players[pCastle->player].pHero[players[pCastle->player].numHeroes++] = pGroup->GetUnit(0);
-
-			// pirates also start with a galleon
-			int pirateID = pUnitDefs->FindRace("Pirates");
-			int galleonID = pUnitDefs->FindUnit("Galleon");
-			if(players[pCastle->player].race == pirateID && galleonID >= 0)
-				CreateUnit(galleonID, pCastle, NULL, true);
-		}
-	}
-
-	// begin the first turn
-	BeginTurn(0);
-	history.PushBeginTurn(0);
-
-	Screen::SetNext(pMapScreen);
-	pGameUI->Show();
-}
-
 void Game::BeginTurn(int player)
 {
 	if(player < currentPlayer)
-		++currentTurn;
+		++currentRound;
 
+	history.PushBeginTurn(player);
 	currentPlayer = player;
 
 	// heal units and restore movement
@@ -900,7 +781,7 @@ void Game::BeginTurn(int player)
 				--pCastle->buildTime;
 
 			// show the starting castle build screen
-			if(currentTurn == 0 && IsMyTurn())
+			if(currentRound == 1 && IsMyTurn())
 				pGameUI->ShowCastleMenu(pCastle);
 		}
 	}
@@ -923,7 +804,7 @@ void Game::BeginTurn(int player)
 					Group *pGroup = NULL;
 
 					Unit *pHero = players[currentPlayer].pHero[pCastle->building - 4];
-					pGroup = CreateUnit(pHero->GetType(), pCastle, NULL, true);
+					pGroup = CreateUnit(pHero->GetType(), pCastle, NULL);
 
 					if(pGroup && !bOnline || IsMyTurn())
 						pGameUI->ShowCastleMenu(pCastle);
@@ -958,7 +839,7 @@ void Game::BeginTurn(int player)
 			if(pPlace->recruit.turnsRemaining == 0)
 			{
 				// build hero
-				CreateUnit(pPlace->recruit.recruiting, NULL, pPlace, true);
+				CreateUnit(pPlace->recruit.recruiting, NULL, pPlace);
 
 				pPlace->recruit.pRecruitHero = NULL;
 				pPlace->recruit.recruiting = -1;
@@ -981,7 +862,7 @@ void Game::BeginTurn(int player)
 					Group *pGroup = NULL;
 
 					if(!bOnline || IsMyTurn())
-						pGroup = CreateUnit(buildUnit.unit, pCastle, NULL, true);
+						pGroup = CreateUnit(buildUnit.unit, pCastle, NULL);
 					if(pGroup)
 						pCastle->buildTime = pCastle->GetUnitBuildTime();
 				}
@@ -1043,7 +924,6 @@ void Game::EndTurn()
 
 	if(playersAlive > 1)
 	{
-		history.PushBeginTurn(nextPlayer);
 		BeginTurn(nextPlayer);
 	}
 	else
@@ -1248,6 +1128,8 @@ Unit *Game::CreateUnit(int unit, int player)
 		pUnit->numItems = pUnit->details.numItems;
 		for(int a=0; a<pUnit->details.numItems; ++a)
 			pUnit->pItems[a] = pUnit->details.items[a];
+
+		players[player].pHero[players[player].numHeroes++] = pUnit;
 	}
 
 	pUnit->kills = pUnit->victories = 0;
@@ -1260,10 +1142,12 @@ Unit *Game::CreateUnit(int unit, int player)
 	pUnit->plan.strength = TS_Weakest;
 	pUnit->plan.bAttackAvailable = true;
 
+	pUnit->id = AddUnit(pUnit);
+
 	return pUnit;
 }
 
-Group *Game::CreateUnit(int unit, Castle *pCastle, Place *pPlace, bool bCommitUnit)
+Group *Game::CreateUnit(int unit, Castle *pCastle, Place *pPlace)
 {
 	// find space in the castle for the unit
 	MapTile *pTile = NULL;
@@ -1364,11 +1248,6 @@ Group *Game::CreateUnit(int unit, Castle *pCastle, Place *pPlace, bool bCommitUn
 		if(!pUnit)
 		{
 			pUnit = CreateUnit(unit, player);
-
-			if(pUnit->IsHero())
-				players[player].pHero[players[player].numHeroes++] = pUnit;
-
-			pUnit->id = AddUnit(pUnit);
 			history.PushCreateUnit(pUnit);
 		}
 
@@ -1385,10 +1264,9 @@ Group *Game::CreateUnit(int unit, Castle *pCastle, Place *pPlace, bool bCommitUn
 			{
 				// if there's space on the same tile, add the second one to the same group
 				Unit *pUnit2 = CreateUnit(unit, player);
-				pGroup->AddUnit(pUnit2);
-
-				pUnit2->id = AddUnit(pUnit2);
 				history.PushCreateUnit(pUnit2);
+
+				pGroup->AddUnit(pUnit2);
 			}
 			else
 			{
@@ -1401,8 +1279,6 @@ Group *Game::CreateUnit(int unit, Castle *pCastle, Place *pPlace, bool bCommitUn
 					{
 						// create the second on the new tile
 						Unit *pUnit2 = CreateUnit(unit, player);
-
-						pUnit2->id = AddUnit(pUnit2);
 						history.PushCreateUnit(pUnit2);
 
 						// create a group for the unit, and add it to the tile
@@ -1723,7 +1599,7 @@ void Game::CommitAction(PendingAction *pAction)
 			a.type = AT_Restack;
 			a.restack.numGroups = regroup.numAfter;
 			a.restack.x = regroup.x;
-			a.restack.y = regroup.x;
+			a.restack.y = regroup.y;
 
 			// create new groups
 			for(int i=0; i<regroup.numAfter; ++i)
@@ -1939,189 +1815,141 @@ Group *Game::RevertAction(Group *pGroup)
 	return pGroup;
 }
 
+void Game::ReplayUntil(int action)
+{
+	while(history.NumApplied() < action)
+	{
+		Action *pAction = history.GetNext();
+		if(!pAction)
+			break;
+
+		ReplayAction(pAction);
+	}
+}
+
 void Game::ReplayAction(Action *pAction)
 {
-//	bUpdating = true;
-/*
 	switch(pAction->type)
 	{
-		case GA_ADDCASTLES:
-			//...
+		case AT_BeginGame:
+			MFDebug_Assert(false, "We should have already done this!");
 			break;
-		case GA_ADDRUINS:
+		case AT_BeginTurn:
+			if(pAction->beginTurn.player < currentPlayer)
+				++currentRound;
+			currentPlayer = pAction->beginTurn.player;
+			break;
+		case AT_PlayerEliminated:
+			// TODO: show dialog
+			players[pAction->playerEliminated.player].bEliminated = true;
+			break;
+		case AT_Victory:
+			// TODO: show dialog
+			break;
+		case AT_SetBuild:
 		{
-			for(int b=0; b<pAction->numArgs; ++b)
-			{
-				Place *pPlace = pMap->GetPlace(b);
-				if(pPlace->GetType() == Special::ST_Searchable)
-					pPlace->ruin.item = pAction->pArgs[b];
-			}
+			Castle *pCastle = pMap->GetCastle(pAction->setBuild.castle);
+			pCastle->building = pAction->setBuild.unit;
+			pCastle->buildTime = pCastle->GetUnitBuildTime();
 			break;
 		}
-		case GA_CREATEUNIT:
+		case AT_CreateUnit:
 		{
-			int player = pAction->pArgs[0];
-			int unit = pAction->pArgs[1];
-			Unit *pUnit = pUnitDefs->CreateUnit(unit, player);
-			if(pUnit->IsHero())
-				players[player].pHero[players[player].numHeroes++] = pUnit;
-			AddUnit(pUnit);
+			Unit *pUnit = CreateUnit(pAction->createUnit.unitType, currentPlayer);
+  			break;
+		}
+		case AT_CreateGroup:
+		{
+			Group *pGroup = Group::Create(currentPlayer);
+			for(int a=0; a<11; ++a)
+			{
+				if(pAction->createGroup.units[a] == -1)
+					continue;
+
+				Unit *pUnit = units[pAction->createGroup.units[a]];
+
+				if(a < 5)
+					pGroup->AddForwardUnit(pUnit);
+				else if(a < 10)
+					pGroup->AddRearUnit(pUnit);
+				else
+					pGroup->AddUnit(pUnit);
+			}
+			pGroup->id = AddGroup(pGroup);
 			break;
 		}
-		case GA_CREATEGROUP:
+		case AT_Resurrect:
+			units[pAction->resurrect.unit]->Revive();
+			break;
+		case AT_Restack:
 		{
-			Group *pGroup = Group::Create(pAction->pArgs[0]);
-			AddGroup(pGroup);
-
-			for(int b=0; b<11; ++b)
-			{
-				int unit = pAction->pArgs[3 + b];
-
-				if(unit > -1)
-				{
-					if(b < 5)
-						pGroup->AddForwardUnit(ppUnits[unit]);
-					else if (b < 10)
-						pGroup->AddRearUnit(ppUnits[unit]);
-					else
-						pGroup->AddUnit(ppUnits[unit]);
-				}
-			}
-
-			MapTile *pTile = pMap->GetTile(pAction->pArgs[1], pAction->pArgs[2]);
+			MapTile *pTile = pMap->GetTile(pAction->restack.x, pAction->restack.y);
+			Group *pGroup;
+			while(pGroup = pTile->GetGroup(0))
+				pTile->RemoveGroup(pGroup);
+			for(int a = pAction->restack.numGroups - 1; a >= 0; --a)
+				pTile->AddGroup(groups[pAction->restack.groupStack[a]]);
+			break;
+		} 
+		case AT_Move:
+		{
+			Group *pGroup = groups[pAction->move.group];
+			pGroup->GetTile()->RemoveGroup(pGroup);
+			MapTile *pTile = pMap->GetTile(pAction->move.destX, pAction->move.destY);
 			pTile->AddGroup(pGroup);
 
-			MFDebug_Assert(pGroup->ValidateGroup(), "EEK!");
-			break;
-		}
-		case GA_DESTROYGROUP:
-		{
-			Group *pGroup = ppGroups[pAction->pArgs[0]];
-
-			MapTile *pTile = pGroup->GetTile();
-			pTile->RemoveGroup(pGroup);
-
-			pGroup->Destroy();
-			ppGroups[pAction->pArgs[0]] = NULL;
-			break;
-		}
-		case GA_MOVEGROUP:
-		{
-			Group *pGroup = ppGroups[pAction->pArgs[0]];
-			MFDebug_Assert(pGroup->ValidateGroup(), "EEK!");
-
-			int x = pAction->pArgs[1];
-			int y = pAction->pArgs[2];
-
-			MoveGroupToTile(pGroup, pMap->GetTile(x, y));
-
 			int numUnits = pGroup->GetNumUnits();
-			for(int b=0; b<numUnits; ++b)
-			{
-				Unit *pUnit = pGroup->GetUnit(b);
-				pUnit->SetMovement(pAction->pArgs[3 + b]);
-			}
-			if(pGroup->pVehicle)
-				pGroup->pVehicle->SetMovement(pAction->pArgs[3 + numUnits]);
-
-			pMap->CenterView((float)x, (float)y);
+			for(int a=0; a<numUnits; ++a)
+				pGroup->GetUnit(a)->SetMovement(pAction->move.endMovement[a]);
+			if(pGroup->GetVehicle())
+				pGroup->GetVehicle()->SetMovement(pAction->move.endMovement[numUnits]);
 			break;
 		}
-		case GA_REARRANGEGROUP:
+		case AT_Search:
 		{
-			Group *pGroup = ppGroups[pAction->pArgs[0]];
-			MFDebug_Assert(pGroup->ValidateGroup(), "EEK!");
-
-			pGroup->numForwardUnits = 0;
-			pGroup->numRearUnits = 0;
-			for(int b=0; b<10; ++b)
+			Place *pPlace = pMap->GetPlace(pAction->search.place);
+			units[pAction->search.unit]->AddItem(pPlace->ruin.item);
+			pPlace->ruin.bHasSearched = true;
+			break;
+		}
+		case AT_Battle:
+			for(int a=0; a<pAction->battle.numUnits; ++a)
 			{
-				int unit = pAction->pArgs[b+1];
-				Unit *pUnit = unit >= 0 ? ppUnits[unit] : NULL;
-				pGroup->pUnits[b] = pUnit;
-				if(pUnit)
+				Action::Unit &result = pAction->battle.pResults[a];
+				Unit *pUnit = units[result.unit];
+				if(result.health)
 				{
-					if(b < 5)
-						++pGroup->numForwardUnits;
-					else
-						++pGroup->numRearUnits;
-				}
-			}
-
-			MFDebug_Assert(pGroup->ValidateGroup(), "EEK!");
-			break;
-		}
-		case GA_CLAIMCASTLE:
-		{
-			Castle *pCastle = pMap->GetCastle(pAction->pArgs[0]);
-			pCastle->player = pAction->pArgs[1];
-			break;
-		}
-		case GA_CAPTUREUNITS:
-		{
-			Group *pGroup = ppGroups[pAction->pArgs[0]];
-			pGroup->SetPlayer(pAction->pArgs[1]);
-			break;
-		}
-		case GA_SETBUILDING:
-		{
-			Castle *pCastle = pMap->GetCastle(pAction->pArgs[0]);
-			pCastle->building = pCastle->nextBuild = pAction->pArgs[1];
-			pCastle->buildTime = pAction->pArgs[2];
-			break;
-		}
-		case GA_SETBATTLEPLAN:
-			//...
-			break;
-		case GA_SEARCH:
-		{
-			Unit *pUnit = ppUnits[pAction->pArgs[0]];
-			Place *pRuin = pMap->GetPlace(pAction->pArgs[1]);
-			pUnit->AddItem(pRuin->ruin.item);
-			pRuin->ruin.bHasSearched = true;
-			break;
-		}
-		case GA_BATTLE:
-		{
-			Group *pGroup = ppGroups[pAction->pArgs[0]];
-			for(int u=0, a=0; u<pGroup->GetNumUnits(); ++a)
-			{
-				Unit *pUnit = pGroup->GetUnit(u);
-				pUnit->SetHP(pAction->pArgs[1 + a*2]);
-				pUnit->SetKills(pAction->pArgs[2 + a*2]);
-
-				if(pUnit->IsDead())
-				{
-					// destroy the unit
-					pGroup->RemoveUnit(pUnit);
-					if(!pUnit->IsHero())
-						pUnit->Destroy();
+					pUnit->SetHP(result.health);
+					pUnit->SetKills(result.kills);
 				}
 				else
 				{
-					// move to next unit
-					++u;
+					Group *pGroup = pUnit->GetGroup();
+					pGroup->RemoveUnit(pUnit);
+
+					units[pUnit->GetID()] = NULL;
+					pUnit->Destroy();
+
+					if(pGroup->GetNumUnits() == 0 && !pGroup->GetVehicle())
+					{
+						groups[pGroup->GetID()] = NULL;
+						pGroup->GetTile()->RemoveGroup(pGroup);
+						pGroup->Destroy();
+					}
 				}
 			}
-
-			if(pGroup->GetNumUnits() == 0)
-			{
-				MapTile *pTile = pGroup->GetTile();
-				pTile->RemoveGroup(pGroup);
-				pGroup->Destroy();
-				pGroup = NULL;
-			}
 			break;
-		}
-		case GA_ENDTURN:
-			EndTurn();
+		case AT_CaptureCastle:
+		{
+			Castle *pCastle = pMap->GetCastle(pAction->captureCastle.castle);
+			pCastle->ClearBuildUnit();
+			pCastle->player = currentPlayer;
 			break;
-		case GA_VICTORY:
-			//...
+		}	
+		case AT_CaptureUnits:
+			groups[pAction->captureUnits.group]->SetPlayer(currentPlayer);
 			break;
 	}
-*/
-//	bUpdating = false;
 }
 
 Player* Game::GetPlayer(uint32 user, int *pPlayer)
