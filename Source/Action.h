@@ -139,7 +139,7 @@ public:
 	void Read(MFString text);
 
 	// hard actions
-	void PushBeginGame(const char *pMap, Action::Player *pPlayers, int numPlayers, Action::Castle *pCastles, int numCastles, Action::Ruin *pRuins, int numRuins);
+	void PushBeginGame(const char *pMap, Action::Player *pPlayers, int numPlayers, Action::Ruin *pRuins, int numRuins);
 
 	void PushBeginTurn(int player);
 	void PushPlayerEliminated(int player);

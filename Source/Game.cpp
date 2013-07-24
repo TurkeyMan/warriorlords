@@ -111,22 +111,6 @@ Game *Game::NewGame(GameParams *pParams)
 		races[a] = pParams->players[a].race;
 	pMap->ConstructMap(races);
 
-	// populate map with starting players
-	// TODO: this can be removed. it's all implicit in the map!
-	MFArray<Action::Castle> castles;
-	int numCastles = pMap->GetNumCastles();
-	for(int a=0; a<numCastles; ++a)
-	{
-		Castle *pCastle = pMap->GetCastle(a);
-		int player = pCastle->GetPlayer();
-		if(player != -1)
-		{
-			Action::Castle &c = castles.push();
-			c.castle = a;
-			c.player = player;
-		}
-	}
-
 	// populate the ruins with items
 	MFArray<Action::Ruin> ruins;
 	int numPlaces = pMap->GetNumPlaces();
@@ -163,7 +147,7 @@ Game *Game::NewGame(GameParams *pParams)
 		players[a].colour = pParams->players[a].colour;
 	}
 
-	pHistory->PushBeginGame(pParams->pMap, players, pParams->numPlayers, castles.getCopy(), castles.size(), ruins.getCopy(), ruins.size());
+	pHistory->PushBeginGame(pParams->pMap, players, pParams->numPlayers, ruins.getCopy(), ruins.size());
 
 	// create the game object
 	Game *pGame = new Game(pHistory, pMap);

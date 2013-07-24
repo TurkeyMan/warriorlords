@@ -293,7 +293,7 @@ void History::Read(MFString text)
 	}
 }
 
-void History::PushBeginGame(const char *pMap, Action::Player *pPlayers, int numPlayers, Action::Castle *pCastles, int numCastles, Action::Ruin *pRuins, int numRuins)
+void History::PushBeginGame(const char *pMap, Action::Player *pPlayers, int numPlayers, Action::Ruin *pRuins, int numRuins)
 {
 	Action a;
 	a.type = AT_BeginGame;
@@ -302,7 +302,7 @@ void History::PushBeginGame(const char *pMap, Action::Player *pPlayers, int numP
 	{
 		a.beginGame.players[i].id = pPlayers[i].id;
 		a.beginGame.players[i].race = pPlayers[i].race;
-		a.beginGame.players[i].colour = pPlayers[i].race;
+		a.beginGame.players[i].colour = pPlayers[i].colour;
 	}
 	a.beginGame.numPlayers = numPlayers;
 	a.beginGame.pRuins = pRuins;
