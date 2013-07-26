@@ -32,9 +32,6 @@ HTTPRequest::HTTPRequest()
 	mutex = MFThread_CreateMutex("HTTP Mutex");
 	MFDebug_Assert(mutex != NULL, "Too many mutexes!");
 
-	reqAlloc = 512;
-	pRequestBuffer = (char*)MFHeap_Alloc(reqAlloc);
-
 	pResponse = NULL;
 
 	eventDelegate.clear();
@@ -45,11 +42,9 @@ HTTPRequest::HTTPRequest()
 
 HTTPRequest::~HTTPRequest()
 {
-	MFHeap_Free(pRequestBuffer);
-
 	if(pResponse)
 	{
-		pResponse->Destroy();
+		delete pResponse;
 		pResponse = NULL;
 	}
 
@@ -89,91 +84,69 @@ void HTTPRequest::UpdateEvents()
 	Unlock();
 }
 
-void HTTPRequest::Get(const char *_pServer, int _port, const char *_pResourcePath)
+void HTTPRequest::Get(const char *pServer, int port, const char *pResourcePath)
 {
 	if(pResponse)
 	{
-		pResponse->Destroy();
+		delete pResponse;
 		pResponse = NULL;
 	}
 
-	pServer = _pServer;
-	pResourcePath = _pResourcePath;
-	port = _port;
-
-	// *** TODO *** 
-	// test to see if there is enough buffer allocated...
+	server = pServer;
+	resourcePath = pResourcePath;
+	this->port = port;
 
 	// generate request
-	reqLen = sprintf(pRequestBuffer, "GET %s HTTP/1.1\nHost: %s:%d\nUser-Agent: WarriorLords Client/1.0\nContent-Type: application/x-www-form-urlencoded\n\n\n", pResourcePath, pServer, port);
+	request.Sprintf("GET %s HTTP/1.1\r\nHost: %s:%d\r\nUser-Agent: WarriorLords Client/1.0\r\n\r\n", pResourcePath, pServer, port);
 
 	// begin async request
 	CreateConnection();
 }
 
-void HTTPRequest::Post(const char *_pServer, int _port, const char *_pResourcePath, MFFileHTTPRequestArg *pArgs, int numArgs)
+void HTTPRequest::Post(const char *pServer, int port, const char *pResourcePath, MFFileHTTPRequestArg *pArgs, int numArgs)
 {
 	Reset();
 
 	if(pResponse)
 	{
-		pResponse->Destroy();
+		delete pResponse;
 		pResponse = NULL;
 	}
 
-	pServer = _pServer;
-	pResourcePath = _pResourcePath;
-	port = _port;
-
-	// generate the request template
-	int sizeOffset = sprintf(pRequestBuffer, "POST %s HTTP/1.1\nHost: %s:%d\nUser-Agent: WarriorLords Client/1.0\nContent-Type: application/x-www-form-urlencoded\nContent-Length: ", pResourcePath, pServer, port);
-	int dataOffset = sizeOffset + sprintf(pRequestBuffer + sizeOffset, "        \n\n");
-	reqLen = dataOffset;
+	server = pServer;
+	resourcePath = pResourcePath;
+	this->port = port;
 
 	// append args
+	MFString content;
 	if(pArgs)
 	{
+		char arg[128];
+		char val[1024];
+
 		// build the string from the supplied args
 		for(int a=0; a<numArgs; ++a)
 		{
-			// count the num chars to write
-			int numChars = MFString_URLEncode(NULL, pArgs[a].pArg);
-			if(pArgs[a].type == MFFileHTTPRequestArg::AT_String)
-				numChars += MFString_URLEncode(NULL, pArgs[a].pValue);
-
-			// make sure we have enough space in the dest buffer
-			while(reqLen > reqAlloc - numChars - 32)
-			{
-				reqAlloc *= 2;
-				pRequestBuffer = (char*)MFHeap_Realloc(pRequestBuffer, reqAlloc);
-			}
-
-			// separate args with an '&'
-			if(a > 0)
-				pRequestBuffer[reqLen++] = '&';
-
-			// append the arg
-			reqLen += MFString_URLEncode(pRequestBuffer + reqLen, pArgs[a].pArg);
-			pRequestBuffer[reqLen++] = '=';
+			MFString_URLEncode(arg, pArgs[a].pArg);
 
 			switch(pArgs[a].type)
 			{
 				case MFFileHTTPRequestArg::AT_Int:
-					reqLen += sprintf(pRequestBuffer + reqLen, "%d", pArgs[a].iValue);
+					content += MFString::Format(a > 0 ? "&%s=%d" : "%s=%d", arg, pArgs[a].iValue);
 					break;
 				case MFFileHTTPRequestArg::AT_Float:
-					reqLen += sprintf(pRequestBuffer + reqLen, "%g", pArgs[a].fValue);
+					content += MFString::Format(a > 0 ? "&%s=%g" : "%s=%g", arg, pArgs[a].fValue);
 					break;
 				case MFFileHTTPRequestArg::AT_String:
-					reqLen += MFString_URLEncode(pRequestBuffer + reqLen, pArgs[a].pValue);
+					MFString_URLEncode(val, pArgs[a].pValue);
+					content += MFString::Format(a > 0 ? "&%s=%s" : "%s=%s", arg, val);
 					break;
 			}
 		}
 	}
 
-	// write size to the buffer
-	sizeOffset += sprintf(pRequestBuffer + sizeOffset, "%d", reqLen - dataOffset);
-	pRequestBuffer[sizeOffset] = ' ';
+	// generate the request template
+	request.Sprintf("POST %s HTTP/1.1\r\nHost: %s:%d\r\nUser-Agent: WarriorLords Client/1.0\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %d\r\n\r\n%s", pResourcePath, pServer, port, content.NumBytes(), content.CStr());
 
 	// begin async request
 	CreateConnection();
@@ -209,7 +182,7 @@ int HTTPRequest::RequestThread(void *_pRequest)
 void HTTPRequest::HandleRequest()
 {
 	MFAddressInfo *pAddrInfo;
-	if(MFSockets_GetAddressInfo(pServer, MFStr("%d", port), NULL, &pAddrInfo) != 0)
+	if(MFSockets_GetAddressInfo(server.CStr(), MFStr("%d", port), NULL, &pAddrInfo) != 0)
 	{
 		SetStatus(CS_CouldntResolveHost, false);
 		return;
@@ -230,7 +203,7 @@ void HTTPRequest::HandleRequest()
 
 	SetStatus(CS_Pending, false);
 
-	MFSockets_Send(s, pRequestBuffer, reqLen, 0);
+	MFSockets_Send(s, request.CStr(), request.NumBytes(), 0);
 	pResponse = HTTPResponse::Create(s);
 	MFSockets_CloseSocket(s);
 
@@ -291,8 +264,7 @@ HTTPResponse *HTTP_Get(const char *pServer, int port, const char *pResourcePath)
 	MFAddressInfo *pAddrInfo;
 	if(MFSockets_GetAddressInfo(pServer, MFStr("%d", port), NULL, &pAddrInfo) == 0)
 	{
-		char buffer[1024];
-		int len = sprintf(buffer, "GET %s HTTP/1.1\nHost: %s:%d\nUser-Agent: WarriorLords Client/1.0\nContent-Type: application/x-www-form-urlencoded\n\n\n", pResourcePath, pServer, port);
+		MFString request = MFString::Format("GET %s HTTP/1.1\r\nHost: %s:%d\r\nUser-Agent: WarriorLords Client/1.0\r\n\r\n", pResourcePath, pServer, port);
 
 		MFSocket s = MFSockets_CreateSocket(pAddrInfo->pAddress->family, MFSockType_Stream, MFProtocol_TCP);
 
@@ -303,7 +275,7 @@ HTTPResponse *HTTP_Get(const char *pServer, int port, const char *pResourcePath)
 			return NULL;
 		}
 
-		MFSockets_Send(s, buffer, len, 0);
+		MFSockets_Send(s, request.CStr(), request.NumBytes(), 0);
 		HTTPResponse *pResponse = HTTPResponse::Create(s);
 		MFSockets_CloseSocket(s);
 
@@ -318,34 +290,34 @@ HTTPResponse *HTTP_Post(const char *pServer, int port, const char *pResourcePath
 	MFAddressInfo *pAddrInfo;
 	if(MFSockets_GetAddressInfo(pServer, MFStr("%d", port), NULL, &pAddrInfo) == 0)
 	{
-		char pArgString[2048];
-		pArgString[0] = 0;
-
+		MFString content;
 		if(pArgs)
 		{
-			int argLen = 0;
+			char arg[128];
+			char val[1024];
 
 			// build the string from the supplied args
 			for(int a=0; a<numArgs; ++a)
 			{
+				MFString_URLEncode(arg, pArgs[a].pArg);
+
 				switch(pArgs[a].type)
 				{
 					case MFFileHTTPRequestArg::AT_Int:
-						argLen += sprintf(pArgString + argLen, "%s%s=%d", argLen ? "&" : "", MFStr_URLEncodeString(pArgs[a].pArg), pArgs[a].iValue);
+						content += MFString::Format(a > 0 ? "&%s=%d" : "%s=%d", arg, pArgs[a].iValue);
 						break;
 					case MFFileHTTPRequestArg::AT_Float:
-						argLen += sprintf(pArgString + argLen, "%s%s=%g", argLen ? "&" : "", MFStr_URLEncodeString(pArgs[a].pArg), pArgs[a].fValue);
+						content += MFString::Format(a > 0 ? "&%s=%g" : "%s=%g", arg, pArgs[a].fValue);
 						break;
 					case MFFileHTTPRequestArg::AT_String:
-						argLen += sprintf(pArgString + argLen, "%s%s=%s", argLen ? "&" : "", MFStr_URLEncodeString(pArgs[a].pArg), MFStr_URLEncodeString(pArgs[a].pValue));
+						MFString_URLEncode(val, pArgs[a].pValue);
+						content += MFString::Format(a > 0 ? "&%s=%s" : "%s=%s", arg, val);
 						break;
 				}
 			}
-			pArgString[argLen] = 0;
 		}
 
-		char buffer[2048];
-		int len = sprintf(buffer, "POST %s HTTP/1.1\nHost: %s:%d\nUser-Agent: WarriorLords Client/1.0\nContent-Type: application/x-www-form-urlencoded\nContent-Length: %d\n\n%s", pResourcePath, pServer, port, MFString_Length(pArgString), pArgString);
+		MFString request = MFString::Format("POST %s HTTP/1.1\r\nHost: %s:%d\r\nUser-Agent: WarriorLords Client/1.0\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %d\r\n\r\n%s", pResourcePath, pServer, port, content.NumBytes(), content.CStr());
 
 		MFSocket s = MFSockets_CreateSocket(pAddrInfo->pAddress->family, MFSockType_Stream, MFProtocol_TCP);
 
@@ -356,7 +328,7 @@ HTTPResponse *HTTP_Post(const char *pServer, int port, const char *pResourcePath
 			return NULL;
 		}
 
-		MFSockets_Send(s, buffer, len, 0);
+		MFSockets_Send(s, request.CStr(), request.NumBytes(), 0);
 		HTTPResponse *pResponse = HTTPResponse::Create(s);
 		MFSockets_CloseSocket(s);
 
@@ -377,8 +349,10 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 //	MFDebug_Log(0, MFStr("Recv: %d", bytes));
 
 	// parse HTTP header
-	HTTPResponse *pHeader = NULL;
-	uint32 headerBytes = 0;
+	HTTPResponse *pHeader = new HTTPResponse;
+
+	pHeader->error = HTTP_UnknownError;
+	pHeader->transferEncoding = HTTP_TE_Identity;
 
 	char *pNextLine = NULL;
 	char *pFormatTag = MFTokeniseLine(revcBuffer, &pNextLine);
@@ -394,110 +368,76 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 	char *pSmall = MFString_Chr(pBig, '.');
 	*pSmall++ = 0;
 
-	int httpVersion = MFString_AsciiToInteger(pBig, false, 10)*100 + MFString_AsciiToInteger(pSmall, false, 10);
+	pHeader->httpVersion = MFString_AsciiToInteger(pBig, false, 10)*100 + MFString_AsciiToInteger(pSmall, false, 10);
 
 	char *pResponseCode = MFSeekNextWord(pSmall);
-	int responseCode = MFString_AsciiToInteger(pResponseCode, false, 10);
+	pHeader->responseCode = MFString_AsciiToInteger(pResponseCode, false, 10);
 
-	char *pResponseMessage = MFSeekNextWord(pResponseCode);
-	headerBytes += MFString_Length(pResponseMessage) + 1;
+	pHeader->responseMessage = MFSeekNextWord(pResponseCode);
 
 	// read header
-	char *pKeys[256];
-	char *pValues[256];
-	int numFields = 0;
-
-	pKeys[numFields] = MFTokeniseLine(pNextLine, &pNextLine);
-	while(pKeys[numFields])
+	const char *pLine = MFTokeniseLine(pNextLine, &pNextLine);
+	while(pLine)
 	{
-		if(!MFString_Length(pKeys[numFields]))
-		{
-			// end of header
-			pHeader = (HTTPResponse*)MFHeap_AllocAndZero(sizeof(HTTPResponse) + sizeof(ResponseField)*numFields + headerBytes);
-			pHeader->pValues = (ResponseField*)&pHeader[1];
-			char *pStrings = (char*)&pHeader->pValues[numFields];
-
-			pHeader->error = HTTP_UnknownError;
-
-			pHeader->httpVersion = httpVersion;
-			pHeader->responseCode = responseCode;
-
-			pHeader->pResponseMessage = MFString_Copy(pStrings, pResponseMessage);
-			pStrings += MFString_Length(pHeader->pResponseMessage) + 1;
-
-			for(int a=0; a<numFields; ++a)
-			{
-				// populate string pair
-				ResponseField &field = pHeader->pValues[pHeader->valueCount++];
-
-				field.pField = MFString_Copy(pStrings, pKeys[a]);
-				pStrings += MFString_Length(field.pField) + 1;
-
-				field.pValue = MFString_Copy(pStrings, pValues[a]);
-				pStrings += MFString_Length(field.pValue) + 1;
-
-				// parse common fields
-				if(!MFString_CaseCmp(field.pField, "Content-Length"))
-				{
-					pHeader->dataSize = MFString_AsciiToInteger(field.pValue, false, 10);
-
-					// allocate data buffer
-					pHeader->pData = (char*)MFHeap_Alloc(pHeader->dataSize + 1);
-					pHeader->pData[pHeader->dataSize] = 0;
-				}
-				else if(!MFString_CaseCmp(field.pField, "Host"))
-				{
-					pHeader->pHost = field.pValue;
-				}
-				else if(!MFString_CaseCmp(field.pField, "Server"))
-				{
-					pHeader->pServer = field.pValue;
-				}
-				else if(!MFString_CaseCmp(field.pField, "Content-Type"))
-				{
-					pHeader->pContentType = field.pValue;
-				}
-				else if(!MFString_CaseCmp(field.pField, "Content-Encoding"))
-				{
-					pHeader->pContentEncoding = field.pValue;
-				}
-				else if(!MFString_CaseCmp(field.pField, "Transfer-Encoding"))
-				{
-					pHeader->transferEncoding = HTTP_TE_Unknown;
-
-					for(int b=0; b<HTTP_TE_Max; ++b)
-					{
-						if(!MFString_CaseCmp(field.pValue, gTransferEncodings[b]))
-						{
-							pHeader->transferEncoding = (HTTPTransferEncoding)b;
-							break;
-						}
-					}
-				}
-			}
-
+		if(!MFString_Length(pLine))
 			break;
-		}
 		else
 		{
-			pValues[numFields] = MFString_Chr(pKeys[numFields], ':');
-			*pValues[numFields]++ = 0;
-			pValues[numFields] = MFSkipWhite(pValues[numFields]);
+			ResponseField &field = pHeader->values.push();
 
-			int fieldLen = MFString_Length(pKeys[numFields]);
-			int valLen = MFString_Length(pValues[numFields]);
+			const char *pColon = MFString_Chr(pLine, ':');
+			field.field = MFString(pLine, pColon - pLine);
 
-			headerBytes += fieldLen + valLen + 2;
-			++numFields;
+			pColon = MFSkipWhite(++pColon);
+			field.value = pColon;
 		}
 
-		pKeys[numFields] = MFTokeniseLine(pNextLine, &pNextLine);
+		pLine = MFTokeniseLine(pNextLine, &pNextLine);
 	}
 
-	if(!pHeader)
+	for(int a=0; a<pHeader->values.size(); ++a)
 	{
-		// there was some sort of error parsing the header...
-		return NULL;
+		// populate string pair
+		ResponseField &field = pHeader->values[a];
+
+		// parse common fields
+		if(field.field.EqualsInsensitive("Content-Length"))
+		{
+			pHeader->dataSize = field.value.ToInt();
+
+			// allocate data buffer
+			pHeader->pData = (char*)MFHeap_Alloc(pHeader->dataSize + 1);
+			pHeader->pData[pHeader->dataSize] = 0;
+		}
+		else if(field.field.EqualsInsensitive("Host"))
+		{
+			pHeader->host = field.value;
+		}
+		else if(field.field.EqualsInsensitive("Server"))
+		{
+			pHeader->server = field.value;
+		}
+		else if(field.field.EqualsInsensitive("Content-Type"))
+		{
+			pHeader->contentType = field.value;
+		}
+		else if(field.field.EqualsInsensitive("Content-Encoding"))
+		{
+			pHeader->contentEncoding = field.value;
+		}
+		else if(field.field.EqualsInsensitive("Transfer-Encoding"))
+		{
+			pHeader->transferEncoding = HTTP_TE_Unknown;
+
+			for(int b=0; b<HTTP_TE_Max; ++b)
+			{
+				if(field.value.EqualsInsensitive(gTransferEncodings[b]))
+				{
+					pHeader->transferEncoding = (HTTPTransferEncoding)b;
+					break;
+				}
+			}
+		}
 	}
 
 	// read packet data
@@ -577,7 +517,7 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 					break;
 				}
 
-//				MFDebug_Log(0, MFStr("RemainingBuffer: %d\n%s", MFString_Length(pPacketData), pPacketData));
+//				MFDebug_Log(0, MFStr("RemainingBuffer: %d\r\n%s", MFString_Length(pPacketData), pPacketData));
 
 				// check that the server has actually sent the next chunk
 				if(*pPacketData == 0)
@@ -605,10 +545,9 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 	return pHeader;
 }
 
-void HTTPResponse::Destroy(bool bDestroyData)
+HTTPResponse::~HTTPResponse()
 {
 	MFHeap_Free(pData);
-	MFHeap_Free(this);
 }
 
 const char *HTTPResponse::GetResponseParameter(const char *pKey)

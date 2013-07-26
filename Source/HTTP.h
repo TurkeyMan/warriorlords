@@ -32,7 +32,8 @@ class HTTPResponse
 {
 public:
 	static HTTPResponse *Create(MFSocket s);
-	void Destroy(bool bDestroyData = true);
+
+	~HTTPResponse();
 
 	const char *GetResponseParameter(const char *pKey);
 
@@ -42,8 +43,8 @@ public:
 private:
 	struct ResponseField
 	{
-		const char *pField;
-		const char *pValue;
+		MFString field;
+		MFString value;
 	};
 
 	HTTPError error;
@@ -51,18 +52,17 @@ private:
 	int httpVersion;
 
 	int responseCode;
-	const char *pResponseMessage;
+	MFString responseMessage;
 
-	const char *pHost;
-	const char *pServer;
+	MFString host;
+	MFString server;
 
 	HTTPTransferEncoding transferEncoding;
 
-	const char *pContentType;
-	const char *pContentEncoding;
+	MFString contentType;
+	MFString contentEncoding;
 
-	ResponseField *pValues;
-	int valueCount;
+	MFArray<ResponseField> values;
 
 	uint32 dataSize;
 	char *pData;
@@ -117,17 +117,15 @@ protected:
 
 	HTTPResponse *pResponse;
 
-	const char *pServer;
+	MFString server;
+	MFString resourcePath;
+	MFString request;
 	int port;
-	const char *pResourcePath;
 
 	bool bFinished;
 	Status status;
 	bool bOldFinished;
 	Status oldStatus;
-
-	char *pRequestBuffer;
-	int reqLen, reqAlloc;
 
 	HTTPEventDelegate eventDelegate;
 	HTTPEventDelegate completeDelegate;
