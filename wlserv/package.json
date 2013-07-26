@@ -1,0 +1,12 @@
+﻿{
+	"name": "wlserv",
+	"description": "WarriorLords server",
+	"homepage": "http://www.warriorlords.com/",
+	"copyright": "Copyright © 2013, Manu Evans",
+	"authors": [
+		"Manu Evans"
+	],
+	"dependencies": {
+		"vibe-d": ">=0.7.16"
+	}
+}
