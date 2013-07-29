@@ -2,10 +2,12 @@ module wlserv.user;
 
 import vibe.data.json;
 
-import std.digest.sha;
 import std.datetime;
+import std.algorithm;
 import std.string;
+import std.digest.sha;
 
+import wlserv.helper;
 import wlserv.sync;
 import wlserv.game;
 
@@ -17,6 +19,12 @@ __gshared uint biggestUser;
 
 class User
 {
+    struct Invitation
+    {
+        Lobby game;
+        User user;
+    }
+
     string newSession()
     {
         sessionKey = format("%x", keygen.front());
@@ -25,7 +33,31 @@ class User
         return sessionKey;
     }
 
-    Json toJson(bool bPrivate)
+    void friendRequest(User friend)
+    {
+        friendRequests ~= friend;
+    }
+
+    void acceptFriend(User friend)
+    {
+        // did this friend actually make a request?
+        auto f = find(friendRequests, friend);
+        wlAssert(f.length > 0, "no friend request");
+
+        // remove it from the pending list
+        friendRequests = friendRequests[0 .. $-f.length] ~ f[1 .. $];
+
+        // connect friends
+        friends ~= friend;
+        friend.friends ~= this;
+    }
+
+    void invite(Lobby game, User friend)
+    {
+        invites ~= Invitation(game, friend);
+    }
+
+    Json toJson(bool bPrivate = false)
     {
         Json j = Json.EmptyObject;
 
@@ -40,9 +72,38 @@ class User
         {
             j.key = sessionKey;
 
-            // games
-
             // friends
+            Json[] arr;
+            foreach(f; friends)
+                arr ~= f.toJson(false);
+            j.friends = arr;
+
+            // friend requests
+            arr = null;
+            foreach(fr; friendRequests)
+            {
+                Json req = Json.EmptyObject;
+                req.id = fr.id;
+                req.name = fr.name;
+            }
+            j.friendRequests = arr;
+
+            // invites
+            arr = null;
+            foreach(i; invites)
+            {
+                Json invite = Json.EmptyObject;
+                invite.friend = i.user.id;
+                invite.game = i.game.id;
+                arr ~= invite;
+            }
+            j.invites = arr;
+
+            // games
+            arr = null;
+            foreach(g; games)
+                arr ~= g.toJson();
+            j.games = arr;
         }
 
         return j;
@@ -58,17 +119,18 @@ class User
     int lost;
     int won;
 
+    Lobby[] pending;
     Game[] active;
     Game[] finished;
 
     User[] friends;
+
     User[] friendRequests;
+    Invitation[] invites;
 
     // transient
     string sessionKey;
     SysTime lastSeen;
-
-    Lobby[] waiting;
 }
 
 ubyte[20] passwordHash(string user, string password)
@@ -76,12 +138,12 @@ ubyte[20] passwordHash(string user, string password)
     return sha1Of("warrior", password, "lords!", user.toLower);
 }
 
-User createUser(string username, string password)
+User createUser(string username, string password, string email)
 {
     synchronized(userMutex)
     {
-        if(getUserByName(username) !is null)
-            return null;
+        if(username in usersByName)
+            throw new WLServException("already exists");
 
         User user = new User();
         user.id = biggestUser++;
@@ -98,25 +160,41 @@ User createUser(string username, string password)
     }
 }
 
-User getUser(string username, string password)
+User authenticate(string username, string password)
 {
     User u = getUserByName(username);
-    if(!u || u.passwordHash[] != passwordHash(username, password)[])
-        return null;
-
+    if(u.passwordHash[] != passwordHash(username, password)[])
+        throw new WLServException("incorrect password");
+    u.lastSeen = Clock.currTime();
     return u;
 }
 
 User getUserByName(string name)
 {
     synchronized(userMutex)
-        return usersByName.get(name, null);
+    {
+        if(name !in usersByName)
+            throw new WLServException("user does not exist");
+        return usersByName[name];
+    }
 }
 
 User getUserById(uint id)
 {
     synchronized(userMutex)
-        return usersById.get(id, null);
+    {
+        if(id !in usersById)
+            throw new WLServException("user does not exist");
+        return usersById[id];
+    }
+}
+
+Json allUsers()
+{
+    Json[] users;
+    foreach(u; usersById)
+        users ~= u.toJson(true);
+    return Json(users);
 }
 
 static this()
