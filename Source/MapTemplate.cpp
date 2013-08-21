@@ -39,7 +39,7 @@ MapTemplate *MapTemplate::Create(MFString mapFilename)
 	{
 		pTemplate = new MapTemplate(mapFilename);
 
-		MFResource_AddResource(pTemplate, gMapTemplateResource, mapFilename.GetHash(), pTemplate->FileName().CStr());
+		MFResource_AddResource(pTemplate, gMapTemplateResource, mapFilename.GetHash(), pTemplate->filename.CStr());
 	}
 	return pTemplate;
 }
@@ -62,7 +62,7 @@ MapTemplate::MapTemplate(MFString tileset, MFString unitset, int width, int heig
 	numPlayers = 0;
 
 	pTiles = Tileset::Create(tileset);
-	pUnits = new UnitDefinitions(unitset, pTiles->NumTerrainTypes());
+	pUnits = UnitDefinitions::Create(unitset, pTiles->NumTerrainTypes());
 
 	this->tileset = tileset;
 	this->unitset = unitset;
@@ -104,7 +104,7 @@ MapTemplate::MapTemplate(MFString mapFilename)
 				else if(pMapLine->IsString(0, "units"))
 				{
 					unitset = pMapLine->GetString(1);
-					pUnits = new UnitDefinitions(pMapLine->GetString(1), pTiles->NumTerrainTypes());
+					pUnits = UnitDefinitions::Create(pMapLine->GetString(1), pTiles->NumTerrainTypes());
 				}
 				else if(pMapLine->IsString(0, "map_width"))
 				{
@@ -284,8 +284,8 @@ MapTemplate::~MapTemplate()
 			MFHeap_Free(templates[a].pMap);
 	}
 
-	pTiles->Destroy();
-	delete pUnits;
+	pTiles->Release();
+	pUnits->Release();
 }
 
 void MapTemplate::Destroy(MFResource *pRes)
@@ -347,7 +347,7 @@ void MapTemplate::Save()
 			"\t{\n"
 			"\t\t[Tiles]\n"
 			"\t\t{\n",
-			r != 0 ? "\n" : "", r == 0 ? "Template" : UnitDefs()->GetRaceName(r).CStr());
+			r != 0 ? "\n" : "", r == 0 ? "Template" : UnitDefs().GetRaceName(r).CStr());
 		MFFile_Write(pFile, pMapData3, MFString_Length(pMapData3));
 
 		for(int a=0; a<mapHeight; ++a)
@@ -402,7 +402,7 @@ void MapTemplate::Save()
 			for(int c=0; c<castle.numBuildUnits; ++c)
 			{
 				BuildUnit &unit = castle.buildUnits[c];
-				int len = sprintf(buffer, "\t\t\t\tunit %d = \"%s\", %d\n", c, UnitDefs()->GetUnitDetails(unit.unit).name.CStr(), unit.buildTime);
+				int len = sprintf(buffer, "\t\t\t\tunit %d = \"%s\", %d\n", c, UnitDefs().GetUnitDetails(unit.unit).name.CStr(), unit.buildTime);
 				MFFile_Write(pFile, buffer, len);
 			}
 			MFFile_Write(pFile, "\t\t\t}\n", MFString_Length("\t\t\t}\n"));

@@ -46,8 +46,8 @@ public:
 
 	void GetMapSize(int *pWidth, int *pHeight) const	{ if(pWidth) *pWidth = mapWidth; if(pHeight) *pHeight = mapHeight; }
 
-	const Tileset* Tileset() const						{ return pTiles; }
-	const UnitDefinitions *UnitDefs() const				{ return pUnits; }
+	const Tileset& Tileset() const						{ return *pTiles; }
+	const UnitDefinitions& UnitDefs() const				{ return *pUnits; }
 
 	// editor
 	MapTemplate(MFString tileset, MFString unitset, int width, int height);

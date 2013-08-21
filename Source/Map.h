@@ -93,6 +93,9 @@ public:
 	Map(MapTemplate &mapTemplate, ::GameState &gameState);
 	virtual ~Map();
 
+	void LoadResources();
+	void ReleaseResources();
+
 	::GameState& GameState()							{ return gameState; }
 
 	const MapTemplate& Template() const					{ return mapTemplate; }
@@ -125,7 +128,7 @@ public:
 	int GetDetail(int x, int y) const;
 
 	const Tileset& Tileset() const						{ return *mapTemplate.pTiles; }
-	UnitDefinitions *UnitDefs() const					{ return mapTemplate.pUnits; }
+	const UnitDefinitions& UnitDefs() const				{ return *mapTemplate.pUnits; }
 
 	Path *FindPath(Group *pGroup, int destX, int destY);
 

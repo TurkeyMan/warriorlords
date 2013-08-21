@@ -54,7 +54,7 @@ Group *Castle::GetMercGroup()
 	for(int a=0; a<details.numBuildUnits; ++a)
 	{
 		int unit = details.buildUnits[a].unit;
-		if(UnitDefs()->GetUnitDetails(unit).type == UT_Unit)
+		if(UnitDefs().GetUnitDetails(unit).type == UT_Unit)
 			choices[numChoices++] = unit;
 	}
 
@@ -64,7 +64,7 @@ Group *Castle::GetMercGroup()
 	int numUnits = odds[MFRand() % range];
 	for(int a=0; a<numUnits; ++a)
 	{
-		pGroup->AddUnit(UnitDefs()->CreateUnit(choices[MFRand()%numChoices], -1, &gameState));
+		pGroup->AddUnit(UnitDefs().CreateUnit(choices[MFRand()%numChoices], -1, &gameState));
 	}
 
 	return pGroup;
@@ -132,7 +132,7 @@ int Castle::GetUnitBuildTime() const
 	return unit < 4 ? details.buildUnits[unit].buildTime : pTile->Map().GameState().PlayerHero(player, unit - 4)->GetDetails().buildTime;
 }
 
-const UnitDefinitions *Castle::UnitDefs() const
+const UnitDefinitions& Castle::UnitDefs() const
 {
 	return pTile->Map().UnitDefs();
 }

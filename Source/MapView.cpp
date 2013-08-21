@@ -310,7 +310,7 @@ void MapView::Update()
 void MapView::Draw()
 {
 	const Tileset &tileset = map.Tileset();
-	UnitDefinitions *pUnits = map.UnitDefs();
+	const UnitDefinitions &units = map.UnitDefs();
 
 	int mapWidth, mapHeight;
 	map.GetMapSize(&mapWidth, &mapHeight);
@@ -457,7 +457,7 @@ void MapView::Draw()
 	// draw the castle stuff
 	if(numCastleTiles)
 	{
-		MFMaterial_SetMaterial(pUnits->GetCastleMaterial());
+		MFMaterial_SetMaterial(units.GetCastleMaterial());
 
 		MFPrimitive(PT_QuadList);
 		MFBegin(numCastleTiles*2);
@@ -475,12 +475,12 @@ void MapView::Draw()
 				switch(drawTile.flags)
 				{
 					case 0:
-						uvs = pUnits->GetCastleUVs(pGame->GetPlayerRace(drawTile.i), texelCenter);
+						uvs = units.GetCastleUVs(pGame->GetPlayerRace(drawTile.i), texelCenter);
 						colour = pGame->GetPlayerColour(drawTile.i);
 						width = 2.f;
 						break;
 					case 1:
-						uvs = pUnits->GetFlagUVs(pGame->GetPlayerRace(drawTile.i), texelCenter);
+						uvs = units.GetFlagUVs(pGame->GetPlayerRace(drawTile.i), texelCenter);
 						colour = pGame->GetPlayerColour(drawTile.i);
 						break;
 				}
@@ -499,7 +499,7 @@ void MapView::Draw()
 	// draw misc stuff
 	if(numMiscTiles)
 	{
-		MFMaterial_SetMaterial(pUnits->GetMiscMaterial());
+		MFMaterial_SetMaterial(units.GetMiscMaterial());
 
 		MFPrimitive(PT_QuadList);
 		MFBegin(numMiscTiles*2);
@@ -514,7 +514,7 @@ void MapView::Draw()
 				MFVector colour = MFVector::one;
 
 				int width, height;
-				uvs = pUnits->GetSpecialUVs(drawTile.i, texelCenter, &width, &height);
+				uvs = units.GetSpecialUVs(drawTile.i, texelCenter, &width, &height);
 
 				MFSetColourV(colour);
 				MFSetTexCoord1(uvs.x, uvs.y);

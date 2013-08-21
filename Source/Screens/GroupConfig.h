@@ -21,7 +21,6 @@ protected:
 	UnitConfig battleConfig;
 
 	MapTile *pTile;
-	const UnitDefinitions *pDefs;
 
 	MFMaterial *pMelee, *pRanged;
 

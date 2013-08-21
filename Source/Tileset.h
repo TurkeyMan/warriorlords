@@ -1,7 +1,10 @@
 #if !defined(_TILESET_H)
 #define _TILESET_H
 
+#include "Fuji/MFResource.h"
+
 struct MFMaterial;
+class MFIniLine;
 
 struct TileSize
 {
@@ -24,11 +27,18 @@ struct Tile
 	uint8 flags    : 7;
 };
 
-class Tileset
+class Tileset : public MFResource
 {
 public:
+	static void Init();
+
 	static Tileset *Create(MFString filename);
-	void Destroy();
+
+	int AddRef();
+	int Release();
+
+	void LoadResources();
+	void ReleaseResources();
 
 	inline int NumTerrainTypes() const							{ return terrainTypes.size(); }
 	inline MFString TerrainName(int type) const					{ return terrainTypes[type].name; }
@@ -53,6 +63,11 @@ public:
 	inline MFMaterial* GetRoadMaterial() const					{ return pRoadMap; }
 
 protected:
+	Tileset(MFIniLine *pLine);
+	~Tileset();
+
+	static void Destroy(MFResource *pRes);
+
 	struct TerrainType
 	{
 		MFString name;
@@ -69,18 +84,24 @@ protected:
 
 	MFString name;
 
+	MFArray<TerrainType> terrainTypes;
+	MFArray<Road> roads;
+
+	Tile tiles[2][256];
+
 	int tileWidth, tileHeight;
 	int imageWidth, imageHeight;
 	int roadWidth, roadHeight;
+
+	MFString tileMap[2];
+	MFString waterMat;
+	MFString roadMat;
 
 	MFMaterial *pTileMap[2];
 	MFMaterial *pWater;
 	MFMaterial *pRoadMap;
 
-	MFArray<TerrainType> terrainTypes;
-	MFArray<Road> roads;
-
-	Tile tiles[2][256];
+	int resourceRefCount;
 
 	// editor stuff
 	uint8 terrainTransitions[16][16];

@@ -28,7 +28,7 @@ public:
 
 	int GetPlayer() const		{ return player; }
 
-	const UnitDefinitions *UnitDefs() const;
+	const UnitDefinitions& UnitDefs() const;
 
 //protected:
 	MapTile *pTile;

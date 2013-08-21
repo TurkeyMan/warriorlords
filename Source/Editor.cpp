@@ -34,15 +34,15 @@ Editor::Editor(MFString mapFilename)
 
 	// buttons
 	const Tileset &tileset = map.Tileset();
-	UnitDefinitions *pUnits = map.UnitDefs();
+	const UnitDefinitions &units = map.UnitDefs();
 
 	MFMaterial *pTileMat[2];
 	pTileMat[0] = tileset.GetTileMaterial(0);
 	pTileMat[1] = tileset.GetTileMaterial(1);
 	MFMaterial *pWater = tileset.GetWaterMaterial();
 	MFMaterial *pRoadMat = tileset.GetRoadMaterial();
-	MFMaterial *pCastleMat = pUnits->GetCastleMaterial();
-	MFMaterial *pMiscMat = pUnits->GetMiscMaterial();
+	MFMaterial *pCastleMat = units.GetCastleMaterial();
+	MFMaterial *pMiscMat = units.GetMiscMaterial();
 
 	TileSize tileSize = tileset.GetTileSize();
 	float texelOffset = MFRenderer_GetTexelCenterOffset();
@@ -112,19 +112,19 @@ Editor::Editor(MFString mapFilename)
 	}
 
 	// castle buttons
-	int raceCount = pUnits->GetNumRaces();
+	int raceCount = units.GetNumRaces();
 
 	for(int a=0; a<raceCount; ++a)
 	{
 		int race = (a + 1) % raceCount;
 		int player = race - 1;
 
-		uvs = pUnits->GetCastleUVs(race, texelOffset);
+		uvs = units.GetCastleUVs(race, texelOffset);
 		brushSelect.AddButton(1, pCastleMat, &uvs, GetPlayerColour(player), (OT_Castle << 16) | (uint16)player, MakeDelegate(this, &Editor::ChooseBrush));
 	}
 
 	// add the merc flag
-	uvs = pUnits->GetFlagUVs(0, texelOffset);
+	uvs = units.GetFlagUVs(0, texelOffset);
 	brushSelect.AddButton(2, pCastleMat, &uvs, GetPlayerColour(-1), OT_Flag << 16, MakeDelegate(this, &Editor::ChooseBrush));
 
 	// add the road
@@ -132,23 +132,23 @@ Editor::Editor(MFString mapFilename)
 	brushSelect.AddButton(2, pRoadMat, &uvs, MFVector::one, OT_Road << 16, MakeDelegate(this, &Editor::ChooseBrush));
 
 	// special buttons
-	int specialCount = pUnits->GetNumSpecials();
+	int specialCount = units.GetNumSpecials();
 	int numPages = 3 + (specialCount-1)/11;
 
 	for(int a=0; a<specialCount; ++a)
 	{
-		uvs = pUnits->GetSpecialUVs(a, texelOffset);
+		uvs = units.GetSpecialUVs(a, texelOffset);
 		brushSelect.AddButton(2 + a/11, pMiscMat, &uvs, MFVector::one, (OT_Place << 16) | a, MakeDelegate(this, &Editor::ChooseBrush));
 	}
 
 	// region buttons
 	for(int a=0; a<10; ++a)
 	{
-		uvs = pUnits->GetFlagUVs(a+1, texelOffset);
+		uvs = units.GetFlagUVs(a+1, texelOffset);
 		brushSelect.AddButton(numPages, pCastleMat, &uvs, GetPlayerColour(a), (OT_Region << 16) | a, MakeDelegate(this, &Editor::ChooseBrush));
 	}
 
-	uvs = pUnits->GetFlagUVs(0, texelOffset);
+	uvs = units.GetFlagUVs(0, texelOffset);
 	brushSelect.AddButton(numPages, pCastleMat, &uvs, GetPlayerColour(-1), (OT_Region << 16) | 15, MakeDelegate(this, &Editor::ChooseBrush));
 }
 
@@ -339,8 +339,8 @@ int Editor::Update()
 		}
 	}
 
-	UnitDefinitions *pUnits = map.UnitDefs();
-	int maxRace = pUnits->GetNumRaces() - 1;
+	const UnitDefinitions &units = map.UnitDefs();
+	int maxRace = units.GetNumRaces() - 1;
 
 	MFDebug_Assert(maxRace <= 12, "Too many races!!");
 
@@ -391,7 +391,7 @@ void Editor::Draw()
 
 	const char *pText = "Race: Template";
 	if(editRace > 0)
-		pText = MFStr("Race: %s", map.UnitDefs()->GetRaceName(editRace));
+		pText = MFStr("Race: %s", map.UnitDefs().GetRaceName(editRace));
 	MFFont_DrawText2(MFFont_GetDebugFont(), 87.f, 10.f, 32.f, MFVector::black, pText);
 	MFFont_DrawText2(MFFont_GetDebugFont(), 85.f, 8.f, 32.f, MFVector::white, pText);
 
@@ -458,25 +458,25 @@ void Editor::ChooseBrush(int button, int buttonID)
 		}
 		case OT_Castle:
 		{
-			UnitDefinitions *pUnits = map.UnitDefs();
-			rect = pUnits->GetCastleUVs(index + 1, texelOffset);
+			const UnitDefinitions &units = map.UnitDefs();
+			rect = units.GetCastleUVs(index + 1, texelOffset);
 			colour = GetPlayerColour(index);
-			pMat = pUnits->GetCastleMaterial();
+			pMat = units.GetCastleMaterial();
 			break;
 		}
 		case OT_Flag:
 		{
-			UnitDefinitions *pUnits = map.UnitDefs();
-			rect = pUnits->GetFlagUVs(index - 1, texelOffset);
-			pMat = pUnits->GetCastleMaterial();
+			const UnitDefinitions &units = map.UnitDefs();
+			rect = units.GetFlagUVs(index - 1, texelOffset);
+			pMat = units.GetCastleMaterial();
 			--brushIndex[brush];
 			break;
 		}
 		case OT_Place:
 		{
-			UnitDefinitions *pUnits = map.UnitDefs();
-			rect = pUnits->GetSpecialUVs(index, texelOffset);
-			pMat = pUnits->GetMiscMaterial();
+			const UnitDefinitions &units = map.UnitDefs();
+			rect = units.GetSpecialUVs(index, texelOffset);
+			pMat = units.GetMiscMaterial();
 			break;
 		}
 		case OT_Road:
@@ -488,12 +488,12 @@ void Editor::ChooseBrush(int button, int buttonID)
 		}
 		case OT_Region:
 		{
-			UnitDefinitions *pUnits = map.UnitDefs();
+			const UnitDefinitions &units = map.UnitDefs();
 			if(index == 15)
 				index = -1;
-			rect = pUnits->GetFlagUVs(index + 1, texelOffset);
+			rect = units.GetFlagUVs(index + 1, texelOffset);
 			colour = GetPlayerColour(index);
-			pMat = pUnits->GetCastleMaterial();
+			pMat = units.GetCastleMaterial();
 			break;
 		}
 	}
@@ -726,18 +726,18 @@ CastleEdit::CastleEdit(Editor &editor)
 	MFRect rect = { 0.5f, 0, 0.25f, 0.25f };
 	unitSelect.AddButton(0, pIcons, &rect, MFVector::one, -1, MakeDelegate(this, &CastleEdit::SetUnit));
 
-	UnitDefinitions *pDefs = editor.Map().UnitDefs();
-	MFMaterial *pUnitMat = pDefs->GetUnitMaterial();
-	int numUnits = pDefs->GetNumUnitTypes();
+	const UnitDefinitions &defs = editor.Map().UnitDefs();
+	MFMaterial *pUnitMat = defs.GetUnitMaterial();
+	int numUnits = defs.GetNumUnitTypes();
 
 	int addedCount = 1;
 	for(int a=0; a<numUnits; ++a)
 	{
 		// don't show heroes
-		if(pDefs->GetUnitType(a) == UT_Hero)
+		if(defs.GetUnitType(a) == UT_Hero)
 			continue;
 
-		rect = pDefs->GetUnitUVs(a, false, texelOffset);
+		rect = defs.GetUnitUVs(a, false, texelOffset);
 		Button *pButton = unitSelect.AddButton(addedCount / 11, pUnitMat, &rect, editor.GetPlayerColour(-1), a, MakeDelegate(this, &CastleEdit::SetUnit));
 		++addedCount;
 	}
@@ -774,21 +774,21 @@ void CastleEdit::Draw()
 	int building = pCastle->GetBuildUnit();
 	if(building > -1)
 	{
-		UnitDefinitions *pUnitDefs = editor.Map().UnitDefs();
-		const UnitDetails &unit = pUnitDefs->GetUnitDetails(building);
+		const UnitDefinitions &unitDefs = editor.Map().UnitDefs();
+		const UnitDetails &unit = unitDefs.GetUnitDetails(building);
 
 		int height = (int)MFFont_GetFontHeight(pFont);
 		MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 5, MFVector::white, unit.name.CStr());
 		if(unit.type == UT_Vehicle)
 		{
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height, MFVector::white, "Mov: %d%s", unit.movement, unit.movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(unit.movementClass)) : "");
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height, MFVector::white, "Mov: %d%s", unit.movement, unit.movementClass > 0 ? MFStr(" (%s)", unitDefs.GetMovementClassName(unit.movementClass)) : "");
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*2, MFVector::white, "Turns: %d", pCastle->buildTime);
 		}
 		else
 		{
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height, MFVector::white, "Type: %s", pUnitDefs->GetArmourClassName(unit.armour));
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*2, MFVector::white, "Atk: %d - %d %s %s", unit.attackMin, unit.attackMax, pUnitDefs->GetWeaponClassName(unit.attack), pUnitDefs->GetAttackTypeName(unit.atkType));
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*3, MFVector::white, "Mov: %d%s", unit.movement, unit.movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(unit.movementClass)) : "");
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height, MFVector::white, "Type: %s", unitDefs.GetArmourClassName(unit.armour));
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*2, MFVector::white, "Atk: %d - %d %s %s", unit.attackMin, unit.attackMax, unitDefs.GetWeaponClassName(unit.attack), unitDefs.GetAttackTypeName(unit.atkType));
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*3, MFVector::white, "Mov: %d%s", unit.movement, unit.movementClass > 0 ? MFStr(" (%s)", unitDefs.GetMovementClassName(unit.movementClass)) : "");
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*4, MFVector::white, "Turns: %d", pCastle->buildTime);
 		}
 	}
@@ -826,9 +826,9 @@ void CastleEdit::Show(Castle *_pCastle)
 
 	pInputManager->PushReceiver(this);
 
-	const UnitDefinitions *pUnitDefs = pCastle->UnitDefs();
+	const UnitDefinitions &unitDefs = pCastle->UnitDefs();
 
-	MFMaterial *pUnitMat = pUnitDefs->GetUnitMaterial();
+	MFMaterial *pUnitMat = unitDefs.GetUnitMaterial();
 	float texelOffset = MFRenderer_GetTexelCenterOffset();
 
 	for(int b=pCastle->details.numBuildUnits; b<4; ++b)
@@ -843,7 +843,7 @@ void CastleEdit::Show(Castle *_pCastle)
 
 		if(unit != -1)
 		{
-			uvs = pUnitDefs->GetUnitUVs(pCastle->details.buildUnits[a].unit, false, texelOffset);
+			uvs = unitDefs.GetUnitUVs(pCastle->details.buildUnits[a].unit, false, texelOffset);
 			pBuildUnits[a]->SetImage(pUnitMat, &uvs, editor.GetPlayerColour(pCastle->player));
 			pBuildUnits[a]->SetOutline(true, pCastle->nextBuild == a ? MFVector::blue : MFVector::white);
 		}
@@ -883,7 +883,7 @@ void CastleEdit::Hide()
 	{
 		pTemplate->buildUnits[a] = pCastle->details.buildUnits[a];
 
-		const UnitDetails &details = pCastle->UnitDefs()->GetUnitDetails(pTemplate->buildUnits[a].unit);
+		const UnitDetails &details = pCastle->UnitDefs().GetUnitDetails(pTemplate->buildUnits[a].unit);
 		pTemplate->buildUnits[a].buildTime -= details.buildTime;
 	}
 }
@@ -907,13 +907,13 @@ void CastleEdit::SelectUnit(int button, int buttonID)
 
 void CastleEdit::SetUnit(int button, int buttonID)
 {
-	UnitDefinitions *pDefs = editor.Map().UnitDefs();
+	const UnitDefinitions &defs = editor.Map().UnitDefs();
 
 	int selected = pCastle->nextBuild;
 
 	// set the new unit
 	BuildUnit &unit = pCastle->details.buildUnits[selected];
-	const UnitDetails &details = pDefs->GetUnitDetails(buttonID);
+	const UnitDetails &details = defs.GetUnitDetails(buttonID);
 	unit.unit = buttonID;
 	unit.buildTime = buttonID >= 0 ? details.buildTime : 0;
 
@@ -923,8 +923,8 @@ void CastleEdit::SetUnit(int button, int buttonID)
 	if(buttonID != -1)
 	{
 		
-		MFMaterial *pUnitMat = pDefs->GetUnitMaterial();
-		MFRect rect = pDefs->GetUnitUVs(buttonID, false, MFRenderer_GetTexelCenterOffset());
+		MFMaterial *pUnitMat = defs.GetUnitMaterial();
+		MFRect rect = defs.GetUnitUVs(buttonID, false, MFRenderer_GetTexelCenterOffset());
 
 		pBuildUnits[selected]->SetImage(pUnitMat, &rect, editor.GetPlayerColour(pCastle->player));
 	}

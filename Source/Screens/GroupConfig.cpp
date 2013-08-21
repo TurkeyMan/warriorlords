@@ -611,7 +611,6 @@ void GroupConfig::Show(Game *_pGame, MapTile *_pTile)
 	Window::Show();
 
 	pTile = _pTile;
-	pDefs = NULL;
 
 	dragUnit = -1;
 	dragGroup = -1;
@@ -638,15 +637,6 @@ void GroupConfig::Show(Game *_pGame, MapTile *_pTile)
 		groups[g].pVehicle = pGroup->GetVehicle();
 
 		groups[g].totalUnits = groups[g].numForward + groups[g].numRear + (groups[g].pVehicle ? 1 : 0);
-	}
-
-	for(int a=0; a<11; ++a)
-	{
-		if(groups[0].pUnits[a])
-		{
-			pDefs = groups[0].pUnits[a]->UnitDefs();
-			break;
-		}
 	}
 }
 

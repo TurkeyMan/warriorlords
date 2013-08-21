@@ -128,7 +128,7 @@ GameState *GameState::NewGame(Lobby *pLobby)
 	// create the GameState object
 	GameState *pGame = new GameState(map);
 
-	UnitDefinitions *pUnitDefs = pGame->map.UnitDefs();
+	const UnitDefinitions &unitDefs = pGame->map.UnitDefs();
 
 	// randomise players
 	int randomMap[16];
@@ -174,7 +174,7 @@ try_again:
 		p.pUser = player.pUser;
 		p.race = players[a].race;
 		p.colourID = player.colour;
-		p.colour = pUnitDefs->GetRaceColour(player.colour);
+		p.colour = unitDefs.GetRaceColour(player.colour);
 	}
 
 	// construct the map
@@ -193,8 +193,8 @@ try_again:
 			int item = -1;
 			do
 			{
-				item = MFRand() % pUnitDefs->GetNumItems();
-				if(!pUnitDefs->GetItem(item).bCollectible)
+				item = MFRand() % unitDefs.GetNumItems();
+				if(!unitDefs.GetItem(item).bCollectible)
 					item = -1;
 			}
 			while(item < 0);
@@ -221,9 +221,9 @@ try_again:
 
 		// choose random hero
 		if(hero == -1)
-			hero = MFRand() % pUnitDefs->GetNumHeroesForRace(player.race);
+			hero = MFRand() % unitDefs.GetNumHeroesForRace(player.race);
 
-		int heroID = pUnitDefs->GetHeroForRace(player.race, hero);
+		int heroID = unitDefs.GetHeroForRace(player.race, hero);
 		MFDebug_Assert(heroID != -1, "Couldn't find hero!");
 
 		for(int a=0; a<pGame->map.GetNumCastles(); ++a)
@@ -239,8 +239,8 @@ try_again:
 				pGame->CreateUnit(heroID, pCastle, NULL);
 
 				// pirates also start with a galleon
-				int pirateID = pUnitDefs->FindRace("Pirates");
-				int galleonID = pUnitDefs->FindUnit("Galleon");
+				int pirateID = unitDefs.FindRace("Pirates");
+				int galleonID = unitDefs.FindUnit("Galleon");
 				if(player.race == pirateID && galleonID >= 0)
 					pGame->CreateUnit(galleonID, pCastle, NULL);
 			}
@@ -437,7 +437,7 @@ void GameState::DestroyGroup(Group *pGroup)
 
 Unit *GameState::CreateUnit(int unit, int player)
 {
-	Unit *pUnit = map.UnitDefs()->CreateUnit(unit, player, this);
+	Unit *pUnit = map.UnitDefs().CreateUnit(unit, player, this);
 
 	if(pUnit->details.type == UT_Hero)
 		players[player].pHero[players[player].numHeroes++] = pUnit;
@@ -449,7 +449,7 @@ Unit *GameState::CreateUnit(int unit, int player)
 
 Group *GameState::CreateUnit(int unit, Castle *pCastle, Place *pPlace)
 {
-	UnitDefinitions *pUnitDefs = map.UnitDefs();
+	const UnitDefinitions &unitDefs = map.UnitDefs();
 
 	// find space in the castle for the unit
 	MapTile *pTile = NULL;
@@ -470,10 +470,10 @@ Group *GameState::CreateUnit(int unit, Castle *pCastle, Place *pPlace)
 		player = pPlace->recruit.pRecruitHero->GetPlayer();
 	}
 
-	const UnitDetails &details = pUnitDefs->GetUnitDetails(unit);
+	const UnitDetails &details = unitDefs.GetUnitDetails(unit);
 	uint32 castleTerrain = map.GetTerrainAt(x, y);
 
-	int movePenalty = pUnitDefs->GetMovementPenalty(details.movementClass, castleTerrain & 0xFF);
+	int movePenalty = unitDefs.GetMovementPenalty(details.movementClass, castleTerrain & 0xFF);
 	if(movePenalty == 0 || movePenalty >= 100)
 	{
 		// the unit can't go on the castle, it must be a boat or something
@@ -499,7 +499,7 @@ Group *GameState::CreateUnit(int unit, Castle *pCastle, Place *pPlace)
 			uint32 terrain = pT->GetTerrain();
 			for(int j=0; j<4; ++j)
 			{
-				if(pUnitDefs->GetMovementPenalty(details.movementClass, terrain & 0xFF) != 0)
+				if(unitDefs.GetMovementPenalty(details.movementClass, terrain & 0xFF) != 0)
 				{
 					if((details.type == UT_Vehicle && pT->GetNumGroups() < 10) || pT->GetNumUnits() < 10)
 					{
@@ -559,7 +559,7 @@ Group *GameState::CreateUnit(int unit, Castle *pCastle, Place *pPlace)
 		pTile->AddGroup(pGroup);
 
 		// HACK: Skeletons build 2 at a time!
-		int skeletonID = pUnitDefs->FindUnit("Skeleton");
+		int skeletonID = unitDefs.FindUnit("Skeleton");
 		if(unit == skeletonID)
 		{
 			if(pGroup->GetTile()->GetNumUnits() < 10)

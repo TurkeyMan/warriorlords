@@ -17,10 +17,10 @@ MapScreen::MapScreen(Game *_pGame)
 
 	// buttons
 	const Tileset &tileSet = pGame->Map().Tileset();
-	UnitDefinitions *pUnits = pGame->Map().UnitDefs();
+	const UnitDefinitions &units = pGame->Map().UnitDefs();
 
 	MFMaterial *pTileMat = tileSet.GetTileMaterial();
-	MFMaterial *pCastleMat = pUnits->GetCastleMaterial();
+	MFMaterial *pCastleMat = units.GetCastleMaterial();
 	MFMaterial *pRoadMat = tileSet.GetRoadMaterial();
 }
 

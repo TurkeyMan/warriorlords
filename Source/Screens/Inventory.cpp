@@ -78,14 +78,14 @@ void Inventory::Show(Game *_pGame, Unit *_pUnit)
 
 	selected = -1;
 
-	const UnitDefinitions *pDefs = pUnit->UnitDefs();
+	const UnitDefinitions &defs = pUnit->UnitDefs();
 	float texelCenter = MFRenderer_GetTexelCenterOffset();
 
 	numItems = pUnit->GetNumItems();
 	for(int a=0; a<numItems; ++a)
 	{
-		MFRect uvs = pDefs->GetItemUVs(pUnit->GetItemID(a), texelCenter);
-		pInventory[a]->SetImage(pDefs->GetItemMaterial(), &uvs);
+		MFRect uvs = defs.GetItemUVs(pUnit->GetItemID(a), texelCenter);
+		pInventory[a]->SetImage(defs.GetItemMaterial(), &uvs);
 		pInputManager->PushReceiver(pInventory[a]);
 	}
 }

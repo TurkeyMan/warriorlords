@@ -40,7 +40,7 @@ void BeginTest(Game *pGame)
 	MFIni *pIni = MFIni::Create("battle_test");
 	MFIniLine *pLine = pIni->GetFirstLine();
 
-	UnitDefinitions *pDefs = pGame->Map().UnitDefs();
+	const UnitDefinitions &defs = pGame->Map().UnitDefs();
 	while(pLine)
 	{
 		if(pLine->IsSection("Group1") || pLine->IsSection("Group2"))
@@ -57,10 +57,10 @@ void BeginTest(Game *pGame)
 					MFIniLine *pUnits = pG->Sub();
 					while(pUnits)
 					{
-						int unit = pDefs->FindUnit(pUnits->GetString(0));
+						int unit = defs.FindUnit(pUnits->GetString(0));
 						if(unit >= 0)
 						{
-							Unit *pUnit = pDefs->CreateUnit(unit, pGroup == pGroup1 ? gBattle : 1-gBattle, &pGame->State());
+							Unit *pUnit = defs.CreateUnit(unit, pGroup == pGroup1 ? gBattle : 1-gBattle, &pGame->State());
 
 							int levels = pUnits->GetInt(1);
 							for(int a=0; a<levels; ++a)
@@ -138,15 +138,15 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 {
 	MFDebug_Log(0, "\nBattle Begins:");
 
-	UnitDefinitions *pUnitDefs = pGame->Map().UnitDefs();
+	const UnitDefinitions &unitDefs = pGame->Map().UnitDefs();
 
 	fg = bg = -1;
 
 	// load portraits
 	int left = pGame->GetPlayerRace(pGroup->GetPlayer());
 	int right = pGame->GetPlayerRace(pTarget->GetPlayer());
-	pPortraits[0] = MFMaterial_Create(MFStr("Portrait-%s", pUnitDefs->GetRaceName(left)));
-	pPortraits[1] = MFMaterial_Create(MFStr("Portrait-%s", pUnitDefs->GetRaceName(right)));
+	pPortraits[0] = MFMaterial_Create(MFStr("Portrait-%s", unitDefs.GetRaceName(left)));
+	pPortraits[1] = MFMaterial_Create(MFStr("Portrait-%s", unitDefs.GetRaceName(right)));
 
 	introTime = 0.f;
 
@@ -182,7 +182,7 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 
 			// load castle
 			int race = pGame->GetPlayerRace(pC->GetPlayer());
-			pCastle = MFMaterial_Create(MFStr("Castle-%s", pUnitDefs->GetRaceName(race)));
+			pCastle = MFMaterial_Create(MFStr("Castle-%s", unitDefs.GetRaceName(race)));
 		}
 		else
 		{
@@ -474,7 +474,7 @@ int Battle::CalculateTargetPreference(BattleUnit *pUnit, BattleUnit *pTarget)
 
 	const UnitDetails &details = pUnit->pUnit->GetDetails();
 	const UnitDetails targetDetails = pTarget->pUnit->GetDetails();
-	float damageMod = pGame->Map().UnitDefs()->GetDamageModifier(details.attack, targetDetails.armour);
+	float damageMod = pGame->Map().UnitDefs().GetDamageModifier(details.attack, targetDetails.armour);
 
 	int maxHP = pTarget->pUnit->GetMaxHP();
 
@@ -491,7 +491,7 @@ int Battle::CalculateDamage(BattleUnit *pUnit, BattleUnit *pTarget)
 	const UnitDetails &targetDetails = pTarget->pUnit->GetDetails();
 
 	// get armor class multiplier
-	float damageMod = pGame->Map().UnitDefs()->GetDamageModifier(details.attack, targetDetails.armour);
+	float damageMod = pGame->Map().UnitDefs().GetDamageModifier(details.attack, targetDetails.armour);
 
 	// get damage
 	float damage = MFRand_Range(pUnit->pUnit->GetMinDamage(), pUnit->pUnit->GetMaxDamage()) * damageMod;
@@ -820,7 +820,7 @@ void DrawHealthBar(int x, int y, int maxHealth, float currentHealth)
 
 void Battle::Draw()
 {
-	UnitDefinitions *pUnitDefs = pGame->Map().UnitDefs();
+	const UnitDefinitions &unitDefs = pGame->Map().UnitDefs();
 
 	MFView_Push();
 	MFMatrix orthoMat, screenMat;
@@ -946,7 +946,7 @@ void Battle::Draw()
 
 			if(unit.bFiring)
 			{
-				const Weapon &weapon = unit.army == unit.pTarget->army ? pUnitDefs->GetWeapon(12) : unit.pUnit->GetWeapon();
+				const Weapon &weapon = unit.army == unit.pTarget->army ? unitDefs.GetWeapon(12) : unit.pUnit->GetWeapon();
 
 				MFRect uvs;
 				weapon.GetUVs(&uvs, fTexWidth, fTexHeight, unit.army == 1, texelOffsetW);

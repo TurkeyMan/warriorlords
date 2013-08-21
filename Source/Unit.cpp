@@ -37,7 +37,7 @@ Unit::~Unit()
 		pGroup->RemoveUnit(this);
 }
 
-const UnitDefinitions *Unit::UnitDefs() const
+const UnitDefinitions& Unit::UnitDefs() const
 {
 	return gameState.Map().UnitDefs();
 }
@@ -57,15 +57,15 @@ UnitRender Unit::Render(float x, float y, bool bFlip, float alpha)
 
 bool Unit::IsType(MFString target) const
 {
-	const UnitDefinitions *pDefs = UnitDefs();
+	const UnitDefinitions &defs = UnitDefs();
 	return (GetType() == UT_Unit && target == "units") ||
 			(GetType() == UT_Hero && target == "heroes") ||
 			(GetType() == UT_Vehicle && target == "vehicles") ||
 			target == GetName() ||
-			target == pDefs->GetRaceName(GetRace()) ||
-			target == pDefs->GetMovementClassName(GetDetails().movementClass) ||
-			target == pDefs->GetUnitTypeName(GetDetails().atkType) ||
-			target == pDefs->GetArmourClassName(GetDetails().armour);
+			target == defs.GetRaceName(GetRace()) ||
+			target == defs.GetMovementClassName(GetDetails().movementClass) ||
+			target == defs.GetUnitTypeName(GetDetails().atkType) ||
+			target == defs.GetArmourClassName(GetDetails().armour);
 }
 
 int Unit::GetRace() const
@@ -83,7 +83,7 @@ float Unit::GetSpecialAttack(MFString special) const
 	float percent = 0.f;
 	for(size_t a=0; a<items.size(); ++a)
 	{
-		const Item &item = UnitDefs()->GetItem(items[a]);
+		const Item &item = UnitDefs().GetItem(items[a]);
 
 		Unit *pHero = pGroup->GetHero();
 		percent += item.GetSpecial(this, pHero, special);
@@ -93,7 +93,7 @@ float Unit::GetSpecialAttack(MFString special) const
 
 int Unit::GetTerrainPenalty(int terrainType) const
 {
-	int penalty = UnitDefs()->GetMovementPenalty(details.movementClass, terrainType);
+	int penalty = UnitDefs().GetMovementPenalty(details.movementClass, terrainType);
 	return ModStatInt(penalty >> 1, Item::MT_Terrain, terrainType) << 1;
 }
 

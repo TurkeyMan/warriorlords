@@ -8,6 +8,8 @@
 #include "Fuji/MFTexture.h"
 #include "Fuji/MFPrimitive.h"
 
+static int gUnitDefResource = -1;
+
 void Item::StatMod::Parse(const char *pString)
 {
 	value = 0.f;
@@ -190,10 +192,101 @@ bool UnitDefinitions::GetDetails(MFString unitsetName, UnitSetDetails *pDetails)
 	return true;
 }
 */
+void UnitDefinitions::Init()
+{
+	gUnitDefResource = MFResource_Register("UnitDefinitions", &UnitDefinitions::Destroy);
+}
+
+UnitDefinitions *UnitDefinitions::Create(MFString unitSetName, int numTerrainTypes)
+{
+	UnitDefinitions *pUnitDefs = (UnitDefinitions*)MFResource_Find(unitSetName.GetHash());
+	if(!pUnitDefs)
+	{
+		pUnitDefs = new UnitDefinitions(unitSetName, numTerrainTypes);
+
+		MFResource_AddResource(pUnitDefs, gUnitDefResource, unitSetName.GetHash(), pUnitDefs->name.CStr());
+	}
+	return pUnitDefs;
+}
+
+int UnitDefinitions::AddRef()
+{
+	return MFResource_AddRef(this);
+}
+
+int UnitDefinitions::Release()
+{
+	return MFResource_Release(this);
+}
+
+void UnitDefinitions::Destroy(MFResource *pRes)
+{
+	UnitDefinitions *pUnitDefs = (UnitDefinitions*)pRes;
+	delete pUnitDefs;
+}
+
+void UnitDefinitions::LoadResources()
+{
+	if(resourceRefCount == 0)
+	{
+		pUnitMat = MFMaterial_Create(unitMat.CStr());
+		pHeadMat = MFMaterial_Create(headMat.CStr());
+		pCastleMat = MFMaterial_Create(castleMat.CStr());
+		pItemMat = MFMaterial_Create(itemMat.CStr());
+		pMiscMat = MFMaterial_Create(miscMat.CStr());
+		pRanks = MFMaterial_Create(rankMat.CStr());
+
+		if(pUnitMat)
+		{
+			MFTexture *pTex = MFMaterial_GetParameterT(pUnitMat, MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
+			if(pTex)
+				MFTexture_GetTextureDimensions(pTex, &unitMapWidth, &unitMapHeight);
+		}
+
+		if(pCastleMat)
+		{
+			MFTexture *pTex = MFMaterial_GetParameterT(pCastleMat, MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
+			if(pTex)
+				MFTexture_GetTextureDimensions(pTex, &castleMapWidth, &castleMapHeight);
+		}
+
+		if(pItemMat)
+		{
+			MFTexture *pTex = MFMaterial_GetParameterT(pItemMat, MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
+			if(pTex)
+				MFTexture_GetTextureDimensions(pTex, &itemMapWidth, &itemMapHeight);
+		}
+
+		if(pMiscMat)
+		{
+			MFTexture *pTex = MFMaterial_GetParameterT(pMiscMat, MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
+			if(pTex)
+				MFTexture_GetTextureDimensions(pTex, &miscMapWidth, &miscMapHeight);
+		}
+	}
+
+	++resourceRefCount;
+}
+
+void UnitDefinitions::ReleaseResources()
+{
+	if(--resourceRefCount == 0)
+	{
+		MFMaterial_Release(pUnitMat);
+		MFMaterial_Release(pHeadMat);
+		MFMaterial_Release(pCastleMat);
+		MFMaterial_Release(pItemMat);
+		MFMaterial_Release(pMiscMat);
+		MFMaterial_Release(pRanks);
+	}
+}
+
 UnitDefinitions::UnitDefinitions(MFString unitsetName, int numTerrainTypes)
 {
 	MFIni *pIni = MFIni::Create(unitsetName.CStr());
 	MFDebug_Assert(pIni, "Can't load unit defs!");
+
+	resourceRefCount = 0;
 
 	pUnitMat = NULL;
 	pHeadMat = NULL;
@@ -202,9 +295,7 @@ UnitDefinitions::UnitDefinitions(MFString unitsetName, int numTerrainTypes)
 	unitMapWidth = unitMapHeight = 0;
 	castleMapWidth = castleMapHeight = 0;
 
-	numTerrainTypes = numTerrainTypes;
-
-	pRanks = MFMaterial_Create("UnitRanks");
+	rankMat = "UnitRanks";
 
 	MFIniLine *pLine = pIni->GetFirstLine();
 	while(pLine)
@@ -225,51 +316,23 @@ UnitDefinitions::UnitDefinitions(MFString unitsetName, int numTerrainTypes)
 		}
 		else if(pLine->IsString(0, "detail_map"))
 		{
-			pUnitMat = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
-
-			if(pUnitMat)
-			{
-				MFTexture *pTex = MFMaterial_GetParameterT(pUnitMat, MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
-				if(pTex)
-					MFTexture_GetTextureDimensions(pTex, &unitMapWidth, &unitMapHeight);
-			}
+			unitMat = MFStr_TruncateExtension(pLine->GetString(1));
 		}
 		else if(pLine->IsString(0, "heads_map"))
 		{
-			pHeadMat = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
+			headMat = MFStr_TruncateExtension(pLine->GetString(1));
 		}
 		else if(pLine->IsString(0, "castle_map"))
 		{
-			pCastleMat = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
-
-			if(pCastleMat)
-			{
-				MFTexture *pTex = MFMaterial_GetParameterT(pCastleMat, MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
-				if(pTex)
-					MFTexture_GetTextureDimensions(pTex, &castleMapWidth, &castleMapHeight);
-			}
+			castleMat = MFStr_TruncateExtension(pLine->GetString(1));
 		}
 		else if(pLine->IsString(0, "item_map"))
 		{
-			pItemMat = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
-
-			if(pItemMat)
-			{
-				MFTexture *pTex = MFMaterial_GetParameterT(pItemMat, MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
-				if(pTex)
-					MFTexture_GetTextureDimensions(pTex, &itemMapWidth, &itemMapHeight);
-			}
+			itemMat = MFStr_TruncateExtension(pLine->GetString(1));
 		}
 		else if(pLine->IsString(0, "misc_map"))
 		{
-			pMiscMat = MFMaterial_Create(MFStr_TruncateExtension(pLine->GetString(1)));
-
-			if(pMiscMat)
-			{
-				MFTexture *pTex = MFMaterial_GetParameterT(pMiscMat, MFMatStandard_Texture, MFMatStandard_Tex_DifuseMap);
-				if(pTex)
-					MFTexture_GetTextureDimensions(pTex, &miscMapWidth, &miscMapHeight);
-			}
+			miscMat = MFStr_TruncateExtension(pLine->GetString(1));
 		}
 		else if(pLine->IsString(0, "tile_width"))
 		{
@@ -497,6 +560,7 @@ UnitDefinitions::UnitDefinitions(MFString unitsetName, int numTerrainTypes)
 						movementClasses.resize(MFMax(movClass + 1, movementClasses.size()));
 
 						movementClasses[movClass].name = pMovement->GetString(1);
+
 						for(int a=0; a<numTerrainTypes; ++a)
 							movementClasses[movClass].movementPenalty.push(pMovement->GetInt(2 + a));
 
@@ -663,14 +727,11 @@ UnitDefinitions::UnitDefinitions(MFString unitsetName, int numTerrainTypes)
 
 UnitDefinitions::~UnitDefinitions()
 {
-	if(pUnitMat)
-		MFMaterial_Release(pUnitMat);
-	if(pHeadMat)
-		MFMaterial_Release(pHeadMat);
-	if(pCastleMat)
-		MFMaterial_Release(pCastleMat);
-	if(pRanks)
-		MFMaterial_Release(pRanks);
+	if(resourceRefCount > 0)
+	{
+		resourceRefCount = 1;
+		ReleaseResources();
+	}
 }
 
 MFVector UnitDefinitions::GetRaceColour(int race) const

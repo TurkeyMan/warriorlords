@@ -231,6 +231,18 @@ Map::~Map()
 	mapTemplate.Release();
 }
 
+void Map::LoadResources()
+{
+	mapTemplate.pTiles->LoadResources();
+	mapTemplate.pUnits->LoadResources();
+}
+
+void Map::ReleaseResources()
+{
+	mapTemplate.pTiles->ReleaseResources();
+	mapTemplate.pUnits->ReleaseResources();
+}
+
 void Map::ConstructMap(int race)
 {
 	// check race has map defined
@@ -259,9 +271,9 @@ void Map::ConstructMap(int race)
 
 			Place &place = places.push();
 			place.id = placeId;
-			place.pUnitDefs = UnitDefs();
+			place.pUnitDefs = &UnitDefs();
 			place.pTile = &pMap[a];
-			place.pSpecial = &UnitDefs()->GetSpecial(pMap[a].index);
+			place.pSpecial = &UnitDefs().GetSpecial(pMap[a].index);
 
 			// THIS MUST COME AFTER pSpecial IS ASSIGNED!
 			pMap[a].index = placeId;
@@ -314,7 +326,7 @@ void Map::ConstructMap(int race)
 
 				for(int a=0; a<castle.details.numBuildUnits; ++a)
 				{
-					const UnitDetails &unitDetails = UnitDefs()->GetUnitDetails(castle.details.buildUnits[a].unit);
+					const UnitDetails &unitDetails = UnitDefs().GetUnitDetails(castle.details.buildUnits[a].unit);
 					castle.details.buildUnits[a].buildTime += unitDetails.buildTime;
 				}
 

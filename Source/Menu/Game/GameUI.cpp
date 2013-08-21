@@ -337,8 +337,8 @@ void GameUI::CastleMenu::UpdateUnitInfo()
 
 	if(buildUnit >= 0)
 	{
-		const UnitDefinitions *pUnitDefs = pCastle->UnitDefs();
-		const UnitDetails &unit = pUnitDefs->GetUnitDetails(buildUnit);
+		const UnitDefinitions &unitDefs = pCastle->UnitDefs();
+		const UnitDetails &unit = unitDefs.GetUnitDetails(buildUnit);
 
 		pUnitName->SetText(unit.name);
 
@@ -346,7 +346,7 @@ void GameUI::CastleMenu::UpdateUnitInfo()
 		{
 			pUnitType->SetVisible(HKWidget::Gone);
 			pUnitAtk->SetVisible(HKWidget::Gone);
-			pUnitMov->SetText(MFString::Format("Mov: %d%s", unit.movement, unit.movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(unit.movementClass).CStr()) : ""));
+			pUnitMov->SetText(MFString::Format("Mov: %d%s", unit.movement, unit.movementClass > 0 ? MFStr(" (%s)", unitDefs.GetMovementClassName(unit.movementClass).CStr()) : ""));
 			pUnitTurns->SetText(MFString::Format("Turns: %d", pCastle->BuildTimeRemaining()));
 
 			pTypeImage->SetVisible(HKWidget::Gone);
@@ -355,9 +355,9 @@ void GameUI::CastleMenu::UpdateUnitInfo()
 		{
 			pUnitType->SetVisible(HKWidget::Visible);
 			pUnitAtk->SetVisible(HKWidget::Visible);
-			pUnitType->SetText(MFString::Format("Type: %s", pUnitDefs->GetArmourClassName(unit.armour).CStr()));
-			pUnitAtk->SetText(MFString::Format("Atk: %d - %d (%s%s)", unit.attackMin, unit.attackMax, unit.AttackSpeedDescription(), pUnitDefs->GetAttackTypeName(unit.atkType).CStr()));
-			pUnitMov->SetText(MFString::Format("Mov: %d%s", unit.movement, unit.movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(unit.movementClass).CStr()) : ""));
+			pUnitType->SetText(MFString::Format("Type: %s", unitDefs.GetArmourClassName(unit.armour).CStr()));
+			pUnitAtk->SetText(MFString::Format("Atk: %d - %d (%s%s)", unit.attackMin, unit.attackMax, unit.AttackSpeedDescription(), unitDefs.GetAttackTypeName(unit.atkType).CStr()));
+			pUnitMov->SetText(MFString::Format("Mov: %d%s", unit.movement, unit.movementClass > 0 ? MFStr(" (%s)", unitDefs.GetMovementClassName(unit.movementClass).CStr()) : ""));
 			pUnitTurns->SetText(MFString::Format("Turns: %d", pCastle->BuildTimeRemaining()));
 
 			pTypeImage->SetVisible(HKWidget::Visible);
@@ -399,13 +399,13 @@ void GameUI::RecruitMenu::Show(Place *pPlace, Unit *pHero)
 		pPlace->recruit.turnsRemaining = 0;
 	}
 
-	UnitDefinitions *pUnitDefs = pGame->Map().UnitDefs();
+	const UnitDefinitions &unitDefs = pGame->Map().UnitDefs();
 
-	int numUnits = pUnitDefs->GetNumUnitTypes();
+	int numUnits = unitDefs.GetNumUnitTypes();
 	int numHeroes = 0;
 	for(int a=0; a<numUnits; ++a)
 	{
-		const UnitDetails &unit = pUnitDefs->GetUnitDetails(a);
+		const UnitDetails &unit = unitDefs.GetUnitDetails(a);
 
 		if(unit.type == UT_Hero && (!pGame->PlayerHasHero(player, a) && (unit.race == 0 || unit.race == pGame->GetPlayerRace(player))))
 		{
@@ -438,12 +438,12 @@ void GameUI::RecruitMenu::UpdateHeroInfo()
 	if(selected < 0)
 		return;
 
-	UnitDefinitions *pUnitDefs = pUI->pGame->Map().UnitDefs();
-	const UnitDetails &unit = pUnitDefs->GetUnitDetails(selected);
+	const UnitDefinitions &unitDefs = pUI->pGame->Map().UnitDefs();
+	const UnitDetails &unit = unitDefs.GetUnitDetails(selected);
 
 	pHeroName->SetText(unit.name);
-	pHeroAtk->SetText(MFString::Format("Atk: %d - %d (%s%s)", unit.attackMin, unit.attackMax, unit.AttackSpeedDescription(), pUnitDefs->GetAttackTypeName(unit.atkType)));
-	pHeroMov->SetText(MFString::Format("Mov: %d%s", unit.movement, unit.movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(unit.movementClass)) : ""));
+	pHeroAtk->SetText(MFString::Format("Atk: %d - %d (%s%s)", unit.attackMin, unit.attackMax, unit.AttackSpeedDescription(), unitDefs.GetAttackTypeName(unit.atkType)));
+	pHeroMov->SetText(MFString::Format("Mov: %d%s", unit.movement, unit.movementClass > 0 ? MFStr(" (%s)", unitDefs.GetMovementClassName(unit.movementClass)) : ""));
 	pHeroTurns->SetText(MFString::Format("Turns: %d", unit.buildTime));
 
 	pTypeImage->SetProperty("background_image", unit.atkType == 0 ? "Melee" : "Ranged");

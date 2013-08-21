@@ -54,7 +54,7 @@ bool UnitConfig::DrawContent()
 
 	pGame->DrawLine(window.x + 16, bottom.y - 5, window.x + window.width - 16, bottom.y - 5);
 
-	const UnitDefinitions *pDefs = pUnit->UnitDefs();
+	const UnitDefinitions &defs = pUnit->UnitDefs();
 	const UnitDetails &details = pUnit->GetDetails();
 
 	
@@ -71,10 +71,10 @@ bool UnitConfig::DrawContent()
 	int height = (int)MFFont_GetFontHeight(pFont);
 	float tWidth = MFFont_GetStringWidth(pFont, pUnit->GetName().CStr(), (float)height);
 	MFFont_BlitText(pFont, (int)top.x + ((int)top.width / 2) - (int)(tWidth*0.5f), (int)top.y + 5, MFVector::yellow, pUnit->GetName().CStr());
-	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height, MFVector::white, "Type: %s", pDefs->GetArmourClassName(details.armour).CStr());
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height, MFVector::white, "Type: %s", defs.GetArmourClassName(details.armour).CStr());
 	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*2, MFVector::white, "HP: %d/%d", (int)(pUnit->GetMaxHP() * pUnit->GetHealth()), pUnit->GetMaxHP());
-	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*3, MFVector::white, "Atk: %d - %d %s (%s%s)", (int)pUnit->GetMinDamage(), (int)pUnit->GetMaxDamage(), attackIcon[details.atkType], pUnit->AttackSpeedDescription(), pDefs->GetWeaponClassName(details.attack).CStr());
-	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*4, MFVector::white, "Mov: %g/%d%s%s", pUnit->MoveRemaining(), pUnit->GetMaxMovement(), details.movementClass == 2 ? " £" : "", details.movementClass > 0 ? MFStr(" (%s)", pDefs->GetMovementClassName(details.movementClass).CStr()) : "");
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*3, MFVector::white, "Atk: %d - %d %s (%s%s)", (int)pUnit->GetMinDamage(), (int)pUnit->GetMaxDamage(), attackIcon[details.atkType], pUnit->AttackSpeedDescription(), defs.GetWeaponClassName(details.attack).CStr());
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*4, MFVector::white, "Mov: %g/%d%s%s", pUnit->MoveRemaining(), pUnit->GetMaxMovement(), details.movementClass == 2 ? " £" : "", details.movementClass > 0 ? MFStr(" (%s)", defs.GetMovementClassName(details.movementClass).CStr()) : "");
 
 	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height, MFVector::white, "Victories: %d", pUnit->GetVictories());
 	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height*2, MFVector::white, "Kills: %d", pUnit->GetKills());

@@ -151,7 +151,7 @@ public:
 	int NextPlayer();
 
 	int PlayerRace(int player) const			{ return player == -1 ? 0 : players[player].race; }
-	MFVector PlayerColour(int player) const		{ return player == -1 ? Map().UnitDefs()->GetRaceColour(0) : players[player].colour; }
+	MFVector PlayerColour(int player) const		{ return player == -1 ? Map().UnitDefs().GetRaceColour(0) : players[player].colour; }
 	int PlayerHeroCount(int player) const		{ return players[player].numHeroes; }
 	Unit *PlayerHero(int player, int hero)		{ return players[player].pHero[hero]; }
 	bool PlayerHasHero(int player, int hero) const;

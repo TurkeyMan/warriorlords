@@ -29,8 +29,6 @@ class Game
 	friend class MapScreen;
 	friend class History;
 public:
-	static Game *CreateEditor(MFString map);
-
 	Game(GameState &state);
 	~Game();
 

@@ -2,6 +2,8 @@
 #if !defined(_UNITDEFS_H)
 #define _UNITDEFS_H
 
+#include "Fuji/MFResource.h"
+
 class GameState;
 class Unit;
 
@@ -148,11 +150,18 @@ struct UnitDetails
 	const char *AttackSpeedDescription() const;
 };
 
-class UnitDefinitions
+class UnitDefinitions : public MFResource
 {
 public:
-	UnitDefinitions(MFString unitSetName, int numTerrainTypes);
-	~UnitDefinitions();
+	static void Init();
+
+	static UnitDefinitions *Create(MFString unitSetName, int numTerrainTypes);
+
+	int AddRef();
+	int Release();
+
+	void LoadResources();
+	void ReleaseResources();
 
 	inline int GetNumRaces() const { return races.size(); }
 	inline MFString GetRaceName(int race) const { return races[race].name; }
@@ -213,6 +222,11 @@ public:
 	inline MFMaterial *GetRanksMaterial() const { return pRanks; }
 
 protected:
+	UnitDefinitions(MFString unitSetName, int numTerrainTypes);
+	~UnitDefinitions();
+
+	static void Destroy(MFResource *pRes);
+
 	struct WeaponClass
 	{
 		MFString name;
@@ -235,20 +249,6 @@ protected:
 
 	MFString name;
 
-	MFMaterial *pUnitMat;
-	MFMaterial *pHeadMat;
-	MFMaterial *pCastleMat;
-	MFMaterial *pItemMat;
-	MFMaterial *pMiscMat;
-	MFMaterial *pRanks;
-
-	int tileWidth, tileHeight;
-	int itemWidth, itemHeight;
-	int unitMapWidth, unitMapHeight;
-	int castleMapWidth, castleMapHeight;
-	int itemMapWidth, itemMapHeight;
-	int miscMapWidth, miscMapHeight;
-
 	MFArray<Race> races;
 	MFArray<UnitDetails> units;
 	MFArray<Special> specials;
@@ -258,10 +258,32 @@ protected:
 	MFArray<ArmourClass> defenceClasses;
 
 	MFArray<MovementClass> movementClasses;
-	int numTerrainTypes;
 
 	MFArray<Weapon> weapons;
 	MFArray<Item> items;
+
+	int tileWidth, tileHeight;
+	int itemWidth, itemHeight;
+	int unitMapWidth, unitMapHeight;
+	int castleMapWidth, castleMapHeight;
+	int itemMapWidth, itemMapHeight;
+	int miscMapWidth, miscMapHeight;
+
+	MFString unitMat;
+	MFString headMat;
+	MFString castleMat;
+	MFString itemMat;
+	MFString miscMat;
+	MFString rankMat;
+
+	MFMaterial *pUnitMat;
+	MFMaterial *pHeadMat;
+	MFMaterial *pCastleMat;
+	MFMaterial *pItemMat;
+	MFMaterial *pMiscMat;
+	MFMaterial *pRanks;
+
+	int resourceRefCount;
 };
 
 #endif

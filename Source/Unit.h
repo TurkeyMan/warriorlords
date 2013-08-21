@@ -63,8 +63,8 @@ public:
 	Unit(GameState &gameState)			: gameState(gameState) {}
 	~Unit();
 
-	GameState &GameState()				{ return gameState; }
-	const UnitDefinitions *UnitDefs() const;
+	GameState& GameState()				{ return gameState; }
+	const UnitDefinitions& UnitDefs() const;
 
 	UnitRender Render(float x, float y, bool bFlip = false, float alpha = 1.f);
 
@@ -91,7 +91,7 @@ public:
 	float GetSpecialAttack(MFString pSpecial) const;
 
 	BattlePlan *GetBattlePlan()			{ return &plan; }
-	const Weapon& GetWeapon() const		{ return UnitDefs()->GetWeapon(details.weapon); }
+	const Weapon& GetWeapon() const		{ return UnitDefs().GetWeapon(details.weapon); }
 
 	int GetHP() const					{ return life; }
 	void SetHP(int hp)					{ life = hp; }
@@ -105,7 +105,7 @@ public:
 	void AddVictory()					{ ++victories; UpdateStats(); }
 	void SetKills(int numKills)			{ kills = numKills; }
 
-	bool IsRanged() const				{ return UnitDefs()->IsRanged(details.atkType); }
+	bool IsRanged() const				{ return UnitDefs().IsRanged(details.atkType); }
 
 	void SetMovement(int _movement)		{ movement = _movement; }
 	int GetMovement() const				{ return movement; }
@@ -113,7 +113,7 @@ public:
 	int GetTerrainPenalty(int terrainType) const;
 	void GetTerrainPenalties(int *pTerrainPenalties) const;
 	int GetMovementPenalty(MapTile *pTile, int *pTerrainType = NULL) const;
-	bool HasRoadWalk() const			{ return UnitDefs()->HasRoadWalk(details.movementClass); }
+	bool HasRoadWalk() const			{ return UnitDefs().HasRoadWalk(details.movementClass); }
 	void Move(int penalty)				{ movement -= penalty; }
 
 	void Restore();
@@ -121,7 +121,7 @@ public:
 
 	int GetNumItems() const				{ return items.size(); }
 	int GetItemID(int item) const		{ return items[item]; }
-	const Item& GetItem(int item) const	{ return UnitDefs()->GetItem(items[item]); }
+	const Item& GetItem(int item) const	{ return UnitDefs().GetItem(items[item]); }
 	bool AddItem(int item);
 
 	// stats
@@ -177,7 +177,7 @@ public:
 	int GetRenderID() const				{ return pSpecial->index; }
 
 //protected:
-	UnitDefinitions *pUnitDefs;
+	const UnitDefinitions *pUnitDefs;
 	const Special *pSpecial;
 
 	MapTile *pTile;

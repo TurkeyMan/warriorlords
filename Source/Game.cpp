@@ -31,6 +31,9 @@ Game::Game(GameState &state)
 	bMoving = false;
 	countdown = 0.f;
 
+	// load game resources
+	state.Map().LoadResources();
+
 	// create the GameUI
 	pGameUI = new GameUI(this);
 
@@ -51,38 +54,15 @@ Game::Game(GameState &state)
 	pBattle = new Battle(this);
 }
 
-Game *Game::CreateEditor(MFString map)
-{
-	MFDebug_Assert(false, "Not done!");
-
-	MapTemplate *pMapTemplate = MapTemplate::Create(map);
-	MFDebug_Assert(pMapTemplate, "!");
-
-	GameState *pState = new GameState(*pMapTemplate);
-
-	// construct the map
-	pState->map.ConstructMap(0);
-
-	// setup players in edit positions
-	int numRaces = pState->map.UnitDefs()->GetNumRaces() - 1;
-	for(int a=0; a<numRaces; ++a)
-	{
-		::Player &p = pState->players.push();
-		p.race = a + 1;
-		p.colour = pState->map.UnitDefs()->GetRaceColour(a + 1);
-	}
-
-	Game *pGame = new Game(*pState);
-
-	return pGame;
-}
-
 Game::~Game()
 {
 	if(pBattle)
 		delete pBattle;
 	if(pMapScreen)
 		delete pMapScreen;
+
+	MFMaterial_Release(pWindow);
+	MFMaterial_Release(pHorizLine);
 
 	MFMaterial_Release(pIcons);
 
@@ -91,11 +71,13 @@ Game::~Game()
 	MFFont_Destroy(pSmallNumbersFont);
 
 	delete pGameUI;
+
+	state.Map().ReleaseResources();
 }
 
 void Game::Show()
 {
-	UnitButton::SetUnitDefs(Map().UnitDefs());
+	UnitButton::SetUnitDefs(&Map().UnitDefs());
 
 	Screen::SetNext(pMapScreen);
 	pGameUI->Show();
@@ -434,7 +416,7 @@ bool Game::HandleInputEvent(HKInputManager &manager, const HKInputManager::Event
 											CommitPending(pSelection);
 											state.History().PushSearch(pHero, pPlace);
 
-											const Item &item = Map().UnitDefs()->GetItem(pPlace->ruin.item);
+											const Item &item = Map().UnitDefs().GetItem(pPlace->ruin.item);
 											pMessage = MFStr("You search the ruin and find\n%s", item.name.CStr());
 										}
 										else
@@ -1442,11 +1424,11 @@ void Game::DrawUnits(const MFArray<UnitRender> &units, float scale, float texelO
 	if(units.size() == 0)
 		return;
 
-	UnitDefinitions *pUnitDefs = Map().UnitDefs();
+	const UnitDefinitions &unitDefs = Map().UnitDefs();
 
 	int numRanked = 0;
 
-	MFMaterial_SetMaterial(bHead ? pUnitDefs->GetUnitHeadsMaterial() : pUnitDefs->GetUnitMaterial());
+	MFMaterial_SetMaterial(bHead ? unitDefs.GetUnitHeadsMaterial() : unitDefs.GetUnitMaterial());
 
 	MFPrimitive(PT_TriList);
 	MFBegin(6*units.size());
@@ -1454,14 +1436,14 @@ void Game::DrawUnits(const MFArray<UnitRender> &units, float scale, float texelO
 	for(size_t u=0; u<units.size(); ++u)
 	{
 		const UnitRender &unit = units[u];
-		const UnitDetails &def = pUnitDefs->GetUnitDetails(unit.unit);
+		const UnitDetails &def = unitDefs.GetUnitDetails(unit.unit);
 
 		if(unit.rank > 0)
 			++numRanked;
 
 		MFSetColourV(MakeVector(GetPlayerColour(unit.player), unit.alpha));
 
-		MFRect uvs = pUnitDefs->GetUnitUVs(unit.unit, unit.bFlip, texelOffset);
+		MFRect uvs = unitDefs.GetUnitUVs(unit.unit, unit.bFlip, texelOffset);
 
 		float depth = 0.f;//bHead ? 0.f : (1000.f - unit.y) / 1000.f;
 
@@ -1486,7 +1468,7 @@ void Game::DrawUnits(const MFArray<UnitRender> &units, float scale, float texelO
 
 	if(bRank && numRanked != 0)
 	{
-		MFMaterial_SetMaterial(pUnitDefs->GetRanksMaterial());
+		MFMaterial_SetMaterial(unitDefs.GetRanksMaterial());
 
 		MFPrimitive(PT_TriList);
 		MFBegin(6*numRanked);
@@ -1497,11 +1479,11 @@ void Game::DrawUnits(const MFArray<UnitRender> &units, float scale, float texelO
 			if(unit.rank == 0)
 				continue;
 
-			const UnitDetails &def = pUnitDefs->GetUnitDetails(unit.unit);
+			const UnitDetails &def = unitDefs.GetUnitDetails(unit.unit);
 
 			MFSetColour(1.f, 1.f, 1.f, unit.alpha);
 
-			MFRect uvs = pUnitDefs->GetBadgeUVs(unit.rank, texelOffset);
+			MFRect uvs = unitDefs.GetBadgeUVs(unit.rank, texelOffset);
 
 			float depth = 0.f;//bHead ? 0.f : (1000.f - unit.y) / 1000.f;
 

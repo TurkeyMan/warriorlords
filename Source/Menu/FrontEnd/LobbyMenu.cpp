@@ -74,18 +74,18 @@ void LobbyMenu::Show(Lobby *pGame)
 	raceList.push(item);
 
 	const MapTemplate &map = pLobby->Map();
-	const UnitDefinitions *pUnitDefs = map.UnitDefs();
-	for(int a=1; a<pUnitDefs->GetNumRaces(); ++a)
+	const UnitDefinitions &unitDefs = map.UnitDefs();
+	for(int a=1; a<unitDefs.GetNumRaces(); ++a)
 	{
 		if(map.IsRacePresent(a))
 		{
 			ListItem item;
-			item.name = pUnitDefs->GetRaceName(a);
+			item.name = unitDefs.GetRaceName(a);
 			item.id = a;
 			raceList.push(item);
 		}
 
-		colourList.push(pUnitDefs->GetRaceColour(a));
+		colourList.push(unitDefs.GetRaceColour(a));
 	}
 
 	// set the lobby title
@@ -187,10 +187,10 @@ void LobbyMenu::RepopulateHeroes(int player, int race, int hero)
 	players[player].heroList.push(i);
 
 	// find and populate heroes
-	const UnitDefinitions *pUnitDefs = pLobby->Map().UnitDefs();
-	for(int b=0; b<pUnitDefs->GetNumUnitTypes(); ++b)
+	const UnitDefinitions &unitDefs = pLobby->Map().UnitDefs();
+	for(int b=0; b<unitDefs.GetNumUnitTypes(); ++b)
 	{
-		const UnitDetails &unit = pUnitDefs->GetUnitDetails(b);
+		const UnitDetails &unit = unitDefs.GetUnitDetails(b);
 		if(unit.type == UT_Hero && (unit.race == race || unit.race == 0))
 		{
 			ListItem i;
