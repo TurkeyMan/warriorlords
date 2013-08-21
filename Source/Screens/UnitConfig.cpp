@@ -6,8 +6,9 @@
 
 void DrawHealthBar(int x, int y, int maxHealth, float currentHealth);
 
-UnitConfig::UnitConfig()
-: Window(true)
+UnitConfig::UnitConfig(Game *pGame)
+: Window(pGame, true)
+, inventory(pGame)
 {
 	DivideRect_Vert(window, 128+10, margin, &top, &bottom, true);
 
@@ -51,28 +52,29 @@ bool UnitConfig::DrawContent()
 	if(inventory.Draw())
 		return true;
 
-	Game::GetCurrent()->DrawLine(window.x + 16, bottom.y - 5, window.x + window.width - 16, bottom.y - 5);
+	pGame->DrawLine(window.x + 16, bottom.y - 5, window.x + window.width - 16, bottom.y - 5);
 
-	UnitDefinitions *pDefs = pUnit->GetDefs();
-	UnitDetails *pDetails = pUnit->GetDetails();
+	const UnitDefinitions *pDefs = pUnit->UnitDefs();
+	const UnitDetails &details = pUnit->GetDetails();
 
-	pUnit->Draw(top.x + 32.f, top.y + 32.f);
-	if(pDefs)
-		pDefs->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset(), false, true);
+	
+	MFArray<UnitRender> units;
+	units.push() = pUnit->Render(top.x + 32.f, top.y + 32.f);
+	pGame->DrawUnits(units, 64.f, MFRenderer_GetTexelCenterOffset(), false, true);
 
 	// do we want to see this?
 //	DrawHealthBar((int)(unit.x + 32.f), (int)(unit.y + 32.f), pUnit->GetMaxHP(), pUnit->GetHealth());
 
 	const char *attackIcon[] = { "¥", "¤" };
 
-	MFFont *pFont = Game::GetCurrent()->GetTextFont();
+	MFFont *pFont = pGame->GetTextFont();
 	int height = (int)MFFont_GetFontHeight(pFont);
-	float tWidth = MFFont_GetStringWidth(pFont, pUnit->GetName(), (float)height);
-	MFFont_BlitText(pFont, (int)top.x + ((int)top.width / 2) - (int)(tWidth*0.5f), (int)top.y + 5, MFVector::yellow, pUnit->GetName());
-	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height, MFVector::white, "Type: %s", pDefs->GetArmourClassName(pDetails->armour));
+	float tWidth = MFFont_GetStringWidth(pFont, pUnit->GetName().CStr(), (float)height);
+	MFFont_BlitText(pFont, (int)top.x + ((int)top.width / 2) - (int)(tWidth*0.5f), (int)top.y + 5, MFVector::yellow, pUnit->GetName().CStr());
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height, MFVector::white, "Type: %s", pDefs->GetArmourClassName(details.armour).CStr());
 	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*2, MFVector::white, "HP: %d/%d", (int)(pUnit->GetMaxHP() * pUnit->GetHealth()), pUnit->GetMaxHP());
-	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*3, MFVector::white, "Atk: %d - %d %s (%s%s)", (int)pUnit->GetMinDamage(), (int)pUnit->GetMaxDamage(), attackIcon[pDetails->atkType], pUnit->AttackSpeedDescription(), pDefs->GetWeaponClassName(pDetails->attack));
-	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*4, MFVector::white, "Mov: %g/%d%s%s", pUnit->MoveRemaining(), pUnit->GetMaxMovement(), pDetails->movementClass == 2 ? " £" : "", pDetails->movementClass > 0 ? MFStr(" (%s)", pDefs->GetMovementClassName(pDetails->movementClass)) : "");
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*3, MFVector::white, "Atk: %d - %d %s (%s%s)", (int)pUnit->GetMinDamage(), (int)pUnit->GetMaxDamage(), attackIcon[details.atkType], pUnit->AttackSpeedDescription(), pDefs->GetWeaponClassName(details.attack).CStr());
+	MFFont_BlitTextf(pFont, (int)top.x + 133, (int)top.y + 5 + height*4, MFVector::white, "Mov: %g/%d%s%s", pUnit->MoveRemaining(), pUnit->GetMaxMovement(), details.movementClass == 2 ? " £" : "", details.movementClass > 0 ? MFStr(" (%s)", pDefs->GetMovementClassName(details.movementClass).CStr()) : "");
 
 	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height, MFVector::white, "Victories: %d", pUnit->GetVictories());
 	MFFont_BlitTextf(pFont, (int)top.x + 320, (int)top.y + 5 + height*2, MFVector::white, "Kills: %d", pUnit->GetKills());
@@ -108,10 +110,11 @@ bool UnitConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 	return Window::HandleInputEvent(ev, info);
 }
 
-void UnitConfig::Show(Unit *_pUnit)
+void UnitConfig::Show(Game *_pGame, Unit *_pUnit)
 {
 	Window::Show();
 
+	pGame = _pGame;
 	pUnit = _pUnit;
 
 	BattlePlan *pPlan = pUnit->GetBattlePlan();
@@ -136,7 +139,7 @@ void UnitConfig::Hide()
 
 void UnitConfig::ShowInventory(int button, int buttonID)
 {
-	inventory.Show(pUnit);
+	inventory.Show(pGame, pUnit);
 }
 
 void UnitConfig::SelectStrat(int value, int buttonID)

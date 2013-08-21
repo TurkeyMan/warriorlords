@@ -1,4 +1,5 @@
 #include "Warlords.h"
+#include "Group.h"
 #include "Haku/UI/HKUI.h"
 #include "Haku/UI/HKWidgetLoader-XML.h"
 #include "Haku/UI/Widgets/HKWidgetButton.h"
@@ -242,15 +243,12 @@ void GameUI::OnCloseClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 void GameUI::GameScreen::Show()
 {
 	pMenu->SetVisible(HKWidget::Visible);
-
 }
 
 void GameUI::GameScreen::OnEndTurnClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
-	Game *pGame = Game::GetCurrent();
-
-	if(pGame->IsMyTurn())
-		pGame->ShowRequest("End Turn?", fastdelegate::MakeDelegate(this, &GameUI::GameScreen::OnFinishTurn), false);
+	if(pUI->pGame->IsMyTurn())
+		pUI->pGame->ShowRequest("End Turn?", fastdelegate::MakeDelegate(this, &GameUI::GameScreen::OnFinishTurn), false);
 }
 
 void GameUI::GameScreen::OnUndoClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
@@ -264,7 +262,7 @@ void GameUI::GameScreen::OnUndoClicked(HKWidget &sender, const HKWidgetEventInfo
 	if(pGroup)
 	{
 		MapTile *pTile = pGroup->GetTile();
-		pGame->pMap->CenterView((float)pTile->GetX(), (float)pTile->GetY());
+		pGame->mapView.CenterView((float)pTile->GetX(), (float)pTile->GetY());
 	}
 
 	pGame->SelectGroup(pGroup);
@@ -313,7 +311,7 @@ void GameUI::CastleMenu::Show(Castle *_pCastle)
 		}
 
 		// hero buttons
-		bool bBuildHero = pGame->CanCastleBuildHero(pCastle, a);
+		bool bBuildHero = pGame->State().CanCastleBuildHero(pCastle, a);
 		pUnits[4 + a]->SetVisible(bBuildHero ? HKWidget::Visible : HKWidget::Gone);
 
 		if(bBuildHero)
@@ -339,16 +337,16 @@ void GameUI::CastleMenu::UpdateUnitInfo()
 
 	if(buildUnit >= 0)
 	{
-		UnitDefinitions *pUnitDefs = pCastle->pUnitDefs;
-		UnitDetails *pDetails = pUnitDefs->GetUnitDetails(buildUnit);
+		const UnitDefinitions *pUnitDefs = pCastle->UnitDefs();
+		const UnitDetails &unit = pUnitDefs->GetUnitDetails(buildUnit);
 
-		pUnitName->SetText(pDetails->pName);
+		pUnitName->SetText(unit.name);
 
-		if(pDetails->type == UT_Vehicle)
+		if(unit.type == UT_Vehicle)
 		{
 			pUnitType->SetVisible(HKWidget::Gone);
 			pUnitAtk->SetVisible(HKWidget::Gone);
-			pUnitMov->SetText(MFString::Format("Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : ""));
+			pUnitMov->SetText(MFString::Format("Mov: %d%s", unit.movement, unit.movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(unit.movementClass).CStr()) : ""));
 			pUnitTurns->SetText(MFString::Format("Turns: %d", pCastle->BuildTimeRemaining()));
 
 			pTypeImage->SetVisible(HKWidget::Gone);
@@ -357,13 +355,13 @@ void GameUI::CastleMenu::UpdateUnitInfo()
 		{
 			pUnitType->SetVisible(HKWidget::Visible);
 			pUnitAtk->SetVisible(HKWidget::Visible);
-			pUnitType->SetText(MFString::Format("Type: %s", pUnitDefs->GetArmourClassName(pDetails->armour)));
-			pUnitAtk->SetText(MFString::Format("Atk: %d - %d (%s%s)", pDetails->attackMin, pDetails->attackMax, pDetails->AttackSpeedDescription(), pUnitDefs->GetAttackTypeName(pDetails->atkType)));
-			pUnitMov->SetText(MFString::Format("Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : ""));
+			pUnitType->SetText(MFString::Format("Type: %s", pUnitDefs->GetArmourClassName(unit.armour).CStr()));
+			pUnitAtk->SetText(MFString::Format("Atk: %d - %d (%s%s)", unit.attackMin, unit.attackMax, unit.AttackSpeedDescription(), pUnitDefs->GetAttackTypeName(unit.atkType).CStr()));
+			pUnitMov->SetText(MFString::Format("Mov: %d%s", unit.movement, unit.movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(unit.movementClass).CStr()) : ""));
 			pUnitTurns->SetText(MFString::Format("Turns: %d", pCastle->BuildTimeRemaining()));
 
 			pTypeImage->SetVisible(HKWidget::Visible);
-			pTypeImage->SetProperty("background_image", pDetails->atkType == 0 ? "Melee" : "Ranged");
+			pTypeImage->SetProperty("background_image", unit.atkType == 0 ? "Melee" : "Ranged");
 		}
 	}
 }
@@ -401,15 +399,15 @@ void GameUI::RecruitMenu::Show(Place *pPlace, Unit *pHero)
 		pPlace->recruit.turnsRemaining = 0;
 	}
 
-	UnitDefinitions *pUnitDefs = pGame->GetUnitDefs();
+	UnitDefinitions *pUnitDefs = pGame->Map().UnitDefs();
 
 	int numUnits = pUnitDefs->GetNumUnitTypes();
 	int numHeroes = 0;
 	for(int a=0; a<numUnits; ++a)
 	{
-		UnitDetails *pDetails = pUnitDefs->GetUnitDetails(a);
+		const UnitDetails &unit = pUnitDefs->GetUnitDetails(a);
 
-		if(pDetails->type == UT_Hero && (!pGame->PlayerHasHero(player, a) && (pDetails->race == 0 || pDetails->race == pGame->GetPlayerRace(player))))
+		if(unit.type == UT_Hero && (!pGame->PlayerHasHero(player, a) && (unit.race == 0 || unit.race == pGame->GetPlayerRace(player))))
 		{
 			heroes[numHeroes] = a;
 
@@ -440,15 +438,15 @@ void GameUI::RecruitMenu::UpdateHeroInfo()
 	if(selected < 0)
 		return;
 
-	UnitDefinitions *pUnitDefs = pUI->pGame->GetUnitDefs();
-	UnitDetails *pDetails = pUnitDefs->GetUnitDetails(selected);
+	UnitDefinitions *pUnitDefs = pUI->pGame->Map().UnitDefs();
+	const UnitDetails &unit = pUnitDefs->GetUnitDetails(selected);
 
-	pHeroName->SetText(pDetails->pName);
-	pHeroAtk->SetText(MFString::Format("Atk: %d - %d (%s%s)", pDetails->attackMin, pDetails->attackMax, pDetails->AttackSpeedDescription(), pUnitDefs->GetAttackTypeName(pDetails->atkType)));
-	pHeroMov->SetText(MFString::Format("Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : ""));
-	pHeroTurns->SetText(MFString::Format("Turns: %d", pDetails->buildTime));
+	pHeroName->SetText(unit.name);
+	pHeroAtk->SetText(MFString::Format("Atk: %d - %d (%s%s)", unit.attackMin, unit.attackMax, unit.AttackSpeedDescription(), pUnitDefs->GetAttackTypeName(unit.atkType)));
+	pHeroMov->SetText(MFString::Format("Mov: %d%s", unit.movement, unit.movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(unit.movementClass)) : ""));
+	pHeroTurns->SetText(MFString::Format("Turns: %d", unit.buildTime));
 
-	pTypeImage->SetProperty("background_image", pDetails->atkType == 0 ? "Melee" : "Ranged");
+	pTypeImage->SetProperty("background_image", unit.atkType == 0 ? "Melee" : "Ranged");
 }
 
 void GameUI::RecruitMenu::OnSelectHero(HKWidget &sender, const HKWidgetEventInfo &ev)
@@ -472,7 +470,7 @@ void GameUI::RecruitMenu::OnSelectHero(HKWidget &sender, const HKWidgetEventInfo
 void GameUI::MiniMap::Show()
 {
 	int width, height;
-	pUI->pGame->GetMap()->GetMinimap(&width, &height);
+	pUI->pGame->mapView.GetMinimap(&width, &height);
 
 	pMap->SetSize(MakeVector((float)width, (float)height));
 	pMap->SetProperty("background_image", "MiniMap");

@@ -159,10 +159,10 @@ void StringBox::Enable(bool bEnable)
 	pInputManager->SetExclusiveReceiver(bEnable ? this : NULL);
 }
 
-void StringBox::StringChangeCallback(const char *pString)
+void StringBox::StringChangeCallback(MFString string)
 {
 	gBlinkTime = 0.4f;
 
 	if(changeCallback)
-		changeCallback(stringLogic.GetString().CStr());
+		changeCallback(stringLogic.GetString());
 }

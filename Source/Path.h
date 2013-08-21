@@ -36,9 +36,29 @@ public:
 	bool IsEnd() const { return GetPathLength() == 1; }
 
 private:
+	struct Cell
+	{
+		uint16 from;
+		uint16 gScore, hScore, fScore;
+		uint8 x, y;
+		uint8 open;
+		uint8 traversible;
+
+		void Set(int _x, int _y, int _gScore, int _hScore, int _fScore)
+		{
+			x = _x; y = _y;
+			gScore = _gScore;
+			hScore = _hScore;
+			fScore = _fScore;
+			from = 0;
+			open = 1;
+		}
+	};
+
 	static const int MaxPath = 1024;
 
 	Map *pMap;
+	Cell *pSearchList;
 
 	Step path[MaxPath];
 	int pathStart;

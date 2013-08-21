@@ -5,6 +5,7 @@
 #include "Haku/UI/Widgets/HKWidgetTextbox.h"
 #include "Haku/UI/Widgets/HKWidgetListbox.h"
 
+class Lobby;
 class FrontMenu;
 
 class ListMenu
@@ -23,7 +24,7 @@ public:
 	void Load(HKWidget *pRoot, FrontMenu *pFrontMenu);
 
 	void ShowResume();
-	void ShowJoin();
+//	void ShowJoin();
 
 	void ShowCreate(bool bOnline);
 
@@ -72,7 +73,7 @@ protected:
 	Type type;
 	bool bReturnToMain;
 
-	void ShowLobby(GameDetails &game);
+	void ShowLobby(Lobby *pLobby);
 
 	void OnSelect(HKWidget &sender, const HKWidgetEventInfo &ev);
 	void OnNameChanged(HKWidget &sender, const HKWidgetEventInfo &ev);
@@ -80,10 +81,10 @@ protected:
 	void OnReturnClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
 	void OnEditClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
 
-	void OnUpdateResponse(ServerError err, Session *pSession);
-	void OnFindResponse(ServerError err, Session *pSession, GameLobby *pGames, int numGames);
-	void OnGameCreated(ServerError error, Session *pSession, GameDetails *pGame);
-	void OnGameJoined(ServerError error, Session *pSession, GameDetails *pGame);
+//	void OnUpdateResponse(ServerError err, Session *pSession);
+//	void OnFindResponse(ServerError err, Session *pSession, GameLobby *pGames, int numGames);
+	void OnGameCreated(ServerRequest *pReq);
+//	void OnGameJoined(ServerRequest *pReq);
 };
 
 #endif

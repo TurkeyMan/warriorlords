@@ -19,7 +19,7 @@ GameData::GameData()
 		MapData &map = maps.push();
 		map.name = fd.pFilename;
 		map.name.TruncateExtension();
-		map.bDetailsLoaded = false;
+		map.pMap = NULL;
 
 		if(!MFFileSystem_FindNext(pFind, &fd))
 		{
@@ -50,12 +50,12 @@ void GameData::Init()
 
 	pGameData = new GameData;
 
-	Session::InitSession();
+//	Session::InitSession();
 }
 
 void GameData::Deinit()
 {
-	Session::DeinitSession();
+//	Session::DeinitSession();
 
 	delete pGameData;
 	pGameData = NULL;

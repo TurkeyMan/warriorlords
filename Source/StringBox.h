@@ -9,7 +9,7 @@ struct MFFont;
 class StringBox : public InputReceiver
 {
 public:
-	typedef FastDelegate1<const char *> ChangeCallback;
+	typedef FastDelegate1<MFString> ChangeCallback;
 
 	StringBox(MFRect &rect, StringEntryLogic::StringType type);
 	virtual ~StringBox();
@@ -33,7 +33,7 @@ public:
 	MFString GetString() { return stringLogic.GetString(); }
 
 protected:
-	void StringChangeCallback(const char *pString);
+	void StringChangeCallback(MFString string);
 
 	StringEntryLogic stringLogic;
 	ChangeCallback changeCallback;

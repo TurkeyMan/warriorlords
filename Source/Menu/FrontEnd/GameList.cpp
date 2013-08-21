@@ -7,6 +7,9 @@
 #include "Editor.h"
 #include "Screen.h"
 
+#include "Profile.h"
+#include "Lobby.h"
+
 extern Editor *pEditor;
 
 // ListMenu
@@ -49,33 +52,54 @@ void ListMenu::ShowResume()
 	// update game list
 	gameList.clear();
 
-	Session *pSession = Session::Get();
-	if(pSession->IsLoggedIn())
+	// list local games
+	MFFindData fd;
+	MFFind *pFind = MFFileSystem_FindFirst("home:*.txt", &fd);
+	while(pFind)
 	{
-		pSession->SetUpdateDelegate(fastdelegate::MakeDelegate(this, &ListMenu::OnUpdateResponse));
-		pSession->UpdateGames();
-	}
-	else
-	{
-		// list local games only
-		MFFindData fd;
-		MFFind *pFind = MFFileSystem_FindFirst("home:*.txt", &fd);
-		while(pFind)
+		fd.pFilename;
+
+		ListItem i;
+		i.id = 0;
+		i.name = fd.pFilename;
+		i.map = "";
+		i.numPlayers = 0;
+		gameList.push(i);
+
+		if(!MFFileSystem_FindNext(pFind, &fd))
 		{
-			fd.pFilename;
+			MFFileSystem_FindClose(pFind);
+			pFind = NULL;
+		}
+	}
 
+	if(Session::Get())
+	{
+		Profile *pUser = Session::Get()->User();
+
+		// populate game list...
+		MFArray<GameState*> &games = pUser->Games();
+		for(size_t a=0; a<games.size(); ++a)
+		{
 			ListItem i;
-			i.id = 0;
-			i.name = fd.pFilename;
-			i.map = "";
-			i.numPlayers = 0;
-			gameList.push(i);
+			i.id = games[a]->ID();
+			i.name = MFString::Format("Game %d", games[a]->ID());
+			i.map = games[a]->Map().Name();
+			i.numPlayers = games[a]->Players().size();
 
-			if(!MFFileSystem_FindNext(pFind, &fd))
-			{
-				MFFileSystem_FindClose(pFind);
-				pFind = NULL;
-			}
+			gameList.push(i);
+		}
+
+		MFArray<Lobby*> &pending = pUser->Pending();
+		for(size_t a=0; a<pending.size(); ++a)
+		{
+			ListItem i;
+			i.id = pending[a]->ID();
+			i.name = MFString::Format("Lobby %d", pending[a]->ID());
+			i.map = pending[a]->Map().Name();
+			i.numPlayers = pending[a]->NumPlayers();
+
+			gameList.push(i);
 		}
 	}
 
@@ -83,7 +107,7 @@ void ListMenu::ShowResume()
 
 	FrontMenu::Get()->ShowAsCurrent(pMenu);
 }
-
+/*
 void ListMenu::ShowJoin()
 {
 	type = Join;
@@ -111,7 +135,7 @@ void ListMenu::ShowJoin()
 
 	FrontMenu::Get()->ShowAsCurrent(pMenu);
 }
-
+*/
 void ListMenu::ShowCreate(bool bOnline)
 {
 	type = bOnline ? Create : Offline;
@@ -146,12 +170,12 @@ void ListMenu::ShowCreate(bool bOnline)
 	FrontMenu::Get()->ShowAsCurrent(pMenu);
 }
 
-void ListMenu::ShowLobby(GameDetails &game)
+void ListMenu::ShowLobby(Lobby *pLobby)
 {
 	FrontMenu &menu = *FrontMenu::Get();
 	menu.HideCurrent();
 
-	menu.lobbyMenu.Show(game);
+	menu.lobbyMenu.Show(pLobby);
 }
 
 void ListMenu::OnSelect(HKWidget &sender, const HKWidgetEventInfo &ev)
@@ -210,16 +234,19 @@ void ListMenu::OnContinueClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 			MFString map = gameList[pActiveList->GetSelection()].name;
 
 			// create the game
-			MapDetails mapDetails;
-			Map::GetMapDetails(map.CStr(), &mapDetails);
+			MapTemplate *pMapTemplate = MapTemplate::Create(map);
 
 			GameCreateDetails details;
 			details.pName = pName->GetString().CStr();
 			details.pMap = map.CStr();
 			details.turnTime = 3600; // TODO: fix me?
-			details.numPlayers = mapDetails.numPlayers;
+			details.numPlayers = pMapTemplate->NumPlayersPresent();
 
-			pSession->CreateGame(details, MakeDelegate(this, &ListMenu::OnGameCreated));
+			pMapTemplate->Release();
+
+			ServerRequest *pReq = new ServerRequest(MakeDelegate(this, &ListMenu::OnGameCreated));
+			pReq->CreateGame(Session::Get(), &details);
+//			pSession->CreateGame(details, MakeDelegate(this, &ListMenu::OnGameCreated));
 
 			// disable the UI while it talks to the server...
 			pActiveList->SetEnabled(false);
@@ -234,29 +261,12 @@ void ListMenu::OnContinueClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 			MFString map = gameList[pActiveList->GetSelection()].name;
 
 			// create offline game
-			GameDetails game;
-			game.id = 0;
-			MFString_Copy(game.name, "Offline Game");
-			MFString_Copy(game.map, map.CStr());
-			Map::GetMapDetails(game.map, &game.mapDetails);
-			game.bMapDetailsLoaded = true;
-			game.maxPlayers = game.mapDetails.numPlayers;
-			game.numPlayers = game.maxPlayers;
-			game.turnTime = 0;
+			Lobby *pLobby = new Lobby(map);
 
-			for(int a=0; a<game.numPlayers; ++a)
-			{
-				game.players[a].id = 0;
-				MFString_Copy(game.players[a].name, MFStr("Player %d", a+1));
-				game.players[a].colour = 1 + a;
-				game.players[a].race = 0;
-				game.players[a].hero = -1;
-			}
-
-			ShowLobby(game);
+			ShowLobby(pLobby);
 			break;
 		}
-
+/*
 		case Join:
 		{
 			// attempt to join the game...
@@ -269,7 +279,7 @@ void ListMenu::OnContinueClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 			pReturnButton->SetEnabled(false);
 			break;
 		}
-
+*/
 		case Resume:
 		{
 			ListItem &item = gameList[pActiveList->GetSelection()];
@@ -277,37 +287,30 @@ void ListMenu::OnContinueClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 
 			if(id == 0)
 			{
-				Game *pGame = Game::ResumeGame(item.name.CStr(), false);
-				Game::SetCurrent(pGame);
+				MFDebug_Assert(false, "!");
+//				GameState *pState = GameState::ResumeGame(item.name.CStr(), false);
+//				Game *pGame = new Game(*pState);
 
 				FrontMenu::Get()->Hide();
 			}
 			else
 			{
-				int numGames = pSession->GetNumPendingGames();
-				for(int a=0; a<numGames; ++a)
+				GameState *pGame = GameState::Get(id);
+				if(pGame)
 				{
-					GameDetails *pGame = pSession->GetPendingGame(a);
-					if(pGame->id == id)
-					{
-						ShowLobby(*pGame);
-						return;
-					}
+					MFDebug_Assert(false, "!");
+//					GameState *pState = GameState::ResumeGame(NULL, true);
+//					Game *pGame = new Game(*pState);
+
+					FrontMenu::Get()->Hide();
+					return;
 				}
 
-				numGames = pSession->GetNumCurrentGames();
-				for(int a=0; a<numGames; ++a)
+				Lobby *pLobby = Lobby::Get(id);
+				if(pLobby)
 				{
-					GameState *pState = pSession->GetCurrentGame(a);
-					if(pState->id == id)
-					{
-	//					Game *pGame = new Game(pState);
-						Game *pGame = Game::ResumeGame(NULL, true);
-						Game::SetCurrent(pGame);
-
-						FrontMenu::Get()->Hide();
-						return;
-					}
+					ShowLobby(pLobby);
+					return;
 				}
 			}
 			break;
@@ -318,7 +321,7 @@ void ListMenu::OnContinueClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 	}
 }
 
-void ListMenu::OnGameCreated(ServerError error, Session *pSession, GameDetails *pGame)
+void ListMenu::OnGameCreated(ServerRequest *pReq)
 {
 	// enable all the UI bits again
 	pActiveList->SetEnabled(true);
@@ -327,12 +330,21 @@ void ListMenu::OnGameCreated(ServerError error, Session *pSession, GameDetails *
 	pReturnButton->SetEnabled(true);
 
 	// check the pSession has this stuff remembered somehow...
-	if(error == SE_NO_ERROR)
+	if(pReq->Status() == ServerRequest::SE_NO_ERROR)
 	{
-		ShowLobby(*pGame);
-	}
-}
+		Lobby *pLobby = Lobby::FromJson(pReq->Json());
 
+		if(pLobby)
+		{
+			// TODO: we should add it to the user's profile
+
+			ShowLobby(pLobby);
+		}
+	}
+
+	delete pReq;
+}
+/*
 void ListMenu::OnGameJoined(ServerError error, Session *pSession, GameDetails *pGame)
 {
 	// enable all the UI bits again
@@ -346,7 +358,7 @@ void ListMenu::OnGameJoined(ServerError error, Session *pSession, GameDetails *p
 		ShowLobby(*pGame);
 	}
 }
-
+*/
 void ListMenu::OnReturnClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
 	pEditButton->SetVisible(HKWidget::Gone);
@@ -364,41 +376,15 @@ void ListMenu::OnEditClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
 	MFString map = gameList[pActiveList->GetSelection()].name;
 
-	// setup game parameters
-	GameParams params;
-	MFZeroMemory(&params, sizeof(params));
-	params.bOnline = false;
-	params.bEditMap = true;
-	params.gameID = 0;
-	params.pMap = map.CStr();
-
-	// create the game
-	MapDetails mapDetails;
-	Map::GetMapDetails(map.CStr(), &mapDetails);
-
-	// set up the players
-	params.numPlayers = mapDetails.numPlayers;
-	for(int a=0; a<mapDetails.numPlayers; ++a)
-	{
-		params.players[a].id = 0;
-		params.players[a].race = a + 1;
-		params.players[a].colour = a + 1;
-		params.players[a].hero = 0;
-	}
-
-	// create the game
-	Game *pGame = Game::CreateEditor(map.CStr());
-	Game::SetCurrent(pGame);
-
 	// create the editor
-	pEditor = new Editor(pGame);
+	pEditor = new Editor(map);
 	Screen::SetNext(pEditor);
 
 	// hide the menu
 	FrontMenu::Get()->Hide();
 }
 
-
+/*
 void ListMenu::OnUpdateResponse(ServerError err, Session *pSession)
 {
 	// populate game list...
@@ -448,7 +434,7 @@ void ListMenu::OnFindResponse(ServerError err, Session *pSession, GameLobby *pGa
 		gameList.push(i);
 	}
 }
-
+*/
 // list adapter
 HKWidget *ListMenu::GameListAdapter::GetItemView(int index, ListItem &item)
 {

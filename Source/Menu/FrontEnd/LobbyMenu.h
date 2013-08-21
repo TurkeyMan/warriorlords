@@ -6,6 +6,8 @@
 #include "Haku/UI/Widgets/HKWidgetListbox.h"
 #include "Haku/UI/Widgets/HKWidgetSelectbox.h"
 
+#include "Lobby.h"
+
 class FrontMenu;
 
 class LobbyMenu
@@ -14,9 +16,11 @@ public:
 	LobbyMenu()	: raceListAdapter(raceList), colourListAdapter(colourList) {}
 
 	void Load(HKWidget *pRoot, FrontMenu *pFrontMenu);
-	void Show(GameDetails &game);
+	void Show(Lobby *pGame);
 
-	GameDetails::Player *GetLobbyPlayer(uint32 id, int *pPlayer);
+	void UpdateUIState();
+
+	Lobby::Player *GetLobbyPlayer(uint32 id, int *pPlayer);
 
 protected:
 	struct ListItem
@@ -87,8 +91,7 @@ protected:
 	HKDynamicArray<MFVector> colourList;
 	ColourListAdapter colourListAdapter;
 
-	GameDetails game;
-	GameParams params;
+	Lobby *pLobby;
 
 	int setPlayer;
 	int setRace, setColour, setHero;
@@ -107,13 +110,14 @@ protected:
 	void OnColourChanged(HKWidget &sender, const HKWidgetEventInfo &ev);
 	void OnHeroChanged(HKWidget &sender, const HKWidgetEventInfo &ev);
 
-	void CommitRace(ServerError error, Session *pSession);
-	void CommitColour(ServerError error, Session *pSession);
-	void CommitHero(ServerError error, Session *pSession);
-	void OnBegin(ServerError error, Session *pSession);
-	void OnGameLeft(ServerError error, Session *pSession);
+	void Commit(ServerRequest *pReq);
+//	void CommitRace(ServerRequest *pReq);
+//	void CommitColour(ServerRequest *pReq);
+//	void CommitHero(ServerRequest *pReq);
+	void OnBegin(ServerRequest *pReq);
+	void OnGameLeft(ServerRequest *pReq);
 
-	void StartGame(ServerError error, Session *pSession, GameState *pState);
+//	void StartGame(ServerRequest *pReq);
 };
 
 #endif

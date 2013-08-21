@@ -1,219 +1,249 @@
 #include "Warlords.h"
 #include "HTTP.h"
 #include "ServerRequest.h"
+#include "Session.h"
+#include "Profile.h"
 
 #include "Fuji/MFSystem.h"
-#include "Fuji/MFDocumentJSON.h"
 
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
 
-#if 0//defined(_DEBUG)
-	const char *pHostname = "10.0.0.27";
+#if 1//defined(_DEBUG)
+	const char *pHostname = "127.0.0.1";
 	const int port = 8888;
 #else
 	const char *pHostname = "warriorlordsserv.appspot.com";
 	const int port = 80;
 #endif
 
-static const char *gpActions[GA_MAX] =
+ServerRequest::ServerRequest(EventDelegate completeDelegate)
+: completeDelegate(completeDelegate)
+, error(SE_PENDING)
+, pStatusString(NULL)
+, pErrorString(NULL)
+, pJson(NULL)
 {
-	"UNKNOWN_ACTION",
-
-	"ADDCASTLES",
-	"ADDRUINS",
-	"CREATEUNIT",
-	"CREATEGROUP",
-	"DESTROYGROUP",
-	"MOVEGROUP",
-	"REARRANGEGROUP",
-	"CLAIMCASTLE",
-	"SETBUILDING",
-	"SETBATTLEPLAN",
-	"SEARCH",
-	"BATTLE",
-	"ENDTURN",
-	"VICTORY",
-	"CAPTUREUNITS"
-};
-
-static GameAction **gppActionList = NULL;
-static int gNumActions = 0;
-static int gNumAllocated = 0;
-
-const char *WLServ_GetActionName(GameActions action)
-{
-	return gpActions[action];
+	pRequest = new HTTPRequest(MakeDelegate(this, &ServerRequest::OnHTTPCompleted), MakeDelegate(this, &ServerRequest::OnHTTPEvent));
 }
 
-static ServerError CheckHTTPError(HTTPRequest::Status status)
+ServerRequest::~ServerRequest()
 {
+	pRequest->Destroy();
+
+	if(pJson)
+		MFParseJSON_DestroyDocument(pJson);
+}
+
+void ServerRequest::CreateAccount(const char *pUsername, const char *pPassword, const char *pEmail)
+{
+	MFFileHTTPRequestArg args[3];
+	args[0].SetString("user", pUsername);
+	args[1].SetString("pass", pPassword);
+	args[1].SetString("verify", pPassword);
+	args[2].SetString("email", pEmail);
+
+	pRequest->Post(pHostname, port, "/api/createaccount", args, sizeof(args)/sizeof(args[0]));
+}
+
+void ServerRequest::Login(const char *pUsername, const char *pPassword)
+{
+	MFFileHTTPRequestArg args[2];
+	args[0].SetString("user", pUsername);
+	args[1].SetString("pass", pPassword);
+
+	pRequest->Post(pHostname, port, "/api/login", args, sizeof(args)/sizeof(args[0]));
+}
+
+void ServerRequest::GetUserByID(uint32 id)
+{
+	MFDebug_Assert(false, "Not suppoprted!");
+
+	pRequest->Post(pHostname, port, MFStr("/users/%d", id));
+}
+
+void ServerRequest::GetUserByName(const char *pUsername)
+{
+	pRequest->Post(pHostname, port, MFStr("/users/%s", pUsername));
+}
+
+void ServerRequest::CreateGame(Session *pSession, const GameCreateDetails *pDetails)
+{
+	Profile *pProfile = pSession->User();
+	MFString key = pSession->SessionKey();
+
+	MFFileHTTPRequestArg args[5];
+	args[0].SetInt("user", pProfile->ID());
+	args[1].SetString("key", key.CStr());
+	args[2].SetString("map", pDetails->pMap);
+	args[3].SetInt("numplayers", pDetails->numPlayers);
+	args[4].SetInt("turntime", pDetails->turnTime);
+
+	pRequest->Post(pHostname, port, "/api/creategame", args, sizeof(args)/sizeof(args[0]));
+}
+
+void ServerRequest::GetGame(Session *pSession, uint32 id, bool bActions, bool bPlayers, int firstAction)
+{
+	Profile *pProfile = pSession->User();
+	MFString key = pSession->SessionKey();
+
+	MFFileHTTPRequestArg args[3];
+	args[0].SetInt("user", pProfile->ID());
+	args[1].SetString("key", key.CStr());
+
+	pRequest->Post(pHostname, port, MFStr("/api/games/%d", id), args, sizeof(args)/sizeof(args[0]));
+}
+
+void ServerRequest::JoinGame(Session *pSession, uint32 game)
+{
+	Profile *pProfile = pSession->User();
+	MFString key = pSession->SessionKey();
+
+	MFFileHTTPRequestArg args[3];
+	args[0].SetInt("user", pProfile->ID());
+	args[1].SetString("key", key.CStr());
+	args[2].SetInt("game", game);
+
+	pRequest->Post(pHostname, port, "/api/joingame", args, sizeof(args)/sizeof(args[0]));
+}
+
+void ServerRequest::LeaveGame(Session *pSession, uint32 game)
+{
+	Profile *pProfile = pSession->User();
+	MFString key = pSession->SessionKey();
+
+	MFFileHTTPRequestArg args[3];
+	args[0].SetInt("user", pProfile->ID());
+	args[1].SetString("key", key.CStr());
+	args[2].SetInt("game", game);
+
+	pRequest->Post(pHostname, port, "/api/leavegame", args, sizeof(args)/sizeof(args[0]));
+}
+
+void ServerRequest::ConfigureGame(Session *pSession, uint32 game, int race, int colour, int hero, bool bReady)
+{
+	Profile *pProfile = pSession->User();
+	MFString key = pSession->SessionKey();
+
+	MFFileHTTPRequestArg args[7];
+	args[0].SetInt("user", pProfile->ID());
+	args[1].SetString("key", key.CStr());
+	args[2].SetInt("game", game);
+	args[3].SetInt("race", race);
+	args[4].SetInt("colour", colour);
+	args[5].SetInt("hero", hero);
+	args[6].SetInt("ready", bReady ? 1 : 0);
+
+	pRequest->Post(pHostname, port, "/api/configuregame", args, sizeof(args)/sizeof(args[0]));
+}
+
+void ServerRequest::CommitActions(Session *pSession, uint32 game, Action *pActions, int numActions)
+{
+	Profile *pProfile = pSession->User();
+	MFString key = pSession->SessionKey();
+
+	MFFileHTTPRequestArg args[2];
+	args[0].SetInt("user", pProfile->ID());
+	args[1].SetString("key", key.CStr());
+}
+
+MFJSONValue *ServerRequest::Json()
+{
+	return MFParseJSON_Root(pJson);
+}
+
+void ServerRequest::OnHTTPEvent(HTTPRequest *pReq)
+{
+}
+
+void ServerRequest::OnHTTPCompleted(HTTPRequest *pReq)
+{
+	HTTPRequest::Status status = pReq->GetStatus();
 	switch(status)
 	{
-		case HTTPRequest::CS_ResolvingHost:
-		case HTTPRequest::CS_WaitingForHost:
-		case HTTPRequest::CS_Pending:
-			return SE_PENDING;
-		case HTTPRequest::CS_CouldntResolveHost:
-			return SE_CANT_FIND_HOST;
-		case HTTPRequest::CS_CouldntConnect:
-			return SE_CONNECTION_REFUSED;
-		case HTTPRequest::CS_ConnectionLost:
-			return SE_CONNECTION_FAILED;
-		case HTTPRequest::CS_HTTPError:
-			return SE_INVALID_RESPONSE;
 		case HTTPRequest::CS_Succeeded:
-		default:
+		{
+			// parse response
+			HTTPResponse &response = *pReq->GetResponse();
+			pJson = MFParseJSON_Parse(response.GetData());
+			if(!pJson)
+			{
+				error = SE_INVALID_RESPONSE;
+				break;
+			}
+
+			MFJSONValue *pRoot = Json();
+			MFJSONValue *pStatus = pRoot->Member("status");
+
+			if(!pStatus || pStatus->Type() != MFJT_StringType)
+			{
+				error = SE_INVALID_RESPONSE;
+				break;
+			}
+
+			pStatusString = pStatus->String();
+			if(!MFString_Compare(pStatusString, "error"))
+			{
+				error = SE_SERVER_ERROR;
+
+				MFJSONValue *pError = pRoot->Member("error");
+				if(pError && pError->Type() == MFJT_StringType)
+					pErrorString = pError->String();
+				if(!pErrorString)
+					break;
+
+				if(!MFString_Compare(pErrorString, "missing arguments"))
+					error = SE_EXPECTED_ARGUMENTS;
+				else if(!MFString_Compare(pErrorString, "invalid username") || !MFString_Compare(pErrorString, "invalid password"))
+					error = SE_INVALID_ARGUMENTS;
+				else if(!MFString_Compare(pErrorString, "incorrect password") || !MFString_Compare(pErrorString, "not logged in"))
+				{
+					error = SE_INVALID_LOGIN;
+
+					// TODO: end the current session?
+
+					// trigger a log-out event...
+				}
+				else if(!MFString_Compare(pErrorString, "user does not exist"))
+					error = SE_INVALID_USER;
+				else if(!MFString_Compare(pErrorString, "already exists"))
+					error = SE_ALREADY_EXISTS;
+				else if(!MFString_Compare(pErrorString, "not in game"))
+					error = SE_NOT_IN_GAME;
+				else if(!MFString_Compare(pErrorString, "already in game"))
+					error = SE_ALREADY_PRESENT;
+				else if(!MFString_Compare(pErrorString, "game full"))
+					error = SE_GAME_FULL;
+				else if(!MFString_Compare(pErrorString, "game does not exist"))
+					error = SE_INVALID_GAME;
+				else if(!MFString_Compare(pErrorString, "no friend request"))
+					error = SE_INVALID_USER;
+				break;
+			}
+
+			error = SE_NO_ERROR;
+			break;
+		}
+		case HTTPRequest::CS_CouldntResolveHost:
+			error = SE_CANT_FIND_HOST;
+			break;
+		case HTTPRequest::CS_CouldntConnect:
+			error = SE_CONNECTION_REFUSED;
+			break;
+		case HTTPRequest::CS_ConnectionLost:
+			error = SE_CONNECTION_FAILED;
+			break;
+		case HTTPRequest::CS_HTTPError:
+			error = SE_INVALID_RESPONSE;
 			break;
 	}
 
-	return SE_NO_ERROR;
+	if(completeDelegate)
+		completeDelegate(this);
 }
 
-class Result
-{
-public:
-	class Item
-	{
-	public:
-		Item(MFJSONValue *_pNode)
-		{
-			pNode = _pNode;
-		}
-
-		MFJSONValue *pNode;
-
-		bool AsBool()
-		{
-			if(pNode->IsNull())
-				return NULL;
-			return pNode->Bool();
-		}
-
-		int AsInt()
-		{
-			if(pNode->IsNull())
-				return 0;
-			return pNode->Int();
-		}
-
-		float AsFloat()
-		{
-			if(pNode->IsNull())
-				return 0.0f;
-			return pNode->Float();
-		}
-
-		const char *AsString()
-		{
-			if(pNode->IsNull())
-				return "";
-			return pNode->String();
-		}
-
-		Item Get(const char *pField)
-		{
-			return pNode->Member(pField);
-		}
-
-		int Size()
-		{
-			return pNode->Length();
-		}
-
-		Item operator [](int index)
-		{
-			return pNode->At(index);
-		}
-	};
-
-	Result(const char *pJson)
-	: data(NULL)
-	{
-		error = SE_INVALID_RESPONSE;
-
-		pDoc = MFParseJSON_Parse((char*)pJson, true);
-		if(!pDoc)
-			return;
-
-		pRoot = MFParseJSON_Root(pDoc);
-
-		MFJSONValue *pReq = pRoot->Member("request");
-		MFJSONValue *pErr = pRoot->Member("error");
-
-		if(pReq != NULL && pErr != NULL)
-		{
-			pRequest = pReq->String();
-
-			error = (ServerError)pErr->Int();
-			pErrorMessage = pRoot->Member("message")->String();
-		}
-
-		data.pNode = pRoot->Member("response");
-	}
-
-	~Result()
-	{
-		MFParseJSON_DestroyDocument(pDoc);
-	}
-
-	const char *pRequest;
-
-	ServerError error;
-	const char *pErrorMessage;
-
-	MFDocumentJSON *pDoc;
-	MFJSONValue *pRoot;
-	Item data;
-
-	Item Data(const char *pField = NULL)
-	{
-		if(!pField)
-			return data;
-		return data.Get(pField);
-	}
-};
-
-void WLServ_CreateAccount(HTTPRequest &request, const char *pUsername, const char *pPassword, const char *pEmail)
-{
-	MFFileHTTPRequestArg args[4];
-	args[0].SetString("request", "CREATEACCOUNT");
-	args[1].SetString("username", pUsername);
-	args[2].SetString("password", pPassword);
-	args[3].SetString("email", pEmail);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-}
-
-void WLServ_Login(HTTPRequest &request, const char *pUsername, const char *pPassword)
-{
-	MFFileHTTPRequestArg args[3];
-	args[0].SetString("request", "LOGIN");
-	args[1].SetString("username", pUsername);
-	args[2].SetString("password", pPassword);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-}
-
-void WLServ_GetUserByID(HTTPRequest &request, uint32 id)
-{
-	MFFileHTTPRequestArg args[2];
-	args[0].SetString("request", "GETUSER");
-	args[1].SetInt("playerid", id);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-}
-
-void WLServ_GetUserByName(HTTPRequest &request, const char *pUsername, UserDetails *pUser)
-{
-	MFFileHTTPRequestArg args[2];
-	args[0].SetString("request", "GETUSER");
-	args[1].SetString("username", pUsername);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-}
-
+/*
 ServerError WLServResult_GetUser(HTTPRequest &request, UserDetails *pUser)
 {
 	ServerError err = CheckHTTPError(request.GetStatus());
@@ -226,109 +256,20 @@ ServerError WLServResult_GetUser(HTTPRequest &request, UserDetails *pUser)
 	if(result.error == SE_NO_ERROR)
 	{
 		pUser->id = result.Data("id").AsInt();
-		MFString_Copy(pUser->userName, result.Data("accountName").AsString());
+		MFString_Copy(pUser->userName, result.Data("name").AsString());
 
 		pUser->creationDate = 0; // result.Data("dateCreated").AsString();
 
-		pUser->played = result.Data("gamesPlayed").AsInt();
-		pUser->won = result.Data("gamesWon").AsInt();
-		pUser->lost = result.Data("gamesLost").AsInt();
+		pUser->won = result.Data("won").AsInt();
+		pUser->lost = result.Data("lost").AsInt();
+		pUser->played = pUser->won + pUser->lost;
 
-		MFString_Copy(pUser->channelToken, result.Data("channelToken").AsString());
+//		MFString_Copy(pUser->channelToken, result.Data("channelToken").AsString());
+
+		// all the game info and stuff...
 	}
 
 	return result.error;
-}
-
-static void WLServ_GetGames(HTTPRequest &request, const char *pRequest, uint32 user)
-{
-	MFFileHTTPRequestArg args[2];
-	args[0].SetString("request", pRequest);
-	args[1].SetInt("playerid", user);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-}
-
-void WLServ_GetActiveGames(HTTPRequest &request, uint32 user)
-{
-	WLServ_GetGames(request, "GETACTIVEGAMES", user);
-}
-
-void WLServ_GetPastGames(HTTPRequest &request, uint32 user)
-{
-	WLServ_GetGames(request, "GETPASTGAMES", user);
-}
-
-void WLServ_GetPendingGames(HTTPRequest &request, uint32 user)
-{
-	WLServ_GetGames(request, "GETWAITINGGAMES", user);
-}
-
-ServerError WLServResult_GetGameList(HTTPRequest &request, const char *pList, uint32 *pGames, int *pNumGames)
-{
-	ServerError err = CheckHTTPError(request.GetStatus());
-	if(err != SE_NO_ERROR)
-		return err;
-
-	HTTPResponse *pResponse = request.GetResponse();
-	Result result(pResponse->GetData());
-
-	if(result.error == SE_NO_ERROR)
-	{
-		Result::Item games = result.Data(pList);
-
-		*pNumGames = games.Size();
-		for(int a=0; a<*pNumGames; ++a)
-			pGames[a] = games[a].AsInt();
-	}
-
-	return result.error;
-}
-
-void WLServ_CreateGame(HTTPRequest &request, uint32 user, const GameCreateDetails *pDetails)
-{
-	MFFileHTTPRequestArg args[6];
-	args[0].SetString("request", "CREATEGAME");
-	args[1].SetString("name", pDetails->pName);
-	args[2].SetString("map", pDetails->pMap);
-	args[3].SetInt("players", pDetails->numPlayers);
-	args[4].SetInt("creator", user);
-	args[5].SetInt("turntime", pDetails->turnTime);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-}
-
-void WLServ_FindGames(HTTPRequest &request, uint32 user)
-{
-	MFFileHTTPRequestArg args[2];
-	args[0].SetString("request", "SEARCHGAMES");
-	args[1].SetInt("playerid", user);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-}
-
-void WLServ_FindRandomGame(HTTPRequest &request, uint32 user, uint32 *pGame)
-{
-	MFFileHTTPRequestArg args[2];
-	args[0].SetString("request", "FINDGAME");
-	args[1].SetInt("playerid", user);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-}
-
-void WLServ_BeginGame(HTTPRequest &request, uint32 game, uint32 *pPlayers, int numPlayers)
-{
-	MFFileHTTPRequestArg args[3];
-	args[0].SetString("request", "BEGINGAME");
-	args[1].SetInt("game", game);
-
-	char players[256] = "";
-	int len = 0;
-	for(int a=0; a<numPlayers; ++a)
-		len += sprintf(players + len, a > 0 ? ",%d" : "%d", pPlayers[a]);
-	args[2].SetString("players", players);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 ServerError WLServResult_GetGame(HTTPRequest &request, uint32 *pGame)
@@ -374,22 +315,13 @@ ServerError WLServResult_GetLobbies(HTTPRequest &request, GameLobby *pGames, int
 	return result.error;
 }
 
-void WLServ_GetGameByID(HTTPRequest &request, uint32 id)
+void WLServ_GetGame(HTTPRequest &request, uint32 id)
 {
-	MFFileHTTPRequestArg args[2];
-	args[0].SetString("request", "GETGAME");
-	args[1].SetInt("gameid", id);
+	MFFileHTTPRequestArg args[3];
+//	args[0].SetInt("user", );
+//	args[1].SetString("key", );
 
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-}
-
-void WLServ_GetGameByName(HTTPRequest &request, const char *pName)
-{
-	MFFileHTTPRequestArg args[2];
-	args[0].SetString("request", "GETGAME");
-	args[1].SetString("gamename", pName);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
+	request.Post(pHostname, port, MFStr("/api/games/%d", id), args, sizeof(args)/sizeof(args[0]));
 }
 
 ServerError WLServResult_GetGameDetails(HTTPRequest &request, GameDetails *pGame)
@@ -428,59 +360,6 @@ ServerError WLServResult_GetGameDetails(HTTPRequest &request, GameDetails *pGame
 	}
 
 	return result.error;
-}
-
-void WLServ_JoinGame(HTTPRequest &request, uint32 user, uint32 game)
-{
-	MFFileHTTPRequestArg args[3];
-	args[0].SetString("request", "JOINGAME");
-	args[1].SetInt("game", game);
-	args[2].SetInt("playerid", user);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-}
-
-void WLServ_LeaveGame(HTTPRequest &request, uint32 user, uint32 game)
-{
-	MFFileHTTPRequestArg args[3];
-	args[0].SetString("request", "LEAVEGAME");
-	args[1].SetInt("gameid", game);
-	args[2].SetInt("playerid", user);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-}
-
-void WLServ_SetRace(HTTPRequest &request, uint32 game, uint32 user, int race)
-{
-	MFFileHTTPRequestArg args[4];
-	args[0].SetString("request", "SETRACE");
-	args[1].SetInt("gameid", game);
-	args[2].SetInt("playerid", user);
-	args[3].SetInt("race", race);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-}
-
-void WLServ_SetColour(HTTPRequest &request, uint32 game, uint32 user, int colour)
-{
-	MFFileHTTPRequestArg args[4];
-	args[0].SetString("request", "SETCOLOUR");
-	args[1].SetInt("gameid", game);
-	args[2].SetInt("playerid", user);
-	args[3].SetInt("colour", colour);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
-}
-
-void WLServ_SetHero(HTTPRequest &request, uint32 game, uint32 user, int hero)
-{
-	MFFileHTTPRequestArg args[4];
-	args[0].SetString("request", "SETHERO");
-	args[1].SetInt("gameid", game);
-	args[2].SetInt("playerid", user);
-	args[3].SetInt("hero", hero);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 ServerError WLServResult_GetError(HTTPRequest &request)
@@ -546,14 +425,15 @@ ServerError WLServResult_GetGameState(HTTPRequest &request, GameState *pState)
 	return result.error;
 }
 
-int WLServ_ApplyActions(HTTPRequest &request, uint32 game, GameAction **ppActions, int numActions)
+int WLServ_CommitActions(HTTPRequest &request, uint32 game, Action *pActions, int numActions)
 {
 	if(numActions == 0)
 		return 0;
 
-	MFFileHTTPRequestArg args[3];
-	args[0].SetString("request", "APPLYACTIONS");
-	args[1].SetInt("game", game);
+	MFFileHTTPRequestArg args[4];
+//	args[0].SetInt("user", user);
+//	args[1].SetString("key", user);
+	args[2].SetInt("game", game);
 
 	// build the actions list
 	char actionList[1024 * 64] = "";
@@ -569,14 +449,14 @@ int WLServ_ApplyActions(HTTPRequest &request, uint32 game, GameAction **ppAction
 		if(len > 0)
 			len += sprintf(actionList + len, "\n");
 
-		GameAction &action = *ppActions[a];
+		Action &action = pActions[a];
 		len += sprintf(actionList + len, gpActions[action.action]);
 
 		for(int b=0; b<action.numArgs; ++b)
 			len += sprintf(actionList + len, "%s%d", b == 0 ? ":" : ",", action.pArgs[b]);
 	}
 
-	args[2].SetString("actions", actionList);
+	args[3].SetString("actions", actionList);
 
 	MFDebug_Log(3, actionList);
 
@@ -585,16 +465,6 @@ int WLServ_ApplyActions(HTTPRequest &request, uint32 game, GameAction **ppAction
 
 	// return the number of actions actually submitted
 	return numActions;
-}
-
-void WLServ_UpdateState(HTTPRequest &request, uint32 game, int lastAction)
-{
-	MFFileHTTPRequestArg args[3];
-	args[0].SetString("request", "UPDATE");
-	args[1].SetInt("game", game);
-	args[2].SetInt("firstaction", lastAction);
-
-	request.Post(pHostname, port, "/warriorlordsserv", args, sizeof(args)/sizeof(args[0]));
 }
 
 ServerError WLServResult_GetActions(HTTPRequest &request)
@@ -663,187 +533,4 @@ ServerError WLServResult_GetActions(HTTPRequest &request)
 
 	return result.error;
 }
-
-GameAction *GameAction::Create(GameActions action, int numArgs)
-{
-	int bytes = sizeof(GameAction) + sizeof(int)*numArgs;
-	GameAction *pAction = (GameAction*)MFHeap_Alloc(bytes);
-	pAction->action = action;
-	pAction->pArgs = (int*)((char*)pAction + sizeof(GameAction));
-	pAction->numArgs = numArgs;
-	return pAction;
-}
-
-bool GameAction::operator ==(GameAction &action)
-{
-	if(this->action != action.action || numArgs != action.numArgs)
-		return false;
-	for(int a=0; a<numArgs; ++a)
-		if(pArgs[a] != action.pArgs[a])
-			return false;
-	return true;
-}
-
-const char *GameAction::GetString()
-{
-	const char *pDesc = MFStr("%s: ", gpActions[action]);
-	for(int b=0; b<numArgs; ++b)
-		pDesc = MFStr(b > 0 ? "%s, %d" : "%s%d", pDesc, pArgs[b]);
-	return pDesc;
-}
-
-ActionList::ActionList(uint32 _game)
-{
-	actionList.reserve(1024);
-
-	numServerActions = 0;
-	commitPending = 0;
-
-	game = _game;
-
-	timeout = 10.f;
-
-	update.SetCompleteDelegate(MakeDelegate(this, &ActionList::RequestCallback));
-
-	Sync();
-}
-
-ActionList::~ActionList()
-{
-	for(int a=0; a<actionList.size(); ++a)
-	{
-		if(actionList[a])
-			MFHeap_Free(actionList[a]);
-	}
-}
-
-void ActionList::Update()
-{
-	timeout -= MFSystem_TimeDelta();
-	if(timeout <= 0.f)
-	{
-		Sync();
-		timeout = 10.f;
-	}
-}
-
-GameAction *ActionList::SubmitAction(GameActions action, int numArgs)
-{
-	GameAction *pNew = GameAction::Create(action, numArgs);
-	actionList.push(pNew);
-
-	return pNew;
-}
-
-GameAction *ActionList::SubmitActionArgs(GameActions action, int numArgs, va_list args)
-{
-	GameAction *pNew = GameAction::Create(action, numArgs);
-	actionList.push(pNew);
-
-	if(numArgs)
-	{
-		for(int a=0; a<numArgs; ++a)
-			pNew->pArgs[a] = va_arg(args, int);
-	}
-
-	return pNew;
-}
-
-void ActionList::Sync()
-{
-	if(update.RequestPending())
-		return;
-
-	if(actionList.size() > numServerActions)
-	{
-		// commit pending actions
-		commitPending = WLServ_ApplyActions(update, game, actionList.getPointer() + numServerActions, actionList.size() - numServerActions);
-	}
-	else
-	{
-		// check for updates from the server
-		WLServ_UpdateState(update, game, actionList.size());
-	}
-
-	timeout = 10.f;
-}
-
-void ActionList::RequestCallback(HTTPRequest::Status status)
-{
-	if(commitPending)
-	{
-		// finalise a commit
-		ServerError err = WLServResult_GetError(update);
-		if(err != SE_NO_ERROR)
-			return;
-
-		numServerActions += commitPending;
-		commitPending = 0;
-	}
-	else
-	{
-		// finalise an update
-		ServerError err = CheckHTTPError(update.GetStatus());
-		if(err != SE_NO_ERROR)
-			return;
-
-		HTTPResponse *pResponse = update.GetResponse();
-		Result result(pResponse->GetData());
-
-		if(result.error != SE_NO_ERROR)
-			return;
-
-		numServerActions = result.Data("totalActions").AsInt();
-		int firstAction = result.Data("firstAction").AsInt();
-
-		MFDebug_Assert(firstAction <= actionList.size(), "Trying to load future actions!!");
-
-		Result::Item actions = result.Data("actions");
-		int actionCount = actions.Size();
-
-		// process the actions
-		for(int a=0; a<actionCount; ++a)
-		{
-			Result::Item action = actions[a];
-
-			// get action type
-			GameActions type = GA_UNKNOWN_ACTION;
-			const char *pAction = action.Get("type").AsString();
-			for(int b=0; b<GA_MAX; ++b)
-			{
-				if(!MFString_Compare(pAction, gpActions[b]))
-				{
-					type = (GameActions)b;
-					break;
-				}
-			}
-
-			MFDebug_Assert(type != GA_UNKNOWN_ACTION, "Unknown action!");
-
-			// read args
-			Result::Item args = action.Get("args");
-			int numArgs = args.Size();
-
-			GameAction *pNew = GameAction::Create(type, numArgs);
-
-			for(int b=0; b<numArgs; ++b)
-				pNew->pArgs[b] = args[b].AsInt();
-
-			if(firstAction + a < actionList.size())
-			{
-				// compare the action that already exists is the same as the one the server's just given us...
-				MFDebug_Assert(*pNew == *actionList[firstAction + a], "The server record is different than the runtime!");
-				delete pNew;
-			}
-			else
-			{
-				// append to the back of the action list
-				actionList.push(pNew);
-			}
-		}
-	}
-
-	// just in case we didn't get eveything...
-	if(actionList.size() != numServerActions)
-		Sync();
-}
+*/

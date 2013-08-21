@@ -1,27 +1,7 @@
 #include "Warlords.h"
 #include "Path.h"
 #include "Map.h"
-
-struct Cell
-{
-	uint16 from;
-	uint16 gScore, hScore, fScore;
-	uint8 x, y;
-	uint8 open;
-	uint8 traversible;
-
-	void Set(int _x, int _y, int _gScore, int _hScore, int _fScore)
-	{
-		x = _x; y = _y;
-		gScore = _gScore;
-		hScore = _hScore;
-		fScore = _fScore;
-		from = 0;
-		open = 1;
-	}
-};
-
-static Cell *gpSearchList = NULL;
+#include "Group.h"
 
 void Path::Init(Map *_pMap)
 {
@@ -29,22 +9,21 @@ void Path::Init(Map *_pMap)
 
 	int width, height;
 	pMap->GetMapSize(&width, &height);
-	gpSearchList = (Cell*)MFHeap_Alloc(sizeof(Cell)*width*height);
+	pSearchList = (Cell*)MFHeap_Alloc(sizeof(Cell)*width*height);
 
 	pathStart = MaxPath;
 }
 
 void Path::Deinit()
 {
-	MFHeap_Free(gpSearchList);
-	gpSearchList = NULL;
+	MFHeap_Free(pSearchList);
+	pSearchList = NULL;
 }
 
 bool Path::FindPath(Group *pGroup, int destX, int destY)
 {
-	Game *pGame = Game::GetCurrent();
-	Map *pMap = pGame->GetMap();
-	Tileset *pTileset = pMap->GetTileset();
+	Map &map = *pMap;
+	const Tileset &tileset = map.Tileset();
 
 	MapTile *pTile = pGroup->GetTile();
 	int player = pGroup->GetPlayer();
@@ -57,7 +36,7 @@ bool Path::FindPath(Group *pGroup, int destX, int destY)
 	bool bRoadWalk = false;
 	MFMemSet(terrainPenalties, 0xFF, sizeof(terrainPenalties));
 
-	int numTerrainTypes = pTileset->GetNumTerrainTypes();
+	int numTerrainTypes = tileset.NumTerrainTypes();
 
 	Unit *pVehicle = pGroup->GetVehicle();
 	if(pVehicle)
@@ -105,10 +84,10 @@ bool Path::FindPath(Group *pGroup, int destX, int destY)
 
 	// initialise the search data
 	int width, height;
-	pMap->GetMapSize(&width, &height);
+	map.GetMapSize(&width, &height);
 
 	int dist = MFMax(MFAbs(destX - startX), MFAbs(destY - startY));
-	gpSearchList[0].Set(startX, startY, 0, dist, dist);
+	pSearchList[0].Set(startX, startY, 0, dist, dist);
 	int item = 0;
 	int numItems = 1;
 
@@ -120,9 +99,9 @@ bool Path::FindPath(Group *pGroup, int destX, int destY)
 		int cf = 1 << 30;
 		for(int a=0; a<numItems; ++a)
 		{
-			if(gpSearchList[a].open == 1 && gpSearchList[a].fScore < cf)
+			if(pSearchList[a].open == 1 && pSearchList[a].fScore < cf)
 			{
-				cf = gpSearchList[a].fScore;
+				cf = pSearchList[a].fScore;
 				x = a;
 			}
 		}
@@ -130,7 +109,7 @@ bool Path::FindPath(Group *pGroup, int destX, int destY)
 		if(x == -1)
 			break;
 
-		Cell &item = gpSearchList[x];
+		Cell &item = pSearchList[x];
 
 		if(item.x == destX && item.y == destY)
 		{
@@ -141,11 +120,11 @@ bool Path::FindPath(Group *pGroup, int destX, int destY)
 			{
 				Step &step = path[--pathStart];
 
-				step.x = gpSearchList[x].x;
-				step.y = gpSearchList[x].y;
-				step.flags = gpSearchList[x].traversible ? 4 : 0;
+				step.x = pSearchList[x].x;
+				step.y = pSearchList[x].y;
+				step.flags = pSearchList[x].traversible ? 4 : 0;
 
-				x = gpSearchList[x].from;
+				x = pSearchList[x].from;
 			}
 
 			// calculate the movement distance
@@ -268,14 +247,14 @@ bool Path::FindPath(Group *pGroup, int destX, int destY)
 				int y = -1;
 				for(int a=0; a<numItems; ++a)
 				{
-					if(tx == gpSearchList[a].x && ty == gpSearchList[a].y)
+					if(tx == pSearchList[a].x && ty == pSearchList[a].y)
 					{
 						y = a;
 						break;
 					}
 				}
 
-				if(y == -1 || gpSearchList[y].open != 2)
+				if(y == -1 || pSearchList[y].open != 2)
 				{
 					// calculate the path score
 					MapTile *pTile = pMap->GetTile(tx, ty);
@@ -300,18 +279,18 @@ bool Path::FindPath(Group *pGroup, int destX, int destY)
 					if(y == -1)
 					{
 						y = numItems;
-						gpSearchList[numItems++].Set(tx, ty, 0, MFMax(MFAbs(destX - tx), MFAbs(destY - ty)), 0);
+						pSearchList[numItems++].Set(tx, ty, 0, MFMax(MFAbs(destX - tx), MFAbs(destY - ty)), 0);
 						isBetter = true;
 					}
-					else if(tg < gpSearchList[y].gScore)
+					else if(tg < pSearchList[y].gScore)
 						isBetter = true;
 
 					if(isBetter)
 					{
-						gpSearchList[y].from = x;
-						gpSearchList[y].gScore = tg;
-						gpSearchList[y].fScore = tg + gpSearchList[y].hScore;
-						gpSearchList[y].traversible = bNonTraversible ? 0 : 1;
+						pSearchList[y].from = x;
+						pSearchList[y].gScore = tg;
+						pSearchList[y].fScore = tg + pSearchList[y].hScore;
+						pSearchList[y].traversible = bNonTraversible ? 0 : 1;
 					}
 				}
 			}

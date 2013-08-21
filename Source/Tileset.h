@@ -3,6 +3,11 @@
 
 struct MFMaterial;
 
+struct TileSize
+{
+	int width, height;
+};
+
 struct Tile
 {
 	enum Type
@@ -22,35 +27,35 @@ struct Tile
 class Tileset
 {
 public:
-	static Tileset *Create(const char *pFilename);
+	static Tileset *Create(MFString filename);
 	void Destroy();
 
-	inline int GetNumTerrainTypes() const { return terrainCount; }
-	inline const char *GetTerrainName(int type) const { return pTerrainTypes[type].name; }
-	const MFVector &GetTerrainColour(int terrain) const { return pTerrainTypes[terrain].mapColour; }
+	inline int NumTerrainTypes() const							{ return terrainTypes.size(); }
+	inline MFString TerrainName(int type) const					{ return terrainTypes[type].name; }
+	inline const MFVector& TerrainColour(int terrain) const		{ return terrainTypes[terrain].mapColour; }
 
 	int FindBestTiles(int *pTiles, uint32 tile, uint32 mask = 0xFFFFFFFF, int maxMatches = 8) const;
 	int FindBestRoads(int *pRoads, uint32 directions, uint32 terrain) const;
 	int FindRoad(uint32 directions, uint32 terrain) const;
-	uint32 GetRoadConnections(int road) const { return pRoads[road].directions; }
+	uint32 GetRoadConnections(int road) const					{ return roads[road].directions; }
 
-	inline void GetTileSize(int *pWidth, int *pHeight) const { *pWidth = tileWidth; *pHeight = tileHeight; }
-	inline const Tile *GetTile(int tile) const { return &tiles[tile >> 8][tile & 0xFF]; }
+	inline TileSize GetTileSize() const							{ TileSize ts; ts.width = tileWidth; ts.height = tileHeight; return ts; }
+	inline const Tile *GetTile(int tile) const					{ return &tiles[tile >> 8][tile & 0xFF]; }
 
-	void DrawMap(int xTiles, int yTiles, uint16 *pTileData, int stride, int lineStride, float texelOffset);
+	void DrawMap(int xTiles, int yTiles, uint16 *pTileData, int stride, int lineStride, float texelOffset) const;
 
-	void GetTileUVs(int tile, MFRect *pUVs, float texelOffset);
-	void GetRoadUVs(int index, MFRect *pUVs, float texelOffset);
-	void GetWaterUVs(MFRect *pUVs, float texelOffset);
+	MFRect GetTileUVs(int tile, float texelOffset) const;
+	MFRect GetRoadUVs(int index, float texelOffset) const;
+	MFRect GetWaterUVs(float texelOffset) const;
 
-	inline MFMaterial *GetTileMaterial(int page = 0) const { return pTileMap[page]; }
-	inline MFMaterial *GetWaterMaterial() const { return pWater; }
-	inline MFMaterial *GetRoadMaterial() const { return pRoadMap; }
+	inline MFMaterial* GetTileMaterial(int page = 0) const		{ return pTileMap[page]; }
+	inline MFMaterial* GetWaterMaterial() const					{ return pWater; }
+	inline MFMaterial* GetRoadMaterial() const					{ return pRoadMap; }
 
 protected:
 	struct TerrainType
 	{
-		char name[28];
+		MFString name;
 		MFVector mapColour;
 	};
 
@@ -62,7 +67,7 @@ protected:
 		uint32 terrain;
 	};
 
-	char name[64];
+	MFString name;
 
 	int tileWidth, tileHeight;
 	int imageWidth, imageHeight;
@@ -72,11 +77,8 @@ protected:
 	MFMaterial *pWater;
 	MFMaterial *pRoadMap;
 
-	TerrainType *pTerrainTypes;
-	int terrainCount;
-
-	Road *pRoads;
-	int roadCount;
+	MFArray<TerrainType> terrainTypes;
+	MFArray<Road> roads;
 
 	Tile tiles[2][256];
 

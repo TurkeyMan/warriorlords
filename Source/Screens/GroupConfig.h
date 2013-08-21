@@ -7,23 +7,25 @@
 class GroupConfig : public Window
 {
 public:
-	GroupConfig();
+	GroupConfig(Game *pGame);
 	virtual ~GroupConfig();
 
 	virtual bool DrawContent();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 
-	virtual void Show(MapTile *pTile);
+	virtual void Show(Game *pGame, MapTile *pTile);
 	virtual void Hide();
 
 protected:
 	UnitConfig battleConfig;
 
 	MapTile *pTile;
-	UnitDefinitions *pDefs;
+	const UnitDefinitions *pDefs;
 
 	MFMaterial *pMelee, *pRanged;
+
+	MFArray<UnitRender> renderUnits;
 
 	MFRect top, rear, front, lower, bottom[4], empty;
 

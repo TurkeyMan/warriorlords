@@ -20,10 +20,18 @@ int HTTPRequest::numLiveRequests = 0;
 void HTTPRequest::UpdateHTTPEvents()
 {
 	for(int a=0; a<numLiveRequests; ++a)
+	{
+		if(pUpdateList[a]->bDestroy && !pUpdateList[a]->transferThread)
+			delete pUpdateList[a--];
+	}
+
+	for(int a=0; a<numLiveRequests; ++a)
 		pUpdateList[a]->UpdateEvents();
 }
 
-HTTPRequest::HTTPRequest()
+HTTPRequest::HTTPRequest(HTTPEventDelegate completeDelegate, HTTPEventDelegate eventDelegate)
+: completeDelegate(completeDelegate)
+, eventDelegate(eventDelegate)
 {
 	bFinished = bOldFinished = false;
 	status = oldStatus = CS_NotStarted;
@@ -34,8 +42,10 @@ HTTPRequest::HTTPRequest()
 
 	pResponse = NULL;
 
-	eventDelegate.clear();
-	completeDelegate.clear();
+	bDestroy = false;
+
+//	eventDelegate.clear();
+//	completeDelegate.clear();
 
 	pUpdateList[numLiveRequests++] = this;
 }
@@ -69,13 +79,13 @@ void HTTPRequest::UpdateEvents()
 	if(status != oldStatus && status != CS_NotStarted)
 	{
 		if(eventDelegate)
-			eventDelegate(status);
+			eventDelegate(this);
 	}
 
 	if(bFinished && !bOldFinished)
 	{
 		if(completeDelegate)
-			completeDelegate(status);
+			completeDelegate(this);
 	}
 
 	oldStatus = status;
@@ -259,85 +269,6 @@ HTTPResponse *HTTPRequest::GetResponse()
 	return pR;
 }
 
-HTTPResponse *HTTP_Get(const char *pServer, int port, const char *pResourcePath)
-{
-	MFAddressInfo *pAddrInfo;
-	if(MFSockets_GetAddressInfo(pServer, MFStr("%d", port), NULL, &pAddrInfo) == 0)
-	{
-		MFString request = MFString::Format("GET %s HTTP/1.1\r\nHost: %s:%d\r\nUser-Agent: WarriorLords Client/1.0\r\n\r\n", pResourcePath, pServer, port);
-
-		MFSocket s = MFSockets_CreateSocket(pAddrInfo->pAddress->family, MFSockType_Stream, MFProtocol_TCP);
-
-		int r = MFSockets_Connect(s, *pAddrInfo->pAddress);
-		if(r != 0)
-		{
-			MFSockets_CloseSocket(s);
-			return NULL;
-		}
-
-		MFSockets_Send(s, request.CStr(), request.NumBytes(), 0);
-		HTTPResponse *pResponse = HTTPResponse::Create(s);
-		MFSockets_CloseSocket(s);
-
-		return pResponse;
-	}
-
-	return NULL;
-}
-
-HTTPResponse *HTTP_Post(const char *pServer, int port, const char *pResourcePath, MFFileHTTPRequestArg *pArgs, int numArgs)
-{
-	MFAddressInfo *pAddrInfo;
-	if(MFSockets_GetAddressInfo(pServer, MFStr("%d", port), NULL, &pAddrInfo) == 0)
-	{
-		MFString content;
-		if(pArgs)
-		{
-			char arg[128];
-			char val[1024];
-
-			// build the string from the supplied args
-			for(int a=0; a<numArgs; ++a)
-			{
-				MFString_URLEncode(arg, pArgs[a].pArg);
-
-				switch(pArgs[a].type)
-				{
-					case MFFileHTTPRequestArg::AT_Int:
-						content += MFString::Format(a > 0 ? "&%s=%d" : "%s=%d", arg, pArgs[a].iValue);
-						break;
-					case MFFileHTTPRequestArg::AT_Float:
-						content += MFString::Format(a > 0 ? "&%s=%g" : "%s=%g", arg, pArgs[a].fValue);
-						break;
-					case MFFileHTTPRequestArg::AT_String:
-						MFString_URLEncode(val, pArgs[a].pValue);
-						content += MFString::Format(a > 0 ? "&%s=%s" : "%s=%s", arg, val);
-						break;
-				}
-			}
-		}
-
-		MFString request = MFString::Format("POST %s HTTP/1.1\r\nHost: %s:%d\r\nUser-Agent: WarriorLords Client/1.0\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %d\r\n\r\n%s", pResourcePath, pServer, port, content.NumBytes(), content.CStr());
-
-		MFSocket s = MFSockets_CreateSocket(pAddrInfo->pAddress->family, MFSockType_Stream, MFProtocol_TCP);
-
-		int r = MFSockets_Connect(s, *pAddrInfo->pAddress);
-		if(r != 0)
-		{
-			MFSockets_CloseSocket(s);
-			return NULL;
-		}
-
-		MFSockets_Send(s, request.CStr(), request.NumBytes(), 0);
-		HTTPResponse *pResponse = HTTPResponse::Create(s);
-		MFSockets_CloseSocket(s);
-
-		return pResponse;
-	}
-
-	return NULL;
-}
-
 HTTPResponse *HTTPResponse::Create(MFSocket s)
 {
 //	MFDebug_Log(0, "---------------------- Begin Transfer ----------------------");
@@ -395,7 +326,7 @@ HTTPResponse *HTTPResponse::Create(MFSocket s)
 		pLine = MFTokeniseLine(pNextLine, &pNextLine);
 	}
 
-	for(int a=0; a<pHeader->values.size(); ++a)
+	for(size_t a=0; a<pHeader->values.size(); ++a)
 	{
 		// populate string pair
 		ResponseField &field = pHeader->values[a];

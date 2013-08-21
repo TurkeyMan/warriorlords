@@ -34,8 +34,7 @@ protected:
 	struct MapData
 	{
 		MFString name;
-		MapDetails details;
-		bool bDetailsLoaded;
+		Map *pMap;
 	};
 
 	GameData();

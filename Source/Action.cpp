@@ -2,6 +2,7 @@
 #include "Game.h"
 
 #include "Unit.h"
+#include "Group.h"
 
 #include <stdio.h>
 
@@ -142,7 +143,7 @@ void History::Read(MFString text)
 	text.SplitLines(lines);
 
 	// parse lines
-	for(int l=0; l<lines.size(); ++l)
+	for(size_t l=0; l<lines.size(); ++l)
 	{
 		// identify action type
 		int lineNumber;
@@ -173,7 +174,7 @@ void History::Read(MFString text)
 				// parse players
 				MFArray<MFString> playerList;
 				playerText.Split(playerList, "}");
-				for(int i=0; i<playerList.size(); ++i)
+				for(size_t i=0; i<playerList.size(); ++i)
 				{
 					playerList[i].Trim(true, false, " ,");
 					playerList[i].Parse("{ %x, %d, %d", &a.beginGame.players[i].id, &a.beginGame.players[i].race, &a.beginGame.players[i].colour);
@@ -184,7 +185,7 @@ void History::Read(MFString text)
 				MFArray<MFString> ruinList;
 				MFArray<Action::Ruin> ruins;
 				ruinText.Split(ruinList, "}");
-				for(int i=0; i<ruinList.size(); ++i)
+				for(size_t i=0; i<ruinList.size(); ++i)
 				{
 					Action::Ruin r;
 					ruinList[i].Trim(true, false, " ,");
@@ -251,7 +252,7 @@ void History::Read(MFString text)
 				MFArray<MFString> moveLeftList;
 				moveLeft.Split(moveLeftList, ", ");
 
-				int i=0;
+				size_t i=0;
 				for(; i<moveLeftList.size(); ++i)
 					moveLeftList[i].Parse("%d", &a.move.endMovement[i]);
 				for(; i<11; ++i)
@@ -269,7 +270,7 @@ void History::Read(MFString text)
 				MFArray<MFString> resultsList;
 				MFArray<Action::Unit> units;
 				results.Split(resultsList, "}");
-				for(int i=0; i<resultsList.size(); ++i)
+				for(size_t i=0; i<resultsList.size(); ++i)
 				{
 					Action::Unit u;
 					resultsList[i].Trim(true, false, " ,");
@@ -293,11 +294,11 @@ void History::Read(MFString text)
 	}
 }
 
-void History::PushBeginGame(const char *pMap, Action::Player *pPlayers, int numPlayers, Action::Ruin *pRuins, int numRuins)
+void History::PushBeginGame(MFString map, Action::Player *pPlayers, int numPlayers, Action::Ruin *pRuins, int numRuins)
 {
 	Action a;
 	a.type = AT_BeginGame;
-	a.beginGame.pMap = MFString_Dup(pMap);
+	a.beginGame.pMap = MFString_Dup(map.CStr());
 	for(int i=0; i<numPlayers; ++i)
 	{
 		a.beginGame.players[i].id = pPlayers[i].id;
@@ -307,7 +308,7 @@ void History::PushBeginGame(const char *pMap, Action::Player *pPlayers, int numP
 	a.beginGame.numPlayers = numPlayers;
 	a.beginGame.pRuins = pRuins;
 	a.beginGame.numRuins = numRuins;
-	actions.push(a);
+	Push(a);
 }
 
 void History::PushBeginTurn(int player)
@@ -427,7 +428,7 @@ void History::PushCaptureCastle(Group *pGroup, Castle *pCastle)
 	Push(a);
 }
 
-void History::PushCaptureUnits(Group *pGroup, Group *pUnits)
+void History::PushCaptureUnits(Group *pUnits)
 {
 	Action a;
 	a.type = AT_CaptureUnits;
@@ -437,10 +438,10 @@ void History::PushCaptureUnits(Group *pGroup, Group *pUnits)
 
 void History::Push(Action &action)
 {
-	actions.push(action);
-
-	++actionsApplied;
 	MFDebug_Assert(actions.size() == actionsApplied, "Out of sync?");
+
+	actions.push(action);
+	++actionsApplied;
 
 	MFString text = Write();
 	MFFileSystem_Save("history.txt", text.CStr(), text.NumBytes());

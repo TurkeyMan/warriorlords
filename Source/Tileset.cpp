@@ -7,9 +7,9 @@
 #include "Fuji/MFTexture.h"
 #include "Fuji/MFPrimitive.h"
 
-Tileset *Tileset::Create(const char *pFilename)
+Tileset *Tileset::Create(MFString filename)
 {
-	MFIni *pIni = MFIni::Create(pFilename);
+	MFIni *pIni = MFIni::Create(filename.CStr());
 	if(!pIni)
 		return NULL;
 
@@ -21,7 +21,7 @@ Tileset *Tileset::Create(const char *pFilename)
 	{
 		if(pLine->IsSection("Tilemap"))
 		{
-			pNew = (Tileset*)MFHeap_AllocAndZero(sizeof(Tileset));
+			pNew = new Tileset;
 			MFMemSet(pNew->tiles, 0xFF, sizeof(pNew->tiles));
 
 			MFIniLine *pTilemap = pLine->Sub();
@@ -30,7 +30,7 @@ Tileset *Tileset::Create(const char *pFilename)
 			{
 				if(pTilemap->IsString(0, "name"))
 				{
-					MFString_Copy(pNew->name, pTilemap->GetString(1));
+					pNew->name, pTilemap->GetString(1);
 				}
 				else if(pTilemap->IsString(0, "tilemap"))
 				{
@@ -79,32 +79,30 @@ Tileset *Tileset::Create(const char *pFilename)
 				}
 				else if(pTilemap->IsSection("Terrain"))
 				{
-					pNew->terrainCount = 0;
-
 					MFIniLine *pTerrain = pTilemap->Sub();
 					while(pTerrain)
 					{
 						if(!pTerrain->IsString(0, "section"))
-							pNew->terrainCount = MFMax(pNew->terrainCount, pTerrain->GetInt(0, 16) + 1);
+							pNew->terrainTypes.resize(MFMax(pNew->terrainTypes.size(), (size_t)pTerrain->GetInt(0, 16) + 1));
 
 						pTerrain = pTerrain->Next();
 					}
-
-					pNew->pTerrainTypes = (TerrainType*)MFHeap_AllocAndZero(sizeof(TerrainType) * pNew->terrainCount);
 
 					pTerrain = pTilemap->Sub();
 					while(pTerrain)
 					{
 						if(!pTerrain->IsString(0, "section"))
-							MFString_Copy(pNew->pTerrainTypes[pTerrain->GetInt(0, 16)].name, pTerrain->GetString(1));
+						{
+							pNew->terrainTypes[pTerrain->GetInt(0, 16)].name = pTerrain->GetString(1);
+						}
 						else if(pTerrain->IsSection("Transitions"))
 						{
 							MFIniLine *pTransitions = pTerrain->Sub();
 
 							while(pTransitions)
 							{
-								MFDebug_Assert(pTransitions->GetStringCount()-1 == pNew->terrainCount, "Invalid transition table dimensions!");
-								for(int a=0; a<pNew->terrainCount; ++a)
+								MFDebug_Assert(pTransitions->GetStringCount()-1 == pNew->terrainTypes.size(), "Invalid transition table dimensions!");
+								for(size_t a=0; a<pNew->terrainTypes.size(); ++a)
 									pNew->terrainTransitions[pTransitions->GetInt(0, 16)][a] = pTransitions->GetInt(a + 1);
 
 								pTransitions = pTransitions->Next();
@@ -117,7 +115,7 @@ Tileset *Tileset::Create(const char *pFilename)
 							while(pColours)
 							{
 								uint32 colour = MFString_AsciiToInteger(pColours->GetString(1), true) | 0xFF000000;
-								pNew->pTerrainTypes[pColours->GetInt(0, 16)].mapColour.Set(((colour >> 16) & 0xFF) * (1.f/255.f), ((colour >> 8) & 0xFF) * (1.f/255.f), (colour & 0xFF) * (1.f/255.f));
+								pNew->terrainTypes[pColours->GetInt(0, 16)].mapColour.Set(((colour >> 16) & 0xFF) * (1.f/255.f), ((colour >> 8) & 0xFF) * (1.f/255.f), (colour & 0xFF) * (1.f/255.f));
 								pColours = pColours->Next();
 							}
 						}
@@ -165,19 +163,7 @@ Tileset *Tileset::Create(const char *pFilename)
 				}
 				else if(pTilemap->IsSection("Road"))
 				{
-					pNew->roadCount = 0;
-					int r = 0;
-
 					MFIniLine *pRoad = pTilemap->Sub();
-					while(pRoad)
-					{
-						++pNew->roadCount;
-						pRoad = pRoad->Next();
-					}
-
-					pNew->pRoads = (Road*)MFHeap_AllocAndZero(sizeof(Road) * pNew->roadCount);
-
-					pRoad = pTilemap->Sub();
 					while(pRoad)
 					{
 						int x = pRoad->GetInt(0);
@@ -185,7 +171,7 @@ Tileset *Tileset::Create(const char *pFilename)
 						MFDebug_Assert(x < 16 && y < 16, "Tile sheets may have a maximum of 16x16 tiles.");
 						MFDebug_Assert(pRoad->IsString(2, "="), "Expected '='.");
 
-						Road &road = pNew->pRoads[r++];
+						Road &road = pNew->roads.push();
 						road.x = x;
 						road.y = y;
 						road.directions = (pRoad->GetInt(3) << 3) | (pRoad->GetInt(4) << 2) | (pRoad->GetInt(5) << 1) | pRoad->GetInt(6);
@@ -209,16 +195,15 @@ Tileset *Tileset::Create(const char *pFilename)
 
 void Tileset::Destroy()
 {
-	MFMaterial_Destroy(pTileMap[0]);
-	MFMaterial_Destroy(pTileMap[1]);
-	MFMaterial_Destroy(pWater);
-	MFMaterial_Destroy(pRoadMap);
-	MFHeap_Free(pTerrainTypes);
-	MFHeap_Free(pRoads);
-	MFHeap_Free(this);
+	MFMaterial_Release(pTileMap[0]);
+	MFMaterial_Release(pTileMap[1]);
+	MFMaterial_Release(pWater);
+	MFMaterial_Release(pRoadMap);
+
+	delete this;
 }
 
-void Tileset::DrawMap(int xTiles, int yTiles, uint16 *pTileData, int stride, int lineStride, float texelOffset)
+void Tileset::DrawMap(int xTiles, int yTiles, uint16 *pTileData, int stride, int lineStride, float texelOffset) const
 {
 	stride /= sizeof(*pTileData);
 
@@ -251,7 +236,7 @@ void Tileset::DrawMap(int xTiles, int yTiles, uint16 *pTileData, int stride, int
 			rt.x = x;
 			rt.y = y;
 
-			Tile &t = tiles[page][tile];
+			const Tile &t = tiles[page][tile];
 			rt.tx = t.x;
 			rt.ty = t.y;
 
@@ -354,11 +339,11 @@ int Tileset::FindBestRoads(int *pRoad, uint32 directions, uint32 terrain) const
 	int numRoads = 0;
 	int error = 4;
 
-	for(int a=0; a<roadCount; ++a)
+	for(size_t a=0; a<roads.size(); ++a)
 	{
-		if(pRoads[a].terrain == terrain)
+		if(roads[a].terrain == terrain)
 		{
-			uint32 d = pRoads[a].directions ^ directions;
+			uint32 d = roads[a].directions ^ directions;
 			int e = 0;
 			for(int b=1; b<0x10; b<<=1)
 			{
@@ -379,7 +364,7 @@ int Tileset::FindBestRoads(int *pRoad, uint32 directions, uint32 terrain) const
 	return numRoads;
 }
 
-void Tileset::GetTileUVs(int tile, MFRect *pUVs, float texelOffset)
+MFRect Tileset::GetTileUVs(int tile, float texelOffset) const
 {
 	float fWidth = (float)imageWidth;
 	float fHeight = (float)imageHeight;
@@ -388,14 +373,16 @@ void Tileset::GetTileUVs(int tile, MFRect *pUVs, float texelOffset)
 	float halfX = texelOffset / fWidth;
 	float halfY = texelOffset / fHeight;
 
-	Tile &t = tiles[tile >> 8][tile & 0xFF];
-	pUVs->x = t.x*xScale + halfX;
-	pUVs->y = t.y*yScale + halfY;
-	pUVs->width = xScale;
-	pUVs->height = yScale;
+	const Tile &t = tiles[tile >> 8][tile & 0xFF];
+	MFRect uvs;
+	uvs.x = t.x*xScale + halfX;
+	uvs.y = t.y*yScale + halfY;
+	uvs.width = xScale;
+	uvs.height = yScale;
+	return uvs;
 }
 
-void Tileset::GetRoadUVs(int index, MFRect *pUVs, float texelOffset)
+MFRect Tileset::GetRoadUVs(int index, float texelOffset) const
 {
 	float fWidth = (float)roadWidth;
 	float fHeight = (float)roadHeight;
@@ -404,31 +391,35 @@ void Tileset::GetRoadUVs(int index, MFRect *pUVs, float texelOffset)
 	float halfX = texelOffset / fWidth;
 	float halfY = texelOffset / fHeight;
 
-	Road &r = pRoads[index];
-	pUVs->x = r.x*xScale + halfX;
-	pUVs->y = r.y*yScale + halfY;
-	pUVs->width = xScale;
-	pUVs->height = yScale;
+	const Road &r = roads[index];
+	MFRect uvs;
+	uvs.x = r.x*xScale + halfX;
+	uvs.y = r.y*yScale + halfY;
+	uvs.width = xScale;
+	uvs.height = yScale;
+	return uvs;
 }
 
-void Tileset::GetWaterUVs(MFRect *pUVs, float texelOffset)
+MFRect Tileset::GetWaterUVs(float texelOffset) const
 {
 	float fWidth = (float)tileWidth;
 	float fHeight = (float)tileHeight;
 	float halfX = texelOffset / fWidth;
 	float halfY = texelOffset / fHeight;
 
-	pUVs->x = halfX;
-	pUVs->y = halfY;
-	pUVs->width = 1.f;
-	pUVs->height = 1.f;
+	MFRect uvs;
+	uvs.x = halfX;
+	uvs.y = halfY;
+	uvs.width = 1.f;
+	uvs.height = 1.f;
+	return uvs;
 }
 
 int Tileset::FindRoad(uint32 directions, uint32 terrain) const
 {
-	for(int a=0; a<roadCount; ++a)
+	for(size_t a=0; a<roads.size(); ++a)
 	{
-		if(pRoads[a].terrain == terrain && pRoads[a].directions == directions)
+		if(roads[a].terrain == terrain && roads[a].directions == directions)
 			return a;
 	}
 

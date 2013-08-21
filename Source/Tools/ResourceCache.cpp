@@ -65,7 +65,7 @@ void ResourceCache::UnloadResources(MFIniLine *pLine)
 		else if(pLine->IsString(1, "material") || pLine->IsString(1, "image"))
 		{
 			MFMaterial *pMaterial = materialList[pResource];
-			MFMaterial_Destroy(pMaterial);
+			MFMaterial_Release(pMaterial);
 			materialList.Destroy(pResource);
 		}
 		else if(pLine->IsString(1, "model"))

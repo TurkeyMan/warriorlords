@@ -1,6 +1,8 @@
 #if !defined(_WARLORDS_H)
 #define _WARLORDS_H
 
+#pragma warning(disable:4530)
+
 #include "Fuji/Fuji.h"
 #include "Fuji/MFHeap.h"
 #include "Fuji/MFArray.h"

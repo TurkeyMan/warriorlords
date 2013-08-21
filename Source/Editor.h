@@ -3,7 +3,7 @@
 
 #include "Screen.h"
 #include "Game.h"
-#include "Map.h"
+#include "EditableMap.h"
 #include "Button.h"
 #include "StringBox.h"
 
@@ -46,7 +46,7 @@ protected:
 class CastleEdit : public InputReceiver
 {
 public:
-	CastleEdit();
+	CastleEdit(Editor &editor);
 	~CastleEdit();
 
 	void Update();
@@ -58,6 +58,8 @@ public:
 	void Hide();
 
 protected:
+	Editor &editor;
+
 	Castle *pCastle;
 	CastleDetails *pTemplate;
 
@@ -76,13 +78,13 @@ protected:
 
 	void SelectUnit(int button, int buttonID);
 	void SetUnit(int button, int buttonID);
-	void NameChangeCallback(const char *pString);
+	void NameChangeCallback(MFString string);
 };
 
-class Editor : public Screen
+class Editor : public Game, public Screen
 {
 public:
-	Editor(Game *pGame);
+	Editor(MFString mapFilename);
 	virtual ~Editor();
 
 	virtual void Select();
@@ -98,10 +100,11 @@ public:
 	void ShowMiniMap(int button, int buttonID);
 	void ChangeMode(int button, int buttonID);
 
+	EditableMap &Map()	{ return map; }
+
 protected:
-	Game *pGame;
-	Map *pMap;
-	bool bOwnsMap;
+	EditableMap map;
+	GameState gameState;
 
 	MFMaterial *pIcons;
 

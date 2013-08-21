@@ -63,8 +63,8 @@ class User
 
         j.id = id;
         j.name = name;
-        j.registrationDate = registration.toISOString();
-        j.lastSeen = lastSeen.toISOString();
+        j.registrationdate = registration.toISOString();
+        j.lastseen = lastSeen.toISOString();
         j.won = won;
         j.lost = lost;
 
@@ -86,7 +86,7 @@ class User
                 req.id = fr.id;
                 req.name = fr.name;
             }
-            j.friendRequests = arr;
+            j.friendrequests = arr;
 
             // invites
             arr = null;
@@ -101,9 +101,21 @@ class User
 
             // games
             arr = null;
-            foreach(g; games)
-                arr ~= g.toJson();
+            foreach(p; pending)
+                arr ~= p.toJson();
+            j.pending = arr;
+
+            // games
+            arr = null;
+            foreach(a; active)
+                arr ~= a.toJson();
             j.games = arr;
+
+            // finished
+            arr = null;
+            foreach(f; finished)
+                arr ~= Json(f.id);
+            j.finished = arr;
         }
 
         return j;

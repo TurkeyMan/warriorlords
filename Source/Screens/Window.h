@@ -7,7 +7,7 @@
 class Window : public InputReceiver
 {
 public:
-	Window(bool bCloseButton);
+	Window(Game *pGame, bool bCloseButton);
 	virtual ~Window();
 
 	virtual bool Draw();
@@ -29,6 +29,8 @@ protected:
 
 	bool bVisible;
 	bool bCloseButton;
+
+	Game *pGame;
 
 	void CloseWindow(int button, int buttonID);
 };

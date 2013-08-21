@@ -139,7 +139,7 @@ public:
 	void Read(MFString text);
 
 	// hard actions
-	void PushBeginGame(const char *pMap, Action::Player *pPlayers, int numPlayers, Action::Ruin *pRuins, int numRuins);
+	void PushBeginGame(MFString map, Action::Player *pPlayers, int numPlayers, Action::Ruin *pRuins, int numRuins);
 
 	void PushBeginTurn(int player);
 	void PushPlayerEliminated(int player);
@@ -157,7 +157,7 @@ public:
 
 	void PushBattle(Action::Unit *pUnits, int numUnits);
 	void PushCaptureCastle(Group *pGroup, Castle *pCastle);
-	void PushCaptureUnits(Group *pGroup, Group *pUnits);
+	void PushCaptureUnits(Group *pUnits);
 
 	void Push(Action &action);
 
@@ -174,7 +174,7 @@ public:
 
 private:
 	MFArray<Action> actions;
-	int actionsApplied;
+	size_t actionsApplied;
 };
 
 #endif

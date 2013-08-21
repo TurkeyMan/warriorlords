@@ -4,6 +4,7 @@
 #include "Haku/UI/HKWidgetLoader-XML.h"
 
 #include "Menu.h"
+#include "Profile.h"
 
 extern FrontMenu *pFrontMenu;
 FrontMenu *FrontMenu::Get()
@@ -50,7 +51,7 @@ FrontMenu::FrontMenu()
 		playMenu.pReturnButton = playMenu.pMenu->FindChild<HKWidgetButton>("return");
 
 		playMenu.pCreateButton->OnClicked += fastdelegate::MakeDelegate(&playMenu, &FrontMenu::PlayMenu::OnCreateClicked);
-		playMenu.pJoinButton->OnClicked += fastdelegate::MakeDelegate(&playMenu, &FrontMenu::PlayMenu::OnJoinClicked);
+//		playMenu.pJoinButton->OnClicked += fastdelegate::MakeDelegate(&playMenu, &FrontMenu::PlayMenu::OnJoinClicked);
 		playMenu.pOfflineButton->OnClicked += fastdelegate::MakeDelegate(&playMenu, &FrontMenu::PlayMenu::OnOfflineClicked);
 		playMenu.pReturnButton->OnClicked += fastdelegate::MakeDelegate(this, &FrontMenu::OnReturnClicked);
 	}
@@ -133,9 +134,9 @@ void FrontMenu::MainMenu::Show()
 	Session *pSession = Session::Get();
 
 	// configure for player signed in
-	if(pSession->IsLoggedIn())
+	if(pSession)
 	{
-		pTitle->SetText(MFString("Welcome ") + pSession->GetUsername());
+		pTitle->SetText(MFString("Welcome ") + pSession->Username());
 
 		pLoginButton->SetVisible(HKWidget::Gone);
 		pProfileButton->SetVisible(HKWidget::Visible);
@@ -182,7 +183,7 @@ void FrontMenu::PlayMenu::Show()
 	Session *pSession = Session::Get();
 
 	// disable online menus
-	bool bOnline = pSession->IsLoggedIn();
+	bool bOnline = pSession != NULL;
 	pCreateButton->SetEnabled(bOnline);
 	pJoinButton->SetEnabled(bOnline);
 
@@ -195,14 +196,14 @@ void FrontMenu::PlayMenu::OnCreateClicked(HKWidget &sender, const HKWidgetEventI
 	menu.HideCurrent();
 	menu.listMenu.ShowCreate(true);
 }
-
+/*
 void FrontMenu::PlayMenu::OnJoinClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
 	FrontMenu &menu = *FrontMenu::Get();
 	menu.HideCurrent();
 	menu.listMenu.ShowJoin();
 }
-
+*/
 void FrontMenu::PlayMenu::OnOfflineClicked(HKWidget &sender, const HKWidgetEventInfo &ev)
 {
 	FrontMenu &menu = *FrontMenu::Get();
@@ -227,25 +228,38 @@ void FrontMenu::LoginMenu::OnLogin(HKWidget &sender, const HKWidgetEventInfo &ev
 	pLoginButton->SetEnabled(false);
 	pReturnButton->SetEnabled(false);
 
-	Session *pSession = Session::Get();
-	pSession->SetLoginDelegate(fastdelegate::MakeDelegate(this, &FrontMenu::LoginMenu::OnLoginResponse));
-	pSession->Login(pUsernameText->GetString().CStr(), pPasswordText->GetString().CStr());
+	ServerRequest *pReq = new ServerRequest(MakeDelegate(this, &FrontMenu::LoginMenu::OnLoginResponse));
+	pReq->Login(pUsernameText->GetString().CStr(), pPasswordText->GetString().CStr());
 }
 
-void FrontMenu::LoginMenu::OnLoginResponse(ServerError err, Session *pSession)
+void FrontMenu::LoginMenu::OnLoginResponse(ServerRequest *pReq)
 {
 	pLoginButton->SetEnabled(true);
 	pReturnButton->SetEnabled(true);
 
-	if(err == SE_NO_ERROR)
+	if(pReq->Status() == ServerRequest::SE_NO_ERROR)
 	{
-		// save the login details...
-		MFString loginInfo = MFString::Format("%s\n%08X", pSession->GetUsername(), pSession->GetUserID());
+		MFJSONValue *pUserNode = pReq->Json()->Member("user");
+		if(pUserNode)
+		{
+			Profile *pUser = Profile::FromJson(pUserNode);
+			MFString key = pUserNode->Member("key")->String();
 
-		MFFileSystem_Save("home:login_info.ini", loginInfo.CStr(), loginInfo.NumBytes());
+			if(pUser && !key.IsEmpty())
+			{
+				Session *pSession = new Session(pUser, key);
+				Session::Set(pSession);
 
-		// we are logged in, return to main menu...
-		HKWidgetEventInfo ev(pReturnButton);
-		FrontMenu::Get()->OnReturnClicked(*pReturnButton, ev);
+				// save the login details...
+				MFString loginInfo = MFString::Format("%08X\n%s", pUser->ID(), key.CStr());
+				MFFileSystem_Save("home:login_info.ini", loginInfo.CStr(), loginInfo.NumBytes());
+
+				// we are logged in, return to main menu...
+				HKWidgetEventInfo ev(pReturnButton);
+				FrontMenu::Get()->OnReturnClicked(*pReturnButton, ev);
+			}
+		}
 	}
+
+	delete pReq;
 }

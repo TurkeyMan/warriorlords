@@ -19,9 +19,12 @@ public:
 	virtual void SetProperty(const char *pProperty, const char *pValue);
 	virtual MFString GetProperty(const char *pProperty);
 
+	static void SetUnitDefs(const UnitDefinitions *pDefs) { pUnitDefs = pDefs; }
 protected:
 	MFVector unitColour;
 	int unit;
+
+	static const UnitDefinitions *pUnitDefs;
 };
 
 class RendererUnitButton : public HKWidgetRenderer

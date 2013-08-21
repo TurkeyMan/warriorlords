@@ -85,9 +85,9 @@ public:
 		CS_HTTPError = 4
 	};
 
-	typedef FastDelegate1<Status> HTTPEventDelegate;
+	typedef FastDelegate1<HTTPRequest*> HTTPEventDelegate;
 
-	HTTPRequest();
+	HTTPRequest(HTTPEventDelegate completeDelegate = NULL, HTTPEventDelegate eventDelegate = NULL);
 	~HTTPRequest();
 
 	static void UpdateHTTPEvents();
@@ -102,6 +102,7 @@ public:
 	bool RequestPending();
 	Status GetStatus();
 	void Reset();
+	void Destroy() { bDestroy = true; }
 
 	void SetEventDelegate(HTTPEventDelegate handler) { eventDelegate = handler; }
 	void SetCompleteDelegate(HTTPEventDelegate handler) { completeDelegate = handler; }
@@ -127,6 +128,8 @@ protected:
 	bool bOldFinished;
 	Status oldStatus;
 
+	bool bDestroy;
+
 	HTTPEventDelegate eventDelegate;
 	HTTPEventDelegate completeDelegate;
 
@@ -139,8 +142,5 @@ private:
 	static HTTPRequest *pUpdateList[MAX_ACTIVE_REQUESTS];
 	static int numLiveRequests;
 };
-
-HTTPResponse *HTTP_Get(const char *pServer, int port, const char *pResourcePath);
-HTTPResponse *HTTP_Post(const char *pServer, int port, const char *pResourcePath, MFFileHTTPRequestArg *pArgs = NULL, int numArgs = 0);
 
 #endif

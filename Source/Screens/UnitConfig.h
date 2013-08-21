@@ -7,14 +7,14 @@
 class UnitConfig : public Window
 {
 public:
-	UnitConfig();
+	UnitConfig(Game *pGame);
 	virtual ~UnitConfig();
 
 	virtual bool DrawContent();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 
-	virtual void Show(Unit *pUnit);
+	virtual void Show(Game *pGame, Unit *pUnit);
 	virtual void Hide();
 
 protected:

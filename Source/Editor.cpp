@@ -11,17 +11,12 @@
 
 #include "Path.h"
 
-Editor::Editor(Game *pGame)
+Editor::Editor(MFString mapFilename)
+: gameState(map.edit, map)
+, Game(gameState)
+, map(gameState, mapFilename)
+, castleEdit(*this)
 {
-	pMap = pGame->GetMap();
-	bOwnsMap = false;
-
-	if(!pMap)
-	{
-		pMap = Map::CreateNew("TileSet", "Castles");
-		bOwnsMap = true;
-	}
-
 	brushType[0] = OT_Terrain;
 	brushType[1] = OT_Terrain;
 	brushIndex[0] = 0;
@@ -33,32 +28,31 @@ Editor::Editor(Game *pGame)
 	editRegion = 15;
 
 	bPaintMode = true;
-	pMap->SetMoveKey(bPaintMode);
+	mapView.SetMoveKey(bPaintMode);
 
 	pIcons = MFMaterial_Create("Icons");
 
 	// buttons
-	Tileset *pTiles = pMap->GetTileset();
-	UnitDefinitions *pUnits = pMap->GetUnitDefinitions();
+	const Tileset &tileset = map.Tileset();
+	UnitDefinitions *pUnits = map.UnitDefs();
 
 	MFMaterial *pTileMat[2];
-	pTileMat[0] = pTiles->GetTileMaterial(0);
-	pTileMat[1] = pTiles->GetTileMaterial(1);
-	MFMaterial *pWater = pTiles->GetWaterMaterial();
-	MFMaterial *pRoadMat = pTiles->GetRoadMaterial();
+	pTileMat[0] = tileset.GetTileMaterial(0);
+	pTileMat[1] = tileset.GetTileMaterial(1);
+	MFMaterial *pWater = tileset.GetWaterMaterial();
+	MFMaterial *pRoadMat = tileset.GetRoadMaterial();
 	MFMaterial *pCastleMat = pUnits->GetCastleMaterial();
 	MFMaterial *pMiscMat = pUnits->GetMiscMaterial();
 
-	int tileWidth, tileHeight;
-	pTiles->GetTileSize(&tileWidth, &tileHeight);
+	TileSize tileSize = tileset.GetTileSize();
 	float texelOffset = MFRenderer_GetTexelCenterOffset();
 
-	MFRect display, uvs, pos = { 0, 0, (float)tileWidth, (float)tileHeight };
+	MFRect display, uvs, pos = { 0, 0, (float)tileSize.width, (float)tileSize.height };
 	MFRect water = { 0, 0, 1, 1 };
 
 	GetDisplayRect(&display);
 
-	pos.x = (float)(display.width - (16 + tileWidth));
+	pos.x = (float)(display.width - (16 + tileSize.width));
 	pos.y = 16.f;
 	uvs.x = 0.75f + (.5f/256.f); uvs.y = 0.f + (.5f/256.f);
 	uvs.width = 0.25f; uvs.height = 0.25f;
@@ -74,22 +68,21 @@ Editor::Editor(Game *pGame)
 	// brush buttons
 	for(int a=0; a<2; ++a)
 	{
-		pos.x = (float)(display.width - (16 + tileWidth));
-		pos.y = (float)(display.height - (16 + tileHeight)*(2-a));
+		pos.x = (float)(display.width - (16 + tileSize.width));
+		pos.y = (float)(display.height - (16 + tileSize.height)*(2-a));
 
 		if(a == 0)
 		{
 			int tile = 0;
-			pTiles->FindBestTiles(&tile, EncodeTile(brushIndex[a], brushIndex[a], brushIndex[a], brushIndex[a]), 0xFFFFFFFF, 1);
-			pTiles->GetTileUVs(tile, &uvs, texelOffset);
+			tileset.FindBestTiles(&tile, EncodeTile(brushIndex[a], brushIndex[a], brushIndex[a], brushIndex[a]), 0xFFFFFFFF, 1);
 
+			uvs = tileset.GetTileUVs(tile, texelOffset);
 			pBrushButton[a] = Button::Create(pTileMat[tile >> 8], &pos, &uvs, MFVector::one, a, true);
 			pBrushButton[a]->SetClickCallback(MakeDelegate(this, &Editor::BrushSelect));
 		}
 		else
 		{
-			pTiles->GetWaterUVs(&uvs, texelOffset);
-
+			uvs = tileset.GetWaterUVs(texelOffset);
 			pBrushButton[a] = Button::Create(pWater, &pos, &uvs, MFVector::one, a, true);
 			pBrushButton[a]->SetClickCallback(MakeDelegate(this, &Editor::BrushSelect));
 		}
@@ -99,23 +92,21 @@ Editor::Editor(Game *pGame)
 
 	// init terrain selector:
 	// terrain page
-	int terrainCount = pTiles->GetNumTerrainTypes();
+	int terrainCount = tileset.NumTerrainTypes();
 
 	for(int a=0; a<terrainCount; ++a)
 	{
 		if(a == 1)
 		{
-			pTiles->GetWaterUVs(&uvs, texelOffset);
-
+			uvs = tileset.GetWaterUVs(texelOffset);
 			brushSelect.AddButton(0, pWater, &uvs, MFVector::one, (OT_Terrain << 16) | a, MakeDelegate(this, &Editor::ChooseBrush));
 		}
 		else
 		{
 			int tile = 0;
-			pTiles->FindBestTiles(&tile, EncodeTile(a, a, a, a), 0xFFFFFFFF, 1);
+			tileset.FindBestTiles(&tile, EncodeTile(a, a, a, a), 0xFFFFFFFF, 1);
 
-			pTiles->GetTileUVs(tile, &uvs, texelOffset);
-
+			uvs = tileset.GetTileUVs(tile, texelOffset);
 			brushSelect.AddButton(0, pTileMat[tile >> 8], &uvs, MFVector::one, (OT_Terrain << 16) | a, MakeDelegate(this, &Editor::ChooseBrush));
 		}
 	}
@@ -128,17 +119,16 @@ Editor::Editor(Game *pGame)
 		int race = (a + 1) % raceCount;
 		int player = race - 1;
 
-		pUnits->GetCastleUVs(race, &uvs, texelOffset);
-
-		brushSelect.AddButton(1, pCastleMat, &uvs, pGame->GetPlayerColour(player), (OT_Castle << 16) | (uint16)player, MakeDelegate(this, &Editor::ChooseBrush));
+		uvs = pUnits->GetCastleUVs(race, texelOffset);
+		brushSelect.AddButton(1, pCastleMat, &uvs, GetPlayerColour(player), (OT_Castle << 16) | (uint16)player, MakeDelegate(this, &Editor::ChooseBrush));
 	}
 
 	// add the merc flag
-	pUnits->GetFlagUVs(0, &uvs, texelOffset);
-	brushSelect.AddButton(2, pCastleMat, &uvs, pGame->GetPlayerColour(-1), OT_Flag << 16, MakeDelegate(this, &Editor::ChooseBrush));
+	uvs = pUnits->GetFlagUVs(0, texelOffset);
+	brushSelect.AddButton(2, pCastleMat, &uvs, GetPlayerColour(-1), OT_Flag << 16, MakeDelegate(this, &Editor::ChooseBrush));
 
 	// add the road
-	pTiles->GetRoadUVs(0, &uvs, texelOffset);
+	uvs = tileset.GetRoadUVs(0, texelOffset);
 	brushSelect.AddButton(2, pRoadMat, &uvs, MFVector::one, OT_Road << 16, MakeDelegate(this, &Editor::ChooseBrush));
 
 	// special buttons
@@ -147,33 +137,29 @@ Editor::Editor(Game *pGame)
 
 	for(int a=0; a<specialCount; ++a)
 	{
-		pUnits->GetSpecialUVs(a, &uvs, texelOffset);
-
+		uvs = pUnits->GetSpecialUVs(a, texelOffset);
 		brushSelect.AddButton(2 + a/11, pMiscMat, &uvs, MFVector::one, (OT_Place << 16) | a, MakeDelegate(this, &Editor::ChooseBrush));
 	}
 
 	// region buttons
 	for(int a=0; a<10; ++a)
 	{
-		pUnits->GetFlagUVs(a+1, &uvs, texelOffset);
-
-		brushSelect.AddButton(numPages, pCastleMat, &uvs, pGame->GetPlayerColour(a), (OT_Region << 16) | a, MakeDelegate(this, &Editor::ChooseBrush));
+		uvs = pUnits->GetFlagUVs(a+1, texelOffset);
+		brushSelect.AddButton(numPages, pCastleMat, &uvs, GetPlayerColour(a), (OT_Region << 16) | a, MakeDelegate(this, &Editor::ChooseBrush));
 	}
 
-	pUnits->GetFlagUVs(0, &uvs, texelOffset);
-	brushSelect.AddButton(numPages, pCastleMat, &uvs, pGame->GetPlayerColour(-1), (OT_Region << 16) | 15, MakeDelegate(this, &Editor::ChooseBrush));
+	uvs = pUnits->GetFlagUVs(0, texelOffset);
+	brushSelect.AddButton(numPages, pCastleMat, &uvs, GetPlayerColour(-1), (OT_Region << 16) | 15, MakeDelegate(this, &Editor::ChooseBrush));
 }
 
 Editor::~Editor()
 {
-	if(bOwnsMap)
-		pMap->Destroy();
 }
 
 void Editor::Select()
 {
 	pInputManager->PushReceiver(this);
-	pInputManager->PushReceiver(pMap);
+	pInputManager->PushReceiver(&mapView);
 
 	pInputManager->PushReceiver(pBrushButton[0]);
 	pInputManager->PushReceiver(pBrushButton[1]);
@@ -191,7 +177,7 @@ bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
 	{
 		int cursorX, cursorY;
 		float  cx, cy;
-		pMap->GetCursor(info.hover.x, info.hover.y, &cx, &cy);
+		mapView.GetCursor(info.hover.x, info.hover.y, &cx, &cy);
 		cursorX = brushType[brush] == OT_Terrain ? (int)(cx * 2.f) : (int)cx;
 		cursorY = brushType[brush] == OT_Terrain ? (int)(cy * 2.f) : (int)cy;
 
@@ -199,7 +185,7 @@ bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
 		{
 			case IE_Down:
 			{
-				ObjectType detail = pMap->GetDetailType(cursorX, cursorY);
+				ObjectType detail = map.GetDetailType(cursorX, cursorY);
 
 				if(brushType[brush] == OT_Road)
 					bRemoveRoad = (detail == OT_Road);
@@ -209,25 +195,25 @@ bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
 					case OT_Castle:
 					{
 						if(detail == OT_Castle)
-							castleEdit.Show(pMap->GetTile(cursorX, cursorY)->GetCastle());
+							castleEdit.Show(map.GetTile(cursorX, cursorY)->GetCastle());
 						else
-							pMap->PlaceCastle(cursorX, cursorY, brushIndex[brush]);
+							map.PlaceCastle(cursorX, cursorY, brushIndex[brush]);
 						break;
 					}
 					case OT_Flag:
 					{
 						if(detail == OT_Flag)
-							pMap->ClearDetail(cursorX, cursorY);
+							map.ClearDetail(cursorX, cursorY);
 						else
-							pMap->PlaceFlag(cursorX, cursorY, brushIndex[brush]);
+							map.PlaceFlag(cursorX, cursorY, brushIndex[brush]);
 						break;
 					}
 					case OT_Place:
 					{
 						if(detail == OT_Place)
-							pMap->ClearDetail(cursorX, cursorY);
+							map.ClearDetail(cursorX, cursorY);
 						else
-							pMap->PlaceSpecial(cursorX, cursorY, brushIndex[brush]);
+							map.PlaceSpecial(cursorX, cursorY, brushIndex[brush]);
 						break;
 					}
 				}
@@ -240,7 +226,7 @@ bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
 					{
 						case OT_None:
 						{
-							pMap->ClearDetail(cursorX, cursorY);
+							map.ClearDetail(cursorX, cursorY);
 							break;
 						}
 						case OT_Terrain:
@@ -249,7 +235,7 @@ bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
 							{
 								int terrain = brushIndex[brush];
 
-								uint32 t = pMap->GetTerrainAt(cursorX >> 1, cursorY >> 1);
+								uint32 t = map.GetTerrainAt(cursorX >> 1, cursorY >> 1);
 								int tl = DecodeTL(t);
 								int tr = DecodeTR(t);
 								int bl = DecodeBL(t);
@@ -283,12 +269,12 @@ bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
 									}
 								}
 
-								pMap->SetTerrain(cursorX >> 1, cursorY >> 1, tl, tr, bl, br, mask);
+								map.SetTerrain(cursorX >> 1, cursorY >> 1, tl, tr, bl, br, mask);
 							}
 							else
 							{
 								int terrain = brushIndex[brush];
-								pMap->SetTerrain(cursorX >> 1, cursorY >> 1, terrain, terrain, terrain, terrain);
+								map.SetTerrain(cursorX >> 1, cursorY >> 1, terrain, terrain, terrain, terrain);
 							}
 							break;
 						}
@@ -296,18 +282,18 @@ bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
 						{
 							if(bRemoveRoad)
 							{
-								if(pMap->GetDetailType(cursorX, cursorY) == OT_Road)
-									pMap->ClearDetail(cursorX, cursorY);
+								if(map.GetDetailType(cursorX, cursorY) == OT_Road)
+									map.ClearDetail(cursorX, cursorY);
 							}
 							else
 							{
-								pMap->PlaceRoad(cursorX, cursorY);
+								map.PlaceRoad(cursorX, cursorY);
 							}
 							break;
 						}
 						case OT_Region:
 						{
-							pMap->SetRegion(cursorX, cursorY, brushIndex[brush]);
+							map.SetRegion(cursorX, cursorY, brushIndex[brush]);
 						}
 					}
 
@@ -329,12 +315,12 @@ bool Editor::HandleInputEvent(InputEvent ev, InputInfo &info)
 
 int Editor::Update()
 {
-	pMap->Update();
+	mapView.Update();
 
 	castleEdit.Update();
 
 	if(MFInput_WasPressed(Key_S, IDD_Keyboard) && MFInput_Read(Key_LControl, IDD_Keyboard))
-		pMap->Save();
+		map.Save();
 
 	bool bChangeRace = MFInput_Read(Key_LShift, IDD_Keyboard) || MFInput_Read(Key_RShift, IDD_Keyboard);
 
@@ -343,17 +329,17 @@ int Editor::Update()
 		if(bChangeRace)
 		{
 			editRace = 0;
-			pMap->ConstructMap(NULL, editRace);
-			pMap->SetEditRace(editRace);
+			map.ConstructMap(editRace);
+			map.SetEditRace(editRace);
 		}
 		else
 		{
 			editRegion = 15;
-			pMap->SetEditRegion(editRegion);
+			map.SetEditRegion(editRegion);
 		}
 	}
 
-	UnitDefinitions *pUnits = pMap->GetUnitDefinitions();
+	UnitDefinitions *pUnits = map.UnitDefs();
 	int maxRace = pUnits->GetNumRaces() - 1;
 
 	MFDebug_Assert(maxRace <= 12, "Too many races!!");
@@ -366,13 +352,13 @@ int Editor::Update()
 			if(bChangeRace)
 			{
 				editRace = a + 1;
-				pMap->ConstructMap(NULL, editRace);
-				pMap->SetEditRace(editRace);
+				map.ConstructMap(editRace);
+				map.SetEditRace(editRace);
 			}
 			else
 			{
 				editRegion = a;
-				pMap->SetEditRegion(editRegion);
+				map.SetEditRegion(editRegion);
 			}
 		}
 	}
@@ -382,7 +368,7 @@ int Editor::Update()
 
 void Editor::Draw()
 {
-	pMap->Draw(pGame);
+	mapView.Draw();
 
 	// draw debug
 	static bool bDrawDebug = false;
@@ -392,7 +378,7 @@ void Editor::Draw()
 		brushSize = brushSize == 1 ? 2 : 1;
 
 	if(bDrawDebug)
-		pMap->DrawDebug();
+		mapView.DrawDebug();
 
 	pMiniMap->Draw();
 	pModeButton->Draw();
@@ -405,7 +391,7 @@ void Editor::Draw()
 
 	const char *pText = "Race: Template";
 	if(editRace > 0)
-		pText = MFStr("Race: %s", pMap->GetUnitDefinitions()->GetRaceName(editRace));
+		pText = MFStr("Race: %s", map.UnitDefs()->GetRaceName(editRace));
 	MFFont_DrawText2(MFFont_GetDebugFont(), 87.f, 10.f, 32.f, MFVector::black, pText);
 	MFFont_DrawText2(MFFont_GetDebugFont(), 85.f, 8.f, 32.f, MFVector::white, pText);
 
@@ -453,60 +439,60 @@ void Editor::ChooseBrush(int button, int buttonID)
 	{
 		case OT_Terrain:
 		{
-			Tileset *pTiles = pMap->GetTileset();
+			const Tileset &tileset = map.Tileset();
 
 			if(index == 1)
 			{
-				pTiles->GetWaterUVs(&rect, texelOffset);
-				pMat = pTiles->GetWaterMaterial();
+				rect = tileset.GetWaterUVs(texelOffset);
+				pMat = tileset.GetWaterMaterial();
 			}
 			else
 			{
 				int tile = 0;
-				pTiles->FindBestTiles(&tile, EncodeTile(index, index, index, index), 0xFFFFFFFF, 1);
+				tileset.FindBestTiles(&tile, EncodeTile(index, index, index, index), 0xFFFFFFFF, 1);
 
-				pTiles->GetTileUVs(tile, &rect, texelOffset);
-				pMat = pTiles->GetTileMaterial();
+				rect = tileset.GetTileUVs(tile, texelOffset);
+				pMat = tileset.GetTileMaterial();
 			}
 			break;
 		}
 		case OT_Castle:
 		{
-			UnitDefinitions *pUnits = pMap->GetUnitDefinitions();
-			pUnits->GetCastleUVs(index + 1, &rect, texelOffset);
-			colour = Game::GetCurrent()->GetPlayerColour(index);
+			UnitDefinitions *pUnits = map.UnitDefs();
+			rect = pUnits->GetCastleUVs(index + 1, texelOffset);
+			colour = GetPlayerColour(index);
 			pMat = pUnits->GetCastleMaterial();
 			break;
 		}
 		case OT_Flag:
 		{
-			UnitDefinitions *pUnits = pMap->GetUnitDefinitions();
-			pUnits->GetFlagUVs(index - 1, &rect, texelOffset);
+			UnitDefinitions *pUnits = map.UnitDefs();
+			rect = pUnits->GetFlagUVs(index - 1, texelOffset);
 			pMat = pUnits->GetCastleMaterial();
 			--brushIndex[brush];
 			break;
 		}
 		case OT_Place:
 		{
-			UnitDefinitions *pUnits = pMap->GetUnitDefinitions();
-			pUnits->GetSpecialUVs(index, &rect, texelOffset);
+			UnitDefinitions *pUnits = map.UnitDefs();
+			rect = pUnits->GetSpecialUVs(index, texelOffset);
 			pMat = pUnits->GetMiscMaterial();
 			break;
 		}
 		case OT_Road:
 		{
-			Tileset *pTiles = pMap->GetTileset();
-			pTiles->GetRoadUVs(index, &rect, texelOffset);
-			pMat = pTiles->GetRoadMaterial();
+			const Tileset &tileset = map.Tileset();
+			rect = tileset.GetRoadUVs(index, texelOffset);
+			pMat = tileset.GetRoadMaterial();
 			break;
 		}
 		case OT_Region:
 		{
-			UnitDefinitions *pUnits = pMap->GetUnitDefinitions();
+			UnitDefinitions *pUnits = map.UnitDefs();
 			if(index == 15)
 				index = -1;
-			pUnits->GetFlagUVs(index + 1, &rect, texelOffset);
-			colour = Game::GetCurrent()->GetPlayerColour(index);
+			rect = pUnits->GetFlagUVs(index + 1, texelOffset);
+			colour = GetPlayerColour(index);
 			pMat = pUnits->GetCastleMaterial();
 			break;
 		}
@@ -526,7 +512,7 @@ void Editor::ShowMiniMap(int button, int buttonID)
 void Editor::ChangeMode(int button, int buttonID)
 {
 	bPaintMode = !bPaintMode;
-	pMap->SetMoveKey(bPaintMode);
+	mapView.SetMoveKey(bPaintMode);
 
 	MFRect uvs;
 	uvs.x = (bPaintMode ? 0.75f : 0.5f) + (1.f/256.f); uvs.y = 0.25f + (1.f/256.f);
@@ -560,7 +546,7 @@ Chooser::~Chooser()
 
 	pFlipButton->Destroy();
 
-	MFMaterial_Destroy(pIcons);
+	MFMaterial_Release(pIcons);
 }
 
 Button *Chooser::AddButton(int page, MFMaterial *pImage, MFRect *pUVs, const MFVector &colour, int buttonID, Button::ClickCallback callback)
@@ -689,9 +675,10 @@ void Chooser::FlipPage(int button, int buttonID)
 		pInputManager->PushReceiver(pFlipButton);
 }
 
-CastleEdit::CastleEdit()
+CastleEdit::CastleEdit(Editor &editor)
+: editor(editor)
 {
-	pFont = Game::GetCurrent()->GetTextFont();
+	pFont = editor.GetTextFont();
 	pIcons = MFMaterial_Create("Icons");
 
 	bVisible = false;
@@ -739,7 +726,7 @@ CastleEdit::CastleEdit()
 	MFRect rect = { 0.5f, 0, 0.25f, 0.25f };
 	unitSelect.AddButton(0, pIcons, &rect, MFVector::one, -1, MakeDelegate(this, &CastleEdit::SetUnit));
 
-	UnitDefinitions *pDefs = Game::GetCurrent()->GetUnitDefs();
+	UnitDefinitions *pDefs = editor.Map().UnitDefs();
 	MFMaterial *pUnitMat = pDefs->GetUnitMaterial();
 	int numUnits = pDefs->GetNumUnitTypes();
 
@@ -750,8 +737,8 @@ CastleEdit::CastleEdit()
 		if(pDefs->GetUnitType(a) == UT_Hero)
 			continue;
 
-		pDefs->GetUnitUVs(a, false, &rect, texelOffset);
-		Button *pButton = unitSelect.AddButton(addedCount / 11, pUnitMat, &rect, Game::GetCurrent()->GetPlayerColour(-1), a, MakeDelegate(this, &CastleEdit::SetUnit));
+		rect = pDefs->GetUnitUVs(a, false, texelOffset);
+		Button *pButton = unitSelect.AddButton(addedCount / 11, pUnitMat, &rect, editor.GetPlayerColour(-1), a, MakeDelegate(this, &CastleEdit::SetUnit));
 		++addedCount;
 	}
 }
@@ -787,21 +774,21 @@ void CastleEdit::Draw()
 	int building = pCastle->GetBuildUnit();
 	if(building > -1)
 	{
-		UnitDefinitions *pUnitDefs = Game::GetCurrent()->GetUnitDefs();
-		UnitDetails *pDetails = pUnitDefs->GetUnitDetails(building);
+		UnitDefinitions *pUnitDefs = editor.Map().UnitDefs();
+		const UnitDetails &unit = pUnitDefs->GetUnitDetails(building);
 
 		int height = (int)MFFont_GetFontHeight(pFont);
-		MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 5, MFVector::white, pDetails->pName);
-		if(pDetails->type == UT_Vehicle)
+		MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 5, MFVector::white, unit.name.CStr());
+		if(unit.type == UT_Vehicle)
 		{
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height, MFVector::white, "Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : "");
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height, MFVector::white, "Mov: %d%s", unit.movement, unit.movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(unit.movementClass)) : "");
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*2, MFVector::white, "Turns: %d", pCastle->buildTime);
 		}
 		else
 		{
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height, MFVector::white, "Type: %s", pUnitDefs->GetArmourClassName(pDetails->armour));
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*2, MFVector::white, "Atk: %d - %d %s %s", pDetails->attackMin, pDetails->attackMax, pUnitDefs->GetWeaponClassName(pDetails->attack), pUnitDefs->GetAttackTypeName(pDetails->atkType));
-			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*3, MFVector::white, "Mov: %d%s", pDetails->movement, pDetails->movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(pDetails->movementClass)) : "");
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height, MFVector::white, "Type: %s", pUnitDefs->GetArmourClassName(unit.armour));
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*2, MFVector::white, "Atk: %d - %d %s %s", unit.attackMin, unit.attackMax, pUnitDefs->GetWeaponClassName(unit.attack), pUnitDefs->GetAttackTypeName(unit.atkType));
+			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*3, MFVector::white, "Mov: %d%s", unit.movement, unit.movementClass > 0 ? MFStr(" (%s)", pUnitDefs->GetMovementClassName(unit.movementClass)) : "");
 			MFFont_BlitTextf(pFont, (int)right.x + 5, (int)right.y + 10 + height*4, MFVector::white, "Turns: %d", pCastle->buildTime);
 		}
 	}
@@ -833,15 +820,13 @@ void CastleEdit::Show(Castle *_pCastle)
 {
 	pCastle = _pCastle;
 
-	Map *pMap = Game::GetCurrent()->GetMap();
-	pTemplate = pMap->GetCastleTemplate(pCastle->details.x, pCastle->details.y);
+	pTemplate = editor.Map().GetCastleTemplate(pCastle->details.x, pCastle->details.y);
 
 	bVisible = true;
 
 	pInputManager->PushReceiver(this);
 
-	UnitDefinitions *pUnitDefs = pCastle->pUnitDefs;
-	Game *pGame = Game::GetCurrent();
+	const UnitDefinitions *pUnitDefs = pCastle->UnitDefs();
 
 	MFMaterial *pUnitMat = pUnitDefs->GetUnitMaterial();
 	float texelOffset = MFRenderer_GetTexelCenterOffset();
@@ -858,8 +843,8 @@ void CastleEdit::Show(Castle *_pCastle)
 
 		if(unit != -1)
 		{
-			pUnitDefs->GetUnitUVs(pCastle->details.buildUnits[a].unit, false, &uvs, texelOffset);
-			pBuildUnits[a]->SetImage(pUnitMat, &uvs, pGame->GetPlayerColour(pCastle->player));
+			uvs = pUnitDefs->GetUnitUVs(pCastle->details.buildUnits[a].unit, false, texelOffset);
+			pBuildUnits[a]->SetImage(pUnitMat, &uvs, editor.GetPlayerColour(pCastle->player));
 			pBuildUnits[a]->SetOutline(true, pCastle->nextBuild == a ? MFVector::blue : MFVector::white);
 		}
 		else
@@ -898,8 +883,8 @@ void CastleEdit::Hide()
 	{
 		pTemplate->buildUnits[a] = pCastle->details.buildUnits[a];
 
-		UnitDetails *pDetails = pCastle->pUnitDefs->GetUnitDetails(pTemplate->buildUnits[a].unit);
-		pTemplate->buildUnits[a].buildTime -= pDetails->buildTime;
+		const UnitDetails &details = pCastle->UnitDefs()->GetUnitDetails(pTemplate->buildUnits[a].unit);
+		pTemplate->buildUnits[a].buildTime -= details.buildTime;
 	}
 }
 
@@ -922,26 +907,26 @@ void CastleEdit::SelectUnit(int button, int buttonID)
 
 void CastleEdit::SetUnit(int button, int buttonID)
 {
-	UnitDefinitions *pDefs = Game::GetCurrent()->GetUnitDefs();
+	UnitDefinitions *pDefs = editor.Map().UnitDefs();
 
 	int selected = pCastle->nextBuild;
 
 	// set the new unit
 	BuildUnit &unit = pCastle->details.buildUnits[selected];
-	UnitDetails *pDetails = pDefs->GetUnitDetails(buttonID);
+	const UnitDetails &details = pDefs->GetUnitDetails(buttonID);
 	unit.unit = buttonID;
-	unit.buildTime = buttonID >= 0 ? pDetails->buildTime : 0;
+	unit.buildTime = buttonID >= 0 ? details.buildTime : 0;
 
 	pCastle->buildTime = buttonID >= 0 ? unit.buildTime : 0;
 
 	// update the button image
 	if(buttonID != -1)
 	{
-		MFRect rect;
+		
 		MFMaterial *pUnitMat = pDefs->GetUnitMaterial();
-		pDefs->GetUnitUVs(buttonID, false, &rect, MFRenderer_GetTexelCenterOffset());
+		MFRect rect = pDefs->GetUnitUVs(buttonID, false, MFRenderer_GetTexelCenterOffset());
 
-		pBuildUnits[selected]->SetImage(pUnitMat, &rect, Game::GetCurrent()->GetPlayerColour(pCastle->player));
+		pBuildUnits[selected]->SetImage(pUnitMat, &rect, editor.GetPlayerColour(pCastle->player));
 	}
 	else
 	{
@@ -953,8 +938,8 @@ void CastleEdit::SetUnit(int button, int buttonID)
 	bHide = false;
 }
 
-void CastleEdit::NameChangeCallback(const char *pString)
+void CastleEdit::NameChangeCallback(MFString string)
 {
-	pCastle->SetName(pString);
-	MFString_Copy(pTemplate->name, pString);
+	pCastle->SetName(string);
+	pTemplate->name = string;
 }

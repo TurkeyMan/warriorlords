@@ -16,15 +16,12 @@ MapScreen::MapScreen(Game *_pGame)
 	pGame = _pGame;
 
 	// buttons
-	Tileset *pTiles = pGame->GetMap()->GetTileset();
-	UnitDefinitions *pUnits = pGame->GetUnitDefs();
+	const Tileset &tileSet = pGame->Map().Tileset();
+	UnitDefinitions *pUnits = pGame->Map().UnitDefs();
 
-	MFMaterial *pTileMat = pTiles->GetTileMaterial();
+	MFMaterial *pTileMat = tileSet.GetTileMaterial();
 	MFMaterial *pCastleMat = pUnits->GetCastleMaterial();
-	MFMaterial *pRoadMat = pTiles->GetRoadMaterial();
-
-	int tileWidth, tileHeight;
-	pTiles->GetTileSize(&tileWidth, &tileHeight);
+	MFMaterial *pRoadMat = tileSet.GetRoadMaterial();
 }
 
 MapScreen::~MapScreen()
@@ -48,22 +45,19 @@ int MapScreen::Update()
 	pGame->Update();
 
 #if defined(_DEBUG)
-	Map *pMap = pGame->GetMap();
+	Map &map = pGame->Map();
 
 	int w, h;
-	pMap->GetMapSize(&w, &h);
+	map.GetMapSize(&w, &h);
 	for(int y=0; y<h; ++y)
 	{
 		for(int x=0; x<w; ++x)
 		{
-			MapTile *pTile = pMap->GetTile(x, y);
+			MapTile *pTile = map.GetTile(x, y);
 
 			int numGroups = pTile->GetNumGroups();
 			for(int g=0; g<numGroups; ++g)
-			{
 				Group *pGroup = pTile->GetGroup(g);
-				MFDebug_Assert(pGroup->ValidateGroup(), "EEK!");
-			}
 		}
 	}
 #endif

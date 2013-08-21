@@ -12,10 +12,11 @@
 
 const float Window::margin = 5.f;
 
-Window::Window(bool _bCloseButton)
+Window::Window(Game *pGame, bool bCloseButton)
+: pGame(pGame)
+, bCloseButton(bCloseButton)
 {
 	bVisible = false;
-	bCloseButton = _bCloseButton;
 	pCloseButton = NULL;
 
 	pIcons = MFMaterial_Create("Icons");
@@ -38,7 +39,7 @@ Window::~Window()
 	if(pCloseButton)
 		pCloseButton->Destroy();
 
-	MFMaterial_Destroy(pIcons);
+	MFMaterial_Release(pIcons);
 }
 
 bool Window::Draw()
@@ -52,7 +53,7 @@ bool Window::Draw()
 	win.width += margin*2;
 	win.height += margin*2;
 
-	Game::GetCurrent()->DrawWindow(win);
+	pGame->DrawWindow(win);
 
 //	MFPrimitive_DrawUntexturedQuad(win.x, win.y, win.width, win.height, MakeVector(0,0,1,0.3f));
 //	MFPrimitive_DrawUntexturedQuad(window.x, window.y, window.width, window.height, MakeVector(0,0,1,0.3f));

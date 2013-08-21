@@ -7,6 +7,8 @@
 #include "Fuji/MFMaterial.h"
 #include "Fuji/MFPrimitive.h"
 
+const UnitDefinitions *UnitButton::pUnitDefs = NULL;
+
 HKWidget *UnitButton::Create(HKWidgetType *pType)
 {
 	return new UnitButton(pType);
@@ -52,13 +54,12 @@ void RendererUnitButton::Render(const HKWidget &widget, const MFMatrix &worldTra
 	if(button.unit < 0)
 		return;
 
-	UnitDefinitions *pUnitDefs = Game::GetCurrent()->GetUnitDefs();
+	MFDebug_Assert(UnitButton::pUnitDefs, "pUnitDefs was not set!");
 
-	MFMaterial *pUnitMat = pUnitDefs->GetUnitMaterial();
+	MFMaterial *pUnitMat = UnitButton::pUnitDefs->GetUnitMaterial();
 	float texelCenter = MFRenderer_GetTexelCenterOffset();
 
-	MFRect uvs;
-	pUnitDefs->GetUnitUVs(button.unit, false, &uvs, texelCenter);
+	MFRect uvs = UnitButton::pUnitDefs->GetUnitUVs(button.unit, false, texelCenter);
 
 	// draw the unit...
 	MFVector widgetColour = widget.GetColour();

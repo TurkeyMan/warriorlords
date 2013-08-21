@@ -1,6 +1,7 @@
 #include "Warlords.h"
 #include "GroupConfig.h"
 #include "MapScreen.h"
+#include "Group.h"
 
 #include "Fuji/MFPrimitive.h"
 #include "Fuji/MFRenderer.h"
@@ -8,8 +9,6 @@
 #include "Fuji/MFFont.h"
 
 #include "stdio.h"
-
-#include "Game.h"
 
 void DrawHealthBar(int x, int y, int maxHealth, float currentHealth);
 
@@ -22,8 +21,9 @@ static float gPositions[5][5][2] =
 	{ {.16f, .25f}, {.84f, .25f}, {.5f, .5f},   {.16f, .75f}, {.84f, .75f} }
 };
 
-GroupConfig::GroupConfig()
-: Window(true)
+GroupConfig::GroupConfig(Game *pGame)
+: Window(pGame, true)
+, battleConfig(pGame)
 {
 	pMelee = MFMaterial_Create("Melee");
 	pRanged = MFMaterial_Create("Ranged");
@@ -36,8 +36,8 @@ GroupConfig::GroupConfig()
 
 GroupConfig::~GroupConfig()
 {
-	MFMaterial_Destroy(pMelee);
-	MFMaterial_Destroy(pRanged);
+	MFMaterial_Release(pMelee);
+	MFMaterial_Release(pRanged);
 }
 
 bool GroupConfig::DrawContent()
@@ -62,7 +62,6 @@ bool GroupConfig::DrawContent()
 	MFPrimitive_DrawQuad(xc + 64.f - 16.f, yc - 80.f, 128.f, 128.f, MFVector::white, tc, tc, 1+tc, 1+tc);
 
 	// draw separators
-	Game *pGame = Game::GetCurrent();
 	pGame->DrawLine(rear.x + 5.f, rear.y+rear.height, front.x + front.width - 5.f, rear.y+rear.height);
 
 	for(int a = 1; a < numGroups; ++a)
@@ -73,20 +72,21 @@ bool GroupConfig::DrawContent()
 	}
 
 	// draw units
+	renderUnits.clear();
 	for(int g = 0; g < numGroups; ++g)
 	{
 		for(int a=10; a>=0; --a)
 		{
 			MFRect rect;
 			if(GetUnitPos(g, a, &rect))
-				pGroups[g]->pUnits[a]->Draw(rect.x, rect.y);
+				renderUnits.push() = pGroups[g]->pUnits[a]->Render(rect.x, rect.y);
 		}
 	}
 
-	pDefs->DrawUnits(64.f, MFRenderer_GetTexelCenterOffset(), false, true);
+	pGame->DrawUnits(renderUnits, 64.f, MFRenderer_GetTexelCenterOffset(), false, true);
 
 	// get the font
-	MFFont *pFont = Game::GetCurrent()->GetSmallNumbersFont();
+	MFFont *pFont = pGame->GetSmallNumbersFont();
 	float height = MFFont_GetFontHeight(pFont);
 
 	// detail the units
@@ -148,7 +148,7 @@ bool GroupConfig::HandleInputEvent(InputEvent ev, InputInfo &info)
 			if(unit > -1)
 			{
 				if(unit < 10)
-					battleConfig.Show(pGroups[0]->pUnits[unit]);
+					battleConfig.Show(pGame, pGroups[0]->pUnits[unit]);
 			}
 			else
 			{
@@ -521,9 +521,9 @@ bool GroupConfig::GetUnitPos(int group, int unit, MFRect *pRect)
 	if(!pGroups[group]->pUnits[unit])
 		return false;
 
-	UnitDetails *pDetails = pGroups[group]->pUnits[unit]->GetDetails();
-	pRect->width = (float)pDetails->width * 64.f;
-	pRect->height = (float)pDetails->height * 64.f;
+	const UnitDetails& details = pGroups[group]->pUnits[unit]->GetDetails();
+	pRect->width = (float)details.width * 64.f;
+	pRect->height = (float)details.height * 64.f;
 
 	if(group == 0)
 	{
@@ -602,9 +602,10 @@ void GroupConfig::GetBottomPanel(int i, MFRect *pRect)
 	}
 }
 
-void GroupConfig::Show(MapTile *_pTile)
+void GroupConfig::Show(Game *_pGame, MapTile *_pTile)
 {
-	Game *pGame = Game::GetCurrent();
+	pGame = _pGame;
+
 	pGame->GetUI()->ShowWindowContainer(true);
 
 	Window::Show();
@@ -643,7 +644,7 @@ void GroupConfig::Show(MapTile *_pTile)
 	{
 		if(groups[0].pUnits[a])
 		{
-			pDefs = groups[0].pUnits[a]->GetDefs();
+			pDefs = groups[0].pUnits[a]->UnitDefs();
 			break;
 		}
 	}
@@ -651,7 +652,6 @@ void GroupConfig::Show(MapTile *_pTile)
 
 void GroupConfig::Hide()
 {
-	Game *pGame = Game::GetCurrent();
 	pGame->GetUI()->ShowWindowContainer(false);
 
 	Window::Hide();
@@ -752,7 +752,7 @@ bail:
 
 				// add the unit's old group to the sub-regroup if not already present...
 				Group *pSourceGroup = pUnit->GetGroup();
-				for(int j=0; j<sub.before.size(); ++j)
+				for(size_t j=0; j<sub.before.size(); ++j)
 				{
 					if(sub.before[j] == pSourceGroup)
 						goto add_to_new_group;
@@ -820,11 +820,11 @@ add_to_new_group:
 	{
 		regroup.pSubRegroups[a].numBefore = subs[a].before.size();
 		regroup.pSubRegroups[a].ppBefore = ppSubGroups;
-		for(int b=0; b<subs[a].before.size(); ++b)
+		for(size_t b=0; b<subs[a].before.size(); ++b)
 			*ppSubGroups++ = subs[a].before[b];
 		regroup.pSubRegroups[a].numAfter = subs[a].after.size();
 		regroup.pSubRegroups[a].ppAfter = ppSubGroups;
-		for(int b=0; b<subs[a].after.size(); ++b)
+		for(size_t b=0; b<subs[a].after.size(); ++b)
 			*ppSubGroups++ = subs[a].after[b];
 	}
 	pGame->PushRegroup(&regroup);

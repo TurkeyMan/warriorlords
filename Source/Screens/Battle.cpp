@@ -1,6 +1,7 @@
 #include "Warlords.h"
 #include "Battle.h"
 #include "Unit.h"
+#include "Group.h"
 #include "Path.h"
 #include "Display.h"
 
@@ -25,7 +26,7 @@ static bool gbBattleTest = false;
 static int gTestWins[2] = {0, 0};
 static int gBattle = 0;
 
-void BeginTest()
+void BeginTest(Game *pGame)
 {
 	// create groups and an artificial tile to fight on...
 	Group *pGroup1 = Group::Create(0);
@@ -39,7 +40,7 @@ void BeginTest()
 	MFIni *pIni = MFIni::Create("battle_test");
 	MFIniLine *pLine = pIni->GetFirstLine();
 
-	UnitDefinitions *pDefs = Game::GetCurrent()->GetUnitDefs();
+	UnitDefinitions *pDefs = pGame->Map().UnitDefs();
 	while(pLine)
 	{
 		if(pLine->IsSection("Group1") || pLine->IsSection("Group2"))
@@ -59,7 +60,7 @@ void BeginTest()
 						int unit = pDefs->FindUnit(pUnits->GetString(0));
 						if(unit >= 0)
 						{
-							Unit *pUnit = pDefs->CreateUnit(unit, pGroup == pGroup1 ? gBattle : 1-gBattle);
+							Unit *pUnit = pDefs->CreateUnit(unit, pGroup == pGroup1 ? gBattle : 1-gBattle, &pGame->State());
 
 							int levels = pUnits->GetInt(1);
 							for(int a=0; a<levels; ++a)
@@ -85,8 +86,7 @@ void BeginTest()
 		pLine = pLine->Next();
 	}
 
-
-	Game::GetCurrent()->BeginBattle(pGroup1, &tile[1]);
+	pGame->BeginBattle(pGroup1, &tile[1]);
 
 	gBattle = 1 - gBattle;
 }
@@ -96,7 +96,7 @@ void BattleTest()
 	MFDebug_Assert(false, "!");
 
 	gbBattleTest = true;
-
+/*
 	// create a game
 	GameParams params;
 	params.bEditMap = false;
@@ -112,20 +112,15 @@ void BattleTest()
 	params.players[1].race = 2;
 	params.players[1].colour = 2;
 	params.players[1].hero = 0;
-
+*/
 	// start game
-	Game *pGame = Game::NewGame(&params);
-	Game::SetCurrent(pGame);
-
-	BeginTest();
+	Game *pGame = new Game(*(GameState*)NULL);
+	BeginTest(pGame);
 }
 
-Battle::Battle(Game *_pGame)
+Battle::Battle(Game *pGame)
+: pGame(pGame)
 {
-	pGame = _pGame;
-	pUnitDefs = pGame->GetUnitDefs();
-	pTileSet = pGame->GetMap()->GetTileset();
-
 	// load lots of battle related stuff
 	pIcons = MFMaterial_Create("BattleIcons");
 	pAttack = MFMaterial_Create("Attack");
@@ -134,14 +129,16 @@ Battle::Battle(Game *_pGame)
 
 Battle::~Battle()
 {
-	MFMaterial_Destroy(pIcons);
-	MFMaterial_Destroy(pAttack);
-	MFMaterial_Destroy(pCloud);
+	MFMaterial_Release(pIcons);
+	MFMaterial_Release(pAttack);
+	MFMaterial_Release(pCloud);
 }
 
 void Battle::Begin(Group *pGroup, MapTile *pTarget)
 {
 	MFDebug_Log(0, "\nBattle Begins:");
+
+	UnitDefinitions *pUnitDefs = pGame->Map().UnitDefs();
 
 	fg = bg = -1;
 
@@ -175,7 +172,7 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 		int t0, t1 = -1;
 
 		pCastle = NULL;
-		Castle *pC = pTarget->GetCastle();
+		const Castle *pC = pTarget->GetCastle();
 		if(!pC)
 			pC = pGroup->GetTile()->GetCastle();
 
@@ -314,7 +311,7 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 			}
 		}
 
-		Tileset *pTileSet = Game::GetCurrent()->GetMap()->GetTileset();
+		const Tileset &tileSet = pGame->Map().Tileset();
 		fg = t0;
 		bg = t1;
 
@@ -326,7 +323,7 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 		else
 		{
 			// load background
-			pBackground = MFMaterial_Create(MFStr("Battle-%s-%s", pTileSet->GetTerrainName(t0), pTileSet->GetTerrainName(t1)));
+			pBackground = MFMaterial_Create(MFStr("Battle-%s-%s", tileSet.TerrainName(t0), tileSet.TerrainName(t1)));
 		}
 	}
 
@@ -452,13 +449,13 @@ void Battle::Begin(Group *pGroup, MapTile *pTarget)
 
 void Battle::End()
 {
-	MFMaterial_Destroy(pBackground);
-	MFMaterial_Destroy(pPortraits[0]);
-	MFMaterial_Destroy(pPortraits[1]);
+	MFMaterial_Release(pBackground);
+	MFMaterial_Release(pPortraits[0]);
+	MFMaterial_Release(pPortraits[1]);
 
 	if(pCastle)
 	{
-		MFMaterial_Destroy(pCastle);
+		MFMaterial_Release(pCastle);
 		pCastle = NULL;
 	}
 }
@@ -475,9 +472,9 @@ int Battle::CalculateTargetPreference(BattleUnit *pUnit, BattleUnit *pTarget)
 	if(pPlan->bAttackAvailable && (pTarget->bEngaged || pTarget->state >= US_Engaging))
 		return 0; // reject this unit
 
-	UnitDetails *pDetails = pUnit->pUnit->GetDetails();
-	UnitDetails *pTargetDetails = pTarget->pUnit->GetDetails();
-	float damageMod = pUnitDefs->GetDamageModifier(pDetails->attack, pTargetDetails->armour);
+	const UnitDetails &details = pUnit->pUnit->GetDetails();
+	const UnitDetails targetDetails = pTarget->pUnit->GetDetails();
+	float damageMod = pGame->Map().UnitDefs()->GetDamageModifier(details.attack, targetDetails.armour);
 
 	int maxHP = pTarget->pUnit->GetMaxHP();
 
@@ -490,17 +487,17 @@ int Battle::CalculateTargetPreference(BattleUnit *pUnit, BattleUnit *pTarget)
 
 int Battle::CalculateDamage(BattleUnit *pUnit, BattleUnit *pTarget)
 {
-	UnitDetails *pDetails = pUnit->pUnit->GetDetails();
-	UnitDetails *pTargetDetails = pTarget->pUnit->GetDetails();
+	const UnitDetails &details = pUnit->pUnit->GetDetails();
+	const UnitDetails &targetDetails = pTarget->pUnit->GetDetails();
 
 	// get armor class multiplier
-	float damageMod = pUnitDefs->GetDamageModifier(pDetails->attack, pTargetDetails->armour);
+	float damageMod = pGame->Map().UnitDefs()->GetDamageModifier(details.attack, targetDetails.armour);
 
 	// get damage
 	float damage = MFRand_Range(pUnit->pUnit->GetMinDamage(), pUnit->pUnit->GetMaxDamage()) * damageMod;
 
 	// apply unit defence
-	damage = pTarget->pUnit->GetDefence(damage, pDetails->attack);
+	damage = pTarget->pUnit->GetDefence(damage, details.attack);
 
 	return (int)damage;
 }
@@ -532,7 +529,7 @@ void Battle::HitTarget(BattleUnit *pUnit, BattleUnit *pTarget)
 
 	pTarget->damage = damage;
 	pTarget->damageIndicatorTime = 1.f;
-	pTarget->impactAnim = pUnit->pUnit->GetWeapon()->impactAnim;
+	pTarget->impactAnim = pUnit->pUnit->GetWeapon().impactAnim;
 
 	MFDebug_Log(0, MFStr("%d:%s is hit for %d damage by %d:%s", pTarget->army, pTarget->pUnit->GetName(), damage, pUnit->army, pUnit->pUnit->GetName()));
 
@@ -597,11 +594,11 @@ int Battle::Update()
 					}
 					else
 					{
-						float speed = unit.pUnit->GetDetails()->attackSpeed;
+						float speed = unit.pUnit->GetDetails().attackSpeed;
 
-						Weapon *pWeapon = unit.pUnit->GetWeapon();
+						const Weapon &weapon = unit.pUnit->GetWeapon();
 
-						if(!pWeapon->bIsProjectile)
+						if(!weapon.bIsProjectile)
 						{
 							float phaseFactor = speed * 0.25f;
 							int phase = (int)((speed - unit.stateTime) / phaseFactor);
@@ -759,7 +756,7 @@ int Battle::Update()
 					pUnit->pTarget = pTarget;
 					pTarget->bEngaged = true;
 					pUnit->state = US_Engaging;
-					pUnit->stateTime = pUnit->pUnit->GetDetails()->attackSpeed;
+					pUnit->stateTime = pUnit->pUnit->GetDetails().attackSpeed;
 					pUnit->bHit = false;
 
 					// unlink
@@ -807,7 +804,7 @@ int Battle::Update()
 	{
 		int victor = armies[0].numUnitsAlive ? 0 : 1;
 		++gTestWins[victor ^ (1-gBattle)];
-		BeginTest();
+		BeginTest(pGame);
 	}
 
 	return 0;
@@ -823,6 +820,8 @@ void DrawHealthBar(int x, int y, int maxHealth, float currentHealth)
 
 void Battle::Draw()
 {
+	UnitDefinitions *pUnitDefs = pGame->Map().UnitDefs();
+
 	MFView_Push();
 	MFMatrix orthoMat, screenMat;
 	GetOrthoMatrix(&orthoMat, true);
@@ -860,7 +859,7 @@ void Battle::Draw()
 
 	int numWaterTiles = waterX * waterY;
 
-	MFMaterial_SetMaterial(pTileSet->GetWaterMaterial());
+	MFMaterial_SetMaterial(pGame->Map().Tileset().GetWaterMaterial());
 
 	MFPrimitive(PT_QuadList);
 	MFBegin(numWaterTiles*2);
@@ -918,6 +917,7 @@ void Battle::Draw()
 	}
 
 	// draw units
+	renderUnits.clear();
 	for(int a=0; a<2; ++a)
 	{
 		for(int b=0; b<armies[a].numUnits; ++b)
@@ -928,12 +928,12 @@ void Battle::Draw()
 
 			if(unit.state != US_Dead)
 			{
-				unit.pUnit->Draw((float)unitX, (float)unitY, a == 1, unit.state == US_Dying ? unit.stateTime : 1.f);
+				renderUnits.push() = unit.pUnit->Render((float)unitX, (float)unitY, a == 1, unit.state == US_Dying ? unit.stateTime : 1.f);
 			}
 		}
 	}
 
-	pUnitDefs->DrawUnits(64.f, texelCenter, false, true);
+	pGame->DrawUnits(renderUnits, 64.f, texelCenter, false, true);
 
 	// health bars + damage indicators
 	for(int a=0; a<2; ++a)
@@ -946,13 +946,13 @@ void Battle::Draw()
 
 			if(unit.bFiring)
 			{
-				Weapon *pWeapon = unit.army == unit.pTarget->army ? pUnitDefs->GetWeapon(12) : unit.pUnit->GetWeapon();
+				const Weapon &weapon = unit.army == unit.pTarget->army ? pUnitDefs->GetWeapon(12) : unit.pUnit->GetWeapon();
 
 				MFRect uvs;
-				pWeapon->GetUVs(&uvs, fTexWidth, fTexHeight, unit.army == 1, texelOffsetW);
+				weapon.GetUVs(&uvs, fTexWidth, fTexHeight, unit.army == 1, texelOffsetW);
 
 				MFMaterial_SetMaterial(pIcons);
-				MFPrimitive_DrawQuad((float)(unit.curX - 16*pWeapon->width), (float)(unit.curY - 16*pWeapon->height), pWeapon->width*32.f, pWeapon->height*32.f, MFVector::one, uvs.x, uvs.y, uvs.x+uvs.width, uvs.y+uvs.height);
+				MFPrimitive_DrawQuad((float)(unit.curX - 16*weapon.width), (float)(unit.curY - 16*weapon.height), weapon.width*32.f, weapon.height*32.f, MFVector::one, uvs.x, uvs.y, uvs.x+uvs.width, uvs.y+uvs.height);
 			}
 
 			if(unit.state != US_Dying && unit.state != US_Dead)
@@ -983,7 +983,7 @@ void Battle::Draw()
 				int numDigits = MFString_Length(damage);
 
 				// get the width of each character
-				MFFont *pFont = Game::GetCurrent()->GetBattleNumbersFont();
+				MFFont *pFont = pGame->GetBattleNumbersFont();
 				float height = MFFont_GetFontHeight(pFont);
 
 				for(int a=0; a<numDigits; ++a)
@@ -1066,6 +1066,7 @@ void Battle::Draw()
 	MFPrimitive_DrawQuad(right - 32.f, timelineY, 32.f, 32.f, MFVector::one, 0.5f + texelOffsetW, texelOffsetH, 0.75f + texelOffsetW, 0.25f + texelOffsetH);
 
 	// plot each unit on the timeline
+	renderUnits.clear();
 	BattleUnit *pUnit = pCooldownTail;
 	while(pUnit)
 	{
@@ -1074,13 +1075,13 @@ void Battle::Draw()
 		float y = timelineY + pUnit->cooldownOffset + offset*20;
 
 		MFPrimitive_DrawQuad(x, y, 32.f, 32.f, MakeVector(pUnit->colour, MFClamp(0.f, (-pUnit->stateTime * 3.f) + 21, 1.f)), 0.f, 0.25f, 0.25f, 0.5f);
-		pUnit->pUnit->Draw(x-16.f, y-16.f);
+		renderUnits.push() = pUnit->pUnit->Render(x-16.f, y-16.f);
 
 		pUnit = pUnit->pPrev;
 	}
 
 	// draw deferred unit heads
-	pUnitDefs->DrawUnits(64.f, texelCenter, true);
+	pGame->DrawUnits(renderUnits, 64.f, texelCenter, true);
 
 	if(gbBattleTest)
 		MFFont_BlitText(MFFont_GetDebugFont(), 10, 100, MFVector::white, MFStr("Wins: %d/%d %g%%", gTestWins[0], gTestWins[1], (float)gTestWins[0] / (float)(gTestWins[0] + gTestWins[1]) * 100.f));

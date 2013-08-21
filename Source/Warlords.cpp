@@ -102,10 +102,14 @@ void Game_Init()
 {
 	MFCALLSTACK;
 
+	MapTemplate::Init();
+	Unit::Init();
+
 	Init_Renderer();
 
 	pInputManager = new InputManager;
 
+	GameState::Init();
 	GameData::Init();
 
 	// check if we want to run a battle test...
@@ -143,10 +147,6 @@ void Game_Update()
 	HTTPRequest::UpdateHTTPEvents();
 
 	pInputManager->Update();
-
-	Session *pSession = Session::Get();
-	if(pSession)
-		pSession->Update();
 
 	Screen::UpdateScreen();
 
@@ -199,6 +199,7 @@ void Game_Deinit()
 	HKUserInterface::Deinit();
 
 	GameData::Deinit();
+	GameState::Deinit();
 
 	Destroy_Renderer();
 }

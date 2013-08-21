@@ -1,7 +1,7 @@
 #if !defined(_STRING_ENTRY_LOGIC)
 #define _STRING_ENTRY_LOGIC
 
-typedef FastDelegate1<const char *> StringChangeCallback;
+typedef FastDelegate1<MFString> StringChangeCallback;
 
 class OnScreenKeyboard
 {

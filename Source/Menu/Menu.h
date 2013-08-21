@@ -6,7 +6,7 @@
 #include "Haku/UI/Widgets/HKWidgetListbox.h"
 #include "Haku/UI/Widgets/HKWidgetSelectbox.h"
 
-#include "Menu/FrontEnd/Lobby.h"
+#include "Menu/FrontEnd/LobbyMenu.h"
 #include "Menu/FrontEnd/GameList.h"
 
 class FrontMenu
@@ -60,7 +60,7 @@ public:
 		HKWidgetButton *pReturnButton;
 
 		void OnCreateClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
-		void OnJoinClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
+//		void OnJoinClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
 		void OnOfflineClicked(HKWidget &sender, const HKWidgetEventInfo &ev);
 	} playMenu;
 
@@ -77,7 +77,7 @@ public:
 
 		void OnUpdateLogin(HKWidget &sender, const HKWidgetEventInfo &ev);
 		void OnLogin(HKWidget &sender, const HKWidgetEventInfo &ev);
-		void OnLoginResponse(ServerError err, Session *pSession);
+		void OnLoginResponse(ServerRequest *pReq);
 	} loginMenu;
 
 protected:

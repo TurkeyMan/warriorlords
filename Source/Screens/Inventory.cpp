@@ -5,8 +5,8 @@
 #include "Fuji/MFMaterial.h"
 #include "Fuji/MFRenderer.h"
 
-Inventory::Inventory()
-: Window(true)
+Inventory::Inventory(Game *pGame)
+: Window(pGame, true)
 {
 	pItems = MFMaterial_Create("Items");
 
@@ -21,14 +21,14 @@ Inventory::Inventory()
 
 Inventory::~Inventory()
 {
-	MFMaterial_Destroy(pItems);
+	MFMaterial_Release(pItems);
 }
 
 bool Inventory::DrawContent()
 {
-	Game::GetCurrent()->DrawLine(window.x + 16, window.y + 192, window.x + window.width - 16, window.y + 192);
+	pGame->DrawLine(window.x + 16, window.y + 192, window.x + window.width - 16, window.y + 192);
 
-	MFFont *pFont = Game::GetCurrent()->GetTextFont();
+	MFFont *pFont = pGame->GetTextFont();
 	float height = MFFont_GetFontHeight(pFont);
 	float width = MFFont_GetStringWidth(pFont, "Inventory", height);
 	MFFont_BlitText(pFont, (int)(window.x + window.width*0.5f - width*0.5f), (int)window.y + 10, MFVector::yellow, "Inventory");
@@ -38,10 +38,10 @@ bool Inventory::DrawContent()
 
 	if(selected != -1)
 	{
-		Item *pItem = pUnit->GetItem(selected);
-		width = MFFont_GetStringWidth(pFont, pItem->pName, height);
-		MFFont_BlitText(pFont, (int)(window.x + window.width*0.5f - width*0.5f), (int)window.y + 200, MFVector::white, pItem->pName);
-		MFFont_BlitText(pFont, (int)(window.x + window.width*0.5f - width*0.5f), (int)window.y + 210 + (int)height, MFVector::white, pItem->pDescription);
+		const Item &item = pUnit->GetItem(selected);
+		width = MFFont_GetStringWidth(pFont, item.name.CStr(), height);
+		MFFont_BlitText(pFont, (int)(window.x + window.width*0.5f - width*0.5f), (int)window.y + 200, MFVector::white, item.name.CStr());
+		MFFont_BlitText(pFont, (int)(window.x + window.width*0.5f - width*0.5f), (int)window.y + 210 + (int)height, MFVector::white, item.description.CStr());
 	}
 
 	return true;
@@ -69,24 +69,22 @@ bool Inventory::HandleInputEvent(InputEvent ev, InputInfo &info)
 	return Window::HandleInputEvent(ev, info);
 }
 
-void Inventory::Show(Unit *_pUnit)
+void Inventory::Show(Game *_pGame, Unit *_pUnit)
 {
 	Window::Show();
 
+	pGame = _pGame;
 	pUnit = _pUnit;
 
 	selected = -1;
 
-	UnitDefinitions *pDefs = pUnit->GetDefs();
+	const UnitDefinitions *pDefs = pUnit->UnitDefs();
 	float texelCenter = MFRenderer_GetTexelCenterOffset();
 
 	numItems = pUnit->GetNumItems();
 	for(int a=0; a<numItems; ++a)
 	{
-		Item *pItem = pUnit->GetItem(a);
-
-		MFRect uvs;
-		pDefs->GetItemUVs(pUnit->GetItemID(a), &uvs, texelCenter);
+		MFRect uvs = pDefs->GetItemUVs(pUnit->GetItemID(a), texelCenter);
 		pInventory[a]->SetImage(pDefs->GetItemMaterial(), &uvs);
 		pInputManager->PushReceiver(pInventory[a]);
 	}

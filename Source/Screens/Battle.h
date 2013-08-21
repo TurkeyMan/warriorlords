@@ -100,14 +100,13 @@ protected:
 
 	Game *pGame;
 
-	UnitDefinitions *pUnitDefs;
-	Tileset *pTileSet;
-
 	Army armies[2];
 
 	BattleUnit *pCooldownHead, *pCooldownTail;
 	BattleUnit *pActionHead, *pActionTail;
 	int cooldownCount;
+
+	MFArray<UnitRender> renderUnits;
 
 	MFMaterial *pIcons;
 	MFMaterial *pAttack;

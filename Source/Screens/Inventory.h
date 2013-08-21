@@ -6,14 +6,14 @@
 class Inventory : public Window
 {
 public:
-	Inventory();
+	Inventory(Game *pGame);
 	virtual ~Inventory();
 
 	virtual bool DrawContent();
 
 	virtual bool HandleInputEvent(InputEvent ev, InputInfo &info);
 
-	virtual void Show(Unit *pUnit);
+	virtual void Show(Game *pGame, Unit *pUnit);
 	virtual void Hide();
 
 protected:
